@@ -1774,6 +1774,171 @@ python -c "import torch; print(torch.cuda.is_available())"
 \end{lstlisting}
 
 % ------------------------------------------------------------------------------------
+\subsection{CUDA与PyTorch版本：公用服务器的大坑}
+% ------------------------------------------------------------------------------------
+
+\marginnote{这一节是很多新手踩的最大坑：不理解CUDA版本、PyTorch版本、驱动版本之间的关系，随意升级，结果把组里老代码全搞挂了。}
+
+在公用服务器上，\textbf{版本管理}是一个非常重要但经常被忽视的问题。理解下面这些概念，能帮你避免"一改配置全组遭殃"的惨剧。
+
+\paragraph{三个版本的区别}
+
+\begin{table}[h]
+\centering
+\small
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{l|l|l|l}
+\toprule
+\textbf{名称} & \textbf{是什么} & \textbf{谁负责安装} & \textbf{能否随意改} \\
+\midrule
+\textbf{NVIDIA驱动} & GPU的底层驱动 & 系统管理员 & \textcolor{red}{绝对不能！} \\
+\textbf{CUDA Toolkit} & GPU编程工具包 & 系统或用户 & 谨慎（见下文） \\
+\textbf{PyTorch CUDA版本} & PyTorch编译时用的CUDA & pip安装时选择 & 可以，但要匹配 \\
+\bottomrule
+\end{tabular}
+\caption{三种"CUDA版本"的区别}
+\end{table}
+
+\begin{keyidea}[版本兼容的关键原则]
+\begin{itemize}
+    \item \textbf{驱动版本} $\geq$ \textbf{CUDA Toolkit版本}（向下兼容）
+    \item \textbf{PyTorch CUDA版本}必须与系统CUDA Toolkit匹配
+    \item 同一台机器上，\textbf{驱动只有一个}，但可以有多个CUDA Toolkit版本
+\end{itemize}
+\end{keyidea}
+
+\paragraph{如何查看版本}
+
+\begin{lstlisting}[language=bash, caption=查看各种CUDA相关版本]
+# 1. 查看NVIDIA驱动版本（nvidia-smi右上角）
+nvidia-smi
+# 输出: Driver Version: 535.104.05   CUDA Version: 12.2
+#                                     ^^^^^^^^^^^^
+#                        注意：这是驱动支持的最高CUDA版本，不是系统安装的CUDA
+
+# 2. 查看系统安装的CUDA Toolkit版本
+nvcc --version
+# 输出: Cuda compilation tools, release 11.8, V11.8.89
+
+# 3. 查看PyTorch使用的CUDA版本
+python -c "import torch; print(torch.version.cuda)"
+# 输出: 11.8
+
+# 4. 验证PyTorch能否使用GPU
+python -c "import torch; print(torch.cuda.is_available())"
+# 输出: True  (如果是False，说明版本不匹配！)
+\end{lstlisting}
+
+\begin{remark}
+\texttt{nvidia-smi}显示的"CUDA Version"容易让人误解。那是\textbf{驱动支持的最高CUDA版本}，不是你实际安装的CUDA版本。实际版本要用\texttt{nvcc --version}查看。
+\end{remark}
+
+\paragraph{什么是 \texttt{cuda:0}？}
+
+当你写 \texttt{.to("cuda:0")} 时，\texttt{cuda:0}表示\textbf{第0号GPU}。
+
+\begin{lstlisting}[language=Python, caption=GPU设备管理]
+import torch
+
+# 查看有几张GPU
+print(torch.cuda.device_count())  # 比如输出 4，表示有4张卡
+
+# 查看当前默认设备
+print(torch.cuda.current_device())  # 通常是 0
+
+# 把张量放到指定GPU
+x = torch.randn(1000, 1000)
+x = x.to("cuda:0")   # 放到第0张卡
+x = x.to("cuda:1")   # 放到第1张卡
+x = x.cuda()         # 等价于 .to("cuda:0")
+
+# 指定默认GPU
+torch.cuda.set_device(1)  # 之后.cuda()默认用第1张卡
+\end{lstlisting}
+
+\paragraph{使用 \texttt{CUDA\_VISIBLE\_DEVICES} 控制可见GPU}
+
+在公用服务器上，你通常不能独占所有GPU。用环境变量控制你的程序能看到哪些卡：
+
+\begin{lstlisting}[language=bash, caption=控制可见GPU]
+# 只用第2张卡（编号从0开始）
+CUDA_VISIBLE_DEVICES=2 python train.py
+
+# 用第0和第3张卡
+CUDA_VISIBLE_DEVICES=0,3 python train.py
+
+# 此时在Python里：
+# - torch.cuda.device_count() 返回 2
+# - "cuda:0" 对应物理上的第0张卡
+# - "cuda:1" 对应物理上的第3张卡
+
+# 完全不用GPU（强制CPU）
+CUDA_VISIBLE_DEVICES="" python train.py
+\end{lstlisting}
+
+\begin{warning}
+\textbf{公用服务器的生存法则}：
+\begin{enumerate}
+    \item \textbf{永远不要升级系统的CUDA或驱动}——这会影响所有用户！
+    \item \textbf{用Conda管理自己的PyTorch版本}——每个环境独立，不影响别人
+    \item \textbf{用 \texttt{CUDA\_VISIBLE\_DEVICES} 指定GPU}——避免抢占别人正在用的卡
+    \item \textbf{跑之前先 \texttt{nvidia-smi} 看一眼}——确认哪些卡空闲
+\end{enumerate}
+\end{warning}
+
+\paragraph{版本不匹配的常见报错}
+
+\begin{table}[h]
+\centering
+\small
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{p{7cm}|p{6cm}}
+\toprule
+\textbf{报错信息} & \textbf{可能原因} \\
+\midrule
+\texttt{CUDA error: no kernel image is available} & PyTorch的CUDA版本与GPU架构不匹配 \\
+\texttt{torch.cuda.is\_available() = False} & PyTorch没装CUDA版本，或CUDA版本不匹配 \\
+\texttt{CUDA out of memory} & 显存不够，或别人在用这张卡 \\
+\texttt{RuntimeError: CUDA unknown error} & 驱动问题，尝试重启或联系管理员 \\
+\bottomrule
+\end{tabular}
+\caption{常见CUDA报错与原因}
+\end{table}
+
+\paragraph{安装正确版本的PyTorch}
+
+去 \url{https://pytorch.org/get-started/locally/} 选择对应你系统CUDA版本的安装命令：
+
+\begin{lstlisting}[language=bash, caption=根据CUDA版本安装PyTorch]
+# 如果系统CUDA是11.8
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+# 如果系统CUDA是12.1
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+# CPU版本（没有GPU或想强制用CPU）
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+\end{lstlisting}
+
+\begin{example}[一个典型的"版本地狱"场景]
+\textbf{场景}：师兄的代码在服务器上跑得好好的。你为了跑一个新论文的代码，把系统CUDA从11.8升级到12.2。
+
+\textbf{结果}：
+\begin{itemize}
+    \item 师兄的PyTorch是cu118版本，现在\texttt{torch.cuda.is\_available()}返回False
+    \item 师姐用的TensorFlow也挂了
+    \item 导师问为什么大家的实验都跑不了了……
+\end{itemize}
+
+\textbf{正确做法}：
+\begin{itemize}
+    \item 不改系统CUDA，用Conda创建新环境
+    \item 在新环境里装cu118版本的PyTorch（向下兼容没问题）
+    \item 或者联系管理员，在不影响现有环境的情况下添加新CUDA版本
+\end{itemize}
+\end{example}
+
+% ------------------------------------------------------------------------------------
 \subsection{后台运行：Screen和Tmux}
 % ------------------------------------------------------------------------------------
 
