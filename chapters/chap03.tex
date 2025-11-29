@@ -5,6 +5,7 @@
 \section*{引言：兄弟之争与一个反直觉的问题}
 
 1696年6月，数学杂志《学术纪事》（Acta Eruditorum）上出现了一则挑战公告。瑞士数学家 Johann Bernoulli 向全欧洲数学家发出挑战：
+\storynote{Bernoulli家族}{数学史上最传奇的家族！三代人出了八位杰出数学家。Johann和哥哥Jakob经常公开争吵、互相攻击，却都做出了一流贡献。Johann甚至试图把儿子Daniel的工作据为己有。家族内斗之激烈，堪比宫斗剧。}
 
 \begin{quote}
 \textit{给定两点 A 和 B，A 不在 B 的正上方。求一条连接它们的曲线，使得一个小球仅在重力作用下，从 A 滑到 B 所需时间最短。}
@@ -77,6 +78,7 @@
 最戏剧性的一幕发生在英国。问题被转交给了已经退休的 Isaac Newton。据说牛顿收到问题时已是下午四点，但他整个晚上都在工作，到凌晨四点就解决了。
 
 牛顿选择匿名发表解答。但当 Johann 看到那个优雅的证明时，他立刻认出了作者："我从爪子认出了狮子（Tanquam ex ungue leonem）。"
+\storynote{Isaac Newton}{牛顿当时53岁，已从剑桥退休，正担任皇家铸币厂厂长。据说他对这个"挑衅"非常恼火，一晚上就解决了问题。有人问他为何匿名发表，他说："我不喜欢被外国人用数学题来戏弄。"}
 
 \textbf{答案}：最速降线是一条\textbf{摆线}（cycloid）——圆在直线上滚动时，圆周上一点的轨迹。
 
@@ -140,6 +142,7 @@
 普通函数把数变成数：$f: \mathbb{R} \to \mathbb{R}$，比如 $f(x) = x^2$。
 
 \textbf{泛函}（functional）把函数变成数：$J: \{\text{函数}\} \to \mathbb{R}$。
+\clarify{泛函的"泛"字表示"广泛"——它比普通函数更一般。普通函数吃数字吐数字，泛函吃函数吐数字。你可以把泛函想象成一个"评分系统"：给它一条曲线，它告诉你这条曲线"有多好"。}
 
 \begin{definition}[泛函]
 泛函是"以函数为输入，以数字为输出"的映射。给定一条曲线 $y(x)$，泛函算出一个数 $J[y]$。
@@ -196,6 +199,7 @@ J[y] = \int_a^b F(x, y(x), y'(x)) \, dx
 \end{tcolorbox}
 
 我们将通过以下步骤证明这一点：
+\preview{这种"离散化→用有限维方法→取极限"的思路会反复出现。第9章的神经网络反向传播、第10章的强化学习，本质上都是这个套路的变体。}
 
 \begin{enumerate}
     \item \textbf{离散化}：把连续曲线 $y(x)$ 变成离散的点 $y_0, y_1, \ldots, y_N$
@@ -444,6 +448,7 @@ J[y] = \int_a^b F(x, y, y') \, dx
 \boxed{\frac{\partial F}{\partial y} - \frac{d}{dx}\frac{\partial F}{\partial y'} = 0}
 \end{equation}
 \end{keytheorem}
+\storynote{Leonhard Euler}{Euler（欧拉）是数学史上最高产的数学家，一生写了800多篇论文。他在1744年建立了变分法的系统理论。更神奇的是，他后半生双目失明，却仍然靠口述完成了大量工作。据说他能在脑中进行复杂的多位数运算。}
 
 \begin{insightbox}
 \textbf{我们做了什么？}
@@ -592,6 +597,7 @@ y(x) = ax^3 + bx^2 + cx + d
 \]
 
 这就是著名的\textbf{三次样条}（cubic spline）！
+\tryit{在Python中用\texttt{scipy.interpolate.CubicSpline}画几条样条曲线，观察它们通过控制点时有多"光滑"。}
 
 \begin{insightbox}
 计算机图形学中的样条曲线不是凭空设计的，而是"最小曲率能量"变分问题的解。
@@ -687,6 +693,7 @@ y(x) = a \cosh\left(\frac{x - x_0}{a}\right) = \frac{a}{2}\left(e^{(x-x_0)/a} + 
 \boxed{F - y' \frac{\partial F}{\partial y'} = C \quad \text{（常数）}}
 \end{equation}
 \end{keytheorem}
+\think{为什么"不显含$x$"会导致守恒量？提示：想想物理中的"时间平移对称性"和能量守恒的关系。这是诺特定理的一个特例！}
 
 \begin{proof}
 计算 $\frac{d}{dx}\left(F - y' \frac{\partial F}{\partial y'}\right)$：
@@ -729,6 +736,7 @@ F - y' \frac{\partial F}{\partial y'} = y\sqrt{1+(y')^2} - y' \cdot \frac{yy'}{\
 \subsection{等周问题}
 
 古希腊人思考过这样一个问题：用一条长度固定的绳子围成一块地，怎样围才能使面积最大？
+\storynote{狄多公主}{传说腓尼基公主狄多（Dido）逃到北非，当地国王答应给她"一张牛皮能围起来的土地"。狄多把牛皮切成细条，围成一个半圆（另一边靠海），建立了迦太基城。这是历史上最早的"等周问题"！}
 
 这就是著名的\textbf{等周问题}（isoperimetric problem）。
 
