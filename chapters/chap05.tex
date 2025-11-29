@@ -12,30 +12,45 @@
 
 \begin{figure}[h]
 \centering
-\begin{tikzpicture}[scale=0.8]
-    % 机翼轮廓
-    \draw[thick] (0,0) .. controls (2,0.8) and (4,0.6) .. (6,0.2);
-    \draw[thick] (0,0) .. controls (2,-0.3) and (4,-0.2) .. (6,0.2);
-    
-    % 网格
-    \foreach \x in {0.5,1,...,5.5} {
-        \draw[gray, thin] (\x,{0.8*\x/6 - 0.1*\x*\x/36}) -- (\x,{-0.3*\x/6 + 0.05*\x*\x/36});
-    }
-    \foreach \y in {-0.2,0,0.2,0.4} {
-        \draw[gray, thin] (0.5,\y) .. controls (3,\y) .. (5.5,\y*0.3);
-    }
-    
+\begin{tikzpicture}[scale=0.9]
+    % 定义机翼形状的上下边界函数
+    % 上边界: y_top(x) 从(0,0)到(6,0.15)，中间凸起
+    % 下边界: y_bot(x) 从(0,0)到(6,0.15)，中间凹陷
+
+    % 填充三角形网格 - 手动绘制以确保填满
+    \begin{scope}
+        \clip (0,0) .. controls (1.5,0.7) and (4,0.55) .. (6,0.15) --
+              (6,0.15) .. controls (4,-0.15) and (1.5,-0.25) .. (0,0);
+
+        % 绘制三角形网格
+        \foreach \i in {0,1,...,11} {
+            \foreach \j in {0,1,...,3} {
+                \pgfmathsetmacro{\x}{\i*0.5}
+                \pgfmathsetmacro{\y}{\j*0.25 - 0.25}
+                % 上三角形
+                \draw[gray!60, thin] (\x,\y) -- (\x+0.5,\y) -- (\x+0.25,\y+0.25) -- cycle;
+                % 下三角形
+                \draw[gray!60, thin] (\x+0.25,\y+0.25) -- (\x+0.5,\y) -- (\x+0.5,\y+0.25) -- cycle;
+            }
+        }
+    \end{scope}
+
+    % 机翼轮廓（加粗）
+    \draw[very thick, blue!70!black] (0,0) .. controls (1.5,0.7) and (4,0.55) .. (6,0.15);
+    \draw[very thick, blue!70!black] (0,0) .. controls (1.5,-0.25) and (4,-0.15) .. (6,0.15);
+
     % 标注
-    \node at (3,-1.2) {机翼被切成很多小单元};
-    
+    \node at (3,-1) {机翼被切成很多小三角形单元};
+
     % 放大一个单元
     \begin{scope}[shift={(8,0)}]
-        \draw[thick, fill=blue!10] (0,0) -- (1.5,0) -- (0.8,1) -- cycle;
-        \fill (0,0) circle (2pt);
-        \fill (1.5,0) circle (2pt);
-        \fill (0.8,1) circle (2pt);
+        \draw[thick, fill=blue!15] (0,0) -- (1.5,0) -- (0.75,1) -- cycle;
+        \fill[red] (0,0) circle (2.5pt);
+        \fill[red] (1.5,0) circle (2.5pt);
+        \fill[red] (0.75,1) circle (2.5pt);
         \node at (0.75,-0.5) {一个三角形单元};
-        \node[right] at (1.5,0) {\small 节点};
+        \node[right, font=\small] at (1.6,0) {节点};
+        \draw[<-, thick] (1.55,0.05) -- (1.9,0.3);
     \end{scope}
 \end{tikzpicture}
 \caption{有限元方法的基本思想：把复杂形状切成简单的小块}
@@ -904,49 +919,54 @@ K^e_{RR} = \int_{x_L}^{x_R} (N_R')^2 dx = \frac{1}{h^2} \cdot h = \frac{1}{h}
 
 \begin{figure}[h]
 \centering
-\begin{tikzpicture}[scale=0.55]
-    % 单元1
-    \node at (-3,6) {\small 单元1 (节点0-1):};
-    \draw (-1,5) rectangle (1,7);
-    \node at (-0.5,6.5) {\scriptsize $\frac{1}{h}$};
-    \node at (0.5,6.5) {\scriptsize $-\frac{1}{h}$};
-    \node at (-0.5,5.5) {\scriptsize $-\frac{1}{h}$};
-    \node at (0.5,5.5) {\scriptsize $\frac{1}{h}$};
-    
-    % 箭头
-    \draw[->, thick] (1.5,6) -- (3,6);
-    
-    % 单元2
-    \node at (-3,2) {\small 单元2 (节点1-2):};
-    \draw (-1,1) rectangle (1,3);
-    \node at (-0.5,2.5) {\scriptsize $\frac{1}{h}$};
-    \node at (0.5,2.5) {\scriptsize $-\frac{1}{h}$};
-    \node at (-0.5,1.5) {\scriptsize $-\frac{1}{h}$};
-    \node at (0.5,1.5) {\scriptsize $\frac{1}{h}$};
-    
-    \draw[->, thick] (1.5,2) -- (3,4);
-    
-    % 整体矩阵
-    \draw (4,0) grid (9,5);
-    
-    % 填充
-    \fill[blue!30] (4,4) rectangle (6,5);
-    \fill[blue!30] (4,3) rectangle (6,4);
-    \fill[orange!30] (5,3) rectangle (7,4);
-    \fill[orange!30] (5,2) rectangle (7,3);
-    
-    % 重叠处（节点1对应的对角元）
-    \fill[red!50] (5,3) rectangle (6,4);
-    \node[red, font=\small] at (5.5,3.5) {$\frac{2}{h}$};
-    
-    % 列标签
+\begin{tikzpicture}[scale=0.6]
+    % 单元1矩阵（用数学矩阵表示，不用tikz框）
+    \node[anchor=east] at (-2,6) {\small 单元1 (节点0-1):};
+    \node at (0,6) {$\begin{pmatrix} \frac{1}{h} & -\frac{1}{h} \\[3pt] -\frac{1}{h} & \frac{1}{h} \end{pmatrix}$};
+
+    % 箭头指向蓝色区域
+    \draw[->, thick, blue!70] (1.8,6) -- (4.2,4.5);
+
+    % 单元2矩阵
+    \node[anchor=east] at (-2,2) {\small 单元2 (节点1-2):};
+    \node at (0,2) {$\begin{pmatrix} \frac{1}{h} & -\frac{1}{h} \\[3pt] -\frac{1}{h} & \frac{1}{h} \end{pmatrix}$};
+
+    % 箭头指向橙色区域
+    \draw[->, thick, orange!80] (1.8,2) -- (5.2,2.5);
+
+    % 整体矩阵框架
+    \draw[thick] (4,0) grid (9,5);
+
+    % 填充蓝色区域（单元1贡献：节点0,1）
+    \fill[blue!25] (4,4) rectangle (5,5);
+    \fill[blue!25] (5,4) rectangle (6,5);
+    \fill[blue!25] (4,3) rectangle (5,4);
+    \fill[blue!25] (5,3) rectangle (6,4);
+
+    % 填充橙色区域（单元2贡献：节点1,2）
+    \fill[orange!25] (5,3) rectangle (6,4);
+    \fill[orange!25] (6,3) rectangle (7,4);
+    \fill[orange!25] (5,2) rectangle (6,3);
+    \fill[orange!25] (6,2) rectangle (7,3);
+
+    % 重叠处（节点1的对角元）用红色标出
+    \fill[red!40] (5,3) rectangle (6,4);
+    \node[font=\footnotesize] at (5.5,3.5) {$\frac{2}{h}$};
+
+    % 列标签（在矩阵上方）
     \foreach \i in {0,...,4} {
-        \node[above] at (4.5+\i,5) {\scriptsize \i};
-        \node[left] at (4,4.5-\i) {\scriptsize \i};
+        \node[above, font=\scriptsize] at (4.5+\i,5.1) {\i};
     }
-    
-    % 说明
-    \node at (6.5,-1) {\small 重叠处累加：$\frac{1}{h} + \frac{1}{h} = \frac{2}{h}$};
+    % 行标签（在矩阵左侧）
+    \foreach \i in {0,...,4} {
+        \node[left, font=\scriptsize] at (3.9,4.5-\i) {\i};
+    }
+
+    % 整体矩阵标题
+    \node[above] at (6.5,5.5) {\small 整体刚度矩阵 $K$};
+
+    % 说明文字
+    \node at (6.5,-0.8) {\small 重叠处累加：$\frac{1}{h} + \frac{1}{h} = \frac{2}{h}$};
 \end{tikzpicture}
 \caption{组装过程示意：单元矩阵放入整体矩阵对应位置，重叠处累加}
 \end{figure}
@@ -1831,16 +1851,16 @@ K_{ij} = \int_\Omega \nabla\Phi_i \cdot \nabla\Phi_j \, dx
 回顾一下有限元的推导路径：
 
 \begin{center}
-\begin{tikzpicture}[node distance=2.5cm, auto,
-    block/.style={rectangle, draw, fill=blue!10, text width=3cm, text centered, rounded corners, minimum height=1cm}]
-    \node[block] (pde) {PDE\\$-\Delta u = f$};
-    \node[block, right of=pde] (var) {变分问题\\$\min J[u]$};
-    \node[block, right of=var] (weak) {弱形式\\$\int \nabla u \cdot \nabla v = \int fv$};
-    \node[block, right of=weak] (lin) {线性方程\\$KU = F$};
-    
-    \draw[->] (pde) -- (var);
-    \draw[->] (var) -- (weak);
-    \draw[->] (weak) -- (lin);
+\begin{tikzpicture}[node distance=4cm, auto,
+    block/.style={rectangle, draw, fill=blue!10, text width=2.8cm, text centered, rounded corners, minimum height=1.2cm, font=\small}]
+    \node[block] (pde) {PDE\\[2pt]$-\Delta u = f$};
+    \node[block, right of=pde] (var) {变分问题\\[2pt]$\min J[u]$};
+    \node[block, right of=var] (weak) {弱形式\\[2pt]$\int \nabla u \cdot \nabla v = \int fv$};
+    \node[block, right of=weak] (lin) {线性方程\\[2pt]$KU = F$};
+
+    \draw[->, thick] (pde) -- (var);
+    \draw[->, thick] (var) -- (weak);
+    \draw[->, thick] (weak) -- (lin);
 \end{tikzpicture}
 \end{center}
 
