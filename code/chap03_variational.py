@@ -13,10 +13,9 @@ from scipy.integrate import solve_ivp, quad
 from scipy.optimize import brentq, minimize_scalar
 
 # 导入中文字体配置
-import sys
-sys.path.insert(0, '/home/user/full_book/code')
-from plot_utils import setup_chinese_font
-setup_chinese_font()
+import matplotlib
+matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial Unicode MS']
+matplotlib.rcParams['axes.unicode_minus'] = False
 
 def create_brachistochrone_figure():
     """
@@ -161,7 +160,7 @@ def create_brachistochrone_figure():
     ax3.grid(True, alpha=0.3)
 
     plt.tight_layout()
-    plt.savefig('/home/user/full_book/figs/chap03_fig1.png', dpi=150, bbox_inches='tight')
+    plt.savefig('figs/chap03_fig1.png', dpi=150, bbox_inches='tight')
     plt.close()
     print("图像已保存到 figs/chap03_fig1.png")
     print(f"下滑时间对比: 直线={t_line:.3f}s, 抛物线={t_para:.3f}s, 摆线={t_cyc:.3f}s")
@@ -244,7 +243,7 @@ def create_catenary_figure():
     ax3.set_ylim(1e-4, 100)
 
     plt.tight_layout()
-    plt.savefig('/home/user/full_book/figs/chap03_fig2.png', dpi=150, bbox_inches='tight')
+    plt.savefig('figs/chap03_fig2.png', dpi=150, bbox_inches='tight')
     plt.close()
     print("图像已保存到 figs/chap03_fig2.png")
 
@@ -326,7 +325,7 @@ def create_geodesic_figure():
     ax2.grid(True, alpha=0.3)
 
     plt.tight_layout()
-    plt.savefig('/home/user/full_book/figs/chap03_fig3.png', dpi=150, bbox_inches='tight')
+    plt.savefig('figs/chap03_fig3.png', dpi=150, bbox_inches='tight')
     plt.close()
     print("图像已保存到 figs/chap03_fig3.png")
 
