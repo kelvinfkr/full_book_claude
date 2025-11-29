@@ -480,10 +480,54 @@ $N$个玩家的\textbf{广义纳什均衡问题}（Generalized Nash Equilibrium 
 \end{itemize}
 \end{theorem}
 
+\begin{proof}[用KKT条件证明Wardrop均衡]
+这是一个经典的``优化 $\Leftrightarrow$ 均衡''对应。让我们用KKT条件来证明Beckmann问题的解恰好满足Wardrop用户均衡条件。
+
+\textbf{Step 1：写出拉格朗日函数}
+
+对于路径流量$f_p$的约束优化问题，拉格朗日函数为：
+\begin{equation}
+    \mathcal{L} = \sum_{a} \int_0^{x_a} t_a(s) \, ds - \sum_w \lambda_w \left( \sum_{p \in P_w} f_p - d_w \right) - \sum_p \mu_p f_p
+\end{equation}
+其中：
+\begin{itemize}
+    \item $\lambda_w$：OD对$w$的需求约束的乘子
+    \item $\mu_p \geq 0$：路径流量非负约束$f_p \geq 0$的乘子
+\end{itemize}
+
+\textbf{Step 2：对$f_p$求偏导}
+
+注意$x_a = \sum_{p \ni a} f_p$，所以$\frac{\partial x_a}{\partial f_p} = 1$（如果路径$p$经过边$a$）。因此：
+\begin{equation}
+    \frac{\partial \mathcal{L}}{\partial f_p} = \sum_{a \in p} t_a(x_a) - \lambda_w - \mu_p = 0
+\end{equation}
+即：\textbf{路径$p$的总旅行时间} = $\lambda_w + \mu_p$
+
+\textbf{Step 3：互补松弛条件}
+
+KKT的互补松弛条件要求：$\mu_p \cdot f_p = 0$
+\begin{itemize}
+    \item 若$f_p > 0$（路径被使用），则$\mu_p = 0$，故路径时间 $= \lambda_w$
+    \item 若$f_p = 0$（路径未被使用），则$\mu_p \geq 0$，故路径时间 $\geq \lambda_w$
+\end{itemize}
+
+\textbf{Step 4：这正是Wardrop条件！}
+
+上述结论可以总结为：
+\begin{center}
+\fbox{\parbox{0.8\textwidth}{
+\textbf{所有被使用的路径}（$f_p > 0$）具有\textbf{相同的}旅行时间$\lambda_w$；\\
+\textbf{所有未被使用的路径}（$f_p = 0$）旅行时间$\geq \lambda_w$。
+}}
+\end{center}
+
+这正是Wardrop第一原理的数学表述！乘子$\lambda_w$就是OD对$w$的\textbf{均衡旅行时间}。
+\end{proof}
+
 \begin{keyinsight}
 \textbf{自私博弈的隐藏秩序}：
 
-看似混乱的交通系统——每个司机都在自私地最小化自己的旅行时间——在宏观上却等价于在优化一个系统的"总势能"$\Phi$。
+看似混乱的交通系统——每个司机都在自私地最小化自己的旅行时间——在宏观上却等价于在优化一个系统的``总势能''$\Phi$。
 
 这类博弈被称为\textbf{势博弈}（Potential Game）：存在一个势函数$\Phi$，每个玩家改变策略导致的代价变化等于势函数的变化。
 
