@@ -1,0 +1,1141 @@
+% ====================================================================================
+\chapter{经典力学：最小作用量原理}
+% ====================================================================================
+
+\section*{引言：上帝是一位优化专家？}
+
+1744年，法国科学院院长 Pierre-Louis Maupertuis（莫佩尔蒂）宣布了一个惊人的发现：自然界的所有运动都遵循一个简单的原则——\textbf{作用量最小}。
+
+Maupertuis 是这样推理的：如果上帝创造了这个世界，他一定会让一切都以最"经济"的方式运行。因此，物体的运动路径一定是所有可能路径中"作用量"最小的那条。
+
+这个想法立即引发了巨大的争议。伏尔泰写了一篇讽刺文章，嘲笑 Maupertuis 试图用物理学证明上帝存在。数学家们也指出，Maupertuis 的"作用量"定义模糊不清。
+
+讽刺的是，这个被嘲笑的想法后来成为整个物理学的基石。
+
+今天，我们知道：
+\begin{itemize}
+    \item 牛顿的 $F = ma$ 可以从最小作用量原理\textbf{推导}出来
+    \item 量子力学的路径积分直接建立在作用量上
+    \item 爱因斯坦的广义相对论可以写成作用量的形式
+    \item 粒子物理的标准模型由一个作用量完全描述
+\end{itemize}
+
+\begin{quote}
+\textbf{本章目标}：展示牛顿定律不是"公理"，而是从一个更深刻的优化原理推导出来的结果。你在第1章学过的拉格朗日乘子法，正是分析约束力学系统的标准工具。
+\end{quote}
+
+% ------------------------------------------------------------------------------------
+\section{两种世界观：牛顿 vs 拉格朗日}
+
+\subsection{牛顿的视角：力导致运动}
+
+你在大一物理课上学过牛顿第二定律：
+\[
+\vec{F} = m\vec{a}
+\]
+
+这是一个\textbf{因果}描述：力是因，加速度是果。要分析一个系统，你需要：
+\begin{enumerate}
+    \item 画受力图，找出所有作用在物体上的力
+    \item 对每个方向列出 $F = ma$
+    \item 解微分方程，得到运动轨迹
+\end{enumerate}
+
+\begin{example}[斜面上的滑块]
+一个质量为 $m$ 的滑块在光滑斜面上下滑。
+
+\textbf{牛顿方法}：
+\begin{enumerate}
+    \item 画受力图：重力 $mg$（向下）、支持力 $N$（垂直斜面向上）
+    \item 建立坐标系：沿斜面方向和垂直斜面方向
+    \item 列方程：
+    \begin{itemize}
+        \item 沿斜面：$mg\sin\theta = ma$
+        \item 垂直斜面：$N - mg\cos\theta = 0$
+    \end{itemize}
+    \item 解得：$a = g\sin\theta$，$N = mg\cos\theta$
+\end{enumerate}
+
+这个例子很简单。但如果斜面本身也在运动呢？如果有多个物体通过绳子连接呢？
+\end{example}
+
+\textbf{牛顿方法的困难}：
+\begin{itemize}
+    \item 需要分析\textbf{约束力}（支持力、张力、摩擦力……），但这些力的大小往往\textbf{不知道}
+    \item 坐标选择不当时，方程会变得非常复杂
+    \item 对于复杂的多体系统，受力分析容易出错
+\end{itemize}
+
+\subsection{拉格朗日的视角：自然选择最优路径}
+
+拉格朗日换了一个角度思考：
+
+\begin{quote}
+与其问"力如何导致运动"，不如问"在所有可能的路径中，自然为什么选择这一条？"
+\end{quote}
+
+想象把一个球从 A 点抛到 B 点。球可以走很多条不同的路径——高抛、低抛、直线、曲线……但实际上，球只会走\textbf{一条}特定的抛物线。
+
+为什么是这一条？拉格朗日的回答是：因为这条路径使某个叫做\textbf{作用量}的东西取极值。
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[scale=0.9]
+    % 起点和终点
+    \fill[red] (0,0) circle (3pt) node[below left] {A（起点）};
+    \fill[red] (6,0) circle (3pt) node[below right] {B（终点）};
+    
+    % 多条可能路径
+    \draw[gray, dashed] (0,0) .. controls (1,3) and (5,3) .. (6,0);
+    \node[gray] at (3,2.8) {\small 高抛路径};
+    
+    \draw[gray, dashed] (0,0) .. controls (2,0.5) and (4,0.5) .. (6,0);
+    \node[gray] at (3,0.8) {\small 低抛路径};
+    
+    \draw[gray, dashed] (0,0) -- (6,0);
+    \node[gray] at (3,-0.4) {\small 直线路径};
+    
+    % 真实路径（抛物线）
+    \draw[blue, very thick] (0,0) .. controls (1.5,2) and (4.5,2) .. (6,0);
+    \node[blue] at (4,1.8) {\textbf{真实路径}};
+    
+    % 重力
+    \draw[->, thick] (3,1.5) -- (3,0.7) node[right] {$g$};
+\end{tikzpicture}
+\caption{从 A 到 B 的无数条可能路径中，自然选择使作用量取极值的那一条}
+\end{figure}
+
+\subsection{两种视角的对比}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{c|c|c}
+\toprule
+& \textbf{牛顿视角} & \textbf{拉格朗日视角} \\
+\midrule
+核心方程 & $\vec{F} = m\vec{a}$ & $\delta S = 0$ \\
+\midrule
+思维方式 & 因果：力 $\to$ 运动 & 整体：运动是最优路径 \\
+\midrule
+需要什么 & 分析所有力 & 只需能量 $T$ 和 $V$ \\
+\midrule
+约束力 & 需要猜测或求解 & 自动算出（乘子 $\lambda$） \\
+\midrule
+坐标变换 & 麻烦（要重新分析力） & 简单（形式不变） \\
+\midrule
+适用范围 & 经典力学 & 整个物理学 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{insightbox}
+\textbf{类比}：
+
+牛顿方法就像你开车时看着 GPS 的\textbf{即时导航}——"前面路口左转，然后直行500米……"
+
+拉格朗日方法就像\textbf{事先规划好整条路线}——"从所有可能的路线中，选择总时间最短的那条"。
+
+两种方法最终到达同一个目的地，但思维方式完全不同。
+\end{insightbox}
+
+% ------------------------------------------------------------------------------------
+\section{作用量与拉格朗日量}
+
+\subsection{什么是作用量？}
+
+想象一个粒子从时刻 $t_1$ 的位置 A 运动到时刻 $t_2$ 的位置 B。在这两个时刻之间，它可以走很多条不同的路径。
+
+我们需要一个方法来"评价"每条路径的好坏。\textbf{作用量}就是这个评价指标。
+
+\begin{definition}[作用量]
+作用量 $S$ 是一个泛函，它把一条路径 $q(t)$ 映射成一个数字：
+\begin{equation}
+S[q] = \int_{t_1}^{t_2} L(q, \dot{q}, t) \, dt
+\end{equation}
+其中 $L$ 叫做\textbf{拉格朗日量}。
+\end{definition}
+
+\marginnote{回忆第4章：泛函是"以函数为输入，以数字为输出"的映射。作用量正是一个泛函——输入是整条路径 $q(t)$，输出是一个数 $S$。}
+
+\textbf{作用量的单位}：能量 $\times$ 时间 = 焦耳·秒 = $\mathrm{J \cdot s}$
+
+这个单位在量子力学中非常重要——普朗克常数 $\hbar$ 的单位正是 $\mathrm{J \cdot s}$！
+
+\subsection{拉格朗日量：$L = T - V$}
+
+对于经典力学系统，拉格朗日量定义为：
+
+\begin{definition}[拉格朗日量]
+\begin{equation}
+\boxed{L = T - V}
+\end{equation}
+其中 $T$ 是\textbf{动能}，$V$ 是\textbf{势能}。
+\end{definition}
+
+\paragraph{为什么是 $T - V$ 而不是 $T + V$？}
+
+这是一个很好的问题。$T + V$ 是总能量，似乎更"自然"。但让我们看看两者的区别：
+
+\begin{itemize}
+    \item $T + V$：总能量，在保守系统中是\textbf{守恒量}（不随时间变化）
+    \item $T - V$：拉格朗日量，是\textbf{变化量}（随位置和速度变化）
+\end{itemize}
+
+如果用 $T + V$ 做被积函数，由于它是常数，对不同路径积分会得到相同的值——无法区分路径的好坏！
+
+只有 $T - V$ 才能从变分原理导出正确的运动方程。这不是人为选择，而是数学推导的\textbf{必然结果}。
+
+\begin{example}[一维谐振子的拉格朗日量]
+弹簧-质量系统，弹簧常数 $k$，质量 $m$。
+
+\textbf{动能}：$T = \frac{1}{2}m\dot{x}^2$
+
+\textbf{势能}：$V = \frac{1}{2}kx^2$（以平衡位置为零势能点）
+
+\textbf{拉格朗日量}：
+\[
+L = T - V = \frac{1}{2}m\dot{x}^2 - \frac{1}{2}kx^2
+\]
+
+注意 $L$ 依赖于位置 $x$（通过势能）和速度 $\dot{x}$（通过动能）。
+\end{example}
+
+\subsection{广义坐标}
+
+在牛顿力学中，我们通常用笛卡尔坐标 $(x, y, z)$ 描述位置。但在拉格朗日力学中，我们可以用任何方便的坐标——这些坐标叫做\textbf{广义坐标}，记作 $q_1, q_2, \ldots, q_n$。
+
+\begin{example}[单摆的广义坐标]
+单摆可以用笛卡尔坐标 $(x, y)$ 描述，但它们不是独立的——必须满足约束 $x^2 + y^2 = l^2$。
+
+更聪明的做法是用\textbf{角度} $\theta$ 作为广义坐标。这样：
+\begin{itemize}
+    \item 只有一个自由度（$\theta$）
+    \item 约束自动满足
+    \item 方程更简洁
+\end{itemize}
+\end{example}
+
+\begin{definition}[自由度]
+系统的\textbf{自由度}是描述系统状态所需的最小独立坐标数。
+
+\begin{itemize}
+    \item 空间中的自由粒子：3 个自由度（$x, y, z$）
+    \item 单摆：1 个自由度（$\theta$）
+    \item 双摆：2 个自由度（$\theta_1, \theta_2$）
+    \item 刚体：6 个自由度（3 个位置 + 3 个姿态）
+\end{itemize}
+\end{definition}
+
+\subsection{最小作用量原理}
+
+现在我们可以陈述物理学中最深刻的原理之一：
+
+\begin{keytheorem}[title=最小作用量原理（Hamilton 原理）]
+在所有连接初态和终态的路径中，真实的运动轨迹使作用量 $S$ 取\textbf{极值}：
+\begin{equation}
+\boxed{\delta S = 0}
+\end{equation}
+\end{keytheorem}
+
+这里 $\delta S = 0$ 是第4章学过的变分条件——泛函的一阶变分为零。
+
+\paragraph{为什么是"极值"而不是"最小值"？}
+
+在大多数情况下，作用量确实取最小值。但在某些情况下（如某些光学问题），作用量可能取最大值或鞍点。所以更准确的说法是"稳定作用量原理"。
+
+不过，为了方便，我们仍然沿用"最小作用量原理"这个名称。
+
+% ------------------------------------------------------------------------------------
+\section{拉格朗日方程的推导}
+
+\subsection{从变分原理到运动方程}
+
+现在让我们推导拉格朗日方程——这直接应用第4章的 Euler-Lagrange 方程。
+
+\paragraph{问题设置}
+
+我们要找使作用量取极值的路径：
+\[
+\delta S = \delta \int_{t_1}^{t_2} L(q, \dot{q}, t) \, dt = 0
+\]
+
+边界条件：$q(t_1) = q_a$（固定起点），$q(t_2) = q_b$（固定终点）
+
+\paragraph{应用 E-L 方程}
+
+这正是第4章的变分问题！把 $x \to t$，$y \to q$，$y' \to \dot{q}$，$F \to L$，E-L 方程变成：
+
+\begin{keyformula}[title=拉格朗日方程]
+\begin{equation}
+\boxed{\frac{d}{dt}\frac{\partial L}{\partial \dot{q}_i} - \frac{\partial L}{\partial q_i} = 0, \quad i = 1, 2, \ldots, n}
+\end{equation}
+
+对于 $n$ 个广义坐标，有 $n$ 个这样的方程。
+\end{keyformula}
+
+\subsection{理解拉格朗日方程的结构}
+
+让我们仔细分析这个方程的各个部分：
+
+\[
+\underbrace{\frac{d}{dt}\frac{\partial L}{\partial \dot{q}_i}}_{\text{动量的时间导数}} - \underbrace{\frac{\partial L}{\partial q_i}}_{\text{广义力}} = 0
+\]
+
+\paragraph{广义动量}
+
+定义\textbf{广义动量}（也叫\textbf{共轭动量}）：
+\begin{equation}
+p_i := \frac{\partial L}{\partial \dot{q}_i}
+\end{equation}
+
+这是拉格朗日量对广义速度的偏导数。
+
+\begin{example}[普通动量是广义动量的特例]
+对于笛卡尔坐标下的自由粒子，$L = \frac{1}{2}m\dot{x}^2$。
+
+广义动量：$p_x = \frac{\partial L}{\partial \dot{x}} = m\dot{x}$
+
+这正是我们熟悉的动量 $p = mv$！
+\end{example}
+
+\paragraph{广义力}
+
+定义\textbf{广义力}：
+\begin{equation}
+F_i := \frac{\partial L}{\partial q_i}
+\end{equation}
+
+这是拉格朗日量对广义坐标的偏导数。
+
+对于保守力系统（$L = T - V$，且 $T$ 不显含 $q$）：
+\[
+F_i = \frac{\partial L}{\partial q_i} = -\frac{\partial V}{\partial q_i}
+\]
+
+这正是势能的负梯度——即保守力！
+
+\paragraph{拉格朗日方程的物理意义}
+
+用广义动量和广义力重写拉格朗日方程：
+\[
+\frac{dp_i}{dt} = F_i
+\]
+
+\textbf{动量的变化率等于力}——这就是牛顿第二定律 $F = \dot{p}$！
+
+\begin{insightbox}
+拉格朗日方程不是什么新东西，它就是牛顿第二定律在广义坐标下的表达形式。
+
+但拉格朗日方法的威力在于：
+\begin{enumerate}
+    \item 不需要分析力，只需要写出能量 $T$ 和 $V$
+    \item 可以使用任何方便的坐标
+    \item 约束力自动处理
+\end{enumerate}
+\end{insightbox}
+
+% ------------------------------------------------------------------------------------
+\section{例题详解：从简单到复杂}
+
+\subsection{例1：自由粒子}
+
+一个质量为 $m$ 的粒子在一维空间中自由运动（无势能）。
+
+\paragraph{步骤1：写出拉格朗日量}
+
+动能：$T = \frac{1}{2}m\dot{x}^2$
+
+势能：$V = 0$
+
+拉格朗日量：$L = T - V = \frac{1}{2}m\dot{x}^2$
+
+\paragraph{步骤2：计算偏导数}
+
+\[
+\frac{\partial L}{\partial \dot{x}} = m\dot{x}, \quad \frac{\partial L}{\partial x} = 0
+\]
+
+\paragraph{步骤3：代入拉格朗日方程}
+
+\[
+\frac{d}{dt}(m\dot{x}) - 0 = 0 \quad \Rightarrow \quad m\ddot{x} = 0
+\]
+
+\paragraph{结论}
+
+$\ddot{x} = 0$，即加速度为零——粒子做匀速直线运动。
+
+这就是\textbf{牛顿第一定律}！
+
+\subsection{例2：一维谐振子}
+
+弹簧-质量系统：质量 $m$，弹簧常数 $k$。
+
+\paragraph{步骤1：写出拉格朗日量}
+
+\[
+L = \frac{1}{2}m\dot{x}^2 - \frac{1}{2}kx^2
+\]
+
+\paragraph{步骤2：计算偏导数}
+
+\[
+\frac{\partial L}{\partial \dot{x}} = m\dot{x}, \quad \frac{\partial L}{\partial x} = -kx
+\]
+
+\paragraph{步骤3：代入拉格朗日方程}
+
+\[
+\frac{d}{dt}(m\dot{x}) - (-kx) = 0 \quad \Rightarrow \quad m\ddot{x} + kx = 0
+\]
+
+\paragraph{结论}
+
+这是谐振子方程！解为 $x(t) = A\cos(\omega t + \phi)$，其中 $\omega = \sqrt{k/m}$。
+
+\textbf{验证}：这与牛顿方法得到的结果一致。胡克定律 $F = -kx$ 代入 $F = ma$ 得到 $m\ddot{x} = -kx$。
+
+\subsection{例3：自由落体}
+
+质量为 $m$ 的物体在重力场中下落。
+
+\paragraph{步骤1：写出拉格朗日量}
+
+取向下为 $y$ 的正方向（这样势能为负）。
+
+动能：$T = \frac{1}{2}m\dot{y}^2$
+
+势能：$V = -mgy$（以某个参考点为零势能）
+
+拉格朗日量：$L = \frac{1}{2}m\dot{y}^2 + mgy$
+
+\paragraph{步骤2：计算偏导数}
+
+\[
+\frac{\partial L}{\partial \dot{y}} = m\dot{y}, \quad \frac{\partial L}{\partial y} = mg
+\]
+
+\paragraph{步骤3：代入拉格朗日方程}
+
+\[
+\frac{d}{dt}(m\dot{y}) - mg = 0 \quad \Rightarrow \quad m\ddot{y} = mg \quad \Rightarrow \quad \ddot{y} = g
+\]
+
+\paragraph{结论}
+
+加速度等于重力加速度 $g$——这就是自由落体运动！
+
+\subsection{例4：单摆（用角度坐标）}
+
+长度为 $l$、质量为 $m$ 的单摆。
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[scale=1.8]
+    % 支点
+    \fill (0,0) circle (1.5pt);
+    \draw[thick] (-0.3,0) -- (0.3,0);
+    
+    % 摆杆
+    \draw[thick] (0,0) -- ({1.2*sin(30)},{-1.2*cos(30)});
+    \node at ({0.6*sin(30)+0.15},{-0.6*cos(30)}) {$l$};
+    
+    % 摆球
+    \shade[ball color=blue!30] ({1.2*sin(30)},{-1.2*cos(30)}) circle (4pt);
+    \node[right] at ({1.2*sin(30)+0.1},{-1.2*cos(30)}) {$m$};
+    
+    % 角度
+    \draw[dashed] (0,0) -- (0,-1);
+    \draw[->] (0,-0.5) arc (-90:-60:0.5);
+    \node at (0.25,-0.6) {$\theta$};
+    
+    % 速度方向
+    \draw[->, red, thick] ({1.2*sin(30)},{-1.2*cos(30)}) -- ({1.2*sin(30)+0.4*cos(30)},{-1.2*cos(30)+0.4*sin(30)});
+    \node[red, above right] at ({1.2*sin(30)+0.3},{-1.2*cos(30)+0.2}) {$v = l\dot{\theta}$};
+    
+    % 高度标注
+    \draw[<->, gray] (1.5,0) -- (1.5,{-1.2*cos(30)});
+    \node[gray, right] at (1.5,{-0.6*cos(30)}) {$h = l\cos\theta$};
+\end{tikzpicture}
+\caption{单摆：用角度 $\theta$ 作为广义坐标}
+\end{figure}
+
+\paragraph{步骤1：选择广义坐标}
+
+用角度 $\theta$ 作为广义坐标（只有1个自由度）。
+
+\paragraph{步骤2：用 $\theta$ 表示位置和速度}
+
+位置：
+\[
+x = l\sin\theta, \quad y = -l\cos\theta \quad \text{（取支点为原点，向下为正）}
+\]
+
+速度：
+\[
+\dot{x} = l\dot{\theta}\cos\theta, \quad \dot{y} = l\dot{\theta}\sin\theta
+\]
+
+速度大小：$v = \sqrt{\dot{x}^2 + \dot{y}^2} = l|\dot{\theta}|$
+
+\paragraph{步骤3：写出动能和势能}
+
+动能：
+\[
+T = \frac{1}{2}mv^2 = \frac{1}{2}m(l\dot{\theta})^2 = \frac{1}{2}ml^2\dot{\theta}^2
+\]
+
+势能（取支点为零势能点，向下为负）：
+\[
+V = -mgy = -mg(-l\cos\theta) = mgl\cos\theta
+\]
+
+\textit{注}：当 $\theta = 0$（最低点），$V = mgl$；当 $\theta = \pi/2$（水平），$V = 0$。这个选择使得最低点势能最大，看起来有点奇怪。我们也可以取最低点为零势能点，那么 $V = mgl(1 - \cos\theta)$。这只是一个常数差，不影响运动方程。
+
+为了简单，我们用 $V = -mgl\cos\theta$（取支点下方 $l$ 处为零势能点）。
+
+\paragraph{步骤4：写出拉格朗日量}
+
+\[
+L = T - V = \frac{1}{2}ml^2\dot{\theta}^2 - (-mgl\cos\theta) = \frac{1}{2}ml^2\dot{\theta}^2 + mgl\cos\theta
+\]
+
+\paragraph{步骤5：计算偏导数}
+
+\[
+\frac{\partial L}{\partial \dot{\theta}} = ml^2\dot{\theta}
+\]
+\[
+\frac{\partial L}{\partial \theta} = -mgl\sin\theta
+\]
+
+\paragraph{步骤6：代入拉格朗日方程}
+
+\[
+\frac{d}{dt}(ml^2\dot{\theta}) - (-mgl\sin\theta) = 0
+\]
+\[
+ml^2\ddot{\theta} + mgl\sin\theta = 0
+\]
+
+消去 $ml$：
+\[
+\boxed{l\ddot{\theta} + g\sin\theta = 0 \quad \Leftrightarrow \quad \ddot{\theta} = -\frac{g}{l}\sin\theta}
+\]
+
+\paragraph{讨论}
+
+这就是单摆的运动方程！
+
+\textbf{小角度近似}：当 $\theta$ 很小时，$\sin\theta \approx \theta$，方程变成：
+\[
+\ddot{\theta} = -\frac{g}{l}\theta
+\]
+
+这是谐振子方程！周期 $T = 2\pi\sqrt{l/g}$，与质量无关。
+
+\textbf{注意}：整个推导过程中，我们\textbf{没有分析绳子的张力}！这就是拉格朗日方法的优势。
+
+% ------------------------------------------------------------------------------------
+\section{约束系统与拉格朗日乘子}
+
+\subsection{什么是约束？}
+
+在许多力学问题中，物体的运动受到某些限制：
+\begin{itemize}
+    \item 单摆的小球必须在以支点为圆心、长度为 $l$ 的圆上运动
+    \item 滑块必须沿着斜面运动
+    \item 火车必须沿着轨道运动
+\end{itemize}
+
+这些限制叫做\textbf{约束}。约束可以用方程表示：
+
+\begin{definition}[完整约束]
+形如
+\[
+f(q_1, q_2, \ldots, q_n, t) = 0
+\]
+的约束叫做\textbf{完整约束}（holonomic constraint）。
+\end{definition}
+
+\begin{example}[约束的例子]
+\begin{itemize}
+    \item 单摆：$x^2 + y^2 - l^2 = 0$（小球到支点距离固定）
+    \item 斜面滑块：$y - x\tan\theta = 0$（必须在斜面上）
+    \item 圆环上的珠子：$x^2 + y^2 - R^2 = 0$
+\end{itemize}
+\end{example}
+
+\subsection{约束力的困难}
+
+在牛顿力学中，约束通过\textbf{约束力}来实现：
+\begin{itemize}
+    \item 单摆的绳子张力使小球保持在圆上
+    \item 斜面的支持力使滑块保持在斜面上
+\end{itemize}
+
+问题是：\textbf{约束力的大小是未知的！}
+
+你必须先假设约束力，列出方程，然后从方程中解出约束力。这在复杂系统中非常麻烦。
+
+\subsection{拉格朗日乘子法处理约束}
+
+拉格朗日力学有一个漂亮的方法：用\textbf{拉格朗日乘子}自动处理约束。
+
+\begin{keyformula}[title=带约束的拉格朗日方程]
+设系统有约束 $f(q_1, \ldots, q_n, t) = 0$。
+
+运动方程变为：
+\begin{equation}
+\boxed{\frac{d}{dt}\frac{\partial L}{\partial \dot{q}_i} - \frac{\partial L}{\partial q_i} = \lambda \frac{\partial f}{\partial q_i}}
+\end{equation}
+
+其中 $\lambda$ 是拉格朗日乘子。
+\end{keyformula}
+
+\paragraph{方程右边是什么？}
+
+右边的 $\lambda \frac{\partial f}{\partial q_i}$ 正是\textbf{约束力}在 $q_i$ 方向上的分量！
+
+\begin{physicalmeaning}
+\textbf{拉格朗日乘子 $\lambda$ 就是约束力的大小！}
+
+\begin{itemize}
+    \item 单摆：$\lambda$ = 绳子的张力
+    \item 斜面滑块：$\lambda$ = 斜面的支持力
+    \item 圆环上的珠子：$\lambda$ = 圆环对珠子的反作用力
+\end{itemize}
+
+这与第1章的"影子价格"完全对应：$\lambda$ 告诉我们约束有多"紧"。
+\end{physicalmeaning}
+
+\subsection{例5：用约束坐标分析单摆}
+
+让我们用另一种方法分析单摆——使用笛卡尔坐标 $(x, y)$ 加约束。
+
+\paragraph{设置}
+
+广义坐标：$(x, y)$（2个坐标）
+
+约束：$f(x, y) = x^2 + y^2 - l^2 = 0$
+
+\paragraph{拉格朗日量}
+
+\[
+L = \frac{1}{2}m(\dot{x}^2 + \dot{y}^2) - (-mgy) = \frac{1}{2}m(\dot{x}^2 + \dot{y}^2) + mgy
+\]
+
+（取支点为原点，向下为 $y$ 正方向）
+
+\paragraph{计算偏导数}
+
+\[
+\frac{\partial L}{\partial \dot{x}} = m\dot{x}, \quad \frac{\partial L}{\partial x} = 0
+\]
+\[
+\frac{\partial L}{\partial \dot{y}} = m\dot{y}, \quad \frac{\partial L}{\partial y} = mg
+\]
+
+约束的偏导数：
+\[
+\frac{\partial f}{\partial x} = 2x, \quad \frac{\partial f}{\partial y} = 2y
+\]
+
+\paragraph{带约束的运动方程}
+
+$x$ 方向：
+\[
+\frac{d}{dt}(m\dot{x}) - 0 = \lambda \cdot 2x \quad \Rightarrow \quad m\ddot{x} = 2\lambda x
+\]
+
+$y$ 方向：
+\[
+\frac{d}{dt}(m\dot{y}) - mg = \lambda \cdot 2y \quad \Rightarrow \quad m\ddot{y} = mg + 2\lambda y
+\]
+
+约束方程：
+\[
+x^2 + y^2 = l^2
+\]
+
+这是3个方程，3个未知量 $(x, y, \lambda)$。
+
+\paragraph{求解约束力}
+
+把坐标用角度表示：$x = l\sin\theta$，$y = -l\cos\theta$
+
+代入运动方程，经过计算可以得到：
+\[
+\lambda = -\frac{m}{2l}(g\cos\theta + l\dot{\theta}^2)
+\]
+
+绳子的张力是：
+\[
+T = |2\lambda l| = m(g\cos\theta + l\dot{\theta}^2)
+\]
+
+\paragraph{物理意义}
+
+张力由两部分组成：
+\begin{itemize}
+    \item $mg\cos\theta$：支撑重力的径向分量
+    \item $ml\dot{\theta}^2$：提供向心加速度
+\end{itemize}
+
+这与牛顿方法得到的结果一致！但拉格朗日方法不需要画受力图，约束力\textbf{自动算出来}了。
+
+% ------------------------------------------------------------------------------------
+\section{两种处理约束的策略}
+
+处理约束有两种策略，各有优缺点：
+
+\subsection{策略1：用广义坐标消去约束}
+
+选择恰好等于自由度数目的广义坐标，使约束自动满足。
+
+\textbf{例}：单摆用角度 $\theta$ 作为唯一的广义坐标。
+
+\textbf{优点}：
+\begin{itemize}
+    \item 方程数目最少
+    \item 不需要处理约束力
+\end{itemize}
+
+\textbf{缺点}：
+\begin{itemize}
+    \item 如果需要约束力（如求绳子的张力），还得另外计算
+    \item 有时候找到好的广义坐标很困难
+\end{itemize}
+
+\subsection{策略2：用拉格朗日乘子保留约束}
+
+使用多于自由度的坐标，显式写出约束方程。
+
+\textbf{例}：单摆用 $(x, y)$ 坐标，加约束 $x^2 + y^2 = l^2$。
+
+\textbf{优点}：
+\begin{itemize}
+    \item 约束力自动算出
+    \item 坐标选择更灵活
+    \item 便于数值计算（约束可以用数值方法强制满足）
+\end{itemize}
+
+\textbf{缺点}：
+\begin{itemize}
+    \item 方程数目更多
+    \item 多了乘子作为额外的未知量
+\end{itemize}
+
+\begin{insightbox}
+\textbf{选择哪种策略？}
+
+\begin{itemize}
+    \item 如果只关心运动轨迹，不需要约束力 $\to$ 策略1
+    \item 如果需要计算约束力（如工程设计中需要知道零件受力） $\to$ 策略2
+    \item 如果约束比较复杂，难以用简单坐标描述 $\to$ 策略2
+    \item 数值仿真中通常使用策略2（便于处理约束稳定性）
+\end{itemize}
+\end{insightbox}
+
+% ------------------------------------------------------------------------------------
+\section{守恒律与对称性}
+
+拉格朗日力学的另一个优美之处是：它自动揭示守恒律。
+
+\subsection{当 $L$ 不显含某个坐标时}
+
+如果拉格朗日量 $L$ 不显含某个坐标 $q_i$（即 $\frac{\partial L}{\partial q_i} = 0$），拉格朗日方程变成：
+\[
+\frac{d}{dt}\frac{\partial L}{\partial \dot{q}_i} = 0
+\]
+
+这意味着：
+\[
+p_i = \frac{\partial L}{\partial \dot{q}_i} = \text{常数}
+\]
+
+\textbf{结论}：对应的广义动量守恒！
+
+\begin{definition}[循环坐标]
+不出现在拉格朗日量中的坐标叫做\textbf{循环坐标}（cyclic coordinate）或\textbf{可遗坐标}（ignorable coordinate）。
+
+循环坐标对应的广义动量是守恒量。
+\end{definition}
+
+\begin{example}[平移不变性 $\to$ 动量守恒]
+自由粒子：$L = \frac{1}{2}m\dot{x}^2$
+
+$L$ 不含 $x$ $\Rightarrow$ $x$ 是循环坐标 $\Rightarrow$ $p_x = m\dot{x}$ 守恒
+\end{example}
+
+\begin{example}[旋转不变性 $\to$ 角动量守恒]
+中心力场中的粒子（如行星绕太阳运动）：
+\[
+L = \frac{1}{2}m(\dot{r}^2 + r^2\dot{\theta}^2) - V(r)
+\]
+
+$L$ 不含 $\theta$ $\Rightarrow$ $\theta$ 是循环坐标 $\Rightarrow$ $p_\theta = mr^2\dot{\theta}$ 守恒
+
+$p_\theta$ 正是角动量！这就是开普勒第二定律（行星扫过相等面积）的数学基础。
+\end{example}
+
+\subsection{当 $L$ 不显含时间时——能量守恒}
+
+如果 $L$ 不显含时间 $t$（即 $\frac{\partial L}{\partial t} = 0$），有一个更深刻的守恒量。
+
+\begin{keytheorem}[title=能量守恒]
+若 $L(q, \dot{q})$ 不显含 $t$，则\textbf{哈密顿量}
+\begin{equation}
+H := \sum_i \dot{q}_i \frac{\partial L}{\partial \dot{q}_i} - L
+\end{equation}
+是守恒量。
+
+对于"正常"的力学系统（动能是速度的二次函数），$H = T + V$ 就是总能量。
+\end{keytheorem}
+
+\begin{proof}[验证]
+计算 $H$ 对时间的全导数：
+\begin{align}
+\frac{dH}{dt} &= \sum_i \left[ \ddot{q}_i \frac{\partial L}{\partial \dot{q}_i} + \dot{q}_i \frac{d}{dt}\frac{\partial L}{\partial \dot{q}_i} \right] - \frac{dL}{dt} \\
+&= \sum_i \left[ \ddot{q}_i \frac{\partial L}{\partial \dot{q}_i} + \dot{q}_i \frac{d}{dt}\frac{\partial L}{\partial \dot{q}_i} \right] - \sum_i \left[ \frac{\partial L}{\partial q_i}\dot{q}_i + \frac{\partial L}{\partial \dot{q}_i}\ddot{q}_i \right] - \frac{\partial L}{\partial t} \\
+&= \sum_i \dot{q}_i \left[ \frac{d}{dt}\frac{\partial L}{\partial \dot{q}_i} - \frac{\partial L}{\partial q_i} \right] - \frac{\partial L}{\partial t}
+\end{align}
+
+由拉格朗日方程，方括号里是零。如果 $\frac{\partial L}{\partial t} = 0$，则 $\frac{dH}{dt} = 0$。
+\end{proof}
+
+\begin{physicalmeaning}
+\textbf{对称性与守恒律的对应}（Noether 定理）：
+
+\begin{center}
+\begin{tabular}{c|c}
+\toprule
+\textbf{对称性} & \textbf{守恒量} \\
+\midrule
+空间平移不变 & 动量 \\
+空间旋转不变 & 角动量 \\
+时间平移不变 & 能量 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+这是物理学中最深刻的联系之一。
+\end{physicalmeaning}
+
+% ------------------------------------------------------------------------------------
+\section{案例：双摆与混沌}
+
+让我们用拉格朗日方法分析一个更复杂的系统——双摆。
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[scale=1.5]
+    % 支点
+    \fill (0,0) circle (2pt);
+    \draw[thick] (-0.3,0) -- (0.3,0);
+    
+    % 第一个摆
+    \draw[thick] (0,0) -- ({1.2*sin(40)},{-1.2*cos(40)});
+    \node[left] at ({0.5*sin(40)},{-0.5*cos(40)}) {$l_1$};
+    \shade[ball color=blue!30] ({1.2*sin(40)},{-1.2*cos(40)}) circle (4pt);
+    \node[left] at ({1.2*sin(40)-0.15},{-1.2*cos(40)}) {$m_1$};
+    
+    % 第二个摆
+    \draw[thick] ({1.2*sin(40)},{-1.2*cos(40)}) -- ({1.2*sin(40)+1*sin(70)},{-1.2*cos(40)-1*cos(70)});
+    \node[right] at ({1.2*sin(40)+0.4*sin(70)},{-1.2*cos(40)-0.4*cos(70)}) {$l_2$};
+    \shade[ball color=red!30] ({1.2*sin(40)+1*sin(70)},{-1.2*cos(40)-1*cos(70)}) circle (4pt);
+    \node[right] at ({1.2*sin(40)+1*sin(70)+0.1},{-1.2*cos(40)-1*cos(70)}) {$m_2$};
+    
+    % 角度
+    \draw[dashed] (0,0) -- (0,-1);
+    \draw[->] (0,-0.5) arc (-90:-50:0.5);
+    \node at (0.25,-0.65) {$\theta_1$};
+    
+    \draw[dashed] ({1.2*sin(40)},{-1.2*cos(40)}) -- ({1.2*sin(40)},{-1.2*cos(40)-0.8});
+    \draw[->] ({1.2*sin(40)},{-1.2*cos(40)-0.4}) arc (-90:-20:0.4);
+    \node at ({1.2*sin(40)+0.35},{-1.2*cos(40)-0.5}) {$\theta_2$};
+\end{tikzpicture}
+\caption{双摆系统}
+\end{figure}
+
+\subsection{建立拉格朗日量}
+
+\paragraph{广义坐标}：$(\theta_1, \theta_2)$（2个自由度）
+
+\paragraph{第一个摆球的位置和速度}
+
+\[
+x_1 = l_1 \sin\theta_1, \quad y_1 = -l_1 \cos\theta_1
+\]
+\[
+\dot{x}_1 = l_1 \dot{\theta}_1 \cos\theta_1, \quad \dot{y}_1 = l_1 \dot{\theta}_1 \sin\theta_1
+\]
+\[
+v_1^2 = \dot{x}_1^2 + \dot{y}_1^2 = l_1^2 \dot{\theta}_1^2
+\]
+
+\paragraph{第二个摆球的位置和速度}
+
+\[
+x_2 = l_1 \sin\theta_1 + l_2 \sin\theta_2, \quad y_2 = -l_1 \cos\theta_1 - l_2 \cos\theta_2
+\]
+\[
+\dot{x}_2 = l_1 \dot{\theta}_1 \cos\theta_1 + l_2 \dot{\theta}_2 \cos\theta_2
+\]
+\[
+\dot{y}_2 = l_1 \dot{\theta}_1 \sin\theta_1 + l_2 \dot{\theta}_2 \sin\theta_2
+\]
+
+$v_2^2$ 的计算比较复杂：
+\[
+v_2^2 = l_1^2 \dot{\theta}_1^2 + l_2^2 \dot{\theta}_2^2 + 2l_1 l_2 \dot{\theta}_1 \dot{\theta}_2 \cos(\theta_1 - \theta_2)
+\]
+
+\paragraph{动能}
+
+\[
+T = \frac{1}{2}m_1 v_1^2 + \frac{1}{2}m_2 v_2^2
+\]
+\[
+= \frac{1}{2}(m_1 + m_2) l_1^2 \dot{\theta}_1^2 + \frac{1}{2}m_2 l_2^2 \dot{\theta}_2^2 + m_2 l_1 l_2 \dot{\theta}_1 \dot{\theta}_2 \cos(\theta_1 - \theta_2)
+\]
+
+\paragraph{势能}
+
+\[
+V = m_1 g y_1 + m_2 g y_2 = -(m_1 + m_2) g l_1 \cos\theta_1 - m_2 g l_2 \cos\theta_2
+\]
+
+\paragraph{拉格朗日量}
+
+\[
+L = T - V
+\]
+
+这是一个相当复杂的表达式！
+
+\subsection{运动方程}
+
+对 $\theta_1$ 和 $\theta_2$ 分别应用拉格朗日方程，得到两个耦合的二阶微分方程。
+
+方程很长，我们不写出完整形式。重要的是：
+\begin{itemize}
+    \item 推导过程是\textbf{机械的}——只需要求偏导数和全导数
+    \item 不需要分析任何力
+    \item 约束（两段摆杆的长度固定）自动满足
+\end{itemize}
+
+\subsection{混沌行为}
+
+双摆是最简单的\textbf{混沌系统}之一。
+
+\begin{definition}[混沌]
+确定性系统对初始条件\textbf{极其敏感}的行为叫做混沌。两个几乎相同的初始状态，经过足够长时间后会演化出完全不同的轨迹。
+\end{definition}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[scale=0.8]
+    % 两条轨迹
+    \draw[blue, thick] plot[smooth] coordinates {(0,0) (0.5,0.3) (1,0.8) (1.5,0.5) (2,1.2) (2.5,0.3) (3,1.5) (3.5,0.8) (4,2)};
+    \draw[red, thick] plot[smooth] coordinates {(0,0.05) (0.5,0.35) (1,0.75) (1.5,0.6) (2,0.9) (2.5,1.5) (3,0.5) (3.5,2) (4,0.3)};
+    
+    % 标注
+    \node at (0,-0.5) {\small 初始条件几乎相同};
+    \draw[<->] (4.5,0.3) -- (4.5,2);
+    \node[right] at (4.5,1.15) {\small 结果完全不同};
+    
+    % 轴
+    \draw[->] (-0.5,0) -- (5,0) node[right] {时间};
+    \draw[->] (0,-0.5) -- (0,2.5) node[above] {状态};
+\end{tikzpicture}
+\caption{混沌系统的特征：初始条件的微小差异导致完全不同的结果}
+\end{figure}
+
+双摆虽然是完全确定性的系统（没有任何随机性），但它的长期行为实际上是\textbf{不可预测}的——因为我们永远无法精确测量初始条件。
+
+这就是"确定性混沌"：方程是确定的，但结果是不可预测的。
+
+% ------------------------------------------------------------------------------------
+\section{拉格朗日方法的威力}
+
+让我们总结拉格朗日方法相比牛顿方法的优势：
+
+\subsection{优势1：不需要分析力}
+
+\textbf{牛顿方法}：需要画受力图，分析所有力（重力、张力、支持力、摩擦力……）
+
+\textbf{拉格朗日方法}：只需要写出动能 $T$ 和势能 $V$，约束力自动处理
+
+\subsection{优势2：坐标选择灵活}
+
+\textbf{牛顿方法}：通常用笛卡尔坐标，坐标变换需要重新分析力
+
+\textbf{拉格朗日方法}：可以用任何方便的广义坐标，方程形式不变
+
+\begin{example}[球面上的运动]
+一个粒子被约束在球面上运动。
+
+\textbf{牛顿方法}：用 $(x, y, z)$ 坐标，需要引入指向球心的约束力。
+
+\textbf{拉格朗日方法}：用球坐标 $(\theta, \phi)$，约束自动满足，只有2个方程。
+\end{example}
+
+\subsection{优势3：揭示深层结构}
+
+\begin{itemize}
+    \item 对称性与守恒律的联系
+    \item 变分原理的统一视角
+    \item 推广到场论和量子力学
+\end{itemize}
+
+\subsection{优势4：便于数值计算}
+
+现代物理仿真（如游戏引擎、机器人仿真）大量使用拉格朗日方法：
+\begin{itemize}
+    \item 约束可以用数值方法强制满足
+    \item 辛积分器保持能量守恒
+    \item 便于处理复杂的多体系统
+\end{itemize}
+
+% ------------------------------------------------------------------------------------
+% 代码演示结果
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\textwidth]{figs/chap04_fig1.png}
+\caption{双摆混沌演示：初值敏感性。两条轨迹的初始角度仅相差0.001弧度（约0.057度）。左上：$\theta_1$随时间变化——约6秒后轨迹开始显著分离；右上：相空间轨迹显示混沌吸引子结构；左下：轨迹差异随时间指数增长（混沌的标志）；右下：双摆末端的实际轨迹，展示蝴蝶效应的生动体现。}
+\label{fig:chap04_double_pendulum}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figs/chap04_fig2.png}
+\caption{单摆：小角度近似的有效范围。左图：不同初始角度下精确解（实线）与近似解（虚线）的对比——$\theta_0 < 30°$时两者几乎重合；中图：周期误差分析——$\theta_0 = 30°$时误差约2\%，$\theta_0 = 90°$时误差超过15\%；右图：相空间对比——小角度近似给出椭圆（蓝），精确解给出更复杂的曲线（红），差异在大振幅时明显。}
+\label{fig:chap04_simple_pendulum}
+\end{figure}
+
+% ------------------------------------------------------------------------------------
+\section{本章小结}
+
+\begin{enumerate}
+    \item \textbf{最小作用量原理}：自然选择使作用量 $S = \int L \, dt$ 取极值的路径。这是比牛顿定律更深刻的原理。
+    
+    \item \textbf{拉格朗日量}：$L = T - V$（动能减势能）。作用量是拉格朗日量对时间的积分。
+    
+    \item \textbf{拉格朗日方程}：
+    \[
+    \frac{d}{dt}\frac{\partial L}{\partial \dot{q}_i} - \frac{\partial L}{\partial q_i} = 0
+    \]
+    这是变分法在力学中的应用，与第4章的 E-L 方程完全一致。
+    
+    \item \textbf{约束处理}：
+    \begin{itemize}
+        \item 策略1：用广义坐标消去约束
+        \item 策略2：用拉格朗日乘子，$\lambda$ 自动给出约束力
+    \end{itemize}
+    
+    \item \textbf{守恒律}：
+    \begin{itemize}
+        \item $L$ 不含 $q_i$ $\Rightarrow$ $p_i = \frac{\partial L}{\partial \dot{q}_i}$ 守恒
+        \item $L$ 不含 $t$ $\Rightarrow$ 能量 $H = T + V$ 守恒
+    \end{itemize}
+\end{enumerate}
+
+\begin{physicalmeaning}
+\textbf{$\lambda$ 在力学中的意义}：
+
+拉格朗日乘子就是\textbf{约束力}本身！
+\begin{itemize}
+    \item 单摆的绳子张力
+    \item 斜面的支持力
+    \item 铰链的反作用力
+    \item ……
+\end{itemize}
+
+这与第1章的"影子价格"完美对应：约束力告诉我们，如果约束稍微放松一点，系统的能量会变化多少。
+
+从优化问题的影子价格，到物理系统的约束力，$\lambda$ 的意义在不同领域间美妙地统一。
+\end{physicalmeaning}
+
+% ------------------------------------------------------------------------------------
+\section{习题}
+
+\paragraph{计算题}
+\begin{enumerate}
+    \item 一个质量为 $m$ 的小球沿光滑斜面（倾角 $\theta$）下滑。
+    \begin{enumerate}
+        \item 用沿斜面的位移 $s$ 作为广义坐标，写出拉格朗日量
+        \item 用拉格朗日方程求加速度
+        \item 与牛顿方法的结果比较
+    \end{enumerate}
+    
+    \item 弹簧单摆：质量为 $m$ 的小球连在弹簧（自然长度 $l_0$，弹簧常数 $k$）的末端，在竖直平面内运动。
+    \begin{enumerate}
+        \item 选择合适的广义坐标（提示：用极坐标 $r, \theta$）
+        \item 写出拉格朗日量
+        \item 写出运动方程（不需要求解）
+    \end{enumerate}
+    
+    \item 对于单摆，用笛卡尔坐标 $(x, y)$ 加约束 $x^2 + y^2 = l^2$：
+    \begin{enumerate}
+        \item 写出带乘子的运动方程
+        \item 求出拉格朗日乘子 $\lambda$ 与角度 $\theta$ 的关系
+        \item 验证绳子张力 $T = m(g\cos\theta + l\dot{\theta}^2)$
+    \end{enumerate}
+    
+    \item 阿特伍德机：两个质量 $m_1$ 和 $m_2$ 的物体通过轻绳连接，绑在定滑轮两侧。
+    \begin{enumerate}
+        \item 选择一个广义坐标（只有1个自由度）
+        \item 写出拉格朗日量
+        \item 求系统的加速度
+    \end{enumerate}
+\end{enumerate}
+
+\paragraph{证明题}
+\begin{enumerate}
+    \setcounter{enumi}{4}
+    \item 证明：如果 $L$ 不显含时间 $t$，则哈密顿量 $H = \sum_i \dot{q}_i \frac{\partial L}{\partial \dot{q}_i} - L$ 守恒。
+    
+    \item 证明：对于 $L = T - V$，如果 $T = \frac{1}{2}\sum_{ij} M_{ij}(q)\dot{q}_i\dot{q}_j$（动能是速度的二次函数），则 $H = T + V$。
+    
+    \item 证明拉格朗日方程在坐标变换下形式不变：如果 $q = q(Q, t)$，则新坐标 $Q$ 满足相同形式的方程。
+\end{enumerate}
+
+\paragraph{编程题}
+\begin{enumerate}
+    \setcounter{enumi}{7}
+    \item 单摆仿真：
+    \begin{enumerate}
+        \item 用四阶 Runge-Kutta 方法求解单摆方程
+        \item 画出 $\theta(t)$ 和相图 $(\theta, \dot{\theta})$
+        \item 比较小角度近似与精确解的差异
+    \end{enumerate}
+    
+    \item 双摆仿真：
+    \begin{enumerate}
+        \item 推导双摆的运动方程（可以用符号计算软件辅助）
+        \item 用数值方法求解并可视化运动
+        \item 展示混沌行为：比较两个初始条件相差 $0.001$ 弧度的轨迹
+    \end{enumerate}
+    
+    \item 实现辛积分器（Störmer-Verlet 方法）：
+    \begin{enumerate}
+        \item 对谐振子和单摆实现辛积分
+        \item 比较与普通欧拉法的能量守恒性能
+        \item 长时间仿真，观察能量漂移
+    \end{enumerate}
+\end{enumerate}
+
+\paragraph{思考题}
+\begin{enumerate}
+    \setcounter{enumi}{10}
+    \item 为什么拉格朗日量是 $T - V$ 而不是 $T + V$？如果用 $T + V$ 会发生什么？
+    
+    \item 拉格朗日方法和牛顿方法本质上是等价的吗？有没有一种方法能做到而另一种方法做不到的事情？
+    
+    \item 量子力学的路径积分表述与最小作用量原理有什么关系？为什么费曼说"粒子探索所有可能的路径"？
+    
+    \item 双摆是确定性系统，为什么它的行为是"不可预测"的？这与随机性有什么区别？
+    
+    \item 在机器人学中（第7章），我们将用 $M(q)\ddot{q} + C(q,\dot{q})\dot{q} + G(q) = \tau$ 描述动力学。这与拉格朗日方程有什么关系？
+\end{enumerate}
