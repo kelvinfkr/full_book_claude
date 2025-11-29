@@ -85,7 +85,8 @@ def create_brachistochrone_figure():
     ax1.legend(fontsize=10)
     ax1.grid(True, alpha=0.3)
     ax1.set_aspect('equal')
-    ax1.invert_yaxis()
+    # 注意：y值已经是负数（y_B=-3），不需要invert_yaxis()
+    # 标准坐标系中，负y值自然在下方，正确表示下落
 
     # === 子图2: 下滑时间计算 ===
     ax2 = axes[1]
