@@ -748,70 +748,108 @@ MAPPO使用Actor-Critic架构：
 \end{itemize}
 \end{example}
 
-\subsection{MFG的核心方程组}
+\subsection{MFG的核心思想：两步不动点}
 
-平均场博弈由两个耦合的PDE描述：
+理解MFG最关键的是把它看成一个\textbf{两步迭代过程}，最终要找的是一个\textbf{不动点}：
+
+\begin{keyidea}[MFG的不动点结构——给大二同学的直观解释]
+想象你是无数智能体中的一个，你需要做两件事：
+
+\textbf{第一步：猜测别人的行为}
+
+你不知道每个具体对手会做什么，但你可以``猜''一个群体分布$m(x,t)$——表示``在时刻$t$，有多少比例的智能体在位置$x$附近''。
+
+\textbf{第二步：基于猜测，优化自己}
+
+假设群体分布就是$m$，那么你面临的是一个\textbf{单人最优控制问题}——环境（别人的分布）已经固定了，你只需要最小化自己的代价。解这个问题得到\textbf{最优策略}$\pi^*(m)$和对应的\textbf{价值函数}$u(x,t)$。
+
+\textbf{第三步：验证猜测是否自洽}
+
+如果每个智能体都用$\pi^*(m)$这个策略，那么所有人的运动会产生一个新的密度分布$m'$。问题来了：$m'$和你最初猜的$m$一样吗？
+
+\textbf{不动点条件}：如果$m' = m$，说明你的猜测是自洽的——每个人基于这个分布做最优决策，而这些最优决策恰好产生了这个分布。这就是\textbf{纳什均衡}！
+
+\begin{center}
+\begin{tikzpicture}[>=stealth, scale=0.9]
+    \node[draw, rounded corners, fill=blue!15, minimum width=3cm, minimum height=1.2cm, align=center] (m) at (0, 0) {群体分布\\$m(x,t)$};
+    \node[draw, rounded corners, fill=orange!15, minimum width=3cm, minimum height=1.2cm, align=center] (u) at (6, 0) {最优策略/价值函数\\$u(x,t), \pi^*$};
+
+    \draw[->, thick] (m.east) -- node[above, font=\small] {固定$m$，解最优控制} node[below, font=\small, gray] {(HJB方程)} (u.west);
+    \draw[->, thick] (u.south) .. controls (6, -2) and (0, -2) .. node[below, font=\small] {按$\pi^*$行动，推导密度} node[above, font=\small, gray] {(FP方程)} (m.south);
+
+    \node[font=\small, red] at (3, -2.8) {\textbf{不动点}：$m \xrightarrow{\text{HJB}} u \xrightarrow{\text{FP}} m$};
+\end{tikzpicture}
+\end{center}
+\end{keyidea}
+
+\subsection{MFG的数学方程}
+
+上面的直觉对应两个偏微分方程：
 
 \begin{keyformula}[title=平均场博弈方程组]
-\textbf{1. Hamilton-Jacobi-Bellman方程}（后向，描述最优控制）：
+\textbf{1. HJB方程}（``给定$m$，求最优策略''）：
 \begin{equation}
     -\frac{\partial u}{\partial t} - H(x, \nabla u, m) = 0, \quad u(x, T) = g(x)
 \end{equation}
+这是一个\textbf{后向方程}：从终端条件$g(x)$出发，往回算每个时刻的最优代价$u(x,t)$。
 
-\textbf{变量含义}：
-\begin{itemize}
-    \item $u(x, t)$：价值函数——从位置$x$、时刻$t$开始的最优代价
-    \item $H$：哈密顿量——控制代价和动力学的综合
-    \item $g(x)$：终端代价——在最终时刻$T$位于$x$的代价
-    \item $\nabla u$：价值函数的梯度，与最优控制相关
-\end{itemize}
-
-\textbf{2. Fokker-Planck方程}（前向，描述密度演化）：
+\textbf{2. FP方程}（``给定最优策略，算密度演化''）：
 \begin{equation}
     \frac{\partial m}{\partial t} + \nabla \cdot (m \cdot v^*) - \nu \Delta m = 0, \quad m(x, 0) = m_0(x)
 \end{equation}
+这是一个\textbf{前向方程}：从初始分布$m_0(x)$出发，根据最优速度场$v^* = -\nabla_p H$往前推演密度如何变化。
 
-\textbf{变量含义}：
+\textbf{耦合与不动点}：
 \begin{itemize}
-    \item $m(x, t)$：密度分布——时刻$t$在位置$x$的智能体密度
-    \item $v^* = -\nabla_p H$：最优速度场——由价值函数决定的最优移动方向
-    \item $\nu$：扩散系数——智能体运动的随机性
-    \item $m_0(x)$：初始分布
+    \item HJB需要$m$：你的最优策略取决于别人在哪里（拥挤效应等）
+    \item FP需要$u$：密度演化取决于大家的最优运动方向
+    \item \textbf{纳什均衡} = 同时满足两个方程的$(u^*, m^*)$
 \end{itemize}
-
-\textbf{3. 耦合条件}：
-\begin{itemize}
-    \item HJB方程依赖于$m$：你的最优策略取决于群体分布
-    \item FP方程依赖于$u$：群体分布由所有人的最优策略决定
-\end{itemize}
-
-\textbf{纳什均衡}：寻找$(u^*, m^*)$使得上述两个方程同时成立。
 \end{keyformula}
 
 \begin{remark}[物理直觉]
-这两个方程有深刻的物理对应：
-
 \begin{itemize}
-    \item \textbf{HJB方程}：类似于量子力学中的Schrödinger方程，描述"波函数"（价值函数）的演化
+    \item \textbf{HJB方程}：类似量子力学中的Schrödinger方程，描述``价值波''的演化
     \item \textbf{FP方程}：就是连续性方程/扩散方程，描述概率密度的输运
-    \item \textbf{耦合}：HJB依赖于$m$（我的策略取决于群体），FP依赖于$u$（群体分布由大家的策略决定）
+\end{itemize}
+MFG是统计力学和最优控制的交叉——群体行为的``热力学''。
+\end{remark}
+
+\begin{example}[线性二次MFG——一个可以精确求解的例子]
+为了让上面的抽象方程变得具体，我们考虑一个最简单的MFG问题：
+
+\textbf{场景}：无穷多个智能体在一维空间$x \in \mathbb{R}$上运动，时间$t \in [0, T]$。
+
+\textbf{每个智能体的目标}：最小化自己的代价
+\begin{equation}
+    J = \int_0^T \left[ \frac{1}{2}v^2 + \frac{\alpha}{2}(x - \bar{x})^2 \right] dt + \frac{1}{2}x(T)^2
+\end{equation}
+其中：
+\begin{itemize}
+    \item $\frac{1}{2}v^2$：控制代价——速度越大，``油费''越贵
+    \item $\frac{\alpha}{2}(x - \bar{x})^2$：\textbf{拥挤代价}——离群体平均位置$\bar{x} = \int x \, m(x,t) dx$越远越好（或越近越好，取决于$\alpha$的符号）
+    \item $\frac{1}{2}x(T)^2$：终端代价——最后希望靠近原点
 \end{itemize}
 
-MFG是统计力学和最优控制的交叉——群体行为的"热力学"。
-\end{remark}
+\textbf{动力学}：每个智能体按$\dot{x} = v$运动，并受布朗运动扰动（扩散系数$\nu$）。
+
+\textbf{初始条件}：所有智能体初始集中在原点附近，$m_0(x) \sim \mathcal{N}(0, \sigma_0^2)$。
+
+这个问题的MFG方程可以用有限差分法数值求解。图\ref{fig:mfg}展示了求解结果。
+\end{example}
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.95\textwidth]{figs_chap15/mfg_solution.pdf}
-\caption{平均场博弈的数值解示例（线性二次情形）。左上：密度分布$m(x,t)$随时间的演化，初始集中在原点附近，逐渐扩散。右上：价值函数$u(x,t)$，终端条件为二次型$g(x)=x^2$。左下：不同时刻的密度剖面，展示群体从集中到分散的过程。右下：最优速度场（箭头）和密度轮廓线（红色），展示智能体的最优运动方向。}
+\caption{线性二次MFG的数值解。左上：密度分布$m(x,t)$随时间的演化，初始集中在原点附近，逐渐扩散。右上：价值函数$u(x,t)$，终端条件为二次型$g(x)=x^2$（越远离原点代价越高）。左下：不同时刻的密度剖面，展示群体从集中到分散的过程。右下：最优速度场（箭头）和密度轮廓线（红色），展示智能体的最优运动方向——总体趋势是向原点靠拢。}
 \label{fig:mfg}
 \end{figure}
 
-图\ref{fig:mfg}展示了一个简单MFG的数值解。可以观察到：
+\textbf{从图中可以观察到}：
 \begin{itemize}
-    \item 密度分布从初始的集中状态逐渐扩散开
-    \item 价值函数满足终端条件，并向后演化
-    \item 最优速度场指向"更好"的区域（价值更低的地方）
+    \item \textbf{左上}：密度分布从初始的高斯分布逐渐扩散，但由于终端代价的``吸引''，最终并没有完全散开
+    \item \textbf{右上}：价值函数在$t=T$时是$u(x,T) = x^2$（碗形），越早的时刻价值越平缓
+    \item \textbf{右下}：速度场箭头指向原点方向——每个智能体的最优策略是向原点移动，因为终端代价惩罚远离原点
 \end{itemize}
 
 % ====================================================================================
