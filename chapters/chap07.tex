@@ -105,6 +105,8 @@ SCARA（平面装配） & 4 & $n < 6$ & 只能在平面内运动 \\
 
 描述物体在三维空间中的位置和姿态，需要同时处理旋转和平移。\textbf{齐次变换矩阵}把这两者统一成一个 $4 \times 4$ 矩阵：
 
+\marginnote{\textbf{D-H参数}：机器人运动学的标准表示法由Jacques Denavit和Richard Hartenberg于1955年提出。这套参数用4个数描述每个关节，使得任何串联机械臂都能用统一的框架分析。几乎所有工业机器人的技术手册都使用D-H参数。}
+
 \begin{definition}[齐次变换]
 \begin{equation}
 T = \begin{bmatrix} R & p \\ 0 & 1 \end{bmatrix} \in SE(3)
