@@ -117,6 +117,9 @@
     showstringspaces=false,
     tabsize=4,
     captionpos=b,
+    aboveskip=\baselineskip,  % 确保listing前有足够空间
+    belowskip=\baselineskip,
+    resetmargins=true,        % 重置边距，避免paragraph后缩进问题
 }
 
 \lstdefinestyle{decision}{

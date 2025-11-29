@@ -849,37 +849,37 @@ print(f"dy/dx = {x.grad}")   # 8.0（理论值：2x + 2 = 8）
 \begin{center}
 \begin{tikzpicture}[
     node distance=0.8cm,
-    box/.style={draw, rounded corners, minimum width=2.5cm, minimum height=0.7cm, font=\small\ttfamily},
+    box/.style={draw, rounded corners, minimum width=3cm, minimum height=0.7cm, font=\small\ttfamily},
     arrow/.style={->, thick, >=stealth}
 ]
     % 原始表达式
     \node[box, fill=gray!10] (expr) {x * x + x * 2 + 1};
-    \node[left of=expr, xshift=-1.5cm, font=\small] {原始表达式};
-    
+    \node[left of=expr, xshift=-2cm, font=\small] {原始表达式};
+
     % Step 1
     \node[box, fill=blue!10] (s1) [below=of expr] {(x * x) + x * 2 + 1};
-    \node[left of=s1, xshift=-1.5cm, font=\small] {Step 1};
-    \node[right of=s1, xshift=2.5cm, font=\small, text=gray] {调用 \texttt{x.\_\_mul\_\_(x)} $\to$ 返回 $m_1$};
-    
+    \node[left of=s1, xshift=-2cm, font=\small] {Step 1};
+    \node[anchor=west, font=\small, text=gray] at ([xshift=1.8cm]s1.east) {调用 \texttt{x.\_\_mul\_\_(x)} $\to$ 返回 $m_1$};
+
     % Step 2
     \node[box, fill=blue!10] (s2) [below=of s1] {m1 + (x * 2) + 1};
-    \node[left of=s2, xshift=-1.5cm, font=\small] {Step 2};
-    \node[right of=s2, xshift=2.5cm, font=\small, text=gray] {调用 \texttt{x.\_\_mul\_\_(2)} $\to$ 返回 $m_2$};
-    
+    \node[left of=s2, xshift=-2cm, font=\small] {Step 2};
+    \node[anchor=west, font=\small, text=gray] at ([xshift=1.8cm]s2.east) {调用 \texttt{x.\_\_mul\_\_(2)} $\to$ 返回 $m_2$};
+
     % Step 3
     \node[box, fill=green!10] (s3) [below=of s2] {(m1 + m2) + 1};
-    \node[left of=s3, xshift=-1.5cm, font=\small] {Step 3};
-    \node[right of=s3, xshift=2.5cm, font=\small, text=gray] {调用 \texttt{m1.\_\_add\_\_(m2)} $\to$ 返回 $s_1$};
-    
+    \node[left of=s3, xshift=-2cm, font=\small] {Step 3};
+    \node[anchor=west, font=\small, text=gray] at ([xshift=1.8cm]s3.east) {调用 \texttt{m1.\_\_add\_\_(m2)} $\to$ 返回 $s_1$};
+
     % Step 4
     \node[box, fill=green!10] (s4) [below=of s3] {s1 + 1};
-    \node[left of=s4, xshift=-1.5cm, font=\small] {Step 4};
-    \node[right of=s4, xshift=2.5cm, font=\small, text=gray] {调用 \texttt{s1.\_\_add\_\_(1)} $\to$ 返回 $y$};
-    
+    \node[left of=s4, xshift=-2cm, font=\small] {Step 4};
+    \node[anchor=west, font=\small, text=gray] at ([xshift=1.8cm]s4.east) {调用 \texttt{s1.\_\_add\_\_(1)} $\to$ 返回 $y$};
+
     % 最终
     \node[box, fill=red!10] (final) [below=of s4] {y};
-    \node[left of=final, xshift=-1.5cm, font=\small] {完成};
-    
+    \node[left of=final, xshift=-2cm, font=\small] {完成};
+
     % 箭头
     \draw[arrow] (expr) -- (s1);
     \draw[arrow] (s1) -- (s2);

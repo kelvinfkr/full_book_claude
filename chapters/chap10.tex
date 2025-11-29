@@ -662,22 +662,22 @@ r(s_t,a)+\gamma V(f(s_t,a))
         (2,-1.5) .. controls (4,-2.5) and (6,-1.5) .. (8,0);
     \node[blue!60] at (5.5,-2.3) {\small $w=6$};
     
-    % 拉紧的绳子（水平直线）- 最短路径
-    \draw[red, very thick] (0,0) -- (4,0);
-    \node[red, above] at (2,0) {\small $w=2$（拉紧）};
-    
-    \draw[red, very thick] (4,0) -- (6,0);
-    \node[red, above] at (5,0) {\small $w=1$（拉紧）};
-    
-    \draw[red, very thick] (6,0) -- (8,0);
-    \node[red, above] at (7,0) {\small $w=1$（拉紧）};
-    
-    % 顶点
+    % 顶点（先画顶点，再画线和标签，确保标签在最上层）
     \node[circle, draw, fill=blue!20, minimum size=10mm] (s) at (0,0) {$s$};
     \node[circle, draw, fill=white, minimum size=10mm] (a) at (4,0) {$a$};
     \node[circle, draw, fill=white, minimum size=10mm] (b) at (2,-1.5) {$b$};
     \node[circle, draw, fill=white, minimum size=10mm] (c) at (6,0) {$c$};
     \node[circle, draw, fill=green!20, minimum size=10mm] (t) at (8,0) {$t$};
+
+    % 拉紧的绳子（水平直线）- 最短路径，在节点之间
+    \draw[red, very thick] (s.east) -- (a.west);
+    \draw[red, very thick] (a.east) -- (c.west);
+    \draw[red, very thick] (c.east) -- (t.west);
+
+    % 拉紧标签（放在线的上方，避开节点）
+    \node[red, fill=white, inner sep=1pt] at (2,0.25) {\scriptsize $w=2$};
+    \node[red, fill=white, inner sep=1pt] at (5,0.25) {\scriptsize $w=1$};
+    \node[red, fill=white, inner sep=1pt] at (7,0.25) {\scriptsize $w=1$};
     
     % 势能标注
     \node[above] at (0,0.6) {$V_s = 0$};
@@ -1413,32 +1413,33 @@ def 选择算法(问题):
 \begin{tikzpicture}[scale=0.9]
     % 画网格
     \draw[step=1, gray!50, thin] (0,0) grid (5,5);
-    
-    % 起点
+
+    % 起点背景
     \fill[blue!30] (0,4) rectangle (1,5);
-    \node[font=\small\bfseries] at (0.5, 4.5) {起点};
-    
+    % 起点标签移到左上方
+    \node[font=\scriptsize, blue!70!black] at (-0.3, 4.8) {起点};
+
     % 终点
     \fill[green!30] (4,0) rectangle (5,1);
     \node[font=\small\bfseries] at (4.5, 0.5) {终点};
-    
-    % 智能体
-    \node[circle, fill=red!70, minimum size=0.6cm, font=\small\color{white}] at (0.5, 4.5) {};
-    
+
+    % 智能体（红色圆圈表示当前位置）
+    \node[circle, fill=red!70, minimum size=0.5cm] at (0.5, 4.5) {};
+
     % 坐标标注
     \node[above, font=\scriptsize] at (0.5, 5) {$(0,0)$};
     \node[below, font=\scriptsize] at (4.5, 0) {$(4,4)$};
-    
+
     % 动作箭头示意
     \begin{scope}[xshift=7cm, yshift=2.5cm]
-        \node[font=\bfseries] at (0, 1.5) {四个动作};
-        \draw[->, thick] (0, 0.5) -- (0, 1) node[right, font=\small] {上};
-        \draw[->, thick] (0, 0.5) -- (0, 0) node[right, font=\small] {下};
-        \draw[->, thick] (0, 0.5) -- (-0.5, 0.5) node[above, font=\small] {左};
-        \draw[->, thick] (0, 0.5) -- (0.5, 0.5) node[above, font=\small] {右};
+        \node[font=\bfseries] at (0, 1.8) {四个动作};
+        \draw[->, thick] (0, 0.5) -- (0, 1.1) node[above, font=\small] {上};
+        \draw[->, thick] (0, 0.5) -- (0, -0.1) node[below, font=\small] {下};
+        \draw[->, thick] (0, 0.5) -- (-0.6, 0.5) node[left, font=\small] {左};
+        \draw[->, thick] (0, 0.5) -- (0.6, 0.5) node[right, font=\small] {右};
         \fill[red!70] (0, 0.5) circle (0.15);
     \end{scope}
-    
+
     % 奖励说明
     \begin{scope}[xshift=7cm, yshift=-0.5cm]
         \node[font=\small, align=left] at (0, 0) {
@@ -1446,7 +1447,7 @@ def 选择算法(问题):
             目标：最短路径到终点
         };
     \end{scope}
-    
+
 \end{tikzpicture}
 \caption{5×5 GridWorld 环境。智能体（红色）从起点出发，每一步获得 $-1$ 奖励，目标是尽快到达终点。}
 \end{figure}
