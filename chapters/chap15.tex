@@ -216,7 +216,7 @@ $(a_1^*, a_2^*)$是纳什均衡，当且仅当：
 \end{algorithmic}
 \end{algorithm}
 
-\begin{warning}[迭代最优响应不一定收敛]
+\begin{warning}[title=迭代最优响应不一定收敛]
 迭代最优响应可能：
 \begin{itemize}
     \item \textbf{收敛到纳什均衡}（如果博弈是"好"的）
@@ -530,7 +530,7 @@ $N$个玩家的\textbf{广义纳什均衡问题}（Generalized Nash Equilibrium 
 \end{equation}
 \end{definition}
 
-\begin{warning}[多智能体RL的核心困难：非平稳性]
+\begin{warning}[title=多智能体RL的核心困难：非平稳性]
 \textbf{问题}：从智能体$i$的视角看，环境的转移概率是：
 \begin{equation}
     P(s' | s, a_i) = \sum_{a_{-i}} P(s' | s, a_i, a_{-i}) \pi_{-i}(a_{-i} | s)
@@ -874,7 +874,7 @@ MFG是统计力学和最优控制的交叉——群体行为的"热力学"。
 
 \subsection{概念理解}
 
-\begin{exercise}[纳什均衡的理解]
+\begin{exercise}[title=纳什均衡的理解]
 考虑以下"协调博弈"：两个人要选择在哪里见面，可以选A地或B地。如果选同一个地方就能见面（代价0），选不同地方就见不到（代价1）。
 \begin{enumerate}
     \item 写出代价矩阵
@@ -884,7 +884,7 @@ MFG是统计力学和最优控制的交叉——群体行为的"热力学"。
 \end{enumerate}
 \end{exercise}
 
-\begin{exercise}[Braess悖论的变种]
+\begin{exercise}[title=Braess悖论的变种]
 在Braess悖论的例子中，如果免费道路AB的时间不是0，而是一个正数$c$，问：
 \begin{enumerate}
     \item $c$取什么范围时，悖论仍然存在（有免费道路更差）？
@@ -895,7 +895,7 @@ MFG是统计力学和最优控制的交叉——群体行为的"热力学"。
 
 \subsection{计算推导}
 
-\begin{exercise}[图博弈的KKT条件]
+\begin{exercise}[title=图博弈的KKT条件]
 对于代价函数$J_i = \frac{1}{2}(a_i - a_{i,0})^2 + \delta a_i \sum_{j \in N(i)} a_j$和约束$a_i \in [0, L]$：
 \begin{enumerate}
     \item 写出每个玩家的拉格朗日函数（提示：需要两个乘子，分别对应$a_i \geq 0$和$a_i \leq L$）
@@ -905,7 +905,7 @@ MFG是统计力学和最优控制的交叉——群体行为的"热力学"。
 \end{enumerate}
 \end{exercise}
 
-\begin{exercise}[QMIX的IGM证明]
+\begin{exercise}[title=QMIX的IGM证明]
 证明：如果$\frac{\partial Q_{tot}}{\partial Q_i} \geq 0$对所有$i$成立，则IGM原则满足。
 
 提示：用反证法，假设存在$a'$使得$Q_{tot}(s, a') > Q_{tot}(s, a^*)$，其中$a_i^* = \arg\max Q_i$，推导矛盾。
@@ -913,7 +913,7 @@ MFG是统计力学和最优控制的交叉——群体行为的"热力学"。
 
 \subsection{编程实践}
 
-\begin{exercise}[实现迭代最优响应]
+\begin{exercise}[title=实现迭代最优响应]
 对于例\ref{ex:lq_network}中的线性二次图博弈：
 \begin{enumerate}
     \item 用Python实现迭代最优响应算法
@@ -923,7 +923,7 @@ MFG是统计力学和最优控制的交叉——群体行为的"热力学"。
 \end{enumerate}
 \end{exercise}
 
-\begin{exercise}[Braess悖论的数值验证]
+\begin{exercise}[title=Braess悖论的数值验证]
 参考本章的Python代码（\texttt{generate\_figures.py}）：
 \begin{enumerate}
     \item 复现Braess悖论的计算

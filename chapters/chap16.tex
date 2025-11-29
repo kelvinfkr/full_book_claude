@@ -5,11 +5,8 @@
 \vspace{1cm}
 
 \begin{center}
-
 \textit{"如果说拉格朗日力学描述了死物的运动规律，\\
-
 那么我们如何用同样的数学语言描述智能体的思考与行动？"}
-
 \end{center}
 
 \vspace{1cm}
@@ -149,9 +146,7 @@
 用数学语言表述：给定当前状态$s_t$和动作$a_t$，世界模型预测下一个状态$s_{t+1}$：
 
 \begin{equation}
-
     \boxed{s_{t+1} = f(s_t, a_t) + \epsilon}
-
 \end{equation}
 
 其中：
@@ -219,9 +214,7 @@
 数学表述：学习条件概率分布
 
 \begin{equation}
-
     P(x_{t+1} | x_1, x_2, \ldots, x_t)
-
 \end{equation}
 
 其中$x_t$是第$t$帧的像素（比如一张$256 \times 256$的图片有65536个像素值）。
@@ -335,9 +328,7 @@ Yann LeCun对生成式路线的批评是尖锐的：
 \textbf{生成式模型}：试图拟合整个数据分布$P(x)$
 
 \begin{equation}
-
     \min_\theta \E_{x \sim \text{data}}[-\log P_\theta(x)]
-
 \end{equation}
 
 这是一个\textbf{无约束}的密度估计问题——要建模所有细节。
@@ -347,9 +338,7 @@ Yann LeCun对生成式路线的批评是尖锐的：
 \textbf{JEPA}：学习表征空间中的\textbf{约束关系}
 
 \begin{equation}
-
     \min_{E, P} \E[D(P(E(x_t), a_t), E(x_{t+1}))] \quad \text{s.t. 表征不能坍缩为常数}
-
 \end{equation}
 
 这是一个\textbf{有约束}的流形学习问题——只学习本质特征。
@@ -405,13 +394,9 @@ JEPA的哲学就是：\textbf{学习本质，忽略细节}。
 一个完整的潜空间动力学模型包含三个部分：
 
 \begin{align}
-
     z_t &= \text{Encoder}(o_t) \quad \text{（\textbf{感知}：把观测压缩成潜态）} \\
-
     z_{t+1} &= \text{Dynamics}(z_t, a_t) \quad \text{（\textbf{预测}：潜态如何演化）} \\
-
     \hat{o}_{t+1} &= \text{Decoder}(z_{t+1}) \quad \text{（\textbf{想象}：从潜态还原观测）}
-
 \end{align}
 
  
@@ -537,61 +522,31 @@ Dreamer算法的工作流程就像人类做白日梦：
  
 
 \begin{algorithm}[H]
-
 \caption{潜空间世界模型的核心流程}
-
 \begin{algorithmic}[1]
-
-\REQUIRE 观测序列 $\{o_1, o_2, \ldots, o_T\}$，动作序列 $\{a_1, a_2, \ldots, a_{T-1}\}$
-
-\STATE \textbf{// 第一步：编码——将高维观测压缩到低维潜空间}
-
-\FOR{$t = 1$ to $T$}
-
-    \STATE $z_t \gets \text{Encoder}(o_t)$ \COMMENT{例如：$256\times256$图像 $\to$ 64维向量}
-
-\ENDFOR
-
- 
-
-\STATE \textbf{// 第二步：学习动力学——潜态如何随动作演化}
-
-\FOR{$t = 1$ to $T-1$}
-
-    \STATE $\hat{z}_{t+1} \gets \text{Dynamics}(z_t, a_t)$ \COMMENT{预测下一个潜态}
-
-    \STATE $\text{loss} \gets \text{loss} + \|z_{t+1} - \hat{z}_{t+1}\|^2$ \COMMENT{预测误差}
-
-\ENDFOR
-
- 
-
-\STATE \textbf{// 第三步：想象未来——在潜空间中"做梦"}
-
-\STATE $z_{\text{current}} \gets \text{Encoder}(o_{\text{current}})$
-
-\FOR{每个候选动作序列 $\{a_1, a_2, \ldots, a_H\}$}
-
-    \STATE $z \gets z_{\text{current}}$
-
-    \STATE $\text{total\_reward} \gets 0$
-
-    \FOR{$h = 1$ to $H$}
-
-        \STATE $z \gets \text{Dynamics}(z, a_h)$
-
-        \STATE $\text{total\_reward} \gets \text{total\_reward} + \text{RewardPredictor}(z)$
-
-    \ENDFOR
-
-    \STATE 记录该动作序列的总奖励
-
-\ENDFOR
-
-\STATE \textbf{return} 总奖励最高的动作序列的第一个动作
-
+\Require 观测序列 $\{o_1, o_2, \ldots, o_T\}$，动作序列 $\{a_1, a_2, \ldots, a_{T-1}\}$
+\State \textbf{// 第一步：编码——将高维观测压缩到低维潜空间}
+\For{$t = 1$ to $T$}
+    \State $z_t \gets \text{Encoder}(o_t)$ \Comment{例如：$256\times256$图像 $\to$ 64维向量}
+\EndFor
+\State \textbf{// 第二步：学习动力学——潜态如何随动作演化}
+\For{$t = 1$ to $T-1$}
+    \State $\hat{z}_{t+1} \gets \text{Dynamics}(z_t, a_t)$ \Comment{预测下一个潜态}
+    \State $\text{loss} \gets \text{loss} + \|z_{t+1} - \hat{z}_{t+1}\|^2$ \Comment{预测误差}
+\EndFor
+\State \textbf{// 第三步：想象未来——在潜空间中"做梦"}
+\State $z_{\text{current}} \gets \text{Encoder}(o_{\text{current}})$
+\For{每个候选动作序列 $\{a_1, a_2, \ldots, a_H\}$}
+    \State $z \gets z_{\text{current}}$
+    \State $\text{total\_reward} \gets 0$
+    \For{$h = 1$ to $H$}
+        \State $z \gets \text{Dynamics}(z, a_h)$
+        \State $\text{total\_reward} \gets \text{total\_reward} + \text{RewardPredictor}(z)$
+    \EndFor
+    \State 记录该动作序列的总奖励
+\EndFor
+\State \textbf{return} 总奖励最高的动作序列的第一个动作
 \end{algorithmic}
-
 \end{algorithm}
 
  
@@ -619,9 +574,7 @@ Dreamer算法的工作流程就像人类做白日梦：
 回顾我们在第一章学过的拉格朗日力学。当时的约束是这样的：
 
 \begin{equation}
-
     \mathcal{L} = T - V + \lambda g(q)
-
 \end{equation}
 
  
@@ -675,9 +628,7 @@ Dreamer算法的工作流程就像人类做白日梦：
  
 
 \begin{equation}
-
     h(x) = \text{（你离柱子的距离）} - \text{（安全距离）}
-
 \end{equation}
 
  
@@ -705,9 +656,7 @@ Dreamer算法的工作流程就像人类做白日梦：
 更具体地，对于一个位于$x_{\text{obs}}$的圆形障碍物，安全距离为$d$，障碍函数可以定义为：
 
 \begin{equation}
-
     h(x) = \|x - x_{\text{obs}}\|^2 - d^2
-
 \end{equation}
 
  
@@ -723,9 +672,7 @@ Dreamer算法的工作流程就像人类做白日梦：
 考虑一个受控系统：
 
 \begin{equation}
-
     \dot{x} = f(x) + g(x)u
-
 \end{equation}
 
 其中$x$是状态，$u$是控制输入，$f(x)$是系统的自然演化，$g(x)$描述控制如何影响系统。
@@ -735,9 +682,7 @@ Dreamer算法的工作流程就像人类做白日梦：
 \textbf{关键问题}：我们想让$h(x)$永远保持非负（永远安全）。根据微积分，$h$的变化率是：
 
 \begin{equation}
-
     \dot{h} = \frac{\partial h}{\partial x} \cdot \dot{x} = \frac{\partial h}{\partial x} \cdot (f(x) + g(x)u)
-
 \end{equation}
 
  
@@ -745,9 +690,7 @@ Dreamer算法的工作流程就像人类做白日梦：
 \textbf{核心条件}：如果我们能保证
 
 \begin{equation}
-
     \boxed{\dot{h}(x, u) \geq -\alpha \cdot h(x)}
-
 \end{equation}
 
 其中$\alpha > 0$是一个正常数，那么安全集合$h(x) \geq 0$是\textbf{前向不变}的——一旦进入安全区域，永远不会离开。
@@ -795,15 +738,11 @@ Dreamer算法的工作流程就像人类做白日梦：
 这是一个\textbf{二次规划}（QP）问题：
 
 \begin{equation}
-
     u^*(x) = \arg\min_{u} \frac{1}{2}\|u - u_{\text{ref}}(x)\|^2
-
 \end{equation}
 
 \begin{equation}
-
     \text{约束条件：} \quad \underbrace{\frac{\partial h}{\partial x}f(x)}_{\text{自然漂移}} + \underbrace{\frac{\partial h}{\partial x}g(x) \cdot u}_{\text{控制效果}} + \alpha h(x) \geq 0
-
 \end{equation}
 
  
@@ -817,9 +756,7 @@ Dreamer算法的工作流程就像人类做白日梦：
 好消息是，这个QP有\textbf{闭式解}！利用拉格朗日乘子法（KKT条件）：
 
 \begin{equation}
-
     u^* = u_{\text{ref}} - \lambda^* \left(\frac{\partial h}{\partial x}g(x)\right)^T
-
 \end{equation}
 
 其中$\lambda^* \geq 0$是拉格朗日乘子，只在约束激活（接近危险）时非零。
@@ -933,47 +870,23 @@ CBF方法可以自然地扩展到\textbf{多障碍物}场景：对每个障碍�
  
 
 \begin{algorithm}[H]
-
 \caption{CBF安全控制器伪代码}
-
 \begin{algorithmic}[1]
-
-\REQUIRE 当前位置 $x$，目标位置 $x_{\text{goal}}$，障碍物位置 $x_{\text{obs}}$，安全距离 $d$
-
-\STATE \textbf{// 第一步：计算标称控制（朝目标走）}
-
-\STATE $u_{\text{ref}} \gets \text{方向}(x_{\text{goal}} - x) \times \text{速度}$
-
- 
-
-\STATE \textbf{// 第二步：计算障碍函数及其梯度}
-
-\STATE $h \gets \|x - x_{\text{obs}}\|^2 - d^2$ \COMMENT{正表示安全，负表示危险}
-
-\STATE $\nabla h \gets 2(x - x_{\text{obs}})$ \COMMENT{指向远离障碍物的方向}
-
- 
-
-\STATE \textbf{// 第三步：检查安全约束}
-
-\IF{$\nabla h \cdot u_{\text{ref}} + \alpha \cdot h \geq 0$}
-
-    \STATE \textbf{return} $u_{\text{ref}}$ \COMMENT{标称控制已经安全，无需修正}
-
-\ENDIF
-
- 
-
-\STATE \textbf{// 第四步：计算安全修正}
-
-\STATE $\lambda \gets -\frac{\nabla h \cdot u_{\text{ref}} + \alpha \cdot h}{\|\nabla h\|^2}$
-
-\STATE $u_{\text{safe}} \gets u_{\text{ref}} - \lambda \cdot \nabla h$ \COMMENT{沿梯度方向修正}
-
-\STATE \textbf{return} $u_{\text{safe}}$
-
+\Require 当前位置 $x$，目标位置 $x_{\text{goal}}$，障碍物位置 $x_{\text{obs}}$，安全距离 $d$
+\State \textbf{// 第一步：计算标称控制（朝目标走）}
+\State $u_{\text{ref}} \gets \text{方向}(x_{\text{goal}} - x) \times \text{速度}$
+\State \textbf{// 第二步：计算障碍函数及其梯度}
+\State $h \gets \|x - x_{\text{obs}}\|^2 - d^2$ \Comment{正表示安全，负表示危险}
+\State $\nabla h \gets 2(x - x_{\text{obs}})$ \Comment{指向远离障碍物的方向}
+\State \textbf{// 第三步：检查安全约束}
+\If{$\nabla h \cdot u_{\text{ref}} + \alpha \cdot h \geq 0$}
+    \State \textbf{return} $u_{\text{ref}}$ \Comment{标称控制已经安全，无需修正}
+\EndIf
+\State \textbf{// 第四步：计算安全修正}
+\State $\lambda \gets -\frac{\nabla h \cdot u_{\text{ref}} + \alpha \cdot h}{\|\nabla h\|^2}$
+\State $u_{\text{safe}} \gets u_{\text{ref}} - \lambda \cdot \nabla h$ \Comment{沿梯度方向修正}
+\State \textbf{return} $u_{\text{safe}}$
 \end{algorithmic}
-
 \end{algorithm}
 
  
@@ -1003,9 +916,7 @@ CBF方法可以自然地扩展到\textbf{多障碍物}场景：对每个障碍�
 可微物理仿真器将物理仿真实现为：
 
 \begin{equation}
-
     x_{t+1} = \text{PhysicsStep}(x_t, u_t; \theta)
-
 \end{equation}
 
 其中$\theta$是物理参数（质量、刚度、摩擦系数等），整个函数对$(x_t, u_t, \theta)$都是\textbf{可微的}——可以计算梯度！
@@ -1045,9 +956,7 @@ CBF方法可以自然地扩展到\textbf{多障碍物}场景：对每个障碍�
 \textbf{1. 策略优化}——直接优化策略参数：
 
 \begin{equation}
-
     \theta^* = \arg\min_\theta \mathcal{L}(\text{Simulate}(\pi_\theta))
-
 \end{equation}
 
 用梯度下降代替随机搜索！
@@ -1057,9 +966,7 @@ CBF方法可以自然地扩展到\textbf{多障碍物}场景：对每个障碍�
 \textbf{2. 系统辨识}——从观测数据学习物理参数：
 
 \begin{equation}
-
     \phi^* = \arg\min_\phi \|x_{\text{真实}} - x_{\text{仿真}}(\phi)\|^2
-
 \end{equation}
 
 给定轨迹数据，反推质量、摩擦系数等。
@@ -1083,9 +990,7 @@ CBF方法可以自然地扩展到\textbf{多障碍物}场景：对每个障碍�
 物理方程：
 
 \begin{equation}
-
     m\ddot{x} = -kx - c\dot{x} + u
-
 \end{equation}
 
 其中：
@@ -1259,17 +1164,13 @@ Karl Friston提出的\textbf{自由能原理}（Free Energy Principle）给出�
 给定观测$o$和内部状态$s$（智能体的"信念"），\textbf{变分自由能}定义为：
 
 \begin{equation}
-
     F = \E_{q(s)}[\log q(s) - \log p(s, o)]
-
 \end{equation}
 
 这可以分解为两部分：
 
 \begin{equation}
-
     F = \underbrace{\text{KL}(q(s) \| p(s|o))}_{\text{信念与真实的差距}} + \underbrace{(-\log p(o))}_{\text{惊奇}}
-
 \end{equation}
 
 \end{definition}
@@ -1303,9 +1204,7 @@ Karl Friston提出的\textbf{自由能原理}（Free Energy Principle）给出�
 \textbf{感知}（Perception）：更新内部信念$s$以最小化自由能
 
 \begin{equation}
-
     s^* = \arg\min_s F(s, o) \quad \text{（"我看到了什么？更新我的信念"）}
-
 \end{equation}
 
  
@@ -1313,9 +1212,7 @@ Karl Friston提出的\textbf{自由能原理}（Free Energy Principle）给出�
 \textbf{行动}（Action）：改变世界状态以最小化\textbf{期望}自由能
 
 \begin{equation}
-
     a^* = \arg\min_a \E_{p(o|a)}[F(s, o)] \quad \text{（"世界不符合预期？改变它！"）}
-
 \end{equation}
 
  
