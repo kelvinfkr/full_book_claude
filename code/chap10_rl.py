@@ -296,79 +296,88 @@ Q_sarsa, rewards_sarsa = sarsa(env, episodes=500, alpha=0.1, gamma=0.99, epsilon
 print(f"SARSA 最后100回合平均奖励: {np.mean(rewards_sarsa[-100:]):.2f}")
 print(f"Q-Learning 最后100回合平均奖励: {np.mean(rewards[-100:]):.2f}")
 
-# ==================== 可视化 ====================
-fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+# ==================== 可视化（拆分为独立图片） ====================
 
-# 图1：最短路图
-ax1 = axes[0, 0]
-ax1.set_xlim(-0.5, 4)
-ax1.set_ylim(-0.5, 3)
+# 辅助函数：绘制最短路图
+def plot_shortest_path(ax, V_sp, pos, edges, path_edges):
+    ax.set_xlim(-0.5, 4)
+    ax.set_ylim(-0.5, 3)
+    for node, (x, y) in pos.items():
+        color = 'lightblue' if node not in ['s', 't'] else ('lightgreen' if node == 't' else 'lightyellow')
+        circle = plt.Circle((x, y), 0.25, color=color, ec='black', linewidth=2)
+        ax.add_patch(circle)
+        ax.text(x, y, node, ha='center', va='center', fontsize=14, fontweight='bold')
+        ax.text(x, y-0.4, f'V={V_sp[node]}', ha='center', va='center', fontsize=10, color='red')
+    for start, end, cost in edges:
+        x1, y1 = pos[start]
+        x2, y2 = pos[end]
+        dx, dy = x2 - x1, y2 - y1
+        length = np.sqrt(dx**2 + dy**2)
+        dx, dy = dx/length, dy/length
+        ax.annotate('', xy=(x2-0.3*dx, y2-0.3*dy), xytext=(x1+0.3*dx, y1+0.3*dy),
+                    arrowprops=dict(arrowstyle='->', color='black', lw=1.5))
+        mx, my = (x1+x2)/2, (y1+y2)/2
+        ax.text(mx+0.1, my+0.1, str(cost), fontsize=11, color='blue')
+    for start, end in path_edges:
+        x1, y1 = pos[start]
+        x2, y2 = pos[end]
+        dx, dy = x2 - x1, y2 - y1
+        length = np.sqrt(dx**2 + dy**2)
+        dx, dy = dx/length, dy/length
+        ax.annotate('', xy=(x2-0.3*dx, y2-0.3*dy), xytext=(x1+0.3*dx, y1+0.3*dy),
+                    arrowprops=dict(arrowstyle='->', color='red', lw=3))
+    ax.set_aspect('equal')
+    ax.axis('off')
 
 pos = {'s': (0, 1.5), 'a': (1.5, 2.5), 'b': (1.5, 0.5), 'c': (2.5, 1.5), 't': (3.5, 1.5)}
-
-for node, (x, y) in pos.items():
-    color = 'lightblue' if node not in ['s', 't'] else ('lightgreen' if node == 't' else 'lightyellow')
-    circle = plt.Circle((x, y), 0.25, color=color, ec='black', linewidth=2)
-    ax1.add_patch(circle)
-    ax1.text(x, y, node, ha='center', va='center', fontsize=14, fontweight='bold')
-    ax1.text(x, y-0.4, f'V={V_sp[node]}', ha='center', va='center', fontsize=10, color='red')
-
 edges = [('s', 'a', 2), ('s', 'b', 5), ('a', 'c', 1), ('a', 'b', 3), ('b', 'c', 2), ('b', 't', 6), ('c', 't', 1)]
-for start, end, cost in edges:
-    x1, y1 = pos[start]
-    x2, y2 = pos[end]
-    dx, dy = x2 - x1, y2 - y1
-    length = np.sqrt(dx**2 + dy**2)
-    dx, dy = dx/length, dy/length
-    ax1.annotate('', xy=(x2-0.3*dx, y2-0.3*dy), xytext=(x1+0.3*dx, y1+0.3*dy),
-                arrowprops=dict(arrowstyle='->', color='black', lw=1.5))
-    mx, my = (x1+x2)/2, (y1+y2)/2
-    ax1.text(mx+0.1, my+0.1, str(cost), fontsize=11, color='blue')
-
 path_edges = [('s', 'a'), ('a', 'c'), ('c', 't')]
-for start, end in path_edges:
-    x1, y1 = pos[start]
-    x2, y2 = pos[end]
-    dx, dy = x2 - x1, y2 - y1
-    length = np.sqrt(dx**2 + dy**2)
-    dx, dy = dx/length, dy/length
-    ax1.annotate('', xy=(x2-0.3*dx, y2-0.3*dy), xytext=(x1+0.3*dx, y1+0.3*dy),
-                arrowprops=dict(arrowstyle='->', color='red', lw=3))
 
-ax1.set_aspect('equal')
-ax1.axis('off')
-ax1.set_title('最短路问题 (书中例子)\n最优: s -> a -> c -> t (代价=4)', fontsize=14)
+# === 图1：最短路问题（独立保存）===
+fig1, ax1 = plt.subplots(figsize=(6, 5))
+plot_shortest_path(ax1, V_sp, pos, edges, path_edges)
+ax1.set_title('最短路问题：最优路径 s → a → c → t（代价=4）', fontsize=12)
+plt.tight_layout()
+plt.savefig('figs/chap10_shortest_path.png', dpi=150, bbox_inches='tight')
+print("已保存：figs/chap10_shortest_path.png")
+plt.close(fig1)
 
-# 图2：值迭代收敛
-ax2 = axes[0, 1]
+# === 图2：值迭代收敛（独立保存）===
+fig2, ax2 = plt.subplots(figsize=(6, 4))
 for s in [0, 5, 10]:
     values = [V_history[i][s] for i in range(len(V_history))]
     ax2.plot(values, label=f'状态 {s}', linewidth=2)
 ax2.set_xlabel('迭代次数', fontsize=12)
-ax2.set_ylabel('值 V(s)', fontsize=12, labelpad=10)
-ax2.set_title('值迭代收敛过程\n(4x4网格世界)', fontsize=14)
+ax2.set_ylabel('值 V(s)', fontsize=12)
+ax2.set_title('值迭代收敛过程（4×4网格世界）', fontsize=12)
 ax2.legend()
 ax2.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.savefig('figs/chap10_value_iteration.png', dpi=150, bbox_inches='tight')
+print("已保存：figs/chap10_value_iteration.png")
+plt.close(fig2)
 
-# 图3：值函数热力图
-ax3 = axes[1, 0]
+# === 图3：值函数热力图（独立保存）===
+fig3, ax3 = plt.subplots(figsize=(5, 4))
 im = ax3.imshow(V.reshape(4, 4), cmap='RdYlGn')
 ax3.set_xticks(range(4))
 ax3.set_yticks(range(4))
 for i in range(4):
     for j in range(4):
         ax3.text(j, i, f'{V[i*4+j]:.1f}', ha='center', va='center', fontsize=11)
-ax3.set_title('值函数 V(s)\n(4x4网格, 目标在右下角)', fontsize=14)
+ax3.set_title('值函数 V(s)（4×4网格，目标在右下角）', fontsize=12)
 plt.colorbar(im, ax=ax3)
+plt.tight_layout()
+plt.savefig('figs/chap10_value_heatmap.png', dpi=150, bbox_inches='tight')
+print("已保存：figs/chap10_value_heatmap.png")
+plt.close(fig3)
 
-# 图4：最优策略
-ax4 = axes[1, 1]
+# === 图4：最优策略（独立保存）===
+fig4, ax4 = plt.subplots(figsize=(5, 5))
 arrow_dx = {0: 0, 1: 0, 2: -0.3, 3: 0.3}
 arrow_dy = {0: 0.3, 1: -0.3, 2: 0, 3: 0}
-
 ax4.set_xlim(-0.5, 3.5)
 ax4.set_ylim(-0.5, 3.5)
-
 for i in range(4):
     for j in range(4):
         s = i * 4 + j
@@ -382,29 +391,36 @@ for i in range(4):
             ax4.annotate('', xy=(j+arrow_dx[a], 3-i+arrow_dy[a]),
                         xytext=(j, 3-i),
                         arrowprops=dict(arrowstyle='->', color='red', lw=2))
-
 ax4.set_aspect('equal')
 ax4.set_xticks(range(4))
 ax4.set_yticks(range(4))
 ax4.set_yticklabels([3, 2, 1, 0])
-ax4.set_title('值迭代最优策略\n(箭头表示各状态的最佳动作)', fontsize=14)
+ax4.set_title('值迭代最优策略（箭头表示最佳动作）', fontsize=12)
 ax4.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.savefig('figs/chap10_policy.png', dpi=150, bbox_inches='tight')
+print("已保存：figs/chap10_policy.png")
+plt.close(fig4)
 
-# 图5：Q-Learning 学习曲线
-ax5 = axes[0, 2]
+# === 图5：Q-Learning vs SARSA 学习曲线（独立保存）===
+fig5, ax5 = plt.subplots(figsize=(7, 4))
 window = 20
 smoothed_rewards = np.convolve(rewards, np.ones(window)/window, mode='valid')
 ax5.plot(smoothed_rewards, 'b-', linewidth=1.5, label='Q-Learning')
 smoothed_sarsa = np.convolve(rewards_sarsa, np.ones(window)/window, mode='valid')
 ax5.plot(smoothed_sarsa, 'r-', linewidth=1.5, alpha=0.7, label='SARSA')
 ax5.set_xlabel('回合数', fontsize=12)
-ax5.set_ylabel('平均奖励 (20回合滑动窗口)', fontsize=12, labelpad=10)
-ax5.set_title('Q-Learning vs SARSA\n学习曲线对比', fontsize=14)
+ax5.set_ylabel('平均奖励（20回合滑动窗口）', fontsize=12)
+ax5.set_title('Q-Learning vs SARSA 学习曲线对比', fontsize=12)
 ax5.legend()
 ax5.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.savefig('figs/chap10_qlearning_sarsa.png', dpi=150, bbox_inches='tight')
+print("已保存：figs/chap10_qlearning_sarsa.png")
+plt.close(fig5)
 
-# 图6：Q 表可视化（热力图）
-ax6 = axes[1, 2]
+# === 图6：Q表热力图（独立保存）===
+fig6, ax6 = plt.subplots(figsize=(5, 4))
 Q_max = np.max(Q_learned, axis=1).reshape(4, 4)
 im6 = ax6.imshow(Q_max, cmap='Blues')
 ax6.set_xticks(range(4))
@@ -412,12 +428,85 @@ ax6.set_yticks(range(4))
 for i in range(4):
     for j in range(4):
         ax6.text(j, i, f'{Q_max[i, j]:.1f}', ha='center', va='center', fontsize=10)
-ax6.set_title('Q-Learning 学到的 max Q(s,a)\n(通过与环境交互学习)', fontsize=14)
+ax6.set_title('Q-Learning 学到的 max Q(s,a)', fontsize=12)
 plt.colorbar(im6, ax=ax6)
+plt.tight_layout()
+plt.savefig('figs/chap10_qtable.png', dpi=150, bbox_inches='tight')
+print("已保存：figs/chap10_qtable.png")
+plt.close(fig6)
+
+# === 保留原有的组合图（向后兼容）===
+fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+
+# 子图1：最短路
+plot_shortest_path(axes[0, 0], V_sp, pos, edges, path_edges)
+axes[0, 0].set_title('最短路问题 (书中例子)\n最优: s -> a -> c -> t (代价=4)', fontsize=14)
+
+# 子图2：值迭代收敛
+for s in [0, 5, 10]:
+    values = [V_history[i][s] for i in range(len(V_history))]
+    axes[0, 1].plot(values, label=f'状态 {s}', linewidth=2)
+axes[0, 1].set_xlabel('迭代次数', fontsize=12)
+axes[0, 1].set_ylabel('值 V(s)', fontsize=12)
+axes[0, 1].set_title('值迭代收敛过程\n(4x4网格世界)', fontsize=14)
+axes[0, 1].legend()
+axes[0, 1].grid(True, alpha=0.3)
+
+# 子图3：值函数热力图
+im3 = axes[1, 0].imshow(V.reshape(4, 4), cmap='RdYlGn')
+axes[1, 0].set_xticks(range(4))
+axes[1, 0].set_yticks(range(4))
+for i in range(4):
+    for j in range(4):
+        axes[1, 0].text(j, i, f'{V[i*4+j]:.1f}', ha='center', va='center', fontsize=11)
+axes[1, 0].set_title('值函数 V(s)\n(4x4网格, 目标在右下角)', fontsize=14)
+plt.colorbar(im3, ax=axes[1, 0])
+
+# 子图4：最优策略
+axes[1, 1].set_xlim(-0.5, 3.5)
+axes[1, 1].set_ylim(-0.5, 3.5)
+for i in range(4):
+    for j in range(4):
+        s = i * 4 + j
+        if env.is_terminal(s):
+            axes[1, 1].add_patch(plt.Circle((j, 3-i), 0.4, color='lightgreen', ec='black', linewidth=2))
+            axes[1, 1].text(j, 3-i, '目标', ha='center', va='center', fontsize=12, fontweight='bold')
+        else:
+            axes[1, 1].add_patch(plt.Rectangle((j-0.4, 3-i-0.4), 0.8, 0.8,
+                                        color='lightyellow', ec='black', linewidth=1))
+            a = policy[s]
+            axes[1, 1].annotate('', xy=(j+arrow_dx[a], 3-i+arrow_dy[a]),
+                        xytext=(j, 3-i),
+                        arrowprops=dict(arrowstyle='->', color='red', lw=2))
+axes[1, 1].set_aspect('equal')
+axes[1, 1].set_xticks(range(4))
+axes[1, 1].set_yticks(range(4))
+axes[1, 1].set_yticklabels([3, 2, 1, 0])
+axes[1, 1].set_title('值迭代最优策略\n(箭头表示各状态的最佳动作)', fontsize=14)
+axes[1, 1].grid(True, alpha=0.3)
+
+# 子图5：Q-Learning vs SARSA
+axes[0, 2].plot(smoothed_rewards, 'b-', linewidth=1.5, label='Q-Learning')
+axes[0, 2].plot(smoothed_sarsa, 'r-', linewidth=1.5, alpha=0.7, label='SARSA')
+axes[0, 2].set_xlabel('回合数', fontsize=12)
+axes[0, 2].set_ylabel('平均奖励 (20回合滑动窗口)', fontsize=12)
+axes[0, 2].set_title('Q-Learning vs SARSA\n学习曲线对比', fontsize=14)
+axes[0, 2].legend()
+axes[0, 2].grid(True, alpha=0.3)
+
+# 子图6：Q表热力图
+im6 = axes[1, 2].imshow(Q_max, cmap='Blues')
+axes[1, 2].set_xticks(range(4))
+axes[1, 2].set_yticks(range(4))
+for i in range(4):
+    for j in range(4):
+        axes[1, 2].text(j, i, f'{Q_max[i, j]:.1f}', ha='center', va='center', fontsize=10)
+axes[1, 2].set_title('Q-Learning 学到的 max Q(s,a)\n(通过与环境交互学习)', fontsize=14)
+plt.colorbar(im6, ax=axes[1, 2])
 
 plt.tight_layout()
 plt.savefig('figs/chap10_fig1.png', dpi=150, bbox_inches='tight')
-print("\n图像已保存到 figs/chap10_fig1.png")
+print("\n组合图已保存到 figs/chap10_fig1.png")
 
 plt.show()
 print("\n第10章代码执行完成！")
