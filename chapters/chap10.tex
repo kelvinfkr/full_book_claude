@@ -1608,6 +1608,8 @@ def value_iteration(env, gamma=1.0, threshold=1e-6):
 \subsection{Q-Learning：从试错中学习}
 % ------------------------------------------------------------------------------------
 
+\marginnote{\textbf{Q-Learning的诞生}：Q-Learning由剑桥大学博士生Christopher Watkins在1989年博士论文中提出，1992年与Peter Dayan合作发表于\textit{Machine Learning}期刊。论文证明了Q-Learning在一定条件下收敛到最优Q函数，这个简洁的算法成为后来深度强化学习的基石。}
+
 Q-Learning 是一种\textbf{无模型}方法。它不知道执行动作会发生什么，只能像小孩学走路一样——走一步、摔一跤、记住教训。
 
 \begin{figure}[h]
@@ -2021,6 +2023,8 @@ for _ in range(1000):
 \subsection{DQN：从 Q-Learning 到深度网络}
 % ------------------------------------------------------------------------------------
 
+\marginnote{\textbf{DeepMind与DQN}：2013年，伦敦创业公司DeepMind（由Demis Hassabis、Shane Legg等创立）在arXiv发布DQN论文，用神经网络玩Atari游戏达到人类水平。2014年Google以约6亿美元收购DeepMind。2015年DQN正式发表于Nature，开启深度强化学习时代。两年后AlphaGo击败世界围棋冠军，震惊世界。}
+
 DQN 是深度强化学习的开山之作（Mnih et al., 2015）。它的核心思想是用神经网络代替 Q 表格，但这带来了两个新问题：
 
 \begin{enumerate}
@@ -2137,6 +2141,8 @@ class DQN:
 % ------------------------------------------------------------------------------------
 \subsection{PPO：稳健的策略梯度}
 % ------------------------------------------------------------------------------------
+
+\marginnote{\textbf{PPO与OpenAI}：PPO由OpenAI的John Schulman等人于2017年提出。Schulman此前还提出了TRPO（2015），但TRPO计算复杂。PPO通过简单的``裁剪''技巧获得类似效果，实现简单、调参容易，成为工业界标配。2022年ChatGPT的RLHF训练正是使用PPO，让AI学会遵循人类偏好。}
 
 PPO（Proximal Policy Optimization）是目前工业界最常用的算法，ChatGPT 的 RLHF 训练就用的它。
 
@@ -2281,6 +2287,8 @@ class PPO:
 % ------------------------------------------------------------------------------------
 \subsection{SAC：最大熵强化学习}
 % ------------------------------------------------------------------------------------
+
+\marginnote{\textbf{SAC与Berkeley}：SAC由UC Berkeley的Tuomas Haarnoja等人于2018年提出，导师是Pieter Abbeel和Sergey Levine——两位机器人强化学习的领军人物。SAC的``最大熵''思想来自信息论，让策略保持适度随机性以增强探索和鲁棒性，在机器人操作任务中表现出色。}
 
 SAC（Soft Actor-Critic）是连续控制任务的首选算法，在机器人控制领域表现优异。
 

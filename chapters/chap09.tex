@@ -387,6 +387,8 @@ $\lambda_i$ 的意义是什么？
 % ------------------------------------------------------------------------------------
 \section{反向传播算法}
 
+\marginnote{\textbf{反向传播的历史}：反向传播的数学思想可追溯到1960年代Bryson和Ho的控制理论工作。1974年，哈佛博士生Paul Werbos在博士论文中首次将其应用于神经网络。但直到1986年，Rumelhart、Hinton和Williams在Nature发表的论文才让反向传播广为人知，成为深度学习的基石。}
+
 现在我们可以写出完整的算法了。
 
 \begin{keyformula}[title=反向传播算法]
@@ -521,6 +523,8 @@ L &= \frac{1}{2}\|z_2 - y\|^2 \quad \text{（均方误差损失）}
 
 % ------------------------------------------------------------------------------------
 \section{自动微分：从代码到内存中的计算图}
+
+\marginnote{\textbf{自动微分的历史}：自动微分（AD）的概念可追溯到1964年Robert Wengert的工作。芬兰学者Seppo Linnainmaa在1970年博士论文中提出了反向模式AD。现代框架如PyTorch（Facebook，2016）、TensorFlow（Google，2015）和JAX（Google，2018）都基于这些思想，但加入了动态/静态计算图、GPU加速等工程创新。}
 
 在实践中，我们不需要手动推导每个网络的反向传播公式。现代深度学习框架（PyTorch、TensorFlow、JAX）都实现了\textbf{自动微分}（Automatic Differentiation）。
 
@@ -1128,6 +1132,8 @@ x.\text{grad} = 8 = 2x + 2 \big|_{x=3} = \frac{dy}{dx}
 
 \subsection{随机梯度下降（SGD）}
 
+\marginnote{\textbf{SGD的起源}：随机梯度下降由Robbins和Monro在1951年提出（``A Stochastic Approximation Method''），最初用于统计估计问题。半个多世纪后，它成为训练深度神经网络的标准方法，每天在全球数百万GPU上运行。}
+
 当数据集很大时，计算全部样本的梯度太慢。\textbf{随机梯度下降}的想法是：每次只用一小批样本（mini-batch）来估计梯度。
 
 \begin{keyformula}[title=Mini-batch SGD]
@@ -1147,6 +1153,8 @@ x.\text{grad} = 8 = 2x + 2 \big|_{x=3} = \frac{dy}{dx}
 典型的批量大小 $B$ 是 32、64、128 或 256。
 
 \subsection{动量法（Momentum）}
+
+\marginnote{\textbf{动量法的历史}：动量方法由苏联数学家Boris Polyak于1964年提出（``Some methods of speeding up the convergence of iteration methods''）。这个简单而优雅的想法——给梯度加上``惯性''——至今仍是训练大型视觉模型（如ResNet、ViT）的首选方法。}
 
 vanilla SGD 的问题：在``峡谷''地形中会来回震荡，收敛很慢。
 
@@ -1170,6 +1178,8 @@ v^{(t+1)} &= \beta \cdot v^{(t)} + \nabla_\theta L(\theta^{(t)}) \\
 \end{physicalmeaning}
 
 \subsection{Adam：自适应学习率}
+
+\marginnote{\textbf{Adam的诞生}：Adam由多伦多大学的Diederik Kingma和Jimmy Ba于2014年提出，发表于ICLR 2015。它巧妙地结合了动量法和RMSprop（Hinton课程中提出）的思想。论文引用超过20万次，Adam成为深度学习中最广泛使用的优化器之一，尤其在NLP和Transformer训练中几乎是标配。}
 
 不同参数可能需要不同的学习率。\textbf{Adam}（Adaptive Moment Estimation）自动为每个参数调整学习率。
 
