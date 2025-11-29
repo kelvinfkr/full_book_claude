@@ -14,7 +14,7 @@ from scipy.optimize import brentq, minimize_scalar
 
 # 导入中文字体配置
 import matplotlib
-matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'DejaVu Sans', 'Arial Unicode MS']
+matplotlib.rcParams['font.sans-serif'] = ['WenQuanYi Micro Hei', 'SimHei', 'DejaVu Sans']
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 def create_brachistochrone_figure():
