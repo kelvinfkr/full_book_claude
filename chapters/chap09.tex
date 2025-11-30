@@ -2619,3 +2619,217 @@ CUDA & GPU 编程平台和运行时 \\
     \item 关注：FlashAttention、vLLM 等开源项目的实现
 \end{itemize}
 \end{insightbox}
+
+
+% ====================================================================================
+\section*{扩展阅读：手写激活函数——从实现到直觉}
+\addcontentsline{toc}{section}{扩展阅读：手写激活函数}
+% ====================================================================================
+
+\begin{tcolorbox}[colback=gray!5, colframe=gray!50, title=本节导读]
+激活函数是神经网络的"非线性魔法"。没有它，再深的网络也只是线性变换。但为什么ReLU比Sigmoid好用？为什么现代大模型偏爱GELU？本节通过手写实现，带你理解激活函数背后的设计哲学。
+\end{tcolorbox}
+
+% ------------------------------------------------------------------------------------
+\subsection*{一、激活函数全家福}
+
+图\ref{fig:activation_functions}展示了8种常用激活函数及其导数。注意几个关键观察：
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figs_chap09/activation_functions.pdf}
+\caption{常用激活函数（实线）及其导数（虚线）。Sigmoid和Tanh在输入绝对值较大时趋于饱和，导数接近0。ReLU在负半轴完全为0，正半轴导数恒为1。Leaky ReLU、ELU、Swish、GELU都是对ReLU的改进。}
+\label{fig:activation_functions}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Sigmoid和Tanh}：输出被"压缩"到有限区间（$[0,1]$或$[-1,1]$），这曾被认为符合生物神经元的激活特性。但它们有严重的\textbf{梯度饱和}问题。
+
+    \item \textbf{ReLU}：极其简单——保留正值，置零负值。计算快、不饱和（正半轴），但可能导致"神经元死亡"。
+
+    \item \textbf{改进版ReLU}：Leaky ReLU、ELU在负半轴保留非零梯度；Swish和GELU则是光滑版本，避免了导数的不连续性。
+\end{itemize}
+
+\subsection*{二、手写实现：以Sigmoid为例}
+
+Sigmoid函数的实现看似简单，但有数值陷阱：
+
+\begin{lstlisting}[language=Python]
+import numpy as np
+
+def sigmoid_naive(x):
+    """朴素实现——可能溢出！"""
+    return 1 / (1 + np.exp(-x))
+
+def sigmoid_stable(x):
+    """数值稳定实现"""
+    return np.where(x >= 0,
+                    1 / (1 + np.exp(-x)),
+                    np.exp(x) / (1 + np.exp(x)))
+\end{lstlisting}
+
+当$x$是很大的负数（如$x = -1000$）时，\texttt{np.exp(-x)}会溢出。稳定版本通过分情况处理避免了这个问题。
+
+Sigmoid的导数有一个优雅的形式：
+\[
+\sigma'(x) = \sigma(x)(1 - \sigma(x))
+\]
+这意味着我们可以复用前向传播的结果来计算梯度——这正是深度学习框架的做法。
+
+\subsection*{三、梯度消失问题}
+
+为什么Sigmoid在深度网络中表现不佳？看图\ref{fig:gradient_flow}的中图：
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figs_chap09/gradient_flow.pdf}
+\caption{梯度流动分析。左图：不同激活函数的梯度分布。中图：梯度经过多层的衰减（对数尺度）。右图：ReLU的"死亡神经元"问题。}
+\label{fig:gradient_flow}
+\end{figure}
+
+Sigmoid的最大梯度只有0.25（在$x=0$处）。经过$n$层网络后，梯度最多变成原来的$0.25^n$倍。这就是\textbf{梯度消失}（vanishing gradient）问题——深层网络的参数几乎无法更新。
+
+\begin{marginnote}
+\textbf{历史注记}：梯度消失问题是神经网络在1990年代陷入低谷的重要原因。直到2006年Hinton等人提出逐层预训练，以及后来ReLU的流行，深度学习才迎来复兴。
+\end{marginnote}
+
+ReLU的优势在于：正半轴的梯度恒为1，不会衰减。这使得梯度可以"无损"地流过任意多层。但ReLU也有代价：负输入的梯度为0，一旦某个神经元进入"死亡"状态，它将永远无法恢复。
+
+\subsection*{四、计算图与反向传播}
+
+理解反向传播的关键是画出\textbf{计算图}（图\ref{fig:computation_graph}）：
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figs_chap09/computation_graph.pdf}
+\caption{单层神经元的计算图。左图：前向传播，从输入$x$计算输出$a$。右图：反向传播，从损失对输出的梯度$\partial L/\partial a$逐步计算对参数$W, b$的梯度。注意$\sigma'(z)$是"阀门"，控制梯度能否有效流回。}
+\label{fig:computation_graph}
+\end{figure}
+
+前向传播中，信息从左到右流动：$x \to z = Wx+b \to a = \sigma(z)$。
+
+反向传播中，梯度从右到左流动。关键公式是\textbf{链式法则}：
+\[
+\frac{\partial L}{\partial W} = \frac{\partial L}{\partial a} \cdot \frac{\partial a}{\partial z} \cdot \frac{\partial z}{\partial W} = \frac{\partial L}{\partial a} \cdot \sigma'(z) \cdot x^T
+\]
+
+这里$\sigma'(z)$扮演着"阀门"的角色：如果它很小，梯度就流不过去。这解释了为什么激活函数的选择如此重要。
+
+\subsection*{五、梯度检验：验证你的实现}
+
+如何确保手写的梯度公式正确？使用\textbf{数值梯度}验证：
+\[
+\frac{\partial f}{\partial x} \approx \frac{f(x + \epsilon) - f(x - \epsilon)}{2\epsilon}
+\]
+
+图\ref{fig:gradient_check}展示了解析梯度与数值梯度的对比：
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figs_chap09/gradient_check.pdf}
+\caption{梯度检验：解析梯度（蓝色实线）与数值梯度（红色虚线）几乎完全重合。绿色区域显示误差，最大约为$10^{-10}$量级，验证了实现的正确性。}
+\label{fig:gradient_check}
+\end{figure}
+
+\begin{lstlisting}[language=Python]
+def gradient_check(func, deriv, x, eps=1e-5):
+    """梯度检验"""
+    analytical = deriv(x)
+    numerical = (func(x + eps) - func(x - eps)) / (2 * eps)
+    error = np.abs(analytical - numerical)
+    return error
+\end{lstlisting}
+
+如果误差超过$10^{-5}$，很可能你的解析梯度有bug。
+
+\subsection*{六、现代激活函数：GELU与Swish}
+
+GPT和BERT等大模型为什么选择GELU（Gaussian Error Linear Unit）？
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.9\textwidth]{figs_chap09/modern_activations.pdf}
+\caption{现代激活函数对比。GELU、Swish、Mish都是ReLU的光滑近似，在$x=0$附近没有导数的跳跃。右图显示它们的导数曲线，比ReLU更加平滑。}
+\label{fig:modern_activations}
+\end{figure}
+
+GELU的定义：
+\[
+\text{GELU}(x) = x \cdot \Phi(x) \approx 0.5x\left(1 + \tanh\left[\sqrt{\frac{2}{\pi}}\left(x + 0.044715x^3\right)\right]\right)
+\]
+其中$\Phi(x)$是标准正态分布的CDF。
+
+直觉：GELU对输入$x$进行"随机门控"——输入越大，通过的概率越高。这可以看作对dropout的可微近似。
+
+Swish则更简单：$\text{Swish}(x) = x \cdot \sigma(x)$。
+
+这些光滑激活函数的优势：
+\begin{itemize}
+    \item 导数处处连续，优化过程更稳定
+    \item 负半轴不完全为0，避免神经元死亡
+    \item 在大规模模型上的实验效果略优于ReLU
+\end{itemize}
+
+\subsection*{七、手写自动微分}
+
+最后，我们展示如何用50行代码实现支持激活函数的自动微分：
+
+\begin{lstlisting}[language=Python]
+class Tensor:
+    def __init__(self, data):
+        self.data = data
+        self.grad = 0
+        self._backward = lambda: None
+        self._prev = set()
+
+    def sigmoid(self):
+        s = 1 / (1 + np.exp(-self.data))
+        out = Tensor(s)
+        out._prev = {self}
+        def _backward():
+            self.grad += s * (1 - s) * out.grad  # 链式法则！
+        out._backward = _backward
+        return out
+
+    def backward(self):
+        # 拓扑排序
+        topo = []
+        visited = set()
+        def build_topo(v):
+            if v not in visited:
+                visited.add(v)
+                for child in v._prev:
+                    build_topo(child)
+                topo.append(v)
+        build_topo(self)
+
+        # 反向传播
+        self.grad = 1
+        for v in reversed(topo):
+            v._backward()
+\end{lstlisting}
+
+核心思想：每个操作（如Sigmoid）都记录"如何把输出的梯度传递给输入"。反向传播时，按拓扑逆序依次调用这些函数。
+
+完整代码见\texttt{code\_chap09/activation\_functions.py}。
+
+\subsection*{八、设计哲学小结}
+
+激活函数的演化体现了深度学习的工程智慧：
+
+\begin{enumerate}
+    \item \textbf{生物启发 → 数学便利}：Sigmoid模拟神经元激活概率，但数学性质不好。ReLU虽不生物，但训练效果好。
+
+    \item \textbf{简单 → 光滑}：ReLU计算快但不连续，GELU光滑但计算稍贵。在大模型时代，光滑性带来的稳定性更重要。
+
+    \item \textbf{理论 → 实验}：没有任何理论证明GELU一定比ReLU好。选择激活函数更多靠实验调参。
+\end{enumerate}
+
+\begin{insightbox}[title=实践建议]
+\begin{itemize}
+    \item \textbf{默认选ReLU}：简单、快、效果好
+    \item \textbf{大模型用GELU}：GPT/BERT的标配
+    \item \textbf{遇到"死神经元"换Leaky ReLU}：负半轴保留梯度
+    \item \textbf{不确定就实验}：在你的任务上跑几个对比
+\end{itemize}
+\end{insightbox}
