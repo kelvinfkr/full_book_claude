@@ -4417,3 +4417,116 @@ def beam_element_matrices(Le, EI, m):
 
 开源软件如OpenFOAM（流体）+ CalculiX（结构）可以进行完整的流固耦合仿真，但计算成本比我们这个简单模型高几个数量级。理解简化模型的物理本质，是驾驭复杂仿真工具的前提。
 
+% ------------------------------------------------------------------------------------
+\subsection*{八、工业标准：Turek-Hron FSI基准测试}
+
+在流固耦合领域，有一个被广泛采用的\textbf{基准测试问题}（benchmark）用于验证数值方法的正确性——Turek-Hron FSI问题\cite{turek2006proposal}。这是一个纯数值基准（没有实验数据），但各种FSI求解器都会用它来验证自己的实现。
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[scale=3.5]
+    % 通道
+    \draw[thick] (0,0) -- (2.5,0);
+    \draw[thick] (0,0.41) -- (2.5,0.41);
+
+    % 入口
+    \draw[thick] (0,0) -- (0,0.41);
+    \draw[->, blue, thick] (-0.15,0.2) -- (0.05,0.2);
+    \node[blue, left] at (-0.15,0.2) {\small $\bar{U}$};
+
+    % 出口
+    \draw[thick, dashed] (2.5,0) -- (2.5,0.41);
+
+    % 圆柱
+    \fill[gray!30] (0.2,0.2) circle (0.05);
+    \draw[thick] (0.2,0.2) circle (0.05);
+    \node at (0.2,0.12) {\tiny $D$};
+
+    % 弹性板
+    \fill[orange!50] (0.25,0.19) rectangle (0.6,0.21);
+    \draw[thick, orange] (0.25,0.19) -- (0.6,0.19) -- (0.6,0.21) -- (0.25,0.21) -- cycle;
+
+    % 标注
+    \draw[<->] (0,-0.05) -- (2.5,-0.05);
+    \node at (1.25,-0.1) {\small $L = 2.5$ m};
+    \draw[<->] (2.55,0) -- (2.55,0.41);
+    \node[right] at (2.55,0.205) {\small $H = 0.41$ m};
+
+    % 板的标注
+    \draw[<->] (0.25,0.25) -- (0.6,0.25);
+    \node[above] at (0.425,0.25) {\tiny $l = 0.35$ m};
+
+    % 圆心位置
+    \draw[dashed, gray] (0.2,0) -- (0.2,0.2);
+    \node[gray, below] at (0.2,0) {\tiny 0.2};
+\end{tikzpicture}
+\caption{Turek-Hron FSI基准问题几何。一个弹性薄板（橙色）固连在刚性圆柱后方，置于矩形通道中的层流流动中。由于圆柱产生的涡脱落，弹性板发生大幅度自激振荡。}
+\label{fig:turek_fsi_geometry}
+\end{figure}
+
+\paragraph{问题设置}
+\begin{itemize}
+    \item \textbf{几何}：$2.5 \times 0.41$ m的矩形通道，圆柱直径$D = 0.1$ m，圆心在$(0.2, 0.2)$（故意偏心以打破对称性），弹性板长$0.35$ m、厚$0.02$ m
+    \item \textbf{流体}：不可压缩Newtonian流体，密度$\rho_f = 1000$ kg/m³，动力粘度$\mu_f = 0.001$ Pa$\cdot$s
+    \item \textbf{固体}：Saint-Venant-Kirchhoff材料，密度$\rho_s = 10000$ kg/m³，杨氏模量$E = 1.4 \times 10^6$ Pa，泊松比$\nu_s = 0.4$
+    \item \textbf{边界条件}：入口抛物线速度剖面（平均速度$\bar{U} = 1$ m/s），出口零压力梯度，壁面无滑移
+\end{itemize}
+
+\paragraph{FSI2测试条件}
+Turek和Hron定义了三个测试工况（FSI1、FSI2、FSI3）。最常用的\textbf{FSI2}条件为：雷诺数$\text{Re} = \rho_f \bar{U} D / \mu_f = 100$，固液密度比$\rho_s/\rho_f = 10$。
+
+\paragraph{参考结果}
+经过初始瞬态后，弹性板进入大幅度自激振荡的稳态周期运动。文献中报告的参考结果：
+\begin{itemize}
+    \item 板端Y方向位移：幅值约$\pm 80$ mm，频率约$2$ Hz
+    \item 圆柱上的升力和阻力也呈周期性变化
+\end{itemize}
+
+\begin{insightbox}
+\textbf{为什么Turek-Hron基准如此重要？}
+
+\begin{enumerate}
+    \item \textbf{大变形}：板的位移幅度与板长相当，几何非线性显著
+    \item \textbf{强耦合}：固液密度比适中（$\rho_s/\rho_f = 10$），流固相互作用强烈
+    \item \textbf{自激振荡}：不是外加强迫振动，而是系统自发产生的不稳定性
+    \item \textbf{无实验噪声}：作为数值基准，可以进行严格的代码间比较
+\end{enumerate}
+
+如果你的FSI代码能正确重现Turek-Hron基准的结果，那它就有了一定的可信度。
+\end{insightbox}
+
+\begin{marginnote}
+\textbf{开源实现}：许多开源FSI框架都包含Turek-Hron基准案例，包括：
+\begin{itemize}
+    \item Kratos Multiphysics
+    \item preCICE（耦合库）
+    \item Feel++
+    \item oomph-lib
+\end{itemize}
+这些都是学习完整FSI仿真的好资源。
+\end{marginnote}
+
+\paragraph{与本节模型的对比}
+本节前面的悬臂梁模型（单向耦合、小变形）与Turek-Hron问题（双向耦合、大变形）有本质区别：
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l|c|c}
+\toprule
+& \textbf{本节简化模型} & \textbf{Turek-Hron FSI2} \\
+\midrule
+流固耦合 & 单向（流$\to$固） & 双向（流$\leftrightarrow$固） \\
+变形量级 & 小变形（$w \ll L$） & 大变形（$w \sim L$） \\
+流动建模 & 经验公式（Strouhal） & 完整Navier-Stokes \\
+计算成本 & 秒级 & 小时/天级 \\
+适用场景 & 工程估算、物理直觉 & 精确预测、代码验证 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+从简化模型到完整的双向耦合FSI，是计算成本增加几个数量级的跨越。但两者并非互斥——简化模型帮助我们建立物理直觉，完整模型用于精确预测和验证。
+
+\begin{references}
+\bibitem{turek2006proposal} S. Turek and J. Hron, ``Proposal for Numerical Benchmarking of Fluid-Structure Interaction between an Elastic Object and Laminar Incompressible Flow,'' in \textit{Fluid-Structure Interaction}, Lecture Notes in Computational Science and Engineering, vol. 53, Springer, 2006, pp. 371--385.
+\end{references}
+
