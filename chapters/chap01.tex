@@ -28,6 +28,16 @@
 \textbf{本章目标}：让你意识到拉格朗日乘子法不是"考试技巧"，而是理解物理和AI的核心语言。读完本章，你会发现自己已经掌握了打开多扇大门的钥匙。
 \end{quote}
 
+\begin{tcolorbox}[colback=green!5, colframe=green!60!black, title=学完这章，你将能够...]
+\begin{itemize}
+    \item 求解带等式/不等式约束的优化问题（工程设计、资源分配）
+    \item 写出任意约束优化问题的KKT条件
+    \item 解释"影子价格"的经济学含义（约束放松1单位，目标改善多少？）
+    \item 判断一个优化问题是否是凸问题，并利用凸性简化求解
+    \item 为后续章节（力学、控制、机器学习）建立统一的数学语言
+\end{itemize}
+\end{tcolorbox}
+
 % ------------------------------------------------------------------------------------
 \section{问题的起点}
 
@@ -644,3 +654,148 @@ v^T H v > 0
     
     \item 在机器人动力学中，KKT矩阵以"质量矩阵+约束雅可比"的形式出现。猜测：$H$对应什么物理量？$\nabla g$对应什么？$\lambda$的物理意义是什么？（提示：第7章会详细讨论）
 \end{enumerate}
+
+% ------------------------------------------------------------------------------------
+\section*{扩展阅读：什么是凸优化？}
+\addcontentsline{toc}{section}{扩展阅读：凸优化}
+
+在本章我们学习了约束优化的一般理论。但有一类特殊的优化问题——\textbf{凸优化}——具有非常好的性质，在机器学习和工程中应用极其广泛。
+
+\subsection*{凸集与凸函数}
+
+\begin{definition}[凸集]
+一个集合$\mathcal{C}$是\textbf{凸集}，如果对于$\mathcal{C}$中任意两点$x, y$，连接它们的线段也完全在$\mathcal{C}$内：
+\[
+\forall x, y \in \mathcal{C}, \forall \theta \in [0,1]: \quad \theta x + (1-\theta)y \in \mathcal{C}
+\]
+\end{definition}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[scale=0.8]
+    % 凸集
+    \begin{scope}[shift={(0,0)}]
+        \draw[thick, fill=blue!15] (0,0) ellipse (1.5cm and 1cm);
+        \fill (0.5,0.3) circle (2pt) node[above] {$x$};
+        \fill (-0.7,-0.2) circle (2pt) node[below] {$y$};
+        \draw[red, thick] (0.5,0.3) -- (-0.7,-0.2);
+        \node at (0,-1.5) {凸集 $\checkmark$};
+    \end{scope}
+
+    % 非凸集
+    \begin{scope}[shift={(5,0)}]
+        \draw[thick, fill=red!15] plot[smooth cycle] coordinates {(0,1) (1.2,0.5) (1,-0.5) (0.3,-0.8) (-0.5,-0.3) (-1,0.3) (-0.3,0.8)};
+        \fill (0.8,0.3) circle (2pt) node[above] {$x$};
+        \fill (-0.6,0.2) circle (2pt) node[above] {$y$};
+        \draw[red, thick, dashed] (0.8,0.3) -- (-0.6,0.2);
+        \node at (0,-1.5) {非凸集 $\times$};
+    \end{scope}
+\end{tikzpicture}
+\caption{凸集的直观理解：线段不会``跑出去''}
+\end{figure}
+
+\begin{definition}[凸函数]
+函数$f: \R^n \to \R$是\textbf{凸函数}，如果它的图形``向下弯曲''：
+\[
+f(\theta x + (1-\theta)y) \leq \theta f(x) + (1-\theta)f(y), \quad \forall \theta \in [0,1]
+\]
+等价地，$f$是凸函数当且仅当它的Hessian矩阵半正定：$\nabla^2 f \succeq 0$。
+\end{definition}
+
+\textbf{直观理解}：凸函数的图像像一个``碗''——任意两点之间的弦总在曲线上方。
+
+\begin{example}[常见凸函数]
+\begin{itemize}
+    \item \textbf{线性函数}：$f(x) = a^T x + b$（既是凸函数也是凹函数）
+    \item \textbf{二次函数}：$f(x) = \frac{1}{2}x^T Q x + b^T x$，当$Q \succeq 0$时是凸函数
+    \item \textbf{范数}：$f(x) = \|x\|_p$（任何$p \geq 1$）
+    \item \textbf{指数函数}：$f(x) = e^x$
+    \item \textbf{负对数}：$f(x) = -\log x$（$x > 0$）
+    \item \textbf{交叉熵损失}：深度学习中常用的损失函数
+\end{itemize}
+\end{example}
+
+\subsection*{凸优化问题的定义}
+
+\begin{definition}[凸优化问题]
+一个优化问题是\textbf{凸优化问题}，如果：
+\begin{enumerate}
+    \item 目标函数$f(x)$是凸函数
+    \item 不等式约束$g_i(x) \leq 0$中，每个$g_i$都是凸函数
+    \item 等式约束$h_j(x) = 0$中，每个$h_j$都是仿射函数（线性函数）
+\end{enumerate}
+\end{definition}
+
+\subsection*{凸优化的``好''性质}
+
+凸优化问题有一个极其重要的性质，使它在实践中非常有用：
+
+\begin{keytheorem}[title=凸优化的核心定理]
+对于凸优化问题：
+\begin{enumerate}
+    \item \textbf{局部最优 = 全局最优}：任何局部最小点都是全局最小点
+    \item \textbf{KKT条件是充分条件}：满足KKT条件的点一定是全局最优解（不只是候选点）
+    \item \textbf{高效算法}：存在多项式时间算法求解（如内点法）
+\end{enumerate}
+\end{keytheorem}
+
+\begin{physicalmeaning}
+为什么``局部=全局''如此重要？
+
+想象你在山里找最低点。对于一般的地形（非凸），你可能陷入一个山谷（局部最小），却不知道旁边还有更深的山谷。
+
+但如果地形是凸的（只有一个``碗底''），那么你只要一直往下走，最终一定能到达最低点。\textbf{不需要担心被骗到假的最低点！}
+
+这就是为什么机器学习中很多人喜欢用凸损失函数——优化更简单，更可靠。
+\end{physicalmeaning}
+
+\subsection*{为什么深度学习是非凸的？}
+
+你可能会问：既然凸优化这么好，为什么深度学习不用凸优化？
+
+答案是：\textbf{神经网络的损失函数天然是非凸的}。
+
+\begin{example}[非凸性的来源]
+考虑一个简单的两层神经网络：$f(x; w_1, w_2) = w_2 \cdot \sigma(w_1 \cdot x)$
+
+即使激活函数$\sigma$是凸的，复合之后损失函数关于参数$(w_1, w_2)$也不是凸的。
+
+直观原因：如果我们交换$w_1$和$-w_1$，同时翻转$w_2$的符号，网络输出可能不变——这意味着参数空间有很多``等效''的点，形成复杂的非凸景观。
+\end{example}
+
+\textbf{好消息是}：虽然深度学习是非凸的，但实践表明：
+\begin{itemize}
+    \item 大多数局部最小点的性能都差不多好
+    \item 鞍点（而非局部最小点）才是主要障碍
+    \item SGD等算法能有效逃离鞍点
+\end{itemize}
+
+\subsection*{凸优化在机器学习中的应用}
+
+虽然深度学习是非凸的，但很多经典机器学习问题是凸优化问题：
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l|l|l}
+\toprule
+\textbf{问题} & \textbf{目标函数} & \textbf{是否凸？} \\
+\midrule
+线性回归 & $\|Ax - b\|^2$ & 凸 \\
+岭回归 & $\|Ax - b\|^2 + \lambda\|x\|^2$ & 凸 \\
+LASSO & $\|Ax - b\|^2 + \lambda\|x\|_1$ & 凸 \\
+支持向量机(SVM) & $\frac{1}{2}\|w\|^2 + C\sum_i \xi_i$ & 凸 \\
+逻辑回归 & $\sum_i \log(1 + e^{-y_i w^T x_i})$ & 凸 \\
+\midrule
+神经网络 & 交叉熵/MSE关于参数 & \textbf{非凸} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{insightbox}
+\textbf{实用建议}：
+\begin{itemize}
+    \item 如果你的问题可以建模为凸优化，\textbf{优先用凸优化}——解是全局最优的，算法可靠
+    \item 如果必须用非凸模型（如深度学习），\textbf{多试几个初始点}，或用预训练模型
+    \item 学习\texttt{cvxpy}库——Python中最好用的凸优化工具
+\end{itemize}
+\end{insightbox}

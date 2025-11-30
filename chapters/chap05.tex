@@ -93,6 +93,16 @@
 \end{itemize}
 \end{tcolorbox}
 
+\begin{tcolorbox}[colback=green!5, colframe=green!60!black, title=学完这章，你将能够...]
+\begin{itemize}
+    \item 把Poisson方程转化为能量最小化问题（变分形式）
+    \item 手算一维有限元问题的刚度矩阵和载荷向量
+    \item 用Python/MATLAB组装刚度矩阵并求解$KU=F$
+    \item 理解工程软件（ANSYS、COMSOL）背后的数学原理
+    \item 估算网格密度与计算精度的关系
+\end{itemize}
+\end{tcolorbox}
+
 % ------------------------------------------------------------------------------------
 \section{从物理问题到数学方程}
 
@@ -130,9 +140,90 @@
 \caption{一维热传导问题}
 \end{figure}
 
+\subsection{Poisson方程从哪里来？}
+
+在有限元和PINN中，你会反复遇到\textbf{Poisson方程}（泊松方程）。让我们从物理第一性原理推导它。
+
+\begin{keyidea}{Poisson方程的推导——大白话版}
+\textbf{核心物理}：守恒律 + 本构关系 = 偏微分方程
+
+\textbf{步骤1：守恒律}
+
+考虑热传导。取一小段$[x, x+\Delta x]$，稳态下热量``进 = 出 + 生成''：
+\[
+q(x) = q(x + \Delta x) + f(x)\Delta x
+\]
+其中$q(x)$是热流密度（单位时间流过$x$处的热量），$f(x)$是热源强度。
+
+整理得：$\frac{q(x+\Delta x) - q(x)}{\Delta x} = -f(x)$
+
+当$\Delta x \to 0$：
+\[
+\frac{dq}{dx} = -f(x) \quad \text{（守恒律）}
+\]
+
+\textbf{步骤2：本构关系（傅里叶定律）}
+
+热量从高温流向低温，流速与温度梯度成正比：
+\[
+q = -k\frac{du}{dx} \quad \text{（傅里叶定律）}
+\]
+这里$k$是热导率（设$k=1$简化），负号表示热量流向温度降低的方向。
+
+\textbf{步骤3：合并}
+
+把傅里叶定律代入守恒律：
+\[
+\frac{d}{dx}\left(-\frac{du}{dx}\right) = -f(x) \quad \Rightarrow \quad \boxed{-\frac{d^2u}{dx^2} = f(x)}
+\]
+
+这就是一维Poisson方程！高维情况只需把$\frac{d^2}{dx^2}$换成Laplacian算子$\nabla^2$：
+\[
+-\nabla^2 u = f \quad \text{（Poisson方程）}
+\]
+\end{keyidea}
+
+\subsection{现实问题与PDE的对应关系}
+
+Poisson方程（及其变种）描述了惊人多的物理现象：
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{l|l|l|l}
+\toprule
+\textbf{物理问题} & \textbf{方程} & \textbf{$u$代表} & \textbf{$f$代表} \\
+\midrule
+稳态热传导 & $-\nabla^2 u = f$ & 温度 & 热源强度 \\
+静电场 & $-\nabla^2 \phi = \rho/\varepsilon_0$ & 电势 & 电荷密度 \\
+万有引力 & $\nabla^2 \phi = 4\pi G\rho$ & 引力势 & 质量密度 \\
+弹性膜变形 & $-\nabla^2 u = f$ & 挠度 & 压力 \\
+地下水渗流 & $-\nabla \cdot (K\nabla h) = Q$ & 水头 & 源/汇 \\
+\midrule
+\multicolumn{4}{c}{\textit{时间相关的方程}} \\
+\midrule
+热扩散 & $\frac{\partial u}{\partial t} = \alpha \nabla^2 u$ & 温度 & — \\
+波动 & $\frac{\partial^2 u}{\partial t^2} = c^2 \nabla^2 u$ & 位移 & — \\
+Schrödinger & $i\hbar\frac{\partial \psi}{\partial t} = -\frac{\hbar^2}{2m}\nabla^2\psi + V\psi$ & 波函数 & 势能 \\
+Navier-Stokes & $\rho(\frac{\partial \vec{v}}{\partial t} + \vec{v}\cdot\nabla\vec{v}) = -\nabla p + \mu\nabla^2\vec{v}$ & 速度场 & 压力 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{insightbox}
+\textbf{为什么这么多问题都对应类似的方程？}
+
+因为它们都遵循相同的模式：
+\begin{enumerate}
+    \item \textbf{守恒律}：能量/质量/电荷守恒
+    \item \textbf{本构关系}：流量与梯度成正比（Fourier/Ohm/Darcy定律）
+\end{enumerate}
+
+这就是为什么学会用有限元解一个问题（如热传导），就等于学会了解\textbf{所有}类似问题！
+\end{insightbox}
+
 \subsection{物理定律：热传导方程}
 
-根据傅里叶热传导定律和能量守恒，稳态温度分布 $u(x)$ 满足：
+根据上面的推导，稳态温度分布 $u(x)$ 满足：
 
 \begin{equation}
 -\frac{d^2 u}{dx^2} = f(x), \quad x \in (0, 1)
