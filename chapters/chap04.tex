@@ -1156,3 +1156,228 @@ L = T - V
     
     \item 在机器人学中（第7章），我们将用 $M(q)\ddot{q} + C(q,\dot{q})\dot{q} + G(q) = \tau$ 描述动力学。这与拉格朗日方程有什么关系？
 \end{enumerate}
+
+% ====================================================================================
+\section*{扩展阅读：ODE数值方法与辛积分器}
+\addcontentsline{toc}{section}{扩展阅读：ODE数值方法}
+% ====================================================================================
+
+求解力学方程需要数值积分ODE。但不是所有数值方法都"尊重物理"——有些方法会让能量随时间漂移，导致长时间仿真失真。本节介绍\textbf{辛积分器}，它能保持哈密顿系统的几何结构。
+
+\subsection*{常见ODE积分方法}
+
+\paragraph{前向欧拉法（1阶）}
+\begin{equation}
+y_{n+1} = y_n + h \cdot f(t_n, y_n)
+\end{equation}
+简单但不稳定，能量会持续增长（对振荡系统）。
+
+\paragraph{4阶龙格-库塔法（RK4）}
+\begin{equation}
+y_{n+1} = y_n + \frac{h}{6}(k_1 + 2k_2 + 2k_3 + k_4)
+\end{equation}
+其中$k_1 = f(t_n, y_n)$, $k_2 = f(t_n + h/2, y_n + hk_1/2)$等。精度高但能量会缓慢漂移。
+
+\paragraph{Störmer-Verlet法（辛积分器，2阶）}
+
+对于哈密顿系统$\dot{q} = \partial H/\partial p$，$\dot{p} = -\partial H/\partial q$：
+\begin{align}
+p_{n+1/2} &= p_n - \frac{h}{2} \frac{\partial H}{\partial q}(q_n) \\
+q_{n+1} &= q_n + h \frac{\partial H}{\partial p}(p_{n+1/2}) \\
+p_{n+1} &= p_{n+1/2} - \frac{h}{2} \frac{\partial H}{\partial q}(q_{n+1})
+\end{align}
+
+\begin{tcolorbox}[colback=blue!5, colframe=blue!60!black, title=辛积分器的关键性质]
+辛积分器保持相空间体积（Liouville定理），\textbf{能量不会系统性漂移}，只会在真实值附近振荡。这对长时间仿真至关重要。
+\end{tcolorbox}
+
+\subsection*{简谐振子对比实验}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\textwidth]{figs_chap04/harmonic_comparison.pdf}
+\caption{简谐振子数值积分对比（$\omega=1$, $dt=0.1$, 积分50个周期）。\textbf{左上}：轨迹——Euler法振幅发散，RK4和Verlet接近精确解。\textbf{右上}：能量——Euler法能量指数增长，RK4缓慢漂移，Verlet围绕真实值振荡。\textbf{左下}：相空间——Euler螺旋向外（能量增加），Verlet保持闭合曲线。\textbf{右下}：相对能量误差——Verlet误差有界，RK4误差累积。}
+\end{figure}
+
+\subsection*{长时间积分的差异}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\textwidth]{figs_chap04/long_time_comparison.pdf}
+\caption{长时间积分（$t=500$）能量漂移对比。\textbf{左图}：RK4的能量漂移随时间累积，而Verlet保持有界振荡。\textbf{右图}：放大看Verlet——能量在真实值附近做小振荡，没有系统性漂移。这是辛积分器的核心优势。}
+\end{figure}
+
+\subsection*{收敛阶验证}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.6\textwidth]{figs_chap04/convergence_order.pdf}
+\caption{收敛阶验证。在双对数坐标下，Euler误差$\sim dt$（1阶），Verlet误差$\sim dt^2$（2阶），RK4误差$\sim dt^4$（4阶）。虽然RK4精度最高，但辛积分器在长时间仿真中表现更好。}
+\end{figure}
+
+\begin{lstlisting}[language=Python, caption=Störmer-Verlet实现]
+def stormer_verlet(dH_dq, dH_dp, q0, p0, t_span, dt):
+    """辛积分器：保能量的ODE求解"""
+    t = np.arange(t_span[0], t_span[1], dt)
+    q, p = np.zeros(len(t)), np.zeros(len(t))
+    q[0], p[0] = q0, p0
+    for i in range(len(t)-1):
+        p_half = p[i] - dt/2 * dH_dq(q[i])    # 半步动量
+        q[i+1] = q[i] + dt * dH_dp(p_half)    # 全步位置
+        p[i+1] = p_half - dt/2 * dH_dq(q[i+1])  # 完成动量
+    return t, q, p
+\end{lstlisting}
+
+\begin{insightbox}
+\textbf{选择数值方法的原则}：
+\begin{itemize}
+    \item \textbf{短时间、高精度需求}：RK4或高阶方法
+    \item \textbf{长时间仿真、能量守恒关键}：辛积分器（Verlet, 辛RK）
+    \item \textbf{刚性系统}：隐式方法（BDF, 隐式RK）
+    \item \textbf{实时应用}（游戏、机器人）：半隐式Euler或Verlet
+\end{itemize}
+\end{insightbox}
+
+% ====================================================================================
+\section*{扩展阅读：从作用量到PDE——连续介质力学}
+\addcontentsline{toc}{section}{扩展阅读：PDE与作用量}
+% ====================================================================================
+
+拉格朗日方法不仅适用于质点系统，还能推广到连续介质。这就是场论的起点——从有限自由度到无限自由度。
+
+\subsection*{从离散到连续}
+
+考虑一根弦上的$N$个质点，用弹簧连接。当$N \to \infty$时：
+\begin{itemize}
+    \item 离散变量$q_i(t)$ $\to$ 连续场$u(x,t)$
+    \item 求和$\sum_i$ $\to$ 积分$\int dx$
+    \item 有限维拉格朗日量$L$ $\to$ 拉格朗日密度$\mathcal{L}$
+\end{itemize}
+
+\subsection*{弦的波动方程}
+
+一维弦的拉格朗日密度：
+\begin{equation}
+\mathcal{L} = \frac{1}{2}\rho \left(\frac{\partial u}{\partial t}\right)^2 - \frac{1}{2}T\left(\frac{\partial u}{\partial x}\right)^2
+\end{equation}
+其中$\rho$是线密度，$T$是张力，$u(x,t)$是位移场。
+
+作用量：
+\begin{equation}
+S[u] = \int_{t_1}^{t_2} \int_0^L \mathcal{L} \, dx \, dt
+\end{equation}
+
+对$u$变分，得到\textbf{Euler-Lagrange场方程}：
+\begin{equation}
+\frac{\partial}{\partial t}\frac{\partial \mathcal{L}}{\partial \dot{u}} + \frac{\partial}{\partial x}\frac{\partial \mathcal{L}}{\partial u'} - \frac{\partial \mathcal{L}}{\partial u} = 0
+\end{equation}
+
+代入弦的$\mathcal{L}$，得到\textbf{波动方程}：
+\begin{equation}
+\boxed{\frac{\partial^2 u}{\partial t^2} = c^2 \frac{\partial^2 u}{\partial x^2}, \quad c = \sqrt{T/\rho}}
+\end{equation}
+
+\subsection*{弹性力学}
+
+三维弹性体的拉格朗日密度：
+\begin{equation}
+\mathcal{L} = \frac{1}{2}\rho |\dot{\mathbf{u}}|^2 - W(\boldsymbol{\varepsilon})
+\end{equation}
+其中$\mathbf{u}(\mathbf{x},t)$是位移场，$\boldsymbol{\varepsilon} = \frac{1}{2}(\nabla \mathbf{u} + \nabla \mathbf{u}^T)$是应变张量，$W$是弹性势能密度。
+
+对于各向同性线弹性材料（Hooke定律）：
+\begin{equation}
+W = \frac{\lambda}{2}(\text{tr}\,\boldsymbol{\varepsilon})^2 + \mu \, \text{tr}(\boldsymbol{\varepsilon}^2)
+\end{equation}
+
+变分得到\textbf{Navier方程}（弹性波方程）：
+\begin{equation}
+\boxed{\rho \frac{\partial^2 \mathbf{u}}{\partial t^2} = (\lambda + \mu)\nabla(\nabla \cdot \mathbf{u}) + \mu \nabla^2 \mathbf{u}}
+\end{equation}
+
+\subsection*{流体力学：Navier-Stokes方程}
+
+流体力学的拉格朗日描述比较复杂，但思想是一致的。对于不可压缩粘性流体：
+
+\textbf{动能}：$T = \frac{1}{2}\int \rho |\mathbf{v}|^2 \, dV$
+
+\textbf{约束}：不可压缩条件$\nabla \cdot \mathbf{v} = 0$
+
+用拉格朗日乘子$p$（压力！）处理约束，变分得到\textbf{Navier-Stokes方程}：
+\begin{equation}
+\boxed{\rho \left(\frac{\partial \mathbf{v}}{\partial t} + \mathbf{v} \cdot \nabla \mathbf{v}\right) = -\nabla p + \mu \nabla^2 \mathbf{v} + \mathbf{f}}
+\end{equation}
+
+\begin{insightbox}
+\textbf{压力是拉格朗日乘子！}
+
+在流体力学中，压力$p$的角色就是不可压缩约束$\nabla \cdot \mathbf{v} = 0$的拉格朗日乘子。这与第1章的"影子价格"、第4章的"约束力"完全一致——$\lambda$在不同领域有不同的物理名称，但数学本质相同。
+\end{insightbox}
+
+\subsection*{物理问题与PDE对应表}
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{l|l|l}
+\toprule
+\textbf{物理系统} & \textbf{作用量/能量泛函} & \textbf{PDE} \\
+\midrule
+弦振动 & $S = \int\!\!\int [\frac{\rho}{2}\dot{u}^2 - \frac{T}{2}u'^2]\,dx\,dt$ & $u_{tt} = c^2 u_{xx}$（波动方程）\\
+热传导 & $F = \int [\frac{k}{2}|\nabla u|^2 + fu]\,dx$ & $-k\nabla^2 u = f$（Poisson方程）\\
+弹性体 & $\Pi = \int W(\varepsilon)\,dV - \int \mathbf{f}\cdot\mathbf{u}\,dS$ & Navier方程 \\
+不可压流体 & $L = T - \int p(\nabla\cdot\mathbf{v})\,dV$ & Navier-Stokes方程 \\
+薛定谔场 & $S = \int \bar{\psi}(i\hbar\partial_t + \frac{\hbar^2}{2m}\nabla^2)\psi\,dx\,dt$ & 薛定谔方程 \\
+电磁场 & $S = \int [-\frac{1}{4}F_{\mu\nu}F^{\mu\nu}]\,d^4x$ & Maxwell方程 \\
+\bottomrule
+\end{tabular}
+\caption{从作用量推导各类物理PDE}
+\end{table}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[scale=0.9]
+    % 波动方程解
+    \begin{scope}[shift={(-5,0)}]
+        \draw[->] (-0.5,0) -- (3.5,0) node[right] {$x$};
+        \draw[->] (0,-1.5) -- (0,1.5) node[above] {$u$};
+        \draw[blue, thick, domain=0:3, samples=50] plot (\x, {sin(2*\x r)*exp(-0.3*\x)});
+        \node at (1.5,-2) {\small 波动方程解：行波};
+    \end{scope}
+
+    % Poisson方程解
+    \begin{scope}[shift={(0,0)}]
+        \draw[->] (-0.5,0) -- (3.5,0) node[right] {$x$};
+        \draw[->] (0,-0.5) -- (0,2) node[above] {$u$};
+        \draw[red, thick, domain=0:3, samples=50] plot (\x, {-0.5*\x*(\x-3)});
+        \node at (1.5,-2) {\small Poisson解：稳态分布};
+    \end{scope}
+
+    % NS涡
+    \begin{scope}[shift={(5,0)}]
+        \draw[->] (-1.5,0) -- (1.5,0) node[right] {$x$};
+        \draw[->] (0,-1.5) -- (0,1.5) node[above] {$y$};
+        \foreach \r in {0.3,0.6,0.9,1.2} {
+            \draw[green!60!black, thick, ->] (0,0) +(\r,0) arc (0:330:\r);
+        }
+        \node at (0,-2) {\small NS解：涡旋};
+    \end{scope}
+\end{tikzpicture}
+\caption{不同PDE的典型解：波动方程产生行波，Poisson方程给出稳态分布，Navier-Stokes方程描述涡旋}
+\end{figure}
+
+\begin{physicalmeaning}
+\textbf{变分原理的统一性}：
+
+从质点力学到场论，变分原理贯穿始终：
+\begin{enumerate}
+    \item 写出系统的拉格朗日量（或拉格朗日密度）
+    \item 构造作用量$S = \int L\,dt$（或$S = \int\!\!\int \mathcal{L}\,dx\,dt$）
+    \item 要求$\delta S = 0$，得到运动方程（ODE或PDE）
+    \item 约束用拉格朗日乘子处理
+\end{enumerate}
+
+这个框架适用于：经典力学、弹性力学、流体力学、电磁学、量子力学、广义相对论……
+
+\textbf{为什么自然"喜欢"极值？}这仍是物理学的深刻谜题。费曼的量子路径积分给出了一种解释：粒子"探索"所有可能路径，但只有作用量驻点附近的路径相互干涉相长，形成经典轨道。
+\end{physicalmeaning}
