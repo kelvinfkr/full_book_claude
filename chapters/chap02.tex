@@ -1085,12 +1085,136 @@ $\lambda$在对偶理论中的意义：它是\textbf{资源的影子价格}。
     \item 深度学习中很少显式使用对偶。为什么？（提示：非凸性）
 \end{enumerate}
 
+
+% ====================================================================================
+\section*{扩展阅读：凸优化基础——为什么"凸"这么重要？}
+\addcontentsline{toc}{section}{扩展阅读：凸优化基础}
+% ====================================================================================
+
+\begin{tcolorbox}[colback=gray!5, colframe=gray!50, title=本节导读]
+在动手使用优化工具之前，我们先回答一个根本问题：\textbf{什么是凸优化，为什么它如此重要？}理解这个概念，你才能判断一个问题能否被高效求解。
+\end{tcolorbox}
+
+\subsection*{一、凸集与凸函数}
+
+\paragraph{凸集}
+一个集合$C$是\textbf{凸集}（convex set），当且仅当集合中任意两点的连线仍在集合内：
+\[
+\forall x, y \in C, \forall \theta \in [0, 1]: \quad \theta x + (1-\theta) y \in C
+\]
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[scale=0.8]
+    % 凸集
+    \begin{scope}[shift={(0,0)}]
+        \draw[fill=blue!20, draw=blue, thick] (0,0) ellipse (1.5 and 1);
+        \fill (0.5, 0.3) circle (2pt);
+        \fill (-0.8, -0.2) circle (2pt);
+        \draw[red, thick] (0.5, 0.3) -- (-0.8, -0.2);
+        \node[below] at (0, -1.5) {\textbf{凸集}：连线在集合内};
+    \end{scope}
+
+    % 非凸集
+    \begin{scope}[shift={(5,0)}]
+        \draw[fill=orange!20, draw=orange, thick]
+            plot[smooth cycle, tension=0.8] coordinates {(0,1) (1.2,0.5) (1.5,-0.3) (0.5,-1) (-0.5,-0.8) (-1,0) (-0.5,0.8)};
+        \fill (0.8, 0.3) circle (2pt);
+        \fill (-0.6, 0.5) circle (2pt);
+        \draw[red, thick, dashed] (0.8, 0.3) -- (-0.6, 0.5);
+        \node[below] at (0.3, -1.5) {\textbf{非凸集}：连线跑出集合};
+    \end{scope}
+\end{tikzpicture}
+\caption{凸集vs非凸集}
+\end{figure}
+
+常见凸集：超平面、半空间、多面体、椭球、二阶锥、半正定锥。
+
+\paragraph{凸函数}
+一个函数$f: \mathbb{R}^n \to \mathbb{R}$是\textbf{凸函数}（convex function），当且仅当其上方图（epigraph）是凸集，等价于Jensen不等式：
+\[
+f(\theta x + (1-\theta) y) \leq \theta f(x) + (1-\theta) f(y), \quad \forall \theta \in [0, 1]
+\]
+
+几何直觉：函数曲线"下凹"，任意弦在曲线上方。
+
+\begin{marginnote}
+\textbf{判断凸性}：对于二阶可微函数，$f$是凸的当且仅当Hessian矩阵半正定：$\nabla^2 f(x) \succeq 0$。这是最常用的判断方法。
+\end{marginnote}
+
+常见凸函数：
+\begin{itemize}
+    \item 线性函数$f(x) = c^\top x$（既凸又凹）
+    \item 二次函数$f(x) = x^\top Q x$（当$Q \succeq 0$）
+    \item 范数$\|x\|_p$（$p \geq 1$）
+    \item 指数函数$e^{ax}$
+    \item 负熵$x \log x$（$x > 0$）
+    \item LogSumExp: $\log(\sum e^{x_i})$
+\end{itemize}
+
+\subsection*{二、凸优化问题}
+
+\textbf{凸优化问题}的标准形式：
+\begin{align}
+    \min_{x} \quad & f_0(x) \quad \text{（凸目标函数）} \\
+    \text{s.t.} \quad & f_i(x) \leq 0, \quad i = 1, \ldots, m \quad \text{（凸不等式约束）} \\
+    & Ax = b \quad \text{（仿射等式约束）}
+\end{align}
+
+\begin{keyidea}[凸优化的根本性质]
+凸优化问题的\textbf{任何局部最优解都是全局最优解}。这是凸优化"好解"的根本原因——不会陷入局部极小值。
+\end{keyidea}
+
+为什么？因为如果存在两个局部最优$x^*$和$y^*$，由凸性，它们的连线上的任意点都可行，且函数值不超过两端点的最大值。若$f(x^*) < f(y^*)$，则$y^*$附近存在更优的点，矛盾。
+
+\subsection*{三、凸优化问题的分类}
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l|l|l}
+\toprule
+\textbf{问题类型} & \textbf{目标/约束} & \textbf{求解难度} \\
+\midrule
+\textbf{LP}（线性规划） & 线性目标 + 线性约束 & 多项式时间（内点法） \\
+\textbf{QP}（二次规划） & 二次目标 + 线性约束 & 多项式时间 \\
+\textbf{QCQP}（二次约束QP） & 二次目标 + 二次约束 & 多项式时间（凸时） \\
+\textbf{SOCP}（二阶锥规划） & 线性目标 + 二阶锥约束 & 多项式时间 \\
+\textbf{SDP}（半正定规划） & 线性目标 + 矩阵半正定约束 & 多项式时间 \\
+\textbf{GP}（几何规划） & 对数凸 & 变换为凸 \\
+\midrule
+\textbf{一般非凸} & 非凸目标或约束 & NP-hard \\
+\bottomrule
+\end{tabular}
+\caption{优化问题分类与求解难度}
+\end{table}
+
+\textbf{包含关系}：$\text{LP} \subset \text{QP} \subset \text{QCQP} \subset \text{SOCP} \subset \text{SDP}$
+
+\subsection*{四、为什么凸优化重要？}
+
+\begin{enumerate}
+    \item \textbf{可高效求解}：内点法可以在多项式时间内找到全局最优解，误差可以做到任意小
+    \item \textbf{理论完备}：强对偶性成立，KKT条件是充要条件
+    \item \textbf{应用广泛}：信号处理、机器学习、金融、控制等领域的大量问题是凸的（或可以转化为凸的）
+    \item \textbf{软件成熟}：CVX、CVXPY、MOSEK等工具让建模和求解变得简单
+\end{enumerate}
+
+\begin{insightbox}[title=实用建议]
+拿到一个优化问题，首先问：\textbf{这是凸问题吗？}
+\begin{itemize}
+    \item 如果是凸的 → 用现成求解器，全局最优有保证
+    \item 如果不确定 → 检查目标函数的Hessian、约束集的凸性
+    \item 如果是非凸的 → 要么接受局部最优，要么寻找凸松弛
+\end{itemize}
+\end{insightbox}
+
 % ====================================================================================
 \section*{扩展阅读：Python/MATLAB优化工具包实战}
 \addcontentsline{toc}{section}{扩展阅读：优化工具包实战}
 % ====================================================================================
 
-学完对偶理论，你可能会问：实际工程中如何求解优化问题？本节介绍主流的优化工具包，并通过实验比较它们的性能。
+学完对偶理论和凸优化基础，你可能会问：实际工程中如何求解优化问题？本节介绍主流的优化工具包，并通过实验比较它们的性能。
 
 \subsection*{主流优化工具概览}
 
