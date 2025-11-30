@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 
 # 设置中文字体
-plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
+plt.rcParams['font.sans-serif'] = ['WenQuanYi Micro Hei', 'SimHei', 'DejaVu Sans']
 plt.rcParams['axes.unicode_minus'] = False
 
 # =============================================================================
@@ -129,26 +129,26 @@ def plot_harmonic_comparison(save_path):
 
     # 左上：轨迹对比
     ax1 = fig.add_subplot(gs[0, 0])
-    ax1.plot(t_exact, x_exact, 'k-', linewidth=2, label='Exact', alpha=0.8)
-    ax1.plot(t_euler, y_euler[:, 0], 'r--', linewidth=1.5, label='Forward Euler', alpha=0.7)
+    ax1.plot(t_exact, x_exact, 'k-', linewidth=2, label='精确解', alpha=0.8)
+    ax1.plot(t_euler, y_euler[:, 0], 'r--', linewidth=1.5, label='前向Euler', alpha=0.7)
     ax1.plot(t_rk4, y_rk4[:, 0], 'b-.', linewidth=1.5, label='RK4', alpha=0.7)
-    ax1.plot(t_verlet, q_verlet, 'g:', linewidth=2, label='Verlet (Symplectic)', alpha=0.7)
-    ax1.set_xlabel('Time t', fontsize=11)
-    ax1.set_ylabel('Position x', fontsize=11)
-    ax1.set_title('Harmonic Oscillator: Trajectory Comparison', fontsize=12)
+    ax1.plot(t_verlet, q_verlet, 'g:', linewidth=2, label='Verlet (辛积分器)', alpha=0.7)
+    ax1.set_xlabel('时间 t', fontsize=11)
+    ax1.set_ylabel('位置 x', fontsize=11)
+    ax1.set_title('简谐振子：轨迹对比', fontsize=12)
     ax1.legend(loc='upper right', fontsize=10)
     ax1.grid(True, alpha=0.3)
     ax1.set_xlim(0, 50)
 
     # 右上：能量对比
     ax2 = fig.add_subplot(gs[0, 1])
-    ax2.axhline(y=E0, color='k', linestyle='-', linewidth=2, label='Exact (constant)', alpha=0.8)
-    ax2.plot(t_euler, E_euler, 'r-', linewidth=1.5, label='Forward Euler', alpha=0.7)
+    ax2.axhline(y=E0, color='k', linestyle='-', linewidth=2, label='精确值 (常数)', alpha=0.8)
+    ax2.plot(t_euler, E_euler, 'r-', linewidth=1.5, label='前向Euler', alpha=0.7)
     ax2.plot(t_rk4, E_rk4, 'b-', linewidth=1.5, label='RK4', alpha=0.7)
     ax2.plot(t_verlet, E_verlet, 'g-', linewidth=1.5, label='Verlet', alpha=0.7)
-    ax2.set_xlabel('Time t', fontsize=11)
-    ax2.set_ylabel('Energy H', fontsize=11)
-    ax2.set_title('Energy Conservation Comparison', fontsize=12)
+    ax2.set_xlabel('时间 t', fontsize=11)
+    ax2.set_ylabel('能量 H', fontsize=11)
+    ax2.set_title('能量守恒对比', fontsize=12)
     ax2.legend(loc='upper left', fontsize=10)
     ax2.grid(True, alpha=0.3)
     ax2.set_xlim(0, 50)
@@ -156,13 +156,13 @@ def plot_harmonic_comparison(save_path):
     # 左下：相空间轨迹
     ax3 = fig.add_subplot(gs[1, 0])
     theta = np.linspace(0, 2*np.pi, 100)
-    ax3.plot(np.cos(theta), np.sin(theta), 'k-', linewidth=2, label='Exact (circle)', alpha=0.8)
-    ax3.plot(y_euler[:, 0], y_euler[:, 1], 'r-', linewidth=1, label='Euler (spiral out)', alpha=0.6)
-    ax3.plot(y_rk4[:, 0], y_rk4[:, 1], 'b-', linewidth=1, label='RK4 (slight drift)', alpha=0.6)
-    ax3.plot(q_verlet, p_verlet, 'g-', linewidth=1, label='Verlet (preserved)', alpha=0.6)
-    ax3.set_xlabel('Position x', fontsize=11)
-    ax3.set_ylabel('Velocity v', fontsize=11)
-    ax3.set_title('Phase Space Portrait', fontsize=12)
+    ax3.plot(np.cos(theta), np.sin(theta), 'k-', linewidth=2, label='精确 (圆)', alpha=0.8)
+    ax3.plot(y_euler[:, 0], y_euler[:, 1], 'r-', linewidth=1, label='Euler (发散)', alpha=0.6)
+    ax3.plot(y_rk4[:, 0], y_rk4[:, 1], 'b-', linewidth=1, label='RK4 (漂移)', alpha=0.6)
+    ax3.plot(q_verlet, p_verlet, 'g-', linewidth=1, label='Verlet (保持)', alpha=0.6)
+    ax3.set_xlabel('位置 x', fontsize=11)
+    ax3.set_ylabel('速度 v', fontsize=11)
+    ax3.set_title('相空间轨迹', fontsize=12)
     ax3.legend(loc='upper right', fontsize=10)
     ax3.grid(True, alpha=0.3)
     ax3.set_aspect('equal')
@@ -171,12 +171,12 @@ def plot_harmonic_comparison(save_path):
 
     # 右下：相对能量误差
     ax4 = fig.add_subplot(gs[1, 1])
-    ax4.semilogy(t_euler, np.abs(E_euler - E0)/E0 + 1e-16, 'r-', linewidth=1.5, label='Forward Euler', alpha=0.7)
+    ax4.semilogy(t_euler, np.abs(E_euler - E0)/E0 + 1e-16, 'r-', linewidth=1.5, label='前向Euler', alpha=0.7)
     ax4.semilogy(t_rk4, np.abs(E_rk4 - E0)/E0 + 1e-16, 'b-', linewidth=1.5, label='RK4', alpha=0.7)
     ax4.semilogy(t_verlet, np.abs(E_verlet - E0)/E0 + 1e-16, 'g-', linewidth=1.5, label='Verlet', alpha=0.7)
-    ax4.set_xlabel('Time t', fontsize=11)
-    ax4.set_ylabel('Relative Energy Error |E-E0|/E0', fontsize=11)
-    ax4.set_title('Energy Error Growth', fontsize=12)
+    ax4.set_xlabel('时间 t', fontsize=11)
+    ax4.set_ylabel('相对能量误差 |E-E0|/E0', fontsize=11)
+    ax4.set_title('能量误差增长', fontsize=12)
     ax4.legend(loc='upper left', fontsize=10)
     ax4.grid(True, alpha=0.3)
     ax4.set_xlim(0, 50)
@@ -215,20 +215,20 @@ def plot_pendulum_comparison(save_path):
     axes[0].plot(t_euler, y_euler[:, 0], 'r-', linewidth=1.5, label='Euler', alpha=0.7)
     axes[0].plot(t_rk4, y_rk4[:, 0], 'b-', linewidth=1.5, label='RK4', alpha=0.7)
     axes[0].plot(t_verlet, q_verlet, 'g-', linewidth=1.5, label='Verlet', alpha=0.7)
-    axes[0].set_xlabel('Time t (s)', fontsize=11)
-    axes[0].set_ylabel('Angle (rad)', fontsize=11)
-    axes[0].set_title('Pendulum: Angle vs Time', fontsize=12)
+    axes[0].set_xlabel('时间 t (s)', fontsize=11)
+    axes[0].set_ylabel('角度 θ (rad)', fontsize=11)
+    axes[0].set_title('单摆：角度随时间变化', fontsize=12)
     axes[0].legend(fontsize=10)
     axes[0].grid(True, alpha=0.3)
 
     # 中：能量对比
-    axes[1].axhline(y=E0, color='k', linestyle='--', linewidth=2, label='Initial E0', alpha=0.8)
+    axes[1].axhline(y=E0, color='k', linestyle='--', linewidth=2, label='初始能量 E0', alpha=0.8)
     axes[1].plot(t_euler, E_euler, 'r-', linewidth=1.5, label='Euler', alpha=0.7)
     axes[1].plot(t_rk4, E_rk4, 'b-', linewidth=1.5, label='RK4', alpha=0.7)
     axes[1].plot(t_verlet, E_verlet, 'g-', linewidth=1.5, label='Verlet', alpha=0.7)
-    axes[1].set_xlabel('Time t (s)', fontsize=11)
-    axes[1].set_ylabel('Energy (J)', fontsize=11)
-    axes[1].set_title('Energy Conservation', fontsize=12)
+    axes[1].set_xlabel('时间 t (s)', fontsize=11)
+    axes[1].set_ylabel('能量 (J)', fontsize=11)
+    axes[1].set_title('能量守恒对比', fontsize=12)
     axes[1].legend(fontsize=10)
     axes[1].grid(True, alpha=0.3)
 
@@ -236,9 +236,9 @@ def plot_pendulum_comparison(save_path):
     axes[2].plot(y_euler[:, 0], y_euler[:, 1], 'r-', linewidth=1, label='Euler', alpha=0.6)
     axes[2].plot(y_rk4[:, 0], y_rk4[:, 1], 'b-', linewidth=1, label='RK4', alpha=0.6)
     axes[2].plot(q_verlet, p_verlet, 'g-', linewidth=1, label='Verlet', alpha=0.6)
-    axes[2].set_xlabel('Angle (rad)', fontsize=11)
-    axes[2].set_ylabel('Angular velocity (rad/s)', fontsize=11)
-    axes[2].set_title('Phase Space', fontsize=12)
+    axes[2].set_xlabel('角度 θ (rad)', fontsize=11)
+    axes[2].set_ylabel('角速度 ω (rad/s)', fontsize=11)
+    axes[2].set_title('相空间轨迹', fontsize=12)
     axes[2].legend(fontsize=10)
     axes[2].grid(True, alpha=0.3)
 
@@ -270,32 +270,37 @@ def plot_long_time_comparison(save_path):
 
     # 能量漂移
     ax1.plot(t_rk4, (E_rk4 - E0), 'b-', linewidth=1.5, label='RK4', alpha=0.7)
-    ax1.plot(t_verlet, (E_verlet - E0), 'g-', linewidth=1.5, label='Verlet (Symplectic)', alpha=0.7)
+    ax1.plot(t_verlet, (E_verlet - E0), 'g-', linewidth=1.5, label='Verlet (辛积分器)', alpha=0.7)
     ax1.axhline(y=0, color='k', linestyle='--', alpha=0.5)
-    ax1.set_xlabel('Time t', fontsize=11)
-    ax1.set_ylabel('Energy Drift (E - E0)', fontsize=11)
-    ax1.set_title('Long-time Energy Drift (t=0 to 500)', fontsize=12)
-    ax1.legend(fontsize=10)
+    ax1.set_xlabel('时间 t', fontsize=11)
+    ax1.set_ylabel('能量漂移 (E - E0)', fontsize=11)
+    ax1.set_title('长时间能量漂移 (t=0 到 500)', fontsize=12)
+    ax1.legend(fontsize=10, loc='upper left')
     ax1.grid(True, alpha=0.3)
+
+    # 添加RK4注释（位置调整）
+    rk4_drift_at_400 = E_rk4[4000] - E0
+    ax1.annotate('RK4: 系统性漂移\n(随时间累积)',
+                xy=(400, rk4_drift_at_400), fontsize=9,
+                xytext=(420, rk4_drift_at_400 * 0.6),
+                arrowprops=dict(arrowstyle='->', color='blue', lw=1.5),
+                bbox=dict(boxstyle='round', facecolor='white', edgecolor='blue', alpha=0.8))
 
     # 放大看Verlet的振荡
     ax2.plot(t_verlet, (E_verlet - E0), 'g-', linewidth=1.5)
     ax2.axhline(y=0, color='k', linestyle='--', alpha=0.5)
-    ax2.set_xlabel('Time t', fontsize=11)
-    ax2.set_ylabel('Energy Drift (E - E0)', fontsize=11)
-    ax2.set_title('Verlet: Bounded Energy Oscillation', fontsize=12)
+    ax2.set_xlabel('时间 t', fontsize=11)
+    ax2.set_ylabel('能量漂移 (E - E0)', fontsize=11)
+    ax2.set_title('Verlet: 有界能量振荡', fontsize=12)
     ax2.grid(True, alpha=0.3)
 
-    # 添加注释
-    ax1.annotate('RK4: systematic drift\n(accumulates over time)',
-                xy=(400, E_rk4[4000]-E0), fontsize=9,
-                xytext=(250, E_rk4[4000]-E0+0.01),
-                arrowprops=dict(arrowstyle='->', color='blue'))
-
-    ax2.annotate('Symplectic: bounded oscillation\n(no systematic drift)',
-                xy=(250, 0.002), fontsize=9,
-                xytext=(100, 0.01),
-                arrowprops=dict(arrowstyle='->', color='green'))
+    # 添加Verlet注释（位置调整）
+    verlet_max = np.max(np.abs(E_verlet - E0))
+    ax2.annotate('辛积分器: 有界振荡\n(无系统性漂移)',
+                xy=(250, verlet_max * 0.5), fontsize=9,
+                xytext=(280, verlet_max * 0.8),
+                arrowprops=dict(arrowstyle='->', color='green', lw=1.5),
+                bbox=dict(boxstyle='round', facecolor='white', edgecolor='green', alpha=0.8))
 
     plt.tight_layout()
     plt.savefig(save_path, dpi=150, bbox_inches='tight')
@@ -335,18 +340,18 @@ def plot_convergence_order(save_path):
 
     fig, ax = plt.subplots(figsize=(8, 6))
 
-    ax.loglog(dts, errors_euler, 'ro-', markersize=8, linewidth=2, label='Euler (Order 1)')
-    ax.loglog(dts, errors_rk4, 'bs-', markersize=8, linewidth=2, label='RK4 (Order 4)')
-    ax.loglog(dts, errors_verlet, 'g^-', markersize=8, linewidth=2, label='Verlet (Order 2)')
+    ax.loglog(dts, errors_euler, 'ro-', markersize=8, linewidth=2, label='Euler (1阶)')
+    ax.loglog(dts, errors_rk4, 'bs-', markersize=8, linewidth=2, label='RK4 (4阶)')
+    ax.loglog(dts, errors_verlet, 'g^-', markersize=8, linewidth=2, label='Verlet (2阶)')
 
     # 参考线
-    ax.loglog(dts, 0.5*dts, 'r--', alpha=0.5, label='O(dt)')
-    ax.loglog(dts, 0.1*dts**2, 'g--', alpha=0.5, label='O(dt²)')
-    ax.loglog(dts, 0.01*dts**4, 'b--', alpha=0.5, label='O(dt⁴)')
+    ax.loglog(dts, 0.5*dts, 'r--', alpha=0.5, label='O(Δt)')
+    ax.loglog(dts, 0.1*dts**2, 'g--', alpha=0.5, label='O(Δt²)')
+    ax.loglog(dts, 0.01*dts**4, 'b--', alpha=0.5, label='O(Δt⁴)')
 
-    ax.set_xlabel('Step size dt', fontsize=12)
-    ax.set_ylabel('Error |x(1) - x_exact|', fontsize=12)
-    ax.set_title('Convergence Order Verification', fontsize=14)
+    ax.set_xlabel('步长 Δt', fontsize=12)
+    ax.set_ylabel('误差 |x(1) - x精确|', fontsize=12)
+    ax.set_title('收敛阶验证', fontsize=14)
     ax.legend(fontsize=10)
     ax.grid(True, alpha=0.3, which='both')
 
