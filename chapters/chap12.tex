@@ -344,7 +344,7 @@ LLaMA-70B & 140 GB & $\approx$1 TB & 单卡不可能 & 集群训练 \\
 \end{keyformula}
 
 \begin{example}[KV Cache计算]
-\textbf{配置}：LLaMA-7B（32层，$H=4096$），序列长度4K，Batch=1，FP16
+\textbf{配置}：LLaMA-7B（32层，$H=4096$），序列长度4K，Batch=1（即同时处理1个请求/1个并发用户），FP16
 
 \begin{align}
     M_{KV} &= 2 \times 32 \times 4096 \times 4096 \times 2 \text{ Bytes} \\

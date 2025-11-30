@@ -3907,3 +3907,178 @@ UCB 的思想也启发了深度强化学习中的\textbf{探索奖励}（Explora
 
 虽然深度强化学习的实践远比理论复杂，但理解这些基础概念，能帮助你在设计算法时做出更有原则的选择。
 \end{remark}
+
+
+% ====================================================================================
+\section*{扩展阅读：从迷宫到机械臂——连续控制的挑战}
+\addcontentsline{toc}{section}{扩展阅读：从迷宫到机械臂}
+% ====================================================================================
+
+\begin{tcolorbox}[colback=gray!5, colframe=gray!50, title=本节导读]
+前面的GridWorld例子只有25个状态、4个动作——这对于理解RL原理很有帮助，但距离真实的机器人控制还很远。本节介绍\textbf{连续控制}（Continuous Control）问题，以机械臂和CartPole为例，展示强化学习如何应对高维、连续的状态和动作空间。
+\end{tcolorbox}
+
+% ------------------------------------------------------------------------------------
+\subsection*{一、为什么连续控制更难？}
+
+GridWorld的状态是离散的格子，动作是上下左右四个方向。但在机器人控制中：
+
+\begin{itemize}
+    \item \textbf{状态是连续的}：机械臂的关节角度$\theta \in \mathbb{R}^n$、角速度$\dot{\theta} \in \mathbb{R}^n$
+    \item \textbf{动作是连续的}：施加的力矩$\tau \in \mathbb{R}^n$，不是"左/右"而是"施加多少牛顿米"
+    \item \textbf{动力学是复杂的}：运动方程涉及质量矩阵、科里奥利力等非线性项
+\end{itemize}
+
+这意味着Q表格不再可行（状态空间无限大），必须用函数逼近（如神经网络）。
+
+% ------------------------------------------------------------------------------------
+\subsection*{二、机械臂的数学模型}
+
+考虑最简单的\textbf{二连杆平面机械臂}（图\ref{fig:arm_kinematics}）：两根杆通过旋转关节连接，第一根固定在基座上。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figs_chap10/arm_kinematics.pdf}
+\caption{二连杆机械臂运动学。左图：正运动学——给定关节角度，计算末端位置，扫出工作空间。中图：逆运动学——给定目标位置，求解关节角度。右图：雅可比矩阵决定的"可操作性椭圆"，反映不同方向上的运动能力。}
+\label{fig:arm_kinematics}
+\end{figure}
+
+\paragraph{正运动学}
+给定关节角度$(\theta_1, \theta_2)$，末端位置为：
+\begin{align}
+    x &= L_1 \cos\theta_1 + L_2 \cos(\theta_1 + \theta_2) \\
+    y &= L_1 \sin\theta_1 + L_2 \sin(\theta_1 + \theta_2)
+\end{align}
+
+\paragraph{逆运动学}
+给定目标位置$(x, y)$，需要求解$(\theta_1, \theta_2)$。这是一个非线性方程组，通常有多个解（对应不同的肘部朝向）。用余弦定理可得：
+\[
+\cos\theta_2 = \frac{x^2 + y^2 - L_1^2 - L_2^2}{2 L_1 L_2}
+\]
+
+\paragraph{雅可比矩阵}
+末端速度与关节速度的关系由\textbf{雅可比矩阵}描述：
+\[
+\begin{pmatrix} \dot{x} \\ \dot{y} \end{pmatrix} = J(\theta) \begin{pmatrix} \dot{\theta}_1 \\ \dot{\theta}_2 \end{pmatrix}
+\]
+
+雅可比矩阵的奇异值分解揭示了机械臂在不同方向的"灵活度"——椭圆长轴方向容易运动，短轴方向难以运动。
+
+% ------------------------------------------------------------------------------------
+\subsection*{三、传统控制 vs 强化学习}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figs_chap10/rl_control_comparison.pdf}
+\caption{控制方法对比。传统控制需要精确建模、控制器设计、稳定性分析；强化学习只需定义奖励函数，让智能体在交互中学习，但需要大量训练样本和计算资源。}
+\label{fig:rl_control_comparison}
+\end{figure}
+
+\paragraph{传统方法：PD控制}
+最简单的控制策略是\textbf{PD控制器}：
+\[
+\tau = K_p (\theta_{\text{target}} - \theta) - K_d \dot{\theta}
+\]
+
+这需要：(1) 知道目标角度（需要逆运动学）；(2) 调节增益$K_p, K_d$；(3) 假设动力学足够简单。
+
+图\ref{fig:pd_control}展示了PD控制器跟踪圆形轨迹的效果——在简单任务上表现良好，但对模型误差和外部扰动敏感。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figs_chap10/pd_control_trajectory.pdf}
+\caption{PD控制器跟踪圆形轨迹。左上：末端实际轨迹vs目标轨迹。右上：跟踪误差。左下：关节角度随时间变化。右下：控制力矩。}
+\label{fig:pd_control}
+\end{figure}
+
+\paragraph{强化学习方法}
+RL不需要显式的逆运动学或动力学模型。智能体直接学习从状态到力矩的映射：
+\[
+\pi_\theta: (\theta_1, \theta_2, \dot{\theta}_1, \dot{\theta}_2, x_{\text{goal}}, y_{\text{goal}}) \mapsto (\tau_1, \tau_2)
+\]
+
+奖励设计示例：
+\[
+r = -\|p_{\text{end}} - p_{\text{goal}}\|^2 - 0.01 \|\tau\|^2
+\]
+第一项鼓励接近目标，第二项惩罚过大的力矩。
+
+% ------------------------------------------------------------------------------------
+\subsection*{四、CartPole：连续控制的入门任务}
+
+在动手实现机械臂RL之前，先用更简单的\textbf{CartPole}任务热身（图\ref{fig:cartpole_demo}）。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figs_chap10/cartpole_demo.pdf}
+\caption{CartPole任务。左图：环境示意——小车上竖立一根杆，目标是通过左右推动小车让杆保持竖直。状态是4维连续向量，动作是离散的（左/右）。右图：不同算法的学习曲线（模拟）——PPO和DQN都能在几百个episode内学会，随机策略则始终徘徊在低奖励。}
+\label{fig:cartpole_demo}
+\end{figure}
+
+CartPole的状态是4维向量$[x, \dot{x}, \theta, \dot{\theta}]$，目标是让杆保持竖直（$|\theta| < 12°$）且小车不出界（$|x| < 2.4$）。每坚持一步获得+1奖励，达到200步"solved"。
+
+\paragraph{用Stable Baselines3训练}
+
+\begin{lstlisting}[language=Python]
+import gymnasium as gym
+from stable_baselines3 import PPO
+
+# 创建环境
+env = gym.make("CartPole-v1")
+
+# 创建并训练智能体
+model = PPO("MlpPolicy", env, verbose=1)
+model.learn(total_timesteps=50000)
+
+# 测试
+obs, _ = env.reset()
+for _ in range(200):
+    action, _ = model.predict(obs, deterministic=True)
+    obs, reward, done, truncated, info = env.step(action)
+    if done:
+        break
+\end{lstlisting}
+
+PPO（Proximal Policy Optimization）是目前最常用的策略梯度算法，在ChatGPT的RLHF训练中也使用了它。
+
+% ------------------------------------------------------------------------------------
+\subsection*{五、进阶：用RL控制机械臂}
+
+机械臂控制比CartPole复杂得多：
+\begin{itemize}
+    \item 动作空间是\textbf{连续}的（力矩值），需要用SAC或TD3等算法
+    \item 状态维度更高（关节+目标位置）
+    \item 奖励设计更关键（稀疏奖励很难学习）
+\end{itemize}
+
+推荐使用\texttt{gymnasium-robotics}库中的\texttt{FetchReach}等环境，或者MuJoCo物理引擎中的机械臂任务。
+
+\begin{lstlisting}[language=Python]
+import gymnasium as gym
+from stable_baselines3 import SAC
+
+# 机械臂到达任务（需要安装gymnasium-robotics）
+env = gym.make("FetchReach-v3")
+
+# SAC适合连续动作空间
+model = SAC("MultiInputPolicy", env, verbose=1)
+model.learn(total_timesteps=100000)
+\end{lstlisting}
+
+% ------------------------------------------------------------------------------------
+\subsection*{六、实践建议}
+
+\begin{insightbox}[title=连续控制学习路线]
+\begin{enumerate}
+    \item \textbf{入门}：CartPole + DQN/PPO，理解基本训练流程
+    \item \textbf{进阶}：Pendulum/MountainCarContinuous + SAC，体验连续动作空间
+    \item \textbf{挑战}：FetchReach/HalfCheetah，接触真实机器人仿真
+    \item \textbf{实战}：sim-to-real迁移，将仿真策略部署到真实机器人
+\end{enumerate}
+\end{insightbox}
+
+完整代码见\texttt{code\_chap10/robotic\_arm\_control.py}。
+
+\begin{remark}
+从GridWorld到机械臂，我们看到了强化学习的通用性：只要能定义状态、动作、奖励，同样的算法框架就能应用。但"能应用"不等于"好用"——连续控制的样本效率、奖励设计、sim-to-real差距都是活跃的研究方向。
+\end{remark}
