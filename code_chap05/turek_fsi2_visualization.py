@@ -75,7 +75,7 @@ def get_flag_shape(t, n_points=50):
 def generate_velocity_field(t, nx=100, ny=50):
     """
     生成卡门涡街速度场的模拟数据
-    使用势流叠加涡流模型，比纯涡量可视化更自然
+    涡随时间向下游对流移动，体现真实的涡街演化
     """
     x = np.linspace(0, 1.2, nx)
     y = np.linspace(0, H_channel, ny)
@@ -90,56 +90,68 @@ def generate_velocity_field(t, nx=100, ny=50):
     V = v_base.copy()
 
     # 卡门涡街参数
-    St = 0.2  # Strouhal数
-    vortex_spacing = 0.15  # 涡间距（沿x方向）
-    lateral_spacing = 0.08  # 涡上下偏移
+    convection_speed = 0.8 * U_mean  # 涡的对流速度（略小于主流速度）
+    vortex_spacing = 0.12  # 涡间距（沿x方向）
+    lateral_spacing = 0.07  # 涡上下偏移
+    shedding_period = vortex_spacing / convection_speed  # 涡脱落周期
 
-    # 生成交替的涡对
-    n_vortices = 10
+    # 生成对流移动的涡
+    # 涡从圆柱后方(x≈0.3)产生，向下游移动
+    n_vortices = 12
     for i in range(n_vortices):
-        # 涡的位置随时间向下游移动
-        phase_shift = (t % period) / period
-        vortex_x = 0.35 + i * vortex_spacing - phase_shift * vortex_spacing
+        # 涡的初始位置（脱落时刻）
+        shed_time = i * shedding_period / 2  # 每半周期脱落一个涡
 
-        if vortex_x < 0.25 or vortex_x > 1.15:
+        # 当前时刻涡的x位置 = 初始位置 + 对流距离
+        # 涡从圆柱后方开始，随时间向右移动
+        vortex_x_initial = 0.32  # 脱落起始位置
+        vortex_x = vortex_x_initial + convection_speed * (t - shed_time)
+
+        # 只绘制在可见范围内的涡
+        if vortex_x < 0.28 or vortex_x > 1.15:
             continue
 
         # 交替上下 - 形成经典卡门涡街模式
         if i % 2 == 0:
             vortex_y = cy + lateral_spacing
-            circulation = 0.015  # 正环量（逆时针）
+            circulation = 0.018  # 正环量（逆时针）
         else:
             vortex_y = cy - lateral_spacing
-            circulation = -0.015  # 负环量（顺时针）
+            circulation = -0.018  # 负环量（顺时针）
 
-        # 点涡诱导速度场 (Rankine涡模型，带核心半径)
-        core_radius = 0.03
+        # 涡强度随距离衰减（模拟粘性耗散）
+        distance_from_cylinder = vortex_x - cx
+        decay = np.exp(-distance_from_cylinder / 1.5)
+        circulation *= decay
+
+        # Rankine涡模型
+        core_radius = 0.035
         dx = X - vortex_x
         dy = Y - vortex_y
         r2 = dx**2 + dy**2
         r = np.sqrt(r2 + 1e-10)
 
-        # 在核心内使用刚体旋转，核心外用点涡
+        # 核心内刚体旋转，核心外势涡
         factor = np.where(r < core_radius,
                           r / (core_radius**2),
-                          1 / (r + 0.01))
+                          1 / (r + 0.005))
 
         # 涡诱导速度（垂直于径向）
         U += circulation * (-dy) * factor / (2 * np.pi)
         V += circulation * dx * factor / (2 * np.pi)
 
-    # 圆柱绕流修正（简化的势流绕流）
+    # 圆柱绕流修正
     dx_cyl = X - cx
     dy_cyl = Y - cy
     r_cyl = np.sqrt(dx_cyl**2 + dy_cyl**2)
 
-    # 在圆柱附近减速，后方形成尾流区
+    # 尾流区减速
     wake_factor = np.where((r_cyl > R_cylinder) & (dx_cyl > 0),
-                            1 - 0.5 * np.exp(-(r_cyl - R_cylinder) / 0.1) * np.exp(-abs(dy_cyl) / 0.1),
+                            1 - 0.6 * np.exp(-(r_cyl - R_cylinder) / 0.08) * np.exp(-(dy_cyl**2) / 0.01),
                             np.ones_like(X))
     U *= wake_factor
 
-    # 圆柱和板内部速度置零
+    # 圆柱内部速度置零
     cylinder_mask = r_cyl < R_cylinder * 1.1
     U[cylinder_mask] = np.nan
     V[cylinder_mask] = np.nan
