@@ -1,0 +1,15 @@
+%% marginnote.sty - Margin notes
+%% Minimal implementation
+%%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{marginnote}[2023/01/01 Marginnote]
+
+\newcommand{\marginnote}[2][0pt]{%
+  \marginpar{\footnotesize\raggedright #2}%
+}
+
+\newcommand{\marginnoteleftadjust}{}
+\newcommand{\marginnoterightadjust}{}
+\newcommand{\marginnotevadjust}{}
+
+\endinput

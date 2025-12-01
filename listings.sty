@@ -1,0 +1,35 @@
+%% listings.sty - Code listings
+%% Minimal implementation
+%%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{listings}[2023/01/01 Code listings]
+
+\RequirePackage{fancyvrb}
+
+% lstset command
+\newcommand{\lstset}[1]{}
+
+% lstdefinestyle
+\newcommand{\lstdefinestyle}[2]{}
+
+% lstdefinelanguage
+\newcommand{\lstdefinelanguage}[2]{}
+
+% lstinputlisting
+\newcommand{\lstinputlisting}[2][]{%
+  \VerbatimInput{#2}%
+}
+
+% lstinline
+\newcommand{\lstinline}[1][]{\Verb}
+
+% lstlisting environment
+\DefineVerbatimEnvironment{lstlisting}{Verbatim}{%
+  frame=single,
+  fontsize=\small
+}
+
+% Colors for syntax highlighting (stubs)
+\newcommand{\lstnewenvironment}[4][]{}
+
+\endinput

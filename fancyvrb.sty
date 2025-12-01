@@ -1,0 +1,23 @@
+%% fancyvrb.sty - Fancy verbatim
+%% Minimal implementation
+%%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{fancyvrb}[2023/01/01 Fancy verbatim]
+
+% DefineVerbatimEnvironment
+\newcommand{\DefineVerbatimEnvironment}[3]{%
+  \newenvironment{#1}{\verbatim}{\endverbatim}%
+}
+
+% VerbatimInput
+\newcommand{\VerbatimInput}[1]{%
+  \begingroup
+  \small\ttfamily
+  \input{#1}%
+  \endgroup
+}
+
+% Verb command
+\let\Verb\verb
+
+\endinput

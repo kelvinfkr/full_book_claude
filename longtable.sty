@@ -1,0 +1,20 @@
+%% longtable.sty - Multi-page tables
+%% Minimal implementation (just use regular tabular)
+%%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{longtable}[2023/01/01 Longtable]
+
+\newenvironment{longtable}[2][c]{%
+  \begin{center}%
+  \begin{tabular}{#2}%
+}{%
+  \end{tabular}%
+  \end{center}%
+}
+
+\newcommand{\endhead}{}
+\newcommand{\endfoot}{}
+\newcommand{\endfirsthead}{}
+\newcommand{\endlastfoot}{}
+
+\endinput
