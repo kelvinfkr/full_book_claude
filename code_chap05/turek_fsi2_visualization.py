@@ -72,9 +72,98 @@ def get_flag_shape(t, n_points=50):
     return x, y
 
 
+def generate_velocity_field(t, nx=100, ny=50):
+    """
+    生成卡门涡街速度场的模拟数据
+    使用势流叠加涡流模型，比纯涡量可视化更自然
+    """
+    x = np.linspace(0, 1.2, nx)
+    y = np.linspace(0, H_channel, ny)
+    X, Y = np.meshgrid(x, y)
+
+    # 基础速度场 - 抛物线入口剖面
+    u_base = 4 * U_mean * Y * (H_channel - Y) / H_channel**2
+    v_base = np.zeros_like(X)
+
+    # 初始化速度场
+    U = u_base.copy()
+    V = v_base.copy()
+
+    # 卡门涡街参数
+    St = 0.2  # Strouhal数
+    vortex_spacing = 0.15  # 涡间距（沿x方向）
+    lateral_spacing = 0.08  # 涡上下偏移
+
+    # 生成交替的涡对
+    n_vortices = 10
+    for i in range(n_vortices):
+        # 涡的位置随时间向下游移动
+        phase_shift = (t % period) / period
+        vortex_x = 0.35 + i * vortex_spacing - phase_shift * vortex_spacing
+
+        if vortex_x < 0.25 or vortex_x > 1.15:
+            continue
+
+        # 交替上下 - 形成经典卡门涡街模式
+        if i % 2 == 0:
+            vortex_y = cy + lateral_spacing
+            circulation = 0.015  # 正环量（逆时针）
+        else:
+            vortex_y = cy - lateral_spacing
+            circulation = -0.015  # 负环量（顺时针）
+
+        # 点涡诱导速度场 (Rankine涡模型，带核心半径)
+        core_radius = 0.03
+        dx = X - vortex_x
+        dy = Y - vortex_y
+        r2 = dx**2 + dy**2
+        r = np.sqrt(r2 + 1e-10)
+
+        # 在核心内使用刚体旋转，核心外用点涡
+        factor = np.where(r < core_radius,
+                          r / (core_radius**2),
+                          1 / (r + 0.01))
+
+        # 涡诱导速度（垂直于径向）
+        U += circulation * (-dy) * factor / (2 * np.pi)
+        V += circulation * dx * factor / (2 * np.pi)
+
+    # 圆柱绕流修正（简化的势流绕流）
+    dx_cyl = X - cx
+    dy_cyl = Y - cy
+    r_cyl = np.sqrt(dx_cyl**2 + dy_cyl**2)
+
+    # 在圆柱附近减速，后方形成尾流区
+    wake_factor = np.where((r_cyl > R_cylinder) & (dx_cyl > 0),
+                            1 - 0.5 * np.exp(-(r_cyl - R_cylinder) / 0.1) * np.exp(-abs(dy_cyl) / 0.1),
+                            np.ones_like(X))
+    U *= wake_factor
+
+    # 圆柱和板内部速度置零
+    cylinder_mask = r_cyl < R_cylinder * 1.1
+    U[cylinder_mask] = np.nan
+    V[cylinder_mask] = np.nan
+
+    # 弹性板遮罩
+    x_flag, y_flag = get_flag_shape(t, n_points=100)
+    for j in range(ny):
+        for k in range(nx):
+            if X[j, k] >= flag_start_x and X[j, k] <= flag_start_x + flag_length:
+                idx = int((X[j, k] - flag_start_x) / flag_length * 99)
+                idx = min(idx, 99)
+                if abs(Y[j, k] - y_flag[idx]) < flag_thickness * 1.5:
+                    U[j, k] = np.nan
+                    V[j, k] = np.nan
+
+    # 速度大小
+    speed = np.sqrt(U**2 + V**2)
+
+    return X, Y, U, V, speed
+
+
 def generate_vorticity_field(t, nx=150, ny=80):
     """
-    生成卡门涡街涡量场的模拟数据
+    生成卡门涡街涡量场的模拟数据（备用）
     """
     x = np.linspace(0, 1.2, nx)
     y = np.linspace(0, H_channel, ny)
@@ -304,37 +393,35 @@ def plot_fsi2_time_history(save_path):
 
 
 def plot_fsi2_mechanism(save_path):
-    """绘制FSI机理示意图 - 带涡量场可视化"""
+    """绘制FSI机理示意图 - 使用速度场和流线可视化"""
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
-
-    # 自定义红蓝色图（涡量）
-    colors_vorticity = [(0, 0, 0.8), (0.5, 0.5, 1), (1, 1, 1), (1, 0.5, 0.5), (0.8, 0, 0)]
-    cmap_vorticity = LinearSegmentedColormap.from_list('vorticity', colors_vorticity, N=256)
 
     for idx, (ax, t_phase, subtitle) in enumerate(zip(
         axes,
         [period/4, 3*period/4],
         ['(a) 板向上运动：上方涡脱落', '(b) 板向下运动：下方涡脱落']
     )):
-        # 生成涡量场
-        X, Y, vorticity = generate_vorticity_field(t_phase)
+        # 生成速度场
+        X, Y, U, V, speed = generate_velocity_field(t_phase, nx=80, ny=40)
 
-        # 绘制涡量云图
-        levels = np.linspace(-2, 2, 41)
-        cf = ax.contourf(X, Y, vorticity, levels=levels, cmap=cmap_vorticity, extend='both')
-        ax.contour(X, Y, vorticity, levels=[-1, 1], colors=['blue', 'red'],
-                   linewidths=1.5, linestyles='--', alpha=0.8)
+        # 绘制速度大小云图
+        levels = np.linspace(0, 1.8, 19)
+        cf = ax.contourf(X, Y, speed, levels=levels, cmap='coolwarm', extend='max', alpha=0.9)
+
+        # 绘制流线 - 更自然地展示涡街
+        seed_points = []
+        for y0 in np.linspace(0.03, H_channel-0.03, 12):
+            seed_points.append([0.01, y0])
+        seed_points = np.array(seed_points)
+
+        # 使用streamplot绘制流线
+        strm = ax.streamplot(X, Y, U, V, color='white', density=1.5, linewidth=0.8,
+                             arrowsize=0.8, arrowstyle='->', broken_streamlines=True)
 
         # 通道边界
         ax.plot([0, 1.2], [0, 0], 'k-', linewidth=3)
         ax.plot([0, 1.2], [H_channel, H_channel], 'k-', linewidth=3)
         ax.axvline(x=0, color='k', linewidth=2)
-
-        # 入口流线
-        for y0 in np.linspace(0.05, H_channel-0.05, 8):
-            u = 4 * U_mean * y0 * (H_channel - y0) / H_channel**2
-            ax.arrow(-0.02, y0, 0.08 * u, 0, head_width=0.015, head_length=0.01,
-                    fc='darkblue', ec='darkblue', alpha=0.7)
 
         # 圆柱
         cylinder = Circle((cx, cy), R_cylinder, facecolor='dimgray',
@@ -343,30 +430,29 @@ def plot_fsi2_mechanism(save_path):
 
         # 弹性板
         x_flag, y_flag = get_flag_shape(t_phase, n_points=100)
-        # 填充板的厚度
         ax.fill_between(x_flag, y_flag - flag_thickness/2, y_flag + flag_thickness/2,
                         color='orange', edgecolor='darkorange', linewidth=2, zorder=10)
 
-        # 力箭头
+        # 力箭头和压力区标注
         if idx == 0:  # 向上
             ax.arrow(0.55, 0.2, 0, 0.08, head_width=0.02, head_length=0.015,
                     fc='limegreen', ec='darkgreen', linewidth=2, zorder=15)
             ax.text(0.58, 0.24, 'F升', fontsize=12, color='darkgreen', fontweight='bold')
-            ax.text(0.75, 0.35, '低压区', fontsize=10, color='darkred',
-                   bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-            ax.text(0.75, 0.08, '高压区', fontsize=10, color='darkblue',
-                   bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+            ax.text(0.75, 0.35, '低压区', fontsize=10, color='white',
+                   bbox=dict(boxstyle='round', facecolor='darkred', alpha=0.8))
+            ax.text(0.75, 0.08, '高压区', fontsize=10, color='white',
+                   bbox=dict(boxstyle='round', facecolor='darkblue', alpha=0.8))
         else:  # 向下
             ax.arrow(0.55, 0.2, 0, -0.08, head_width=0.02, head_length=0.015,
                     fc='limegreen', ec='darkgreen', linewidth=2, zorder=15)
             ax.text(0.58, 0.16, 'F升', fontsize=12, color='darkgreen', fontweight='bold')
-            ax.text(0.75, 0.35, '高压区', fontsize=10, color='darkblue',
-                   bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-            ax.text(0.75, 0.08, '低压区', fontsize=10, color='darkred',
-                   bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+            ax.text(0.75, 0.35, '高压区', fontsize=10, color='white',
+                   bbox=dict(boxstyle='round', facecolor='darkblue', alpha=0.8))
+            ax.text(0.75, 0.08, '低压区', fontsize=10, color='white',
+                   bbox=dict(boxstyle='round', facecolor='darkred', alpha=0.8))
 
-        # 标注涡
-        ax.text(0.02, 0.02, '蓝: 顺时针涡 (ω<0)\n红: 逆时针涡 (ω>0)',
+        # 标注
+        ax.text(0.02, 0.02, '颜色: 速度大小\n流线: 流动方向',
                fontsize=8, transform=ax.transAxes,
                bbox=dict(boxstyle='round', facecolor='white', alpha=0.9))
 
@@ -380,7 +466,7 @@ def plot_fsi2_mechanism(save_path):
     # 添加颜色条
     cbar_ax = fig.add_axes([0.92, 0.15, 0.015, 0.7])
     cbar = fig.colorbar(cf, cax=cbar_ax)
-    cbar.set_label('涡量 ω (1/s)', fontsize=10)
+    cbar.set_label('速度 |u| (m/s)', fontsize=10)
 
     plt.suptitle('Turek-Hron FSI2：涡激振动机理（卡门涡街交替脱落）', fontsize=14, fontweight='bold')
     plt.tight_layout(rect=[0, 0, 0.91, 0.95])
@@ -390,24 +476,24 @@ def plot_fsi2_mechanism(save_path):
 
 
 def plot_fsi2_vortex_street(save_path):
-    """绘制完整的涡街演化序列"""
+    """绘制完整的涡街演化序列 - 使用速度场和流线"""
     fig, axes = plt.subplots(2, 3, figsize=(15, 8))
-
-    # 自定义红蓝色图
-    colors_vorticity = [(0, 0, 0.8), (0.4, 0.4, 1), (1, 1, 1), (1, 0.4, 0.4), (0.8, 0, 0)]
-    cmap_vorticity = LinearSegmentedColormap.from_list('vorticity', colors_vorticity, N=256)
 
     times = np.linspace(0, period, 6)
     titles = [f't = {i}T/5' if i > 0 else 't = 0' for i in range(6)]
     titles[-1] = 't ≈ T'
 
     for idx, (ax, t, title) in enumerate(zip(axes.flat, times, titles)):
-        # 生成涡量场
-        X, Y, vorticity = generate_vorticity_field(t)
+        # 生成速度场
+        X, Y, U, V, speed = generate_velocity_field(t, nx=80, ny=40)
 
-        # 绘制涡量云图
-        levels = np.linspace(-2, 2, 41)
-        cf = ax.contourf(X, Y, vorticity, levels=levels, cmap=cmap_vorticity, extend='both')
+        # 绘制速度大小云图
+        levels = np.linspace(0, 1.8, 19)
+        cf = ax.contourf(X, Y, speed, levels=levels, cmap='coolwarm', extend='max', alpha=0.9)
+
+        # 绘制流线
+        strm = ax.streamplot(X, Y, U, V, color='white', density=1.2, linewidth=0.6,
+                             arrowsize=0.6, arrowstyle='->', broken_streamlines=True)
 
         # 通道边界
         ax.plot([0, 1.2], [0, 0], 'k-', linewidth=2)
@@ -433,7 +519,7 @@ def plot_fsi2_vortex_street(save_path):
     # 添加颜色条
     cbar_ax = fig.add_axes([0.92, 0.15, 0.015, 0.7])
     cbar = fig.colorbar(cf, cax=cbar_ax)
-    cbar.set_label('涡量 ω', fontsize=10)
+    cbar.set_label('速度 |u| (m/s)', fontsize=10)
 
     plt.suptitle('Turek-Hron FSI2：涡街演化与固体振动耦合 (一个周期)',
                 fontsize=14, fontweight='bold')
