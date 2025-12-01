@@ -4198,8 +4198,8 @@ else:
 
 
 % ====================================================================================
-\section*{扩展阅读：流固耦合有限元——当风吹过一根杆子}
-\addcontentsline{toc}{section}{扩展阅读：流固耦合有限元——当风吹过一根杆子}
+\section*{扩展阅读：流固耦合有限元——Turek-Hron FSI2基准测试}
+\addcontentsline{toc}{section}{扩展阅读：流固耦合有限元}
 % ====================================================================================
 
 \begin{tcolorbox}[colback=gray!5, colframe=gray!50, title=本节导读]
@@ -4207,220 +4207,13 @@ else:
 
 这些现象背后有一个共同的物理机制：\textbf{流固耦合}（Fluid-Structure Interaction, FSI）。流体（空气或水）作用于固体结构，固体的变形又反过来影响流场，形成复杂的相互作用。
 
-本节用有限元方法模拟一个简单但典型的问题：\textbf{高速气流中的悬臂梁振动}。我们将看到，即使是最简单的模型也能揭示涡激振动（Vortex-Induced Vibration）这一重要工程现象。
+本节介绍流固耦合领域最著名的基准测试——\textbf{Turek-Hron FSI2问题}：一个弹性薄板固连在圆柱后方，在来流作用下发生大幅度自激振荡。这个问题展示了涡激振动的典型特征，也是验证FSI求解器的工业标准。
 \end{tcolorbox}
 
 % ------------------------------------------------------------------------------------
-\subsection*{一、问题描述：风中的杆子}
+\subsection*{一、问题描述：圆柱后的弹性旗}
 
-想象一根细长的杆子垂直固定在地面上，一阵强风水平吹来（如图\ref{fig:fsi_setup}所示）。
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{figs_chap05/fsi_mesh_setup.pdf}
-\caption{流固耦合问题的物理模型与有限元网格。左图：物理模型示意图，悬臂梁一端固定，另一端自由。高速气流横向吹过梁，产生周期性的涡脱落。右图：将梁离散为有限元网格，每个节点有两个自由度——横向位移$w$和转角$\theta$。}
-\label{fig:fsi_setup}
-\end{figure}
-
-直觉告诉我们，杆子会被吹弯。但如果风速足够大，你会发现杆子不只是弯曲，而是开始\textbf{周期性振动}！
-
-这是为什么？答案藏在流体力学中一个著名的现象：\textbf{卡门涡街}（Kármán vortex street）。当流体绕过钝体（比如圆柱或矩形截面）时，会在尾部交替脱落旋转方向相反的涡。这些涡产生周期性的横向力，驱动结构振动。
-
-\begin{marginnote}
-\textbf{西奥多·冯·卡门}（Theodore von Kármán, 1881--1963）是20世纪最伟大的航空工程师之一。他不仅发现了卡门涡街，还创立了喷气推进实验室（JPL），培养了钱学森等众多杰出学生。
-\end{marginnote}
-
-涡脱落频率由\textbf{Strouhal数}确定：
-\begin{equation}
-f_s = \text{St} \cdot \frac{U}{D}
-\end{equation}
-其中$U$是来流速度，$D$是杆子的特征尺寸（如直径或厚度），Strouhal数$\text{St} \approx 0.2$对于许多钝体都近似成立。
-
-% ------------------------------------------------------------------------------------
-\subsection*{二、结构模型：Euler-Bernoulli梁}
-
-我们用经典的\textbf{Euler-Bernoulli梁理论}建模。这个理论假设：
-\begin{itemize}
-    \item 截面变形后仍保持平面，且垂直于中性轴（平截面假设）
-    \item 忽略剪切变形（细长梁的合理假设）
-    \item 小变形假设
-\end{itemize}
-
-控制方程为：
-\begin{equation}
-EI \frac{\partial^4 w}{\partial x^4} + \rho A \frac{\partial^2 w}{\partial t^2} = f(x, t)
-\end{equation}
-其中$w(x,t)$是横向位移，$EI$是抗弯刚度，$\rho A$是单位长度质量，$f(x,t)$是分布载荷（来自流体力）。
-
-\subsubsection*{单元刚度矩阵与质量矩阵}
-
-对于一个长度为$L_e$的梁单元，每端有两个自由度（位移$w$和转角$\theta$），因此单元矩阵是$4 \times 4$的：
-
-\begin{equation}
-\mathbf{K}_e = \frac{EI}{L_e^3}
-\begin{pmatrix}
-12 & 6L_e & -12 & 6L_e \\
-6L_e & 4L_e^2 & -6L_e & 2L_e^2 \\
--12 & -6L_e & 12 & -6L_e \\
-6L_e & 2L_e^2 & -6L_e & 4L_e^2
-\end{pmatrix}
-\end{equation}
-
-\begin{equation}
-\mathbf{M}_e = \frac{\rho A L_e}{420}
-\begin{pmatrix}
-156 & 22L_e & 54 & -13L_e \\
-22L_e & 4L_e^2 & 13L_e & -3L_e^2 \\
-54 & 13L_e & 156 & -22L_e \\
--13L_e & -3L_e^2 & -22L_e & 4L_e^2
-\end{pmatrix}
-\end{equation}
-
-这些矩阵的结构可以可视化为稀疏模式（图\ref{fig:fsi_matrices}）。
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{figs_chap05/fsi_fem_matrices.pdf}
-\caption{有限元矩阵的稀疏结构。刚度矩阵$K$和质量矩阵$M$都是\textbf{带状稀疏矩阵}，非零元素集中在对角线附近。这种结构来自于单元组装过程：只有相邻节点之间有耦合。稀疏性是大规模有限元计算能够高效求解的关键。}
-\label{fig:fsi_matrices}
-\end{figure}
-
-% ------------------------------------------------------------------------------------
-\subsection*{三、模态分析：结构的"指纹"}
-
-在施加外力之前，我们先研究结构的\textbf{固有特性}。求解广义特征值问题：
-\begin{equation}
-\mathbf{K} \boldsymbol{\phi}_i = \omega_i^2 \mathbf{M} \boldsymbol{\phi}_i
-\end{equation}
-得到固有频率$f_i = \omega_i/(2\pi)$和相应的振型$\boldsymbol{\phi}_i$。
-
-图\ref{fig:fsi_modes}展示了悬臂梁的前四阶振型。注意每一阶振型的"节点"（振幅为零的位置）数量递增，这是所有振动系统的普遍规律。
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.9\textwidth]{figs_chap05/fsi_modal_shapes.pdf}
-\caption{悬臂梁的前四阶振型。第一阶振型（$f_1 \approx 16.7$ Hz）是整体弯曲模态，高阶振型呈现更复杂的形状。注意固定端（$x=0$）位移始终为零，这是边界条件的体现。}
-\label{fig:fsi_modes}
-\end{figure}
-
-\begin{marginnote}
-\textbf{模态分析的工程价值}：结构的固有频率决定了它对哪些频率的激励最敏感。如果外力的频率接近某个固有频率，就会发生\textbf{共振}，振幅急剧增大。这就是为什么桥梁设计要避开行人步频、建筑物设计要避开地震主频。
-\end{marginnote}
-
-% ------------------------------------------------------------------------------------
-\subsection*{四、涡激振动模拟}
-
-现在加入流体力。涡脱落产生的周期性升力可以简化建模为：
-\begin{equation}
-f(x, t) = \frac{1}{2} \rho_f U^2 D \cdot C_L \sin(2\pi f_s t)
-\end{equation}
-其中$\rho_f$是流体密度，$C_L$是升力系数（振荡值，典型约为0.5）。
-
-将系统写成状态空间形式：
-\begin{equation}
-\begin{pmatrix} \dot{\mathbf{w}} \\ \ddot{\mathbf{w}} \end{pmatrix}
-= \begin{pmatrix} \mathbf{0} & \mathbf{I} \\ -\mathbf{M}^{-1}\mathbf{K} & -\mathbf{M}^{-1}\mathbf{C} \end{pmatrix}
-\begin{pmatrix} \mathbf{w} \\ \dot{\mathbf{w}} \end{pmatrix}
-+ \begin{pmatrix} \mathbf{0} \\ \mathbf{M}^{-1} \end{pmatrix} \mathbf{F}(t)
-\end{equation}
-其中阻尼矩阵$\mathbf{C}$采用Rayleigh阻尼模型：$\mathbf{C} = \alpha \mathbf{M} + \beta \mathbf{K}$。
-
-使用Python的\texttt{scipy.integrate.solve\_ivp}求解这个常微分方程组。图\ref{fig:fsi_response}展示了典型的时域响应。
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{figs_chap05/fsi_time_response.pdf}
-\caption{涡激振动的时域响应分析。左上：梁端位移随时间变化，呈现周期性振荡。右上：相图（位移-速度平面）显示系统最终收敛到稳定的极限环。左下：频谱分析揭示主导频率与涡脱落频率一致。右下：不同流速下的响应对比。}
-\label{fig:fsi_response}
-\end{figure}
-
-图\ref{fig:fsi_snapshots}展示了梁在振动过程中的变形序列，直观呈现了涡激振动的物理图景。
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.9\textwidth]{figs_chap05/fsi_deformation_snapshots.pdf}
-\caption{涡激振动过程中梁的变形序列。六个快照展示了梁从初始位置逐渐进入稳态振动的过程。注意变形主要由第一阶模态主导（整体弯曲形态）。}
-\label{fig:fsi_snapshots}
-\end{figure}
-
-% ------------------------------------------------------------------------------------
-\subsection*{五、锁定现象：流速与响应的非线性关系}
-
-直觉可能认为：风速越大，振动越剧烈。但真实情况更加微妙。
-
-图\ref{fig:fsi_velocity}展示了振幅随流速变化的关系。当涡脱落频率$f_s$接近结构的固有频率$f_n$时（即$U$接近$U_r = f_n D / \text{St}$），会发生\textbf{锁定}（lock-in）现象：
-\begin{itemize}
-    \item 涡脱落频率被"锁定"到结构固有频率
-    \item 振幅急剧增大
-    \item 即使流速变化，频率仍保持在固有频率附近
-\end{itemize}
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{figs_chap05/fsi_velocity_sweep.pdf}
-\caption{振幅随流速变化曲线。左图：绝对流速表示；右图：用约化速度$U^* = U/(f_n D)$无量纲化。当约化速度接近$1/\text{St} = 5$时，振幅出现峰值，这就是涡激振动的"锁定"区间。}
-\label{fig:fsi_velocity}
-\end{figure}
-
-锁定现象是涡激振动最重要的工程特性：它意味着在特定的"危险流速"区间，结构会经历剧烈振动，可能导致疲劳破坏。海洋工程中的立管、桥梁的悬索、高层建筑的避雷针都需要仔细评估这一风险。
-
-\begin{marginnote}
-\textbf{塔科马海峡大桥}（1940年坍塌）长期被误解为共振导致。现代分析表明，真正原因是\textbf{气动弹性颤振}——一种更复杂的流固耦合不稳定性。但涡激振动确实是该桥在坍塌前频繁振动的重要原因。
-\end{marginnote}
-
-% ------------------------------------------------------------------------------------
-\subsection*{六、代码实现}
-
-完整的Python代码位于\texttt{code\_chap05/fsi\_cantilever\_beam.py}，主要包含以下函数：
-
-\begin{itemize}
-    \item \texttt{beam\_element\_matrices()}：计算单元刚度和质量矩阵
-    \item \texttt{assemble\_global\_matrices()}：组装全局矩阵
-    \item \texttt{apply\_boundary\_conditions()}：施加边界条件
-    \item \texttt{modal\_analysis()}：求解特征值问题
-    \item \texttt{simulate\_fsi()}：时域模拟
-\end{itemize}
-
-核心的有限元组装代码片段：
-\begin{lstlisting}[language=Python]
-def beam_element_matrices(Le, EI, m):
-    """计算单个梁单元的刚度矩阵和质量矩阵"""
-    Ke = EI / Le**3 * np.array([
-        [12, 6*Le, -12, 6*Le],
-        [6*Le, 4*Le**2, -6*Le, 2*Le**2],
-        [-12, -6*Le, 12, -6*Le],
-        [6*Le, 2*Le**2, -6*Le, 4*Le**2]
-    ])
-    Me = m * Le / 420 * np.array([
-        [156, 22*Le, 54, -13*Le],
-        [22*Le, 4*Le**2, 13*Le, -3*Le**2],
-        [54, 13*Le, 156, -22*Le],
-        [-13*Le, -3*Le**2, -22*Le, 4*Le**2]
-    ])
-    return Ke, Me
-\end{lstlisting}
-
-% ------------------------------------------------------------------------------------
-\subsection*{七、进一步探索}
-
-本节的模型做了许多简化。更精确的流固耦合分析需要：
-
-\begin{enumerate}
-    \item \textbf{双向耦合}：结构变形影响流场，流场变化又反馈到结构力。这需要同时求解Navier-Stokes方程和结构动力学方程。
-
-    \item \textbf{大变形}：当位移较大时，几何非线性效应变得重要，需要使用协同旋转公式（co-rotational formulation）或Total Lagrangian公式。
-
-    \item \textbf{三维效应}：真实结构是三维的，涡脱落也有展向变化。
-
-    \item \textbf{湍流}：高雷诺数下流动变为湍流，涡脱落变得不规则。
-\end{enumerate}
-
-开源软件如OpenFOAM（流体）+ CalculiX（结构）可以进行完整的流固耦合仿真，但计算成本比我们这个简单模型高几个数量级。理解简化模型的物理本质，是驾驭复杂仿真工具的前提。
-
-% ------------------------------------------------------------------------------------
-\subsection*{八、工业标准：Turek-Hron FSI基准测试}
-
-在流固耦合领域，有一个被广泛采用的\textbf{基准测试问题}（benchmark）用于验证数值方法的正确性——Turek-Hron FSI问题\cite{turek2006proposal}。这是一个纯数值基准（没有实验数据），但各种FSI求解器都会用它来验证自己的实现。
+Turek和Hron在2006年提出了一系列FSI基准测试问题，其中\textbf{FSI2}是最具挑战性也最常被引用的一个。
 
 \begin{figure}[h]
 \centering
@@ -4460,27 +4253,224 @@ def beam_element_matrices(Le, EI, m):
     \draw[dashed, gray] (0.2,0) -- (0.2,0.2);
     \node[gray, below] at (0.2,0) {\tiny 0.2};
 \end{tikzpicture}
-\caption{Turek-Hron FSI基准问题几何。一个弹性薄板（橙色）固连在刚性圆柱后方，置于矩形通道中的层流流动中。由于圆柱产生的涡脱落，弹性板发生大幅度自激振荡。}
+\caption{Turek-Hron FSI2几何设置。矩形通道（$2.5 \times 0.41$ m）内有一刚性圆柱（直径$D = 0.1$ m），圆心在$(0.2, 0.2)$m处（故意偏心以打破对称性）。一块弹性薄板（长$0.35$ m，厚$0.02$ m，橙色）固连在圆柱后方。流体从左侧入口以抛物线速度剖面进入。}
 \label{fig:turek_fsi_geometry}
 \end{figure}
 
-\paragraph{问题设置}
+\paragraph{物理参数}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l|l|l}
+\toprule
+\textbf{参数} & \textbf{符号} & \textbf{FSI2取值} \\
+\midrule
+流体密度 & $\rho_f$ & 1000 kg/m³ \\
+动力粘度 & $\mu_f$ & 0.001 Pa$\cdot$s \\
+平均入口速度 & $\bar{U}$ & 1.0 m/s \\
+雷诺数 & Re $= \rho_f \bar{U} D / \mu_f$ & 100 \\
+\midrule
+固体密度 & $\rho_s$ & 10000 kg/m³ \\
+杨氏模量 & $E$ & $1.4 \times 10^6$ Pa \\
+泊松比 & $\nu_s$ & 0.4 \\
+\midrule
+密度比 & $\rho_s / \rho_f$ & 10 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{marginnote}
+\textbf{为什么圆心偏心？} 如果圆柱在通道正中央，由于对称性，初始阶段不会产生涡脱落。偏心打破了对称性，使得流动从一开始就不稳定，更快进入周期性振荡状态。
+\end{marginnote}
+
+% ------------------------------------------------------------------------------------
+\subsection*{二、涡激振动机理}
+
+当流体绕过圆柱时，会在圆柱两侧交替脱落旋转方向相反的涡——这就是著名的\textbf{卡门涡街}（Kármán vortex street）。
+
+\begin{marginnote}
+\textbf{西奥多·冯·卡门}（Theodore von Kármán, 1881--1963）是20世纪最伟大的航空工程师之一。他不仅发现了卡门涡街，还创立了喷气推进实验室（JPL），培养了钱学森等众多杰出学生。
+\end{marginnote}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\textwidth]{figs_chap05/turek_fsi2_mechanism.pdf}
+\caption{涡激振动机理示意。(a) 当上方涡脱落时，圆柱和板上方形成低压区，产生向上的升力，推动弹性板向上弯曲。(b) 半个周期后，下方涡脱落，下方形成低压区，产生向下的升力。这种交替的压力差驱动板的周期性振荡。}
+\label{fig:turek_fsi2_mechanism}
+\end{figure}
+
+涡脱落频率由\textbf{Strouhal数}确定：
+\begin{equation}
+f_s = \text{St} \cdot \frac{U}{D}
+\end{equation}
+其中$\text{St} \approx 0.2$对于许多钝体都近似成立。对于FSI2条件：$f_s \approx 0.2 \times 1.0 / 0.1 = 2$ Hz。
+
+当这个涡脱落频率接近弹性板的固有频率时，会发生\textbf{锁定}（lock-in）现象：
 \begin{itemize}
-    \item \textbf{几何}：$2.5 \times 0.41$ m的矩形通道，圆柱直径$D = 0.1$ m，圆心在$(0.2, 0.2)$（故意偏心以打破对称性），弹性板长$0.35$ m、厚$0.02$ m
-    \item \textbf{流体}：不可压缩Newtonian流体，密度$\rho_f = 1000$ kg/m³，动力粘度$\mu_f = 0.001$ Pa$\cdot$s
-    \item \textbf{固体}：Saint-Venant-Kirchhoff材料，密度$\rho_s = 10000$ kg/m³，杨氏模量$E = 1.4 \times 10^6$ Pa，泊松比$\nu_s = 0.4$
-    \item \textbf{边界条件}：入口抛物线速度剖面（平均速度$\bar{U} = 1$ m/s），出口零压力梯度，壁面无滑移
+    \item 涡脱落频率被"锁定"到结构固有频率
+    \item 振幅急剧增大
+    \item 流固相互作用形成正反馈，系统进入\textbf{自激振荡}
 \end{itemize}
 
-\paragraph{FSI2测试条件}
-Turek和Hron定义了三个测试工况（FSI1、FSI2、FSI3）。最常用的\textbf{FSI2}条件为：雷诺数$\text{Re} = \rho_f \bar{U} D / \mu_f = 100$，固液密度比$\rho_s/\rho_f = 10$。
+% ------------------------------------------------------------------------------------
+\subsection*{三、振动响应}
 
-\paragraph{参考结果}
-经过初始瞬态后，弹性板进入大幅度自激振荡的稳态周期运动。文献中报告的参考结果：
+经过初始瞬态后，弹性板进入稳态周期振荡。图\ref{fig:turek_fsi2_snapshots}展示了一个振动周期内弹性板的变形序列。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\textwidth]{figs_chap05/turek_fsi2_snapshots.pdf}
+\caption{Turek-Hron FSI2：弹性板在一个振动周期（$T \approx 0.5$ s）内的变形快照。板端Y方向位移幅值约$\pm 80$ mm，这是板长（350 mm）的约23\%——属于大变形范畴！注意板的变形主要由一阶弯曲模态主导。}
+\label{fig:turek_fsi2_snapshots}
+\end{figure}
+
+图\ref{fig:turek_fsi2_analysis}给出了完整的动力学分析。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\textwidth]{figs_chap05/turek_fsi2_time_history.pdf}
+\caption{Turek-Hron FSI2动力学分析。\textbf{左上}：板端Y位移时间历程——经过短暂瞬态后进入稳态振荡，振幅约$\pm 80$ mm。\textbf{右上}：相空间轨迹——稳态时形成极限环（limit cycle），这是自激振荡的标志。\textbf{左下}：频谱分析——主频约2 Hz，与涡脱落频率一致。\textbf{右下}：振动包络——一个周期内板的位置叠加，展示振动的空间范围。}
+\label{fig:turek_fsi2_analysis}
+\end{figure}
+
+\paragraph{文献参考值}
+Turek和Hron报告的FSI2基准结果：
 \begin{itemize}
-    \item 板端Y方向位移：幅值约$\pm 80$ mm，频率约$2$ Hz
-    \item 圆柱上的升力和阻力也呈周期性变化
+    \item 板端Y方向位移：$y(A) = 1.23 \pm 80.6 \times 10^{-3}$ m（均值1.23 mm，振幅80.6 mm）
+    \item 振动频率：$f \approx 2.0$ Hz
+    \item 圆柱阻力系数：$C_D = 208.83 \pm 73.75$
+    \item 圆柱升力系数：$C_L = 0.88 \pm 234.2$
 \end{itemize}
+
+% ------------------------------------------------------------------------------------
+\subsection*{四、结构建模：Euler-Bernoulli梁有限元}
+
+弹性板可以用\textbf{Euler-Bernoulli梁理论}建模。控制方程为：
+\begin{equation}
+EI \frac{\partial^4 w}{\partial x^4} + \rho A \frac{\partial^2 w}{\partial t^2} = f(x, t)
+\end{equation}
+其中$w(x,t)$是横向位移，$EI$是抗弯刚度，$\rho A$是单位长度质量，$f(x,t)$是流体力。
+
+\subsubsection*{单元刚度矩阵与质量矩阵}
+
+对于长度为$L_e$的梁单元，每端有两个自由度（位移$w$和转角$\theta$），单元矩阵是$4 \times 4$的：
+\begin{equation}
+\mathbf{K}_e = \frac{EI}{L_e^3}
+\begin{pmatrix}
+12 & 6L_e & -12 & 6L_e \\
+6L_e & 4L_e^2 & -6L_e & 2L_e^2 \\
+-12 & -6L_e & 12 & -6L_e \\
+6L_e & 2L_e^2 & -6L_e & 4L_e^2
+\end{pmatrix}, \quad
+\mathbf{M}_e = \frac{\rho A L_e}{420}
+\begin{pmatrix}
+156 & 22L_e & 54 & -13L_e \\
+22L_e & 4L_e^2 & 13L_e & -3L_e^2 \\
+54 & 13L_e & 156 & -22L_e \\
+-13L_e & -3L_e^2 & -22L_e & 4L_e^2
+\end{pmatrix}
+\end{equation}
+
+\begin{marginnote}
+\textbf{注意}：FSI2涉及大变形，严格来说需要使用几何非线性公式（如协同旋转法或Total Lagrangian公式）。这里的线性梁模型只是演示目的。
+\end{marginnote}
+
+% ------------------------------------------------------------------------------------
+\subsection*{五、完整FSI求解的挑战}
+
+Turek-Hron FSI2之所以成为经典基准，是因为它包含了FSI问题的核心难点：
+
+\begin{insightbox}
+\textbf{FSI2的挑战}：
+\begin{enumerate}
+    \item \textbf{大变形}：板端位移约80 mm，是板长的23\%，几何非线性显著
+    \item \textbf{强耦合}：密度比$\rho_s/\rho_f = 10$适中，流固相互作用强烈
+    \item \textbf{自激振荡}：不是外加强迫振动，而是系统自发产生的不稳定性
+    \item \textbf{双向耦合}：结构变形影响流场，流场变化又反馈到结构力
+\end{enumerate}
+\end{insightbox}
+
+完整求解FSI2需要同时求解：
+\begin{itemize}
+    \item \textbf{流体}：不可压缩Navier-Stokes方程
+    \begin{equation}
+    \rho_f \left( \frac{\partial \mathbf{v}}{\partial t} + \mathbf{v} \cdot \nabla \mathbf{v} \right) = -\nabla p + \mu_f \nabla^2 \mathbf{v}
+    \end{equation}
+    \item \textbf{固体}：非线性弹性动力学方程（Saint-Venant-Kirchhoff材料）
+    \item \textbf{耦合条件}：流固界面上速度连续、应力平衡
+\end{itemize}
+
+这需要迭代求解或整体求解，计算成本比单独的流体或结构问题高1-2个数量级。
+
+% ------------------------------------------------------------------------------------
+\subsection*{六、开源实现}
+
+\begin{marginnote}
+\textbf{开源FSI框架}：
+\begin{itemize}
+    \item \textbf{Kratos Multiphysics}：完整的多物理场框架
+    \item \textbf{preCICE}：耦合库，连接不同求解器
+    \item \textbf{Feel++}：C++ FEM库
+    \item \textbf{oomph-lib}：牛津大学开发的多物理场库
+    \item \textbf{OpenFOAM + CalculiX}：流体+结构组合
+\end{itemize}
+这些都包含Turek-Hron基准案例的实现。
+\end{marginnote}
+
+完整的Python可视化代码位于\texttt{code\_chap05/turek\_fsi2\_visualization.py}，用于生成本节的示意图。真正的FSI2求解需要使用专业的多物理场软件。
+
+\begin{lstlisting}[language=Python, caption=弹性板变形计算示意]
+def flag_deformation(s, t, amplitude=0.080, freq=2.0):
+    """
+    计算弹性板在给定时刻的变形
+    s: 沿板长度的参数 [0, 1], 0=固定端, 1=自由端
+    t: 时间
+    """
+    # 一阶弯曲模态: phi(s) ~ 1 - cos(pi*s/2)
+    phi = 1 - np.cos(np.pi * s / 2)
+    omega = 2 * np.pi * freq
+    y_displacement = amplitude * phi * np.sin(omega * t)
+    return y_displacement
+\end{lstlisting}
+
+% ------------------------------------------------------------------------------------
+\subsection*{七、工程意义}
+
+涡激振动不仅是学术问题，在工程中有重大实际意义：
+
+\begin{itemize}
+    \item \textbf{海洋工程}：深海立管（riser）在洋流中的涡激振动是设计的主要挑战
+    \item \textbf{桥梁工程}：塔科马海峡大桥（1940年坍塌）的前期振动就与涡激振动有关
+    \item \textbf{航空航天}：飞机机翼、尾翼的气动弹性颤振
+    \item \textbf{能源工程}：风力机叶片、热交换器管束的振动
+\end{itemize}
+
+\begin{marginnote}
+\textbf{塔科马海峡大桥}（1940年坍塌）长期被误解为共振导致。现代分析表明，真正原因是\textbf{气动弹性颤振}——一种更复杂的流固耦合不稳定性。但涡激振动确实是该桥在坍塌前频繁振动的重要原因。
+\end{marginnote}
+
+如果你的FSI代码能正确重现Turek-Hron基准的结果，那它就有了一定的可信度。这就是为什么FSI2成为了验证FSI求解器的"金标准"。
+
+\begin{references}
+\bibitem{turek2006proposal} S. Turek and J. Hron, ``Proposal for Numerical Benchmarking of Fluid-Structure Interaction between an Elastic Object and Laminar Incompressible Flow,'' in \textit{Fluid-Structure Interaction}, Lecture Notes in Computational Science and Engineering, vol. 53, Springer, 2006, pp. 371--385.
+\end{references}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\textwidth]{figs_chap05/turek_fsi2_time_history.pdf}
+\caption{Turek-Hron FSI2动力学分析。\textbf{左上}：板端Y位移时间历程，经过短暂瞬态后进入稳态振荡。\textbf{右上}：相空间轨迹，稳态时形成极限环（limit cycle）。\textbf{左下}：频谱分析显示主频约2 Hz。\textbf{右下}：振动包络展示一个周期内板的位置叠加。}
+\label{fig:turek_fsi2_analysis}
+\end{figure}
+
+\paragraph{涡激振动机理}
+为什么弹性板会自发振荡？图\ref{fig:turek_fsi2_mechanism}解释了涡激振动的物理机理：
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\textwidth]{figs_chap05/turek_fsi2_mechanism.pdf}
+\caption{涡激振动机理示意。流体绕过圆柱时形成交替脱落的卡门涡街。(a) 当上方涡脱落时，上方形成低压区，产生向上的升力，推动板向上弯曲。(b) 半个周期后，下方涡脱落，下方形成低压区，产生向下的升力。这种交替的压力差驱动板的周期性振荡。当涡脱落频率接近板的固有频率时，发生\textbf{锁定}（lock-in），振幅达到最大。}
+\label{fig:turek_fsi2_mechanism}
+\end{figure}
 
 \begin{insightbox}
 \textbf{为什么Turek-Hron基准如此重要？}
