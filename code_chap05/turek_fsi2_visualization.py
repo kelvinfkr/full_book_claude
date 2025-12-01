@@ -488,12 +488,18 @@ def plot_fsi2_mechanism(save_path):
 
 
 def plot_fsi2_vortex_street(save_path):
-    """绘制完整的涡街演化序列 - 使用速度场和流线"""
+    """绘制完整的涡街演化序列 - 清晰展示涡向下游移动"""
     fig, axes = plt.subplots(2, 3, figsize=(15, 8))
 
-    times = np.linspace(0, period, 6)
-    titles = [f't = {i}T/5' if i > 0 else 't = 0' for i in range(6)]
-    titles[-1] = 't ≈ T'
+    # 使用更长的时间跨度，让涡移动更明显
+    # 涡对流速度约0.8 m/s，一个周期内移动约0.4m
+    times = [0, 0.1, 0.2, 0.3, 0.4, 0.5]  # 0.5秒 = 一个周期
+    titles = ['t = 0', 't = 0.1s', 't = 0.2s', 't = 0.3s', 't = 0.4s', 't = 0.5s (≈T)']
+
+    # 涡的参数 - 用于追踪
+    convection_speed = 0.8  # m/s
+    vortex_spacing = 0.12
+    lateral_spacing = 0.07
 
     for idx, (ax, t, title) in enumerate(zip(axes.flat, times, titles)):
         # 生成速度场
@@ -501,11 +507,11 @@ def plot_fsi2_vortex_street(save_path):
 
         # 绘制速度大小云图
         levels = np.linspace(0, 1.8, 19)
-        cf = ax.contourf(X, Y, speed, levels=levels, cmap='coolwarm', extend='max', alpha=0.9)
+        cf = ax.contourf(X, Y, speed, levels=levels, cmap='coolwarm', extend='max', alpha=0.85)
 
         # 绘制流线
-        strm = ax.streamplot(X, Y, U, V, color='white', density=1.2, linewidth=0.6,
-                             arrowsize=0.6, arrowstyle='->', broken_streamlines=True)
+        strm = ax.streamplot(X, Y, U, V, color='white', density=1.0, linewidth=0.5,
+                             arrowsize=0.5, arrowstyle='->', broken_streamlines=True)
 
         # 通道边界
         ax.plot([0, 1.2], [0, 0], 'k-', linewidth=2)
@@ -521,10 +527,37 @@ def plot_fsi2_vortex_street(save_path):
         ax.fill_between(x_flag, y_flag - flag_thickness/2, y_flag + flag_thickness/2,
                         color='orange', edgecolor='darkorange', linewidth=2, zorder=10)
 
-        ax.set_xlim(-0.05, 1.0)
+        # 标记涡心位置 - 用圆圈和箭头清晰显示
+        shedding_period = vortex_spacing / convection_speed
+        for i in range(8):
+            shed_time = i * shedding_period / 2
+            vortex_x = 0.32 + convection_speed * (t - shed_time)
+
+            if vortex_x < 0.30 or vortex_x > 0.95:
+                continue
+
+            if i % 2 == 0:
+                vortex_y = cy + lateral_spacing
+                color = 'red'
+                marker = '↺'  # 逆时针
+            else:
+                vortex_y = cy - lateral_spacing
+                color = 'blue'
+                marker = '↻'  # 顺时针
+
+            # 绘制涡心标记
+            circle = Circle((vortex_x, vortex_y), 0.025, facecolor='none',
+                           edgecolor=color, linewidth=2, linestyle='-', zorder=15)
+            ax.add_patch(circle)
+
+            # 添加旋转方向标记
+            ax.text(vortex_x, vortex_y, marker, fontsize=10, color=color,
+                   ha='center', va='center', fontweight='bold', zorder=16)
+
+        ax.set_xlim(-0.02, 1.0)
         ax.set_ylim(-0.02, H_channel + 0.02)
         ax.set_aspect('equal')
-        ax.set_title(title, fontsize=11)
+        ax.set_title(title, fontsize=11, fontweight='bold')
         ax.set_xlabel('x (m)', fontsize=9)
         ax.set_ylabel('y (m)', fontsize=9)
 
@@ -533,9 +566,13 @@ def plot_fsi2_vortex_street(save_path):
     cbar = fig.colorbar(cf, cax=cbar_ax)
     cbar.set_label('速度 |u| (m/s)', fontsize=10)
 
-    plt.suptitle('Turek-Hron FSI2：涡街演化与固体振动耦合 (一个周期)',
+    # 添加说明
+    fig.text(0.5, 0.02, '红圈↺: 逆时针涡 (上排)    蓝圈↻: 顺时针涡 (下排)    涡对流速度 ≈ 0.8 m/s',
+             ha='center', fontsize=10, style='italic')
+
+    plt.suptitle('Turek-Hron FSI2：涡街演化与固体振动耦合 (涡随时间向下游移动)',
                 fontsize=14, fontweight='bold')
-    plt.tight_layout(rect=[0, 0, 0.91, 0.95])
+    plt.tight_layout(rect=[0, 0.04, 0.91, 0.95])
     plt.savefig(save_path, dpi=150, bbox_inches='tight')
     plt.close()
     print(f"Saved: {save_path}")
