@@ -393,4 +393,16 @@
     \marginnote{\color{gray!30}\rule{\marginparwidth}{0.5pt}\\[5mm]\rule{\marginparwidth}{0.5pt}\\[5mm]\rule{\marginparwidth}{0.5pt}\\[5mm]\rule{\marginparwidth}{0.5pt}}%
 }
 
+% ========== 参考文献环境 ==========
+% 章节末参考文献列表
+\newenvironment{references}{%
+    \subsection*{参考文献}%
+    \begin{list}{}{\setlength{\leftmargin}{1.5em}\setlength{\itemindent}{-1.5em}\setlength{\itemsep}{0.5ex}\setlength{\parsep}{0pt}}%
+}{%
+    \end{list}%
+}
+
+% bibitem命令（简化版）
+\providecommand{\bibitem}[1]{\item[\textbf{[#1]}]}
+
 \endinput
