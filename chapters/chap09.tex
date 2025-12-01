@@ -1285,7 +1285,7 @@ def train(model, data_loader, optimizer, num_epochs):
 % 代码演示结果
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs/chap09_fig1.png}
+\includegraphics[width=0.95\textwidth]{figs_chap09/chap09_fig1.png}
 \caption{自动微分与反向传播演示。（1）计算图展开：函数$y = (x^2 + 1) \cdot x$的计算图，显示中间变量$z_1 = x^2$, $z_2 = z_1 + 1$, $y = z_2 \cdot x$；（2）前向传播计算各中间值；（3）反向传播计算梯度：从损失$L$反向传播$\lambda$（伴随变量），最终得到$\partial L / \partial x$；（4）梯度验证：自动微分结果与数值差分对比，在$x=3$处得到$dy/dx = 8$，与书中结果一致。}
 \label{fig:chap09_autograd}
 \end{figure}

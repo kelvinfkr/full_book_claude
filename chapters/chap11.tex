@@ -2236,14 +2236,14 @@ Transformer有一个重要限制：\textbf{最大上下文长度}。
 % 代码演示结果
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.98\textwidth]{figs/chap12_fig1.png}
+\includegraphics[width=0.98\textwidth]{figs_chap11/chap12_fig1.png}
 \caption{自注意力机制完整计算过程。左上：输入嵌入矩阵$X$（3个词$\times$4维）；中上：Q、K、V矩阵（通过线性变换$W_Q$、$W_K$、$W_V$得到）；右上：注意力权重热图$\text{softmax}(QK^T/\sqrt{d_k})$；左下：计算流程的五个步骤；中下：单词"love"的注意力分布（它对三个词的关注程度）；右下：多头注意力的并行结构示意。}
 \label{fig:chap12_attention}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs/chap12_fig2.png}
+\includegraphics[width=0.95\textwidth]{figs_chap11/chap12_fig2.png}
 \caption{位置编码可视化。左上：正弦位置编码热图——低频维度变化慢，高频维度变化快；右上：不同维度的正弦波形——体现位置编码的频率分解；左下：位置相似度——相邻位置的点积相似度更高，体现局部性先验；右下：RoPE（旋转位置编码）示意——在复平面上，不同位置对应不同的旋转角度。}
 \label{fig:chap12_positional_encoding}
 \end{figure}

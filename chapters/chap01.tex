@@ -413,14 +413,14 @@ $h(x^*) = 0$ & 紧绑（恰好在边界上） & 约束"激活了"，当等式处
 % 代码演示结果
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.85\textwidth]{figs/chap01_fig1.png}
+\includegraphics[width=0.85\textwidth]{figs_chap01/kkt_visualization.pdf}
 \caption{KKT系统的可视化（1行3列）。\textbf{左图}：3D几何——蓝色平面为约束$x+y+z=1$，红点为原点，绿色星号为最近点，连线表示最短距离；\textbf{中图}：KKT矩阵结构热力图——矩阵有鞍点结构，对角块来自目标函数Hessian（$2I$），非对角块来自约束梯度；\textbf{右图}：KKT系统的解——蓝色柱子为原始变量$(x^*,y^*,z^*)=(1/3,1/3,1/3)$，橙色柱子为拉格朗日乘子$\lambda^*=-2/3$（负号表示约束放松会减小目标值）。}
 \label{fig:chap01_kkt}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.85\textwidth]{figs/chap01_fig2.png}
+\includegraphics[width=0.85\textwidth]{figs_chap01/shadow_price.pdf}
 \caption{牛顿法求解非线性约束优化的收敛过程。通过迭代求解KKT系统，算法从初始点快速收敛到约束曲面上的最优解，展示了二次收敛的特性。}
 \label{fig:chap01_newton}
 \end{figure}

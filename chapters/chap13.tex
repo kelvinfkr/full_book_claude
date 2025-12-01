@@ -101,7 +101,7 @@ PINN的想法出奇地简单：
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.95\textwidth]{figures_chap13/pinn_workflow.pdf}
+    \includegraphics[width=0.95\textwidth]{figs_chap13/pinn_workflow.pdf}
     \caption{PINN训练流程示意图。输入坐标$(x,t)$经过神经网络得到预测值$u_\theta$，通过自动微分计算所需的导数，然后分别计算PDE损失、边界条件损失和初值条件损失。三种损失加权求和后通过反向传播更新网络参数。}
     \label{fig:pinn_workflow}
 \end{figure}
@@ -205,7 +205,7 @@ PINN正是这个思路：$L_{\text{PDE}}$惩罚方程不被满足的程度，$L_
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.95\textwidth]{figures_chap13/lambda_effect.pdf}
+    \includegraphics[width=0.95\textwidth]{figs_chap13/lambda_effect.pdf}
     \caption{罚参数$\lambda$的影响。左图：不同$\lambda$值下PINN的预测解与精确解（黑色）对比；右图：不同$\lambda$值对应的边界误差和整体MSE柱状对比。}
     \label{fig:lambda_effect}
 \end{figure}
@@ -545,7 +545,7 @@ Epoch  3000 | Loss: 8.67e-05 | PDE: 8.65e-05 | BC: 1.45e-07
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.95\textwidth]{figures_chap13/pinn_poisson_1d.pdf}
+    \includegraphics[width=0.95\textwidth]{figs_chap13/pinn_poisson_1d.pdf}
     \caption{PINN求解一维泊松方程的结果。左图：训练损失曲线；右图：PINN预测（红色虚线）与精确解（蓝色实线）的对比。}
     \label{fig:pinn_1d}
 \end{figure}
@@ -666,7 +666,7 @@ $x$ & 解析解 $u_{\text{exact}}(x)$ & PINN预测 $u_\theta(x)$ & 绝对误差 
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.95\textwidth]{figures_chap13/constraint_concept.pdf}
+    \includegraphics[width=0.95\textwidth]{figs_chap13/constraint_concept.pdf}
     \caption{软约束与硬约束的对比示意图。左图：软约束通过惩罚项间接满足边界条件，边界可能存在误差；右图：硬约束通过结构设计（乘以$x(1-x)$因子）使边界条件自动精确满足。}
     \label{fig:constraint_concept}
 \end{figure}
@@ -747,7 +747,7 @@ def compute_loss_hard_constraint(model, x_interior):
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.95\textwidth]{figures_chap13/hard_vs_soft.pdf}
+    \includegraphics[width=0.95\textwidth]{figs_chap13/hard_vs_soft.pdf}
     \caption{硬约束与软约束PINN的对比。左图：训练损失曲线对比，硬约束只需优化PDE损失，损失更低；右图：解的对比，两种方法都能较好逼近精确解（蓝色），硬约束（红色）在边界处精确为零。}
     \label{fig:hard_vs_soft}
 \end{figure}
@@ -933,7 +933,7 @@ plt.show()
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.95\textwidth]{figures_chap13/spectral_bias.pdf}
+    \includegraphics[width=0.95\textwidth]{figs_chap13/spectral_bias.pdf}
     \caption{频谱偏置现象演示。目标函数$u(x) = \sin(2\pi x) + 0.5\sin(20\pi x)$包含低频和高频成分。四个子图展示不同训练阶段的拟合效果：左上为初始状态，右上为第500轮，左下为第2000轮，右下为第5000轮。可见网络先学会低频成分，高频成分需要更长时间才能拟合。}
     \label{fig:spectral_bias}
 \end{figure}
@@ -1042,7 +1042,7 @@ class FourierPINN(nn.Module):
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.95\textwidth]{figures_chap13/fourier_features.pdf}
+    \includegraphics[width=0.95\textwidth]{figs_chap13/fourier_features.pdf}
     \caption{傅里叶特征映射的效果对比。左图：标准MLP与傅里叶特征网络的训练损失曲线，傅里叶特征网络收敛更快；右图：拟合效果对比，标准MLP（绿色）难以捕捉高频成分，傅里叶特征网络（红色）能准确拟合整个目标函数。}
     \label{fig:fourier_features}
 \end{figure}
@@ -1164,7 +1164,7 @@ for epoch in range(num_epochs):
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.95\textwidth]{figures_chap13/gradient_diagnosis.pdf}
+    \includegraphics[width=0.95\textwidth]{figs_chap13/gradient_diagnosis.pdf}
     \caption{梯度冲突诊断结果。左图：PDE损失梯度与边界条件损失梯度的余弦相似度，负值表示梯度方向冲突；右图：两个损失项的梯度范数对比，边界条件梯度范数通常较大（因为权重$\lambda=100$）。}
     \label{fig:gradient_diagnosis}
 \end{figure}
@@ -1295,7 +1295,7 @@ history = trainer.train(num_epochs=10000)
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.95\textwidth]{figures_chap13/adaptive_weight.pdf}
+    \includegraphics[width=0.95\textwidth]{figs_chap13/adaptive_weight.pdf}
     \caption{自适应权重PINN的训练过程。左图：PDE损失和边界条件损失的变化曲线；中图：自适应权重$\lambda$的演化，可见权重自动调整以平衡两个损失；右图：训练后PINN预测与精确解的对比。}
     \label{fig:adaptive_weight}
 \end{figure}
@@ -1597,7 +1597,7 @@ def compute_ritz_loss(model, x_interior, x_boundary, f_func, lambda_bc=100.0):
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.95\textwidth]{figures_chap13/deep_ritz_comparison.pdf}
+    \includegraphics[width=0.95\textwidth]{figs_chap13/deep_ritz_comparison.pdf}
     \caption{Deep Ritz Method与标准PINN对比。左图：两种方法的解与精确解对比；中图：训练损失演化（注意Deep Ritz的损失是能量值，可以为负）；右图：点误差分布。}
     \label{fig:deep_ritz}
 \end{figure}
@@ -1738,7 +1738,7 @@ print(f"\n真实D = {D_true}, 估计D = {model.D.item():.4f}")
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.95\textwidth]{figures_chap13/inverse_problem.pdf}
+    \includegraphics[width=0.95\textwidth]{figs_chap13/inverse_problem.pdf}
     \caption{逆问题PINN反演扩散系数。左图：反演的$D$值随训练收敛到真实值；中图：训练损失曲线；右图：$t=0.2$时刻预测解与精确解对比（绿色点为观测数据）。}
     \label{fig:inverse_problem}
 \end{figure}
@@ -1785,14 +1785,14 @@ print(f"\n真实D = {D_true}, 估计D = {model.D.item():.4f}")
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.98\textwidth]{figures_chap13/pinn_poisson_2d.pdf}
+    \includegraphics[width=0.98\textwidth]{figs_chap13/pinn_poisson_2d.pdf}
     \caption{二维泊松方程PINN求解结果。上排从左到右：精确解3D视图、PINN预测3D视图、绝对误差3D视图；下排从左到右：精确解等高线、PINN预测等高线、训练损失曲线。}
     \label{fig:pinn_2d}
 \end{figure}
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.98\textwidth]{figures_chap13/pinn_poisson_2d_slices.pdf}
+    \includegraphics[width=0.98\textwidth]{figs_chap13/pinn_poisson_2d_slices.pdf}
     \caption{二维泊松方程的切片对比。左图：$x=0.5$处沿$y$方向的截面对比；右图：$y=0.5$处沿$x$方向的截面对比。两个截面均显示PINN预测（红色虚线）与精确解（蓝色实线）高度吻合。}
     \label{fig:pinn_2d_slices}
 \end{figure}

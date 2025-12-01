@@ -2242,14 +2242,14 @@ J_\alpha(U) = \frac{1}{2}U^\top K_{block} U - F^\top U + \frac{\alpha}{2}\|CU\|^
 % 代码演示结果
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs/chap05_fig1.png}
+\includegraphics[width=0.95\textwidth]{figs_chap05/chap05_fig1.png}
 \caption{Python性能优化实验：GIL对多线程的影响、缓存局部性的重要性、以及NumPy向量化的加速效果。左图显示Python多线程在CPU密集任务上受GIL限制，multiprocessing才能真正并行；中图展示行优先vs列优先遍历的性能差异（缓存局部性）；右图对比循环与向量化操作的速度——向量化可获得数十倍加速。}
 \label{fig:chap05_python}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs/chap05_fig2.png}
+\includegraphics[width=0.95\textwidth]{figs_chap05/chap05_fig2.png}
 \caption{一维有限元求解热传导问题。左图展示有限元解与解析解$u(x) = x(1-x)/2$的对比，二者几乎完全重合；中图显示刚度矩阵$K$的三对角稀疏结构——这源于帐篷函数的局部支撑性；右图展示网格细化时的收敛行为，验证了线性元的$O(h^2)$收敛阶。}
 \label{fig:chap05_fem}
 \end{figure}
@@ -3627,7 +3627,7 @@ $256 \times 256$ & 650 次 & 500 次 & 78 次 & 8 次 \\
 % 代码演示结果
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs/chap05_fig3.png}
+\includegraphics[width=0.95\textwidth]{figs_chap05/chap05_fig3.png}
 \caption{预条件子效果的实验验证（1行3列）。\textbf{左图}：共轭梯度法收敛曲线对比——无预条件（蓝）、Jacobi预条件（绿）、ILU预条件（红），ILU只需约1/3的迭代次数；\textbf{中图}：网格加密时迭代次数的增长趋势——无预条件和Jacobi迭代次数线性增长，而ILU增长明显更慢；\textbf{右图}：条件数的几何意义——扁椭圆（高条件数）导致zigzag路径，圆形（低条件数）可以直达最优解。代码见 \texttt{code/chap05\_performance.py}。}
 \label{fig:preconditioner}
 \end{figure}

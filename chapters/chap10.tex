@@ -595,7 +595,7 @@ r(s_t,a)+\gamma V(f(s_t,a))
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.6\textwidth]{figs/chap10_shortest_path.png}
+\includegraphics[width=0.6\textwidth]{figs_chap10/chap10_shortest_path.png}
 \caption{最短路问题示意图。红色箭头标示最优路径$s \to a \to c \to t$，总代价为4。每个节点旁标注的$V$值是从该点到终点的最短距离。}
 \label{fig:shortest_path}
 \end{figure}
@@ -1598,12 +1598,12 @@ def value_iteration(env, gamma=1.0, threshold=1e-6):
 \centering
 \begin{minipage}{0.48\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{figs/chap10_value_iteration.png}
+    \includegraphics[width=\textwidth]{figs_chap10/chap10_value_iteration.png}
 \end{minipage}
 \hfill
 \begin{minipage}{0.48\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{figs/chap10_value_heatmap.png}
+    \includegraphics[width=\textwidth]{figs_chap10/chap10_value_heatmap.png}
 \end{minipage}
 \caption{值迭代结果。\textbf{左}：不同状态的值函数随迭代次数的变化，展示收敛过程；\textbf{右}：收敛后的值函数热力图，颜色越绿表示到达目标的期望回报越高。}
 \label{fig:value_iteration}
@@ -1611,7 +1611,7 @@ def value_iteration(env, gamma=1.0, threshold=1e-6):
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.45\textwidth]{figs/chap10_policy.png}
+\includegraphics[width=0.45\textwidth]{figs_chap10/chap10_policy.png}
 \caption{值迭代得到的最优策略。箭头指向每个状态应采取的最佳动作，指引智能体沿最短路径到达右下角的目标。}
 \label{fig:policy}
 \end{figure}
@@ -1851,12 +1851,12 @@ Q-Learning：训练了 2000 个回合
 \centering
 \begin{minipage}{0.55\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{figs/chap10_qlearning_sarsa.png}
+    \includegraphics[width=\textwidth]{figs_chap10/chap10_qlearning_sarsa.png}
 \end{minipage}
 \hfill
 \begin{minipage}{0.42\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{figs/chap10_qtable.png}
+    \includegraphics[width=\textwidth]{figs_chap10/chap10_qtable.png}
 \end{minipage}
 \caption{\textbf{左}：Q-Learning与SARSA的学习曲线对比。两种无模型算法通过与环境交互不断改进，最终都能学到接近最优的策略。\textbf{右}：Q-Learning学到的$\max_a Q(s,a)$热力图，可与图\ref{fig:value_iteration}中的值函数对比——虽然训练方式完全不同（无模型vs有模型），最终学到的值函数非常接近。}
 \label{fig:qlearning_results}

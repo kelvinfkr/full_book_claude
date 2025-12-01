@@ -1217,14 +1217,14 @@ x_1 = \begin{pmatrix} 5 \\ 2 + (-7.34) \end{pmatrix} = \begin{pmatrix} 5 \\ -5.3
 % 代码演示结果
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs/chap08_fig1.png}
+\includegraphics[width=0.95\textwidth]{figs_chap08/chap08_fig1.png}
 \caption{最省力移动问题的解析解可视化。左图：最优轨迹$x^*(t) = (t/T)^2(3 - 2t/T)$（位置）和速度曲线——先加速后减速，在中点速度最大；中图：最优控制$u^*(t) = 6/T^2(1 - 2t/T)$——前半段加速（$u > 0$），后半段减速（$u < 0$）；右图：能量消耗随时间horizon的关系——时间越长，所需控制能量越小，符合"慢工出细活"的直觉。}
 \label{fig:chap08_minimum_effort}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.98\textwidth]{figs/chap08_fig2.png}
+\includegraphics[width=0.98\textwidth]{figs_chap08/chap08_fig2.png}
 \caption{MPC（模型预测控制）滚动时域演示。左上：实际轨迹与多条预测轨迹——每个时刻重新规划，但只执行第一步；右上：控制输入（饱和在$\pm 0.5$）；左下：滚动时域示意——不同时刻的规划窗口；右下：跟踪误差随时间减小。MPC的核心思想：规划多步但只执行一步，用反馈不断修正。}
 \label{fig:chap08_mpc}
 \end{figure}
