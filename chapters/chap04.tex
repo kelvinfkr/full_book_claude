@@ -50,15 +50,7 @@ Shannon把这个"问题数"叫做\textbf{比特（bit）}——1 bit就是一个
 
 \subsection{什么消息更有"信息量"？}
 
-考虑两条消息：
-\begin{itemize}
-    \item 消息A："明天太阳从东边升起"
-    \item 消息B："明天北京下雪"（假设现在是7月）
-\end{itemize}
-
-哪条消息的信息量更大？
-
-直觉告诉我们是消息B。为什么？因为消息A是必然发生的事（概率 $\approx 1$），而消息B是罕见事件（概率很小）。
+要把"信息"变成一个可以计算的量，先得弄清楚它到底和什么有关。比较两条消息：消息A说"明天太阳从东边升起"，消息B说"明天北京下雪"（假设现在是7月）。哪条消息的信息量更大？直觉告诉我们是消息B，因为消息A是必然发生的事（概率 $\approx 1$），听了等于没听；而消息B是罕见事件（概率很小），一旦成真就大大改变了我们对明天的预期。于是信息量应当是概率的减函数——概率越小，消息越"值钱"。
 
 \begin{keyformula}[title=单个事件的信息量]
 事件 $x$ 的信息量（自信息）定义为：
@@ -68,24 +60,10 @@ I(x) = -\log_2 p(x) \quad \text{（单位：比特）}
 \end{keyformula}
 \clarify{这里$p(x)$是事件$x$发生的概率。概率是0到1之间的数，表示事件发生的可能性。比如"抛硬币正面朝上"的概率是0.5，"太阳从东边升起"的概率是1。}
 
-\textbf{验证直觉}：
-\begin{itemize}
-    \item 必然事件（$p=1$）：$I = -\log_2 1 = 0$ 比特（没有新信息）
-    \item 抛硬币正面（$p=0.5$）：$I = -\log_2 0.5 = 1$ 比特
-    \item 掷骰子得6（$p=1/6$）：$I = -\log_2(1/6) \approx 2.58$ 比特
-    \item 罕见事件（$p=0.001$）：$I = -\log_2 0.001 \approx 10$ 比特
-\end{itemize}
+用几个例子验证这个定义是否符合直觉。必然事件（$p=1$）的信息量是 $I = -\log_2 1 = 0$ 比特，没有新信息；抛硬币得到正面（$p=0.5$）的信息量是 $I = -\log_2 0.5 = 1$ 比特；掷骰子得到 6（$p=1/6$）的信息量是 $I = -\log_2(1/6) \approx 2.58$ 比特；一个概率为 $0.001$ 的罕见事件则携带 $I = -\log_2 0.001 \approx 10$ 比特。概率每减半，信息量恰好增加一比特。
 
 \begin{physicalmeaning}
-为什么用 $-\log p$？
-
-\begin{enumerate}
-    \item \textbf{概率越小，信息量越大}：$-\log$ 是单调递减函数
-    \item \textbf{独立事件的信息量可加}：$I(x \cap y) = -\log(p_x p_y) = -\log p_x - \log p_y = I(x) + I(y)$
-    \item \textbf{确定事件信息量为零}：$-\log 1 = 0$
-\end{enumerate}
-
-这三条性质唯一地确定了 $-\log p$ 的形式！
+为什么偏偏是 $-\log p$，而不是别的减函数？因为除了"概率越小，信息量越大"（$-\log$ 是单调递减函数）之外，我们对信息量还有两条要求。其一，独立事件的信息量应当可加：同时得知两件互不相关的事，得到的信息应等于分别得知它们的信息之和，而独立事件的概率是相乘的，$I(x \cap y) = -\log(p_x p_y) = -\log p_x - \log p_y = I(x) + I(y)$，对数恰好把乘法变成加法。其二，确定事件的信息量应为零，而 $-\log 1 = 0$。这三条性质唯一地确定了 $-\log p$ 的形式！
 \end{physicalmeaning}
 
 \subsection{回到猜数字游戏}
@@ -104,17 +82,7 @@ I = -\log_2 \frac{1}{8} = \log_2 8 = 3 \text{ 比特}
 
 \subsection{不均匀概率的情况}
 
-现在考虑不均匀的情况。假设天气预报说：
-\begin{itemize}
-    \item 晴天概率 70\%
-    \item 雨天概率 30\%
-\end{itemize}
-
-如果告诉你"明天是晴天"，信息量是 $-\log_2 0.7 \approx 0.51$ 比特。
-
-如果告诉你"明天下雨"，信息量是 $-\log_2 0.3 \approx 1.74$ 比特。
-
-\textbf{平均来看}，每天的天气消息能带来多少信息？
+猜数字游戏里每个答案等可能，所以每条消息的信息量都一样。现实中的消息源却往往不均匀：假设天气预报说晴天概率 70\%、雨天概率 30\%。如果告诉你"明天是晴天"，信息量是 $-\log_2 0.7 \approx 0.51$ 比特；如果告诉你"明天下雨"，信息量是 $-\log_2 0.3 \approx 1.74$ 比特。两种消息的信息量不同，那么\textbf{平均来看}，每天的天气消息能带来多少信息？自然的做法是按概率加权：
 
 \begin{align}
 \text{平均信息量} &= 0.7 \times (-\log_2 0.7) + 0.3 \times (-\log_2 0.3) \\
@@ -122,7 +90,7 @@ I = -\log_2 \frac{1}{8} = \log_2 8 = 3 \text{ 比特}
 &\approx 0.88 \text{ 比特}
 \end{align}
 
-这个"平均信息量"就是\textbf{熵}！
+这个"平均信息量"就是\textbf{熵}。香农 1948 年在《通信的数学理论》里引入这个量时，据说是冯·诺伊曼建议他把它叫作"熵"，理由之一是"没人真正知道熵是什么，所以辩论时你总占上风"。名字的来历下一节会讲清楚——它确实和物理学里的熵是同一个东西。
 
 \begin{keyformula}[title=熵（Shannon Entropy）]
 \begin{equation}
@@ -191,24 +159,14 @@ H = -0.5 \log_2 0.5 - 5 \times 0.1 \log_2 0.1 \approx 0.5 + 1.66 = 2.16 \text{ �
 \caption{二元熵函数 $H(p) = -p\log_2 p - (1-p)\log_2(1-p)$。当 $p=0.5$ 时熵最大，当 $p=0$ 或 $p=1$ 时熵为零。}
 \end{figure}
 
-\begin{enumerate}
-    \item \textbf{非负性}：$H(p) \geq 0$，等号当且仅当某个 $p_i = 1$（确定性）
-    
-    \item \textbf{最大值}：对于 $k$ 个可能结果，$H \leq \log_2 k$，等号当且仅当均匀分布
-    
-    \item \textbf{可加性}：独立系统的熵等于各部分熵之和
-    \[
-    H(X, Y) = H(X) + H(Y) \quad \text{（若 $X, Y$ 独立）}
-    \]
-\end{enumerate}
+从定义可以直接读出熵的三条基本性质。第一是非负性：$H(p) \geq 0$，等号当且仅当某个 $p_i = 1$，也就是结果完全确定时。第二是最大值：对于 $k$ 个可能结果，$H \leq \log_2 k$，等号当且仅当分布均匀——二元熵函数 $H(p)$ 的曲线在 $p = 0.5$ 处取到最大值 1 比特，正是这条性质最简单的情形。第三是可加性：独立系统的熵等于各部分熵之和，
+\[
+H(X, Y) = H(X) + H(Y) \quad \text{（若 $X, Y$ 独立）}
+\]
+这一条直接继承自信息量的可加性。
 
 \begin{insightbox}
-熵的三重理解：
-\begin{enumerate}
-    \item \textbf{不确定性}：熵越大，结果越难预测
-    \item \textbf{信息量}：熵越大，每次观测带来的平均信息越多
-    \item \textbf{均匀程度}：熵越大，分布越"平坦"
-\end{enumerate}
+同一个量 $H(p)$ 可以从三个角度理解，它们说的是一回事：作为\textbf{不确定性}，熵越大，结果越难预测；作为\textbf{信息量}，熵越大，每次观测带来的平均信息越多；作为\textbf{均匀程度}，熵越大，分布越"平坦"。本章后面的最大熵原理用的主要是第三种理解。
 \end{insightbox}
 
 % ------------------------------------------------------------------------------------
@@ -216,7 +174,7 @@ H = -0.5 \log_2 0.5 - 5 \times 0.1 \log_2 0.1 \approx 0.5 + 1.66 = 2.16 \text{ �
 
 \subsection{微观态计数}
 
-熵的概念其实来自物理学。让我们从一个计数问题理解它。
+上一节把熵定义成平均信息量，但这个定义看上去仍有几分人为：为什么恰好是 $-\sum p \ln p$，而不是别的某个衡量"平坦程度"的函数？答案来自物理学，而且来自一个纯粹的计数问题。
 
 \textbf{问题}：把 $N$ 个可区分的球放入 $k$ 个盒子，第 $i$ 个盒子有 $n_i$ 个球（$\sum_i n_i = N$）。有多少种放法？
 
@@ -242,6 +200,7 @@ W = \frac{6!}{2! \cdot 2! \cdot 2!} = \frac{720}{8} = 90 \text{ 种}
 \subsection{从计数到熵}
 
 当 $N$ 很大时，用 Stirling 近似 $\ln n! \approx n \ln n - n$：
+\clarify{从这里开始，我们改用自然对数 $\ln$（单位是奈特 nat），它与 $\log_2$（比特）只差常数 $\ln 2$。凡是与比特有关的地方（编码、压缩）会再换回 $\log_2$。}
 
 令 $p_i = n_i / N$（各盒子的比例），则：
 \begin{align}
@@ -253,9 +212,8 @@ W = \frac{6!}{2! \cdot 2! \cdot 2!} = \frac{720}{8} = 90 \text{ 种}
 
 （最后一步用到 $\ln n_i = \ln(p_i N) = \ln p_i + \ln N$）
 
-\storynote{Ludwig Boltzmann}{1844--1906，奥地利物理学家，统计力学奠基人。他的墓碑上刻着$S = k \log W$——熵等于微观态数的对数。这个公式连接了宏观热力学和微观统计力学。他因学术争论而抑郁，最终自杀，但他的理论被后世完全证实。}
+于是，香农的熵不是凭空定义的：它就是微观态数的对数按球数平摊后的值。这也回答了前面的疑问——$-\sum p \ln p$ 这个形式是从计数里长出来的，不是选出来的。
 
-\clarify{从这里开始，我们改用自然对数 $\ln$（单位是奈特 nat），它与 $\log_2$（比特）只差常数 $\ln 2$。凡是与比特有关的地方（编码、压缩）会再换回 $\log_2$。}
 \begin{keytheorem}[title=熵的组合学意义]
 \begin{equation}
 H(p) = -\sum_i p_i \ln p_i \approx \frac{1}{N} \ln W
@@ -265,15 +223,10 @@ H(p) = -\sum_i p_i \ln p_i \approx \frac{1}{N} \ln W
 
 熵大 $\Leftrightarrow$ 微观实现方式多 $\Leftrightarrow$ 更"自然"、更容易出现
 \end{keytheorem}
+\storynote{Ludwig Boltzmann}{1844--1906，奥地利物理学家，统计力学奠基人。他的墓碑上刻着$S = k \log W$——熵等于微观态数的对数。这个公式连接了宏观热力学和微观统计力学。他因学术争论而抑郁，最终自杀，但他的理论被后世完全证实。}
 
 \begin{physicalmeaning}
-想象把一盒气体分子放到房间里：
-\begin{itemize}
-    \item 所有分子挤在角落（低熵）：只有极少数微观态对应这种宏观状态
-    \item 分子均匀分布在房间（高熵）：有海量微观态对应这种宏观状态
-\end{itemize}
-
-这就是为什么气体会自发扩散——不是因为有什么"力"推动，而是因为均匀分布对应的微观态数压倒性地多！
+想象把一盒气体分子放到房间里。所有分子挤在角落是低熵状态，只有极少数微观态对应这种宏观状态；分子均匀分布在房间是高熵状态，有海量微观态与之对应。这就是为什么气体会自发扩散——不是因为有什么"力"推动，而是因为均匀分布对应的微观态数压倒性地多！
 \end{physicalmeaning}
 
 % ------------------------------------------------------------------------------------
@@ -281,13 +234,7 @@ H(p) = -\sum_i p_i \ln p_i \approx \frac{1}{N} \ln W
 
 \subsection{一个关键问题}
 
-假设你在调查某城市的收入分布，但只知道两个信息：
-\begin{itemize}
-    \item 平均收入是 5 万元
-    \item 收入必须非负
-\end{itemize}
-
-问题：你应该假设什么样的收入分布？
+前两节回答了"熵是什么"。现在把问题反过来：能不能用熵去\textbf{构造}分布？假设你在调查某城市的收入分布，但只知道两个信息——平均收入是 5 万元，而且收入必须非负。你应该假设什么样的收入分布？
 
 \begin{figure}[htbp]
 \centering
@@ -339,15 +286,7 @@ H(p) = -\sum_i p_i \ln p_i \approx \frac{1}{N} \ln W
 \end{align}
 \end{keyformula}
 
-\textbf{为什么这是合理的？}
-
-\begin{enumerate}
-    \item \textbf{组合学理由}：最大熵分布对应最多的微观态，是"最可能"的宏观状态
-    
-    \item \textbf{信息论理由}：最大熵 = 最大不确定性 = 不引入任何额外假设
-    
-    \item \textbf{决策论理由}：如果你用错误的分布做决策，最大熵分布让你的"最坏情况损失"最小
-\end{enumerate}
+为什么这是合理的？可以从三个角度回答。从组合学看，上一节的计数表明最大熵分布对应最多的微观态，是"最可能"的宏观状态；从信息论看，最大熵就是最大不确定性，意味着除了已知约束之外不引入任何额外假设；从决策论看，如果你用错误的分布做决策，最大熵分布让你的"最坏情况损失"最小。三条理由指向同一个结论：只知道部分信息时，最大熵分布是最诚实的选择。
 
 \storynote{Edwin Jaynes}{1922--1998，美国物理学家，最大熵原理的现代奠基人。他1957年的论文将熵和概率推理统一起来，影响了统计学、机器学习、贝叶斯推断等领域。他认为``概率是知识的逻辑，不是物理的性质''。}
 
@@ -361,7 +300,7 @@ H(p) = -\sum_i p_i \ln p_i \approx \frac{1}{N} \ln W
 \begin{center}
 \renewcommand{\arraystretch}{1.3}
 \small
-\begin{tabular}{lll}
+\begin{tabularx}{\linewidth}{llX}
 \toprule
  & \textbf{第1章（约束优化）} & \textbf{本章（最大熵）} \\
 \midrule
@@ -373,7 +312,7 @@ H(p) = -\sum_i p_i \ln p_i \approx \frac{1}{N} \ln W
 解 & 驻点 $x^*$ & 指数族 $p_i = e^{\sum_j \beta_j g_j(x_i)} / Z$ \\
 影子价格 & $\lambda = -df^*/d\epsilon$ & $\beta_j = -\partial H^*/\partial c_j$ \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{center}
 \end{tcolorbox}
 
@@ -404,6 +343,7 @@ p_i = \exp\left( \alpha - 1 + \sum_j \beta_j g_j(x_i) \right)
 \paragraph{Step 4：用归一化条件确定 $\alpha$}
 
 由 $\sum_i p_i = 1$，定义配分函数：
+\review{第2章}{"$\beta$ 的值由约束隐式确定"其实就是在解对偶问题：$\min_\beta [\ln Z(\beta) - \beta^\top c]$。它无约束、且是凸的（log-sum-exp 减线性），对 $\beta_j$ 求导恰好得到 $\langle g_j \rangle = c_j$。}
 \begin{equation}
 Z(\bm{\beta}) = \sum_i \exp\left( \sum_j \beta_j g_j(x_i) \right)
 \end{equation}
@@ -416,41 +356,27 @@ Z(\bm{\beta}) = \sum_i \exp\left( \sum_j \beta_j g_j(x_i) \right)
 \label{eq:maxent}
 \end{equation}
 
-其中：
-\begin{itemize}
-    \item $Z = \sum_i \exp\left( \sum_j \beta_j g_j(x_i) \right)$ 是归一化常数（配分函数）
-    \item $\beta_j$ 是约束 $\langle g_j \rangle = c_j$ 对应的拉格朗日乘子
-    \item $\beta_j$ 的值由约束条件隐式确定
-\end{itemize}
+其中 $Z = \sum_i \exp\left( \sum_j \beta_j g_j(x_i) \right)$ 是归一化常数（配分函数），$\beta_j$ 是约束 $\langle g_j \rangle = c_j$ 对应的拉格朗日乘子，它的值由约束条件隐式确定。
 \end{keytheorem}
 \preview{这个"指数族"形式就是深度学习里的 softmax：第8章分类网络的输出层、第11章 Transformer 的注意力权重 $\mathrm{softmax}(q \cdot k / \sqrt{d})$ 都是它的实例，第11章还会把 $\sqrt{d}$ 解释成"温度"。}
-\review{第2章}{"$\beta$ 的值由约束隐式确定"其实就是在解对偶问题：$\min_\beta [\ln Z(\beta) - \beta^\top c]$。它无约束、且是凸的（log-sum-exp 减线性），对 $\beta_j$ 求导恰好得到 $\langle g_j \rangle = c_j$。}
 
 \begin{physicalmeaning}
-拉格朗日乘子 $\beta_j$ 的意义：
-\begin{itemize}
-    \item 它调节分布的形状，使得约束 $\langle g_j \rangle = c_j$ 被精确满足
-    \item $\beta_j > 0$：倾向于让 $g_j(x)$ 大的状态概率增加
-    \item $\beta_j < 0$：倾向于让 $g_j(x)$ 大的状态概率减少
-\end{itemize}
+拉格朗日乘子 $\beta_j$ 做的事情是调节分布的形状，使得约束 $\langle g_j \rangle = c_j$ 被精确满足：$\beta_j > 0$ 时，分布倾向于让 $g_j(x)$ 大的状态概率增加；$\beta_j < 0$ 时则相反，倾向于让 $g_j(x)$ 大的状态概率减少。
 
-在物理中，取 $g = E$（能量）时得到玻尔兹曼分布 $p \propto e^{-E/kT}$，即 $\beta = -1/kT$（物理惯例把乘子取相反符号），$|\beta|$ 是逆温度；在机器学习中，$\beta$ 是特征权重。
+在物理中，取 $g = E$（能量）时得到玻尔兹曼分布 $p \propto e^{-E/kT}$，即 $\beta = -1/kT$（物理惯例把乘子取相反符号），$|\beta|$ 是逆温度；在机器学习中，$\beta$ 是特征权重。E. T. Jaynes 1957 年提出最大熵原理时，正是把统计力学整个解释成这样一种在已知约束下的推断：玻尔兹曼分布不是额外的物理假设，而是"只知道平均能量"时的最大熵解。
 
 更准确地说：$\beta_j = -\dfrac{\partial H^*}{\partial c_j}$——它度量"多知道一点信息（约束值变一个单位），最大熵下降多少"。这与第1章的 $\lambda = -df^*/d\epsilon$ 完全对应：从"影子价格"到"特征权重"，$\lambda$ 的统一性再次显现！
 \end{physicalmeaning}
-\think{按第1章"影子价格"的定义，$\beta_j$ 应该等于哪个导数？提示：把最优熵 $H^*$ 看成 $c_j$ 的函数，用包络定理，你会得到 $\beta_j = -\partial H^*/\partial c_j$。热力学里 $\partial S/\partial U = 1/T$——温度的倒数正是"能量约束的影子价格"。}
 
 % ------------------------------------------------------------------------------------
 \section{经典分布的推导}
 
-现在让我们用最大熵原理推导几个著名的概率分布。
-\clarify{如果你没学过概率论，不用担心——下面推导的这些分布（均匀分布、指数分布、高斯分布）是最基础的概率分布，学完本节你就掌握了概率论最核心的几个分布！}
+有了式~\eqref{eq:maxent}，推导一个具体的分布就只剩两步：说清楚约束是什么，再由约束把乘子定出来。下面用这套程序推导几个著名的概率分布，约束一次比一次多。
+\clarify{如果你没学过概率论，不用担心——本节推导的这些分布（均匀分布、指数分布、高斯分布）是最基础的概率分布，学完本节你就掌握了概率论最核心的几个分布！}
 
 \subsection{均匀分布：一无所知时}
 
-\textbf{约束}：仅有归一化 $\sum_i p_i = 1$
-
-\textbf{推导}：
+这时唯一的约束是归一化 $\sum_i p_i = 1$，拉格朗日函数只需要一个乘子：
 \begin{equation}
 \mathcal{L} = -\sum_i p_i \ln p_i + \alpha \left( \sum_i p_i - 1 \right)
 \end{equation}
@@ -472,14 +398,7 @@ Z(\bm{\beta}) = \sum_i \exp\left( \sum_j \beta_j g_j(x_i) \right)
 
 \subsection{指数分布：已知均值时}
 
-\textbf{约束}：
-\begin{itemize}
-    \item 归一化：$\int_0^\infty p(x) dx = 1$
-    \item 均值：$\int_0^\infty x \cdot p(x) dx = \mu$
-    \item 支撑：$x \geq 0$
-\end{itemize}
-
-\textbf{推导}：这里只有一个"矩约束" $g(x) = x$，$c = \mu$。
+现在多知道一点：变量非负，而且均值已知。约束因此有三条——归一化 $\int_0^\infty p(x) dx = 1$，均值 $\int_0^\infty x \cdot p(x) dx = \mu$，以及支撑 $x \geq 0$（它决定了积分区间）。其中只有一个"矩约束" $g(x) = x$，$c = \mu$。
 
 由最大熵公式：
 \begin{equation}
@@ -509,27 +428,13 @@ Z = \int_0^\infty e^{-\lambda x} dx = \frac{1}{\lambda}
 \end{equation}
 
 \begin{physicalmeaning}
-指数分布出现在哪里？
-\begin{itemize}
-    \item 放射性衰变（已知平均寿命）
-    \item 电话呼叫到达间隔（已知平均间隔）
-    \item 设备故障时间（已知平均寿命）
-\end{itemize}
-
-这些情况的共同特点：只知道均值，不知道其他信息。最大熵原理告诉我们，应该假设指数分布。
+指数分布在放射性衰变（已知平均寿命）、电话呼叫的到达间隔（已知平均间隔）、设备的故障时间（已知平均寿命）里反复出现。这些情况的共同特点是只知道均值，不知道其他信息；最大熵原理告诉我们，这时就应该假设指数分布。
 \end{physicalmeaning}
+\think{按第1章"影子价格"的定义，$\beta_j$ 应该等于哪个导数？提示：把最优熵 $H^*$ 看成 $c_j$ 的函数，用包络定理，你会得到 $\beta_j = -\partial H^*/\partial c_j$。热力学里 $\partial S/\partial U = 1/T$——温度的倒数正是"能量约束的影子价格"。}
 
 \subsection{高斯分布：已知均值和方差时}
-\storynote{高斯}{高斯（1777-1855）被誉为"数学王子"。高斯分布以他命名，但最早是德莫瓦弗在1733年发现的。高斯用它来分析天文观测误差，发现它神奇地描述了几乎所有测量误差的分布。}
 
-\textbf{约束}：
-\begin{itemize}
-    \item 归一化：$\int_{-\infty}^{\infty} p(x) dx = 1$
-    \item 均值：$\int x \cdot p(x) dx = \mu$
-    \item 方差：$\int (x-\mu)^2 \cdot p(x) dx = \sigma^2$
-\end{itemize}
-
-\textbf{推导}：两个矩约束 $g_1(x) = x$，$g_2(x) = (x-\mu)^2$。
+再多知道一点：均值 $\mu$ 和方差 $\sigma^2$ 都已知，支撑是整个实轴。约束是归一化 $\int_{-\infty}^{\infty} p(x) dx = 1$、均值 $\int x \cdot p(x) dx = \mu$ 和方差 $\int (x-\mu)^2 \cdot p(x) dx = \sigma^2$，也就是两个矩约束 $g_1(x) = x$，$g_2(x) = (x-\mu)^2$。
 
 由最大熵公式：
 \begin{equation}
@@ -542,13 +447,13 @@ p(x) = \frac{1}{Z} \exp\left( \beta_1 x + \beta_2 (x-\mu)^2 \right)
 \begin{equation}
 \boxed{p(x) = \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left( -\frac{(x-\mu)^2}{2\sigma^2} \right)} \quad \text{（高斯分布）}
 \end{equation}
+\storynote{高斯}{高斯（1777-1855）被誉为"数学王子"。高斯分布以他命名，但最早是德莫瓦弗在1733年发现的。高斯用它来分析天文观测误差，发现它神奇地描述了几乎所有测量误差的分布。}
 
 \begin{keytheorem}[title=高斯分布的最大熵性质]
 在所有均值为 $\mu$、方差为 $\sigma^2$ 的连续分布中，\textbf{高斯分布的熵最大}。
 
 这解释了为什么高斯分布在自然界和统计学中如此普遍——当你只知道均值和方差时，高斯分布是"最诚实"的选择。
 \end{keytheorem}
-\tryit{用 numpy 各生成 10 万个均值 0、方差 1 的样本（高斯、均匀 $[-\sqrt{3}, \sqrt{3}]$、拉普拉斯），用直方图估计熵，验证高斯最大：理论值分别约 1.42、1.24、1.35 nat。}
 
 \subsection{经典分布总结}
 
@@ -566,20 +471,14 @@ p(x) = \frac{1}{Z} \exp\left( \beta_1 x + \beta_2 (x-\mu)^2 \right)
 \bottomrule
 \end{tabular}
 \end{center}
+\tryit{用 numpy 各生成 10 万个均值 0、方差 1 的样本（高斯、均匀 $[-\sqrt{3}, \sqrt{3}]$、拉普拉斯），用直方图估计熵，验证高斯最大：理论值分别约 1.42、1.24、1.35 nat。}
 
 % ------------------------------------------------------------------------------------
 \section{KL散度：分布之间的"距离"}
-\preview{KL散度是深度学习中最重要的概念之一。第8章的神经网络训练、第9章的强化学习策略优化、第12章的大模型后训练（RLHF 里的 KL 约束）、第16章的世界模型，都会反复用到它。现在花时间理解透彻，后面会事半功倍！}
 
 \subsection{问题的提出}
 
-我们经常需要比较两个概率分布的"差异"。比如：
-\begin{itemize}
-    \item 模型预测的分布 $q$ 与真实分布 $p$ 有多接近？
-    \item 数据的经验分布与理论分布差多少？
-\end{itemize}
-
-一个自然的想法是用"距离"来度量。但什么样的"距离"对概率分布是合理的？
+到目前为止我们只谈单个分布的熵。但机器学习里更常见的情形是手里有两个分布，需要比较它们的"差异"：模型预测的分布 $q$ 与真实分布 $p$ 有多接近？数据的经验分布与理论分布差多少？一个自然的想法是用"距离"来度量。但什么样的"距离"对概率分布是合理的？
 
 \subsection{KL散度的定义}
 
@@ -593,6 +492,7 @@ D_{KL}(P \| Q) = \sum_i p_i \ln \frac{p_i}{q_i} = \sum_i p_i \ln p_i - \sum_i p_
 D_{KL}(P \| Q) = \mathbb{E}_{x \sim P} \left[ \ln \frac{P(x)}{Q(x)} \right]
 \end{equation}
 \end{keyformula}
+\preview{KL散度是深度学习中最重要的概念之一。第8章的神经网络训练、第9章的强化学习策略优化、第12章的大模型后训练（RLHF 里的 KL 约束）、第16章的世界模型，都会反复用到它。现在花时间理解透彻，后面会事半功倍！}
 
 \subsection{KL散度的直觉}
 
@@ -618,18 +518,11 @@ $D_{KL}(P \| Q)$ 越大，越容易通过采样区分 $P$ 和 $Q$。
 
 \subsection{KL散度的性质}
 
-\begin{enumerate}
-    \item \textbf{非负性}：$D_{KL}(P \| Q) \geq 0$
-    
-    \textit{证明}：利用 Jensen 不等式和 $\ln$ 的凹性：
-    \[
-    -D_{KL}(P \| Q) = \sum_i p_i \ln \frac{q_i}{p_i} \leq \ln \sum_i p_i \cdot \frac{q_i}{p_i} = \ln \sum_i q_i = \ln 1 = 0
-    \]
-    
-    \item \textbf{零点}：$D_{KL}(P \| Q) = 0 \Leftrightarrow P = Q$
-    
-    \item \textbf{不对称}：一般 $D_{KL}(P \| Q) \neq D_{KL}(Q \| P)$
-\end{enumerate}
+KL散度最重要的性质是\textbf{非负性}：$D_{KL}(P \| Q) \geq 0$。证明只需要 Jensen 不等式和 $\ln$ 的凹性：
+\[
+-D_{KL}(P \| Q) = \sum_i p_i \ln \frac{q_i}{p_i} \leq \ln \sum_i p_i \cdot \frac{q_i}{p_i} = \ln \sum_i q_i = \ln 1 = 0
+\]
+进一步，等号当且仅当 $P = Q$ 时成立，即 $D_{KL}(P \| Q) = 0 \Leftrightarrow P = Q$。这两条使 KL散度可以充当分布之间的"距离"。但它并不是真正的距离——一般 $D_{KL}(P \| Q) \neq D_{KL}(Q \| P)$，交换两个分布的位置，结果会变。
 
 \begin{example}[不对称性的例子]
 设 $P = (0.5, 0.5)$，$Q = (0.9, 0.1)$。
@@ -703,12 +596,7 @@ D_{KL}(p \| u) &= \sum_i p_i \ln \frac{p_i}{1/k} = \sum_i p_i \ln p_i + \sum_i p
 \end{keyformula}
 
 \begin{physicalmeaning}
-这三条公理的直觉：
-\begin{itemize}
-    \item \textbf{局部性}：每个点的偏差独立计算，就像质量、能量一样是"广延量"
-    \item \textbf{可加性}：独立系统的总偏差 = 偏差之和，这与熵、能量的性质一致
-    \item \textbf{一致性}：完美近似时差异为零——这是最基本的要求
-\end{itemize}
+这三条公理各有直觉。局部性说的是每个点的偏差独立计算，就像质量、能量一样是"广延量"；可加性说的是独立系统的总偏差等于各自偏差之和，这与熵、能量的性质一致；一致性说的是完美近似时差异为零——这是最基本的要求。
 \end{physicalmeaning}
 
 \subsection{从公理推导KL散度}
@@ -768,11 +656,11 @@ D(p\|q) = \int \left( A p(x) \ln p(x) + B p(x) \ln q(x) + C p(x) \right) dx
 % ------------------------------------------------------------------------------------
 \section{常见损失函数的"违规记录"}
 
-并非所有损失函数都满足信息论公理。有些为了特定的工程目的（如鲁棒性、几何感知），故意违反某些公理。
+既然 KL散度是唯一满足三条公理的度量，为什么实践中还有那么多别的损失函数？因为并非所有损失函数都需要满足信息论公理。有些为了特定的工程目的（如鲁棒性、几何感知），故意违反某些公理。
 
 \begin{center}
 \renewcommand{\arraystretch}{1.6}
-\begin{tabular}{p{1.8cm}|p{2.6cm}|p{2cm}|p{4.6cm}}
+\begin{tabularx}{\textwidth}{p{2.4cm}|p{2.8cm}|p{2cm}|X}
 \toprule
 \textbf{损失函数} & \textbf{数学形式} & \textbf{违反的公理} & \textbf{为何要违反？} \\
 \midrule
@@ -801,18 +689,11 @@ D(p\|q) = \int \left( A p(x) \ln p(x) + B p(x) \ln q(x) + C p(x) \right) dx
 & 局部性 
 & 引入空间距离（全局耦合），解决分布不重叠时KL散度梯度消失的问题 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{center}
 
 \begin{physicalmeaning}
-\textbf{选择损失函数的智慧}：
-\begin{itemize}
-    \item 如果你相信数据服从某个概率模型 $\to$ 用交叉熵（信息论最优）
-    \item 如果你想要对异常值鲁棒 $\to$ 用MAE或Huber损失
-    \item 如果你只关心分类边界 $\to$ 用Hinge损失
-    \item 如果两个分布可能不重叠 $\to$ 用Wasserstein距离
-\end{itemize}
-没有"最好"的损失函数，只有最适合问题的损失函数。
+\textbf{选择损失函数的智慧}：如果你相信数据服从某个概率模型，就用交叉熵，它是信息论意义下的最优选择；如果你想要对异常值鲁棒，就用 MAE 或 Huber 损失；如果你只关心分类边界，就用 Hinge 损失；如果两个分布可能不重叠，就用 Wasserstein 距离。没有"最好"的损失函数，只有最适合问题的损失函数——每一次"违规"都是在用信息论最优性换取某种工程性质。
 \end{physicalmeaning}
 
 
@@ -832,13 +713,7 @@ H(P, Q) = -\sum_i p_i \ln q_i = H(P) + D_{KL}(P \| Q)
 
 \subsection{为什么机器学习用交叉熵损失？}
 
-在分类问题中：
-\begin{itemize}
-    \item $P$ = 真实标签分布（通常是 one-hot，如 $[0, 1, 0]$）
-    \item $Q$ = 模型预测的概率分布（如 $[0.1, 0.7, 0.2]$）
-\end{itemize}
-
-训练目标：让 $Q$ 尽量接近 $P$，即最小化 $D_{KL}(P \| Q)$。
+前面的推导都是关于分布本身的，现在把它接到机器学习最常见的任务——分类——上。在分类问题中，$P$ 是真实标签分布（通常是 one-hot，如 $[0, 1, 0]$），$Q$ 是模型预测的概率分布（如 $[0.1, 0.7, 0.2]$）。训练目标是让 $Q$ 尽量接近 $P$，即最小化 $D_{KL}(P \| Q)$。
 
 由于 $H(P)$ 是固定的（真实标签不变），所以：
 \begin{equation}
@@ -853,14 +728,7 @@ H(P, Q) = -\sum_i y_i \ln q_i = -\ln q_c
 这就是我们熟悉的\textbf{交叉熵损失}！
 
 \begin{insightbox}
-\textbf{为什么不用均方误差（MSE）？}
-
-对于分类问题，交叉熵有几个优势：
-\begin{enumerate}
-    \item \textbf{信息论最优}：交叉熵直接度量"用模型编码真实数据"的代价
-    \item \textbf{梯度性质好}：当预测很错时，交叉熵的梯度大；MSE的梯度可能很小（梯度消失）
-    \item \textbf{概率解释}：最小化交叉熵 = 最大化似然
-\end{enumerate}
+\textbf{为什么不用均方误差（MSE）？}对于分类问题，交叉熵有三个优势。它是信息论最优的：交叉熵直接度量"用模型编码真实数据"的代价。它的梯度性质好：当预测很错时，交叉熵的梯度大，而 MSE 的梯度可能很小（梯度消失）。它还有概率解释：最小化交叉熵等价于最大化似然。
 \end{insightbox}
 
 \subsection{Softmax = 最大熵分布}
@@ -914,11 +782,7 @@ Softmax 函数给出的是满足约束 $\langle z \rangle = \sum_i p_i z_i = c$ 
 \text{argmax: } p_i = \begin{cases} 1 & \text{if } i = \arg\max_j z_j \\ 0 & \text{otherwise} \end{cases}
 \]
 
-Softmax 是它的"软"版本：
-\begin{itemize}
-    \item 当各 $z_i$ 差异很大时，softmax 接近 argmax（赢者通吃）
-    \item 当各 $z_i$ 差异很小时，softmax 接近均匀分布（不确定）
-\end{itemize}
+Softmax 是它的"软"版本：当各 $z_i$ 差异很大时，softmax 接近 argmax（赢者通吃）；当各 $z_i$ 差异很小时，softmax 接近均匀分布（不确定）。
 
 你可以通过引入"温度"参数 $T$ 来控制软硬程度：
 \[
@@ -941,14 +805,7 @@ P(y=1 | \bm{x}) = \sigma(\bm{w}^\top \bm{x}) = \frac{1}{1 + e^{-\bm{w}^\top \bm{
 权重 $\bm{w}$ 正是这些约束的拉格朗日乘子！
 
 \begin{physicalmeaning}
-逻辑回归的训练过程：
-\begin{enumerate}
-    \item 从数据计算特征的经验期望 $\mathbb{E}_{data}[\bm{\phi}]$
-    \item 调整 $\bm{w}$ 使得模型的特征期望 $\mathbb{E}_{model}[\bm{\phi}]$ 匹配数据
-    \item 在满足这些矩约束的同时，保持熵最大（不做额外假设）
-\end{enumerate}
-
-这就是为什么逻辑回归又叫"最大熵分类器"！
+逻辑回归的训练过程可以完全用最大熵的语言复述：先从数据计算特征的经验期望 $\mathbb{E}_{data}[\bm{\phi}]$，然后调整 $\bm{w}$ 使得模型的特征期望 $\mathbb{E}_{model}[\bm{\phi}]$ 与之匹配，而在满足这些矩约束的同时，模型保持熵最大，不做额外假设。这就是为什么逻辑回归又叫"最大熵分类器"！
 \end{physicalmeaning}
 
 % ------------------------------------------------------------------------------------
@@ -960,7 +817,7 @@ P(y=1 | \bm{x}) = \sigma(\bm{w}^\top \bm{x}) = \frac{1}{1 + e^{-\bm{w}^\top \bm{
 
 \subsection{为什么需要变长编码？}
 
-假设你要传输天气预报，有4种天气：晴、阴、雨、雪。
+熵被定义成"平均信息量"，这个说法能不能落到实处——它到底对应多少个比特？信源编码给出了最直接的回答。假设你要传输天气预报，有4种天气：晴、阴、雨、雪。
 
 \textbf{方案1：等长编码}
 
@@ -1003,29 +860,16 @@ P(y=1 | \bm{x}) = \sigma(\bm{w}^\top \bm{x}) = \frac{1}{1 + e^{-\bm{w}^\top \bm{
 解决方案是\textbf{前缀码}：任何符号的编码都不是另一个符号编码的前缀。
 
 \begin{example}[前缀码]
-A = 0, B = 10, C = 11
-
-收到 "01011"：
-\begin{itemize}
-    \item 第一位是0 → 一定是A（没有其他编码以0开头然后继续）
-    \item 接下来10 → 是B
-    \item 最后11 → 是C
-\end{itemize}
-解码结果：ABC，没有歧义！
+A = 0, B = 10, C = 11。收到 "01011" 时，第一位是 0，只能是 A（没有其他编码以 0 开头然后继续）；接下来的 10 是 B；最后的 11 是 C。解码结果 ABC，没有歧义！
 \end{example}
 
 \begin{physicalmeaning}
-前缀码可以用\textbf{二叉树}表示：
-\begin{itemize}
-    \item 每个符号对应一个叶子节点
-    \item 从根到叶子的路径就是编码（左=0，右=1）
-    \item 因为符号都在叶子上，所以不会有前缀问题
-\end{itemize}
+前缀码可以用\textbf{二叉树}表示：每个符号对应一个叶子节点，从根到叶子的路径就是编码（左=0，右=1）。因为符号都在叶子上，任何编码都不会是另一个编码的前缀，所以不会有歧义。
 \end{physicalmeaning}
 
 \subsection{最优编码的理论极限}
 
-那么，最好的变长编码能做到多好？
+那么，最好的变长编码能做到多好？答案正是熵。
 
 \begin{keytheorem}[title=Shannon第一定理（信源编码定理）]
 对于信源 $X$，任何无损前缀码的平均码长都不低于 $H(X)$，而\textbf{最优}前缀码的平均码长 $\bar{L}$ 满足：
@@ -1037,14 +881,7 @@ H(X) \leq \bar{L} < H(X) + 1
 \end{keytheorem}
 \think{为什么平均码长不可能低于熵？提示：把码长看成一个分布 $q_i = 2^{-l_i}$（Kraft 不等式保证 $\sum q_i \le 1$），平均码长 $\sum p_i l_i = -\sum p_i \log_2 q_i$ 就是交叉熵 $H(p, q) \ge H(p)$——正是习题 5 的 Gibbs 不等式。}
 
-\textbf{直觉理解}：
-\begin{itemize}
-    \item 如果一个符号的概率是 $p_i$，它携带的信息量是 $-\log_2 p_i$ 比特
-    \item 编码这个符号至少需要 $-\log_2 p_i$ 比特（否则就"凭空创造"了信息）
-    \item 平均下来，每个符号至少需要 $H = \sum p_i (-\log_2 p_i)$ 比特
-\end{itemize}
-
-理想情况下，符号 $i$ 的最优码长应该是：
+直觉上，如果一个符号的概率是 $p_i$，它携带的信息量是 $-\log_2 p_i$ 比特，编码这个符号就至少需要 $-\log_2 p_i$ 比特，否则就"凭空创造"了信息；平均下来，每个符号至少需要 $H = \sum p_i (-\log_2 p_i)$ 比特。理想情况下，符号 $i$ 的最优码长应该是：
 \begin{equation}
 l_i^* = -\log_2 p_i
 \end{equation}
@@ -1063,18 +900,10 @@ l_i^* = -\log_2 p_i
 我们要最小化这个加权深度！
 
 \begin{physicalmeaning}
-想象一下：你要把符号放在一棵二叉树的叶子上。
-\begin{itemize}
-    \item 高频符号应该放在\textbf{靠近根}的位置（深度小，编码短）
-    \item 低频符号可以放在\textbf{远离根}的位置（深度大，编码长）
-\end{itemize}
-
-就像公司组织架构：CEO（最重要）在顶层，实习生在最底层。
+想象一下：你要把符号放在一棵二叉树的叶子上。高频符号应该放在\textbf{靠近根}的位置（深度小，编码短），低频符号可以放在\textbf{远离根}的位置（深度大，编码长）。就像公司组织架构：CEO（最重要）在顶层，实习生在最底层。
 \end{physicalmeaning}
 
-\textbf{Huffman的贪心策略}：
-
-从叶子往上建树，每次把概率最小的两个节点合并成一个。
+\textbf{Huffman的贪心策略}：从叶子往上建树，每次把概率最小的两个节点合并成一个。1951 年，David Huffman 还是 MIT 的研究生，导师 Fano 允许学生用一篇论文代替期末考试，题目正是最优二进制编码；他在几乎放弃的时候想到了这个"自底向上合并最小概率"的办法。
 
 为什么这样做是对的？直觉是：
 \begin{quote}
@@ -1171,12 +1000,15 @@ l_i^* = -\log_2 p_i
 \end{tabular}
 \end{center}
 
-\textbf{性能分析}：
-\begin{itemize}
-    \item 平均码长：$\bar{L} = 0.5 \times 1 + 0.25 \times 2 + 0.15 \times 3 + 0.1 \times 3 = 1.75$ 比特
-    \item 熵：$H = -0.5\log_2 0.5 - 0.25\log_2 0.25 - 0.15\log_2 0.15 - 0.1\log_2 0.1 \approx 1.74$ 比特
-    \item 效率：$\eta = H / \bar{L} = 1.74 / 1.75 = 99.4\%$
-\end{itemize}
+\textbf{性能分析}：平均码长为
+\[
+\bar{L} = 0.5 \times 1 + 0.25 \times 2 + 0.15 \times 3 + 0.1 \times 3 = 1.75
+\]
+比特，而熵为
+\[
+H = -0.5\log_2 0.5 - 0.25\log_2 0.25 - 0.15\log_2 0.15 - 0.1\log_2 0.1 \approx 1.74
+\]
+比特，效率 $\eta = H / \bar{L} = 1.74 / 1.75 = 99.4\%$。
 
 对比等长编码（2比特/符号），Huffman编码节省了 $(2-1.75)/2 = 12.5\%$！
 
@@ -1184,16 +1016,7 @@ l_i^* = -\log_2 p_i
 \end{example}
 
 \begin{insightbox}
-\textbf{Huffman编码为什么是最优的？}
-
-直觉证明：
-\begin{enumerate}
-    \item 概率最小的两个符号必须在最深层（否则可以交换到更深处，减小平均码长）
-    \item 它们必须是兄弟（否则可以配对，腾出其他位置）
-    \item 合并后，问题规模减1，递归应用同样的论证
-\end{enumerate}
-
-这是一个经典的\textbf{贪心算法}：每步做局部最优选择（合并最小两个），最终得到全局最优。
+\textbf{Huffman编码为什么是最优的？}直觉证明分三步：概率最小的两个符号必须在最深层，否则可以把它们交换到更深处、减小平均码长；它们必须是兄弟，否则可以把它们配对、腾出其他位置；合并之后问题规模减一，对剩下的问题递归应用同样的论证。这是一个经典的\textbf{贪心算法}：每步做局部最优选择（合并最小两个），最终得到全局最优。
 \end{insightbox}
 
 \subsection{从Huffman到现代压缩}
@@ -1216,16 +1039,7 @@ Deflate & LZ77 + Huffman & ZIP, GZIP, HTTP \\
 \end{center}
 
 \begin{physicalmeaning}
-\textbf{为什么ZIP能把文件压小？}
-
-因为大多数文件都有\textbf{冗余}：
-\begin{itemize}
-    \item 文本中某些字母/词组频繁出现（字母 e 比 z 常见100倍）
-    \item 代码中有大量重复模式（括号、关键字）
-    \item 图像中相邻像素通常很相似
-\end{itemize}
-
-压缩算法就是在\textbf{发现并利用这些冗余}，用更少的比特表示同样的信息。
+\textbf{为什么ZIP能把文件压小？}因为大多数文件都有\textbf{冗余}：文本中某些字母和词组频繁出现（字母 e 比 z 常见100倍），代码中有大量重复模式（括号、关键字），图像中相邻像素通常很相似。压缩算法就是在\textbf{发现并利用这些冗余}，用更少的比特表示同样的信息。
 
 理论极限就是熵——当且仅当数据完全随机（无冗余）时，才无法压缩。
 \end{physicalmeaning}
@@ -1250,43 +1064,30 @@ GPT-4 估计 & $\approx 0.9$ & 当前最好的语言模型 \\
 \begin{insightbox}
 英语文本的真实熵率约为 1-1.5 bits/字母，远低于 4.7 bits 的"随机上限"。
 
-这意味着：\textbf{英语有约 70\% 的冗余}！
-
-这正是：
-\begin{itemize}
-    \item 文本压缩（ZIP, GZIP）能工作的原因
-    \item 语言模型（GPT）能预测下一个词的原因
-    \item 手机自动补全能猜对的原因
-    \item 你能读懂 "Cn y rd ths sntnc?" 的原因
-\end{itemize}
+这意味着\textbf{英语有约 70\% 的冗余}！正是这些冗余，让文本压缩（ZIP, GZIP）能够工作，让语言模型（GPT）能预测下一个词，让手机自动补全能猜对，也让你能读懂 "Cn y rd ths sntnc?"。
 \end{insightbox}
 % ------------------------------------------------------------------------------------
 \section{本章小结}
 
 \begin{enumerate}
-    \item \textbf{信息量}：$I(x) = -\log_2 p(x)$，概率越小信息量越大
-    
-    \item \textbf{熵}：$H(p) = -\sum p_i \log p_i$，是平均信息量，度量不确定性
-    
-    \item \textbf{最大熵原理}：在约束下选择熵最大的分布，得到指数族形式
+    \item \textbf{信息量}：事件 $x$ 的信息量是 $I(x) = -\log_2 p(x)$，概率越小，信息量越大。
+
+    \item \textbf{熵}：$H(p) = -\sum p_i \log p_i$ 是平均信息量，度量一个分布的不确定性。
+
+    \item \textbf{最大熵原理}：在约束下选择熵最大的分布，用拉格朗日乘子法解出来就是指数族形式
     \[
-    p_i = \frac{1}{Z} \exp\left( \sum_j \beta_j g_j(x_i) \right)
+    p_i = \frac{1}{Z} \exp\left( \sum_j \beta_j g_j(x_i) \right) .
     \]
-    
-    \item \textbf{拉格朗日乘子}：$\beta_j$ 是约束的拉格朗日乘子，调节分布形状
-    
-    \item \textbf{KL散度}：$D_{KL}(P \| Q) = \sum p_i \ln \frac{p_i}{q_i}$，度量分布差异
-    
-    \item \textbf{交叉熵}：$H(P, Q) = H(P) + D_{KL}(P \| Q)$，机器学习的核心损失函数
-    
-    \item \textbf{机器学习联系}：
-    \begin{itemize}
-        \item Softmax = 最大熵分布
-        \item 逻辑回归 = 最大熵分类
-        \item 最小化交叉熵 = 最小化KL散度 = 最大似然
-    \end{itemize}
-    
-    \item \textbf{信息压缩}：熵是压缩的理论极限，最优码长 $\approx -\log_2 p$
+
+    \item \textbf{拉格朗日乘子}：$\beta_j$ 是约束的拉格朗日乘子，它调节分布的形状，使约束被精确满足。
+
+    \item \textbf{KL散度}：$D_{KL}(P \| Q) = \sum p_i \ln \frac{p_i}{q_i}$ 度量两个分布的差异，非负但不对称。
+
+    \item \textbf{交叉熵}：$H(P, Q) = H(P) + D_{KL}(P \| Q)$ 是机器学习的核心损失函数。
+
+    \item \textbf{机器学习联系}：softmax 就是最大熵分布，逻辑回归就是最大熵分类，而最小化交叉熵、最小化KL散度和最大似然是同一件事。
+
+    \item \textbf{信息压缩}：熵是压缩的理论极限，最优码长约为 $-\log_2 p$。
 \end{enumerate}
 
 \begin{unification}[title=本章的统一视角]
@@ -1309,12 +1110,7 @@ KL散度 & 与均匀分布的"距离" \\
 \end{unification}
 
 \begin{physicalmeaning}
-\textbf{$\lambda$ 在本章的意义}：本章的乘子叫 $\beta_j$，它是第 $j$ 条已知信息的"熵价格"——$\beta_j = -\partial H^*/\partial c_j$，约束值每变一个单位，最大可达的熵变多少。
-\begin{itemize}
-    \item 物理：$\partial S/\partial U = 1/T$，温度的倒数是"能量约束的影子价格"
-    \item 机器学习：logit $z = w^\top x$ 中的权重 $w$ 就是乘子，softmax 就是最大熵分布
-    \item 往前看：第1章的影子价格、第5章的约束力、第4章的逆温度，是同一个 $\lambda$；第8章会把 softmax 放进网络的最后一层，第11章会把它变成注意力权重，第9章的最大熵强化学习（SAC）则把熵直接加进目标
-\end{itemize}
+\textbf{$\lambda$ 在本章的意义}：本章的乘子叫 $\beta_j$，它是第 $j$ 条已知信息的"熵价格"——$\beta_j = -\partial H^*/\partial c_j$，约束值每变一个单位，最大可达的熵变多少。在物理里，$\partial S/\partial U = 1/T$，温度的倒数是"能量约束的影子价格"；在机器学习里，logit $z = w^\top x$ 中的权重 $w$ 就是乘子，softmax 就是最大熵分布。往前看，第1章的影子价格、第5章的约束力、本章的逆温度，是同一个 $\lambda$；第8章会把 softmax 放进网络的最后一层，第11章会把它变成注意力权重，第9章的最大熵强化学习（SAC）则把熵直接加进目标。
 \end{physicalmeaning}
 
 % ------------------------------------------------------------------------------------
@@ -1372,7 +1168,7 @@ KL散度 & 与均匀分布的"距离" \\
     \setcounter{enumi}{8}
     \item 为什么深度学习中分类任务用交叉熵损失而不是均方误差？从梯度的角度分析。
     
-    \item KL散度不对称意味着什么？在实际应用中，$\min_Q D_{KL}(P \| Q)$ 和 $\min_Q D_{KL}(Q \| P)$ 分别倾向于产生什么样的近似？
+    \item KL散度不对称意味着什么？在实际应用中，对 $Q$ 最小化 $D_{KL}(P \| Q)$ 与最小化 $D_{KL}(Q \| P)$，分别倾向于产生什么样的近似？
     
     \item 最大熵原理与 Occam 剃刀有什么联系？为什么"最均匀"的分布是"最简单"的？
     
