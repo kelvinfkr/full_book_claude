@@ -124,6 +124,10 @@
     framesep=5pt,
     breaklines=true,
     breakatwhitespace=true,
+    % 中文注释：fixed 列宽会把每个汉字塞进 0.6em 的等宽格子里，字与字之间被撑开；
+    % 改为弹性列宽并保留空格（缩进）
+    columns=fullflexible,
+    keepspaces=true,
     tabsize=4,
     showstringspaces=false,
     backgroundcolor=\color{gray!5},
