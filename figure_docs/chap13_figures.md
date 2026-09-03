@@ -1,231 +1,255 @@
 # 第13章 图片说明
 
-## pinn_poisson_1d.pdf / pinn_poisson_1d.png
+## fsi_mesh_setup.pdf
 
-**背景**：第13章介绍物理信息神经网络（PINN）。
+**背景**：第13章介绍流固耦合（FSI），需要展示计算域和网格设置。
 
-**意图**：展示PINN求解1D Poisson方程的效果，对比解析解。
+**意图**：说明FSI问题的几何设置：流体域、固体域、交界面。
 
 **生成方法**：
-- 代码文件：`code_chap13/pinn_poisson_1d.py`
-- PyTorch实现PINN
-- 绘制预测解、真实解、误差
+- 代码文件：`code_chap13/fsi_cantilever_beam.py`
+- 使用matplotlib绑制示意图
+- 标注边界条件类型
 
 **数据来源**：
-- 方程：-u'' = f(x)，x∈[0,1]
-- 边界条件：u(0)=u(1)=0
-- 解析解用于验证
+- 悬臂梁在流场中的标准设置
+- 几何参数参考Turek-Hron基准
 
 ---
 
-## pinn_poisson_2d.pdf / pinn_poisson_2d.png
+## chap13_fig1.png
 
-**背景**：2D问题展示PINN的实用价值。
+**背景**：第13章扩展阅读"CPU 并行计算的真正含义"的实验汇总图。（旧图，未重绘。）
 
-**意图**：可视化2D Poisson方程的PINN解。
+**意图**：用三个小实验说明 Python 性能的三条经验：多线程受 GIL 限制、按行访问比按列访问快、向量化远快于循环。
 
 **生成方法**：
-- 代码文件：`code_chap13/pinn_poisson_2d.py`
-- 2D神经网络输出
-- 等高线图和3D表面
+- 代码文件：`code/chap13_performance.py`（`python3 code/chap13_performance.py perf`）
+- 实验1：5×10⁶ 次计数，单线程 vs 双线程 `threading`
+- 实验2：2000×2000 数组按行 / 按列双重循环求和
+- 实验3：10⁶ 个元素的加法，列表推导 vs NumPy 向量化（对数坐标）
 
 **数据来源**：
-- 方程：-Δu = f(x,y)，(x,y)∈[0,1]²
-- 网格：50×50配点
-- 训练迭代：10000
+- 计时结果依赖运行机器，图中数字仅为一次运行的量级参考
+
+**思路（这张图想让读者看到什么）**：数值代码的快慢往往不在算法，而在解释器、缓存与向量化这些"工程"因素上。
+
+**读图指南（先看哪、再看哪）**：先看右图的对数坐标（两个数量级的差距）；再看中图（同样的加法，只因遍历顺序不同就差数倍）；最后看左图理解为什么"开两个线程"没有帮助。
 
 ---
 
-## pinn_poisson_2d_slices.pdf / pinn_poisson_2d_slices.png
+## chap13_fig2.png
 
-**背景**：切片视图帮助理解2D解的细节。
+**背景**：第13章"十行代码：一维线性有限元"之后的代码演示：求解 −u'' = 1，u(0) = u(1) = 0。
 
-**意图**：展示固定x或y时的解剖面。
+**意图**：(a) 看到有限元解是折线、节点值与精确解重合；(b) 看到刚度矩阵为什么是三对角；(c) 用正确的误差度量验证线性元的收敛阶。旧图用"节点误差"做收敛实验——一维线性元在这个问题上节点精确，所测到的 10⁻¹⁵ 只是舍入误差，O(h²) 参考线毫无意义，已重做。
 
 **生成方法**：
-- 代码文件：`code_chap13/pinn_poisson_2d.py`
-- 沿x=0.5和y=0.5切片
-- 对比PINN解和参考解
+- 代码文件：`code/chap13_performance.py`（`python3 code/chap13_performance.py fem`），输出 `figs_chap13/chap13_fig2.{pdf,png}`
+- 线性单元组装 K、F，施加 Dirichlet 边界后 `np.linalg.solve`
+- (c) 的误差在每个单元上用 5 点 Gauss 求积计算：L² 误差 ‖u_h − u‖、H¹ 半范数误差 ‖u_h' − u'‖；最大误差在每个单元内细采样 41 点求 max|u_h − u|；对 N = 4…256 的结果在双对数坐标做最小二乘拟合，图例给出斜率
+- (b) 直接画施加边界条件后的内部刚度矩阵（N = 8，7×7），蓝格 2/h、红格 −1/h、灰色 0
 
 **数据来源**：
-- 同上2D问题
-- 切片位置：中线
+- 精确解 u = x(1 − x)/2
+- 拟合斜率：L² 误差 2.00，H¹ 半范数误差 1.00，单元内最大误差 2.00；节点误差全程 < 10⁻¹⁴（舍入水平）
+
+**思路（这张图想让读者看到什么）**：有限元的"误差"要问清楚是哪种范数——节点值可以恰好精确（超收敛），但函数整体的 L² 误差按 h² 下降、导数误差只按 h 下降，这才是线性元真正的收敛阶。
+
+**读图指南（先看哪、再看哪）**：先看 (a)：折线的顶点都落在黑线上，误差只在两节点之间"鼓"出来；再看 (c)：三条线的斜率——两条 2、一条 1，与理论一致；(b) 解释为什么 K 这么稀疏：每个帐篷函数只和左右邻居重叠。
 
 ---
 
-## pinn_workflow.pdf / pinn_workflow.png
+## chap13_fig3.png
 
-**背景**：PINN的工作流程需要清晰说明。
+**背景**：第13章"预条件子"一节的实验验证。（旧图，未重绘。）
 
-**意图**：图解PINN的训练流程：采样→网络前向→计算残差→反向传播。
+**意图**：展示预条件子如何减少共轭梯度法的迭代次数，以及条件数的几何意义。
 
 **生成方法**：
-- 代码文件：`code_chap13/regenerate_chinese_figures.py`
-- 流程图绘制
-- 中文标注
+- 代码文件：`code/chap13_performance.py`（`python3 code/chap13_performance.py precond`）
+- 2D 五点差分拉普拉斯矩阵（n×n 网格），`scipy.sparse.linalg.cg`，预条件子：无 / Jacobi / ILU（`spilu`）
+- 左：30×30 网格的残差收敛曲线；中：n = 10…30 时迭代次数随网格增长；右：条件数几何意义的示意图（椭圆等高线，非计算结果）
 
 **数据来源**：
-- 概念性示意图
-- 无具体数值数据
+- 条件数由稠密特征值计算（仅小矩阵可行）
+- 右图为示意，不来自真实迭代路径
+
+**思路（这张图想让读者看到什么）**：迭代法的代价由条件数决定，预条件子的作用是"把扁椭圆变圆"。
+
+**读图指南（先看哪、再看哪）**：先看左图三条曲线到达同一残差所需的迭代次数；再看中图随网格加密的增长趋势；右图是解释，不是数据。
 
 ---
 
-## spectral_bias.pdf / spectral_bias.png
+## fsi_fem_matrices.pdf
 
-**背景**：谱偏差是PINN的重要挑战。
+**背景**：FSI的数值实现涉及耦合矩阵组装。
 
-**意图**：展示神经网络倾向于先学低频成分。
+**意图**：可视化流体、固体、耦合子矩阵的稀疏结构。
 
 **生成方法**：
-- 代码文件：`code_chap13/spectral_bias.py`
-- 训练PINN拟合高频函数
-- 绘制不同训练阶段的频谱
+- 代码文件：`code_chap13/fsi_cantilever_beam.py`
+- 组装简化的FEM矩阵
+- 使用spy()绘制稀疏模式
 
 **数据来源**：
-- 目标函数：sin(kx)，k=1,5,10,20
-- 记录训练过程中的频谱分解
+- 简化的2D FSI模型
+- 流体：Stokes方程
+- 固体：线弹性
 
 ---
 
-## fourier_features.pdf / fourier_features.png
+## fsi_modal_shapes.pdf
 
-**背景**：Fourier特征可缓解谱偏差。
+**背景**：固体的振动模态影响FSI响应。
 
-**意图**：对比普通PINN和Fourier feature PINN的高频学习能力。
+**意图**：展示悬臂梁的前几阶弯曲模态。
 
 **生成方法**：
-- 代码文件：`code_chap13/fourier_features.py`
-- 实现随机Fourier特征映射
-- 对比学习曲线
+- 代码文件：`code_chap13/fsi_cantilever_beam.py`
+- 求解特征值问题
+- 绘制模态振型
 
 **数据来源**：
-- 特征维度：256
-- 频率采样：高斯分布
+- Euler-Bernoulli梁理论
+- 解析模态：φₙ(x) = cosh(βₙx) - cos(βₙx) - ...
 
 ---
 
-## lambda_effect.pdf / lambda_effect.png
+## fsi_time_response.pdf
 
-**背景**：固定权重 PINN 的损失 $L_{\mathrm{PDE}} + \rho L_{\mathrm{BC}}$ 就是第1章视角三的罚函数法，$\rho$ 是"边界条件这条约束的罚款单价"，不是拉格朗日乘子（正文从本轮起一律记作 ρ，代码变量 `rho_bc`；文件名沿用 lambda_effect 以免改引用）。
+**背景**：FSI的瞬态响应是关键输出。
 
-**意图**：用一个可复现的小实验回答"ρ 该取多大"：ρ 太小约束学得慢，ρ 太大优化变病态。
+**意图**：展示梁端点位移随时间的变化，观察振荡和衰减。
 
 **生成方法**：
-- 代码文件：`code_chap13/lambda_effect.py`（统一风格 `code/textbook_style.py`）
-- 问题：$-u'' = \pi^2 \sin \pi x$，$u(0)=u(1)=0$，精确解 $\sin \pi x$
-- 网络 1–32–32–1（tanh），Adam lr=1e-3，50 个内部配点，2 个边界点
-- ρ ∈ {0.1, 1, 10, 100, 1000} × 种子 {0, 1, 2}，各训练 10000 轮；每 100 轮记录一次测试 MSE
-- 训练结果缓存在 `LAMBDA_EFFECT_CACHE`（默认 /tmp/lambda_effect_cache.npz），改图不必重训
+- 代码文件：`code_chap13/fsi_cantilever_beam.py`
+- 时间推进求解耦合系统
+- 绘制位移-时间曲线
 
 **数据来源**：
-- 全部为脚本实际训练结果，数值汇总在 `figs_chap13/lambda_effect_results.json`
-- 正文表格中的数字是三个种子的中位数
-
-**思路（这张图想让读者看到什么）**：
-- (a) 第 1000 轮的逐点误差：ρ=0.1 的误差高出 3–4 个数量级，而且是一条平缓的弧线——解满足了 PDE 但整体漂了一个齐次解 a+bx，直观说明"边界条件不值钱时会发生什么"。
-- (b) MSE 随轮数：ρ=10–100 前期最快；ρ=100、1000 后期锯齿震荡——罚系数越大，损失面越病态（与第1章"ρ→∞ 条件数变差"、第6章"大数法"呼应）。
-- (c) 第 10000 轮的最终误差：随 ρ 增大单调变差，"罚得越狠，边界反而学得越差"，为后面的自适应权重（对偶上升）做铺垫。
-
-**读图指南**：先看 (a) 找出那条"漂起来"的紫色曲线（ρ=0.1）；再看 (b) 比较各曲线在 1000 轮处的高度（速度）和 5000 轮后的锯齿（稳定性）；最后看 (c) 的两条折线，注意横轴是对数刻度。
+- 时间步长：Δt = 0.001s
+- 总时间：T = 10s
+- 初始条件：静止
 
 ---
 
-## adaptive_weight.pdf / adaptive_weight.png
+## fsi_velocity_sweep.pdf
 
-**背景**：自适应权重可自动平衡多任务损失。
+**背景**：来流速度是FSI的关键参数。
 
-**意图**：展示自适应方法如何动态调整权重。
+**意图**：展示不同流速下的响应幅值，识别共振区域。
 
 **生成方法**：
-- 代码文件：`code_chap13/adaptive_weight.py`
-- 实现梯度归一化方法
-- 绘制权重随训练的变化
+- 代码文件：`code_chap13/fsi_cantilever_beam.py`
+- 扫描流速从0.1到10 m/s
+- 记录稳态振幅
 
 **数据来源**：
-- 训练过程中记录的权重轨迹
-- 对比固定权重和自适应权重
+- 流速扫描：20个点
+- 每个流速运行到稳态
 
 ---
 
-## gradient_diagnosis.pdf / gradient_diagnosis.png
+## fsi_deformation_snapshots.pdf
 
-**背景**：梯度病态是PINN训练困难的原因之一。
+**背景**：可视化FSI的动态变形过程。
 
-**意图**：可视化不同损失项的梯度范数差异。
+**意图**：展示不同时刻的梁变形和流场。
 
 **生成方法**：
-- 代码文件：`code_chap13/gradient_diagnosis.py`
-- 计算各损失项的梯度
-- 柱状图对比
+- 代码文件：`code_chap13/fsi_cantilever_beam.py`
+- 选取典型时刻的快照
+- 叠加绘制变形和流线
 
 **数据来源**：
-- 记录训练过程中的梯度统计
-- ||∇L_pde|| vs ||∇L_bc|| vs ||∇L_data||
+- 时刻选取：t = 0, T/4, T/2, 3T/4, T
+- T为主振荡周期
 
 ---
 
-## hard_vs_soft.pdf / hard_vs_soft.png
+## turek_fsi2_cfd_velocity.pdf
 
-**背景**：硬约束vs软约束是PINN的重要设计选择。
+**背景**：Turek-Hron FSI2是国际公认的FSI基准问题。
 
-**意图**：对比两种边界条件处理方式的效果。
+**意图**：展示真实CFD模拟的速度场演化，验证涡街形成。
 
 **生成方法**：
-- 代码文件：`code_chap13/hard_constraint.py`
-- 软约束：惩罚项
-- 硬约束：网络结构设计
+- 数据来源：Kratos Multiphysics开源CFD软件
+- 从官方GitHub仓库下载预计算结果
+- 提取GIF动画的关键帧
+- 组合成PDF
 
 **数据来源**：
-- 硬约束：u_nn = x(1-x)·N(x)
-- 软约束：u_nn = N(x)，加边界惩罚
+- Kratos官方FSI2验证案例
+- URL: https://github.com/KratosMultiphysics/Examples
+- Re = 100，弹性旗帜
 
 ---
 
-## constraint_concept.pdf / constraint_concept.png
+## turek_fsi2_mechanism.pdf
 
-**背景**：解释约束的概念。
+**背景**：解释FSI2中的物理机制。
 
-**意图**：示意图说明硬约束如何嵌入网络结构。
+**意图**：图解涡脱落如何激励固体振动。
 
 **生成方法**：
-- 代码文件：`code_chap13/regenerate_chinese_figures.py`
-- 概念图绘制
+- 代码文件：`code_chap13/turek_fsi2_visualization.py`
+- 示意图绘制
+- 标注涡、升力、位移的关系
 
 **数据来源**：
-- 概念性示意图
+- Turek-Hron论文几何参数
+- 圆柱直径D=0.1m，旗帜长度L=0.35m
 
 ---
 
-## deep_ritz_comparison.pdf / deep_ritz_comparison.png
+## turek_fsi2_snapshots.pdf
 
-**背景**：Deep Ritz方法是PINN的变体。
+**背景**：展示FSI2的变形序列。
 
-**意图**：对比PINN（强形式）和Deep Ritz（弱形式）的收敛性。
+**意图**：直观展示旗帜在流场中的摆动。
 
 **生成方法**：
-- 代码文件：`code_chap13/additional_experiments.py`
-- 实现两种方法
-- 绘制收敛曲线对比
+- 代码文件：`code_chap13/turek_fsi2_visualization.py`
+- 参数化旗帜变形
+- 叠加流线绘制
 
 **数据来源**：
-- 相同的PDE问题
-- 相同的网络结构
-- 对比训练损失和测试误差
+- 简化的正弦模态变形
+- 振幅参考Turek-Hron结果
 
 ---
 
-## inverse_problem.pdf / inverse_problem.png
+## turek_fsi2_time_history.pdf
 
-**背景**：PINN可用于参数辨识。
+**背景**：FSI2的定量验证需要时间历程。
 
-**意图**：展示如何从观测数据反演PDE参数。
+**意图**：展示旗帜端点位移的周期性振荡。
 
 **生成方法**：
-- 代码文件：`code_chap13/additional_experiments.py`
-- 设置逆问题：已知解，求系数
-- 绘制参数收敛过程
+- 代码文件：`code_chap13/turek_fsi2_visualization.py`
+- 绘制y方向位移vs时间
+- 标注振幅和频率
 
 **数据来源**：
-- 真实参数：k=1.0（待辨识）
-- 观测数据：带噪声的解
-- 辨识结果：k_pred随迭代的变化
+- Turek-Hron参考值：
+  - 频率 f ≈ 2 Hz
+  - 振幅 A ≈ 0.08m
+
+---
+
+## turek_fsi2_vortex_street.pdf
+
+**背景**：卡门涡街是FSI的驱动力。
+
+**意图**：可视化涡度场，展示涡脱落的规律性。
+
+**生成方法**：
+- 代码文件：`code_chap13/turek_fsi2_visualization.py`
+- Rankine涡模型
+- 涡度等高线绘制
+
+**数据来源**：
+- 简化的涡街模型
+- Strouhal数 St ≈ 0.2

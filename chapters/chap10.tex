@@ -1,4384 +1,1079 @@
 % ====================================================================================
-\chapter{强化学习：从约束优化到智能决策}
+\chapter{多智能体系统：从微观博弈到宏观平均场}
+\chaptermark{多智能体系统}
 % ====================================================================================
 
+% ====================================================================================
+\section*{引言：当优化遇到博弈}
+% ====================================================================================
 
-\section*{过去的就让它过去吧}
+\storynote{John Nash}{1928--2015，普林斯顿数学博士，21岁（1950年）就证明了纳什均衡的存在性。患精神分裂症数十年后奇迹康复，1994年获诺贝尔经济学奖。他的故事被拍成电影《美丽心灵》(A Beautiful Mind)，获奥斯卡最佳影片。2015年与妻子在出租车事故中去世。}
 
-\storynote{Richard Bellman}{1920--1984，美国应用数学家，动态规划之父。他在兰德公司工作期间创立了这一领域，后获IEEE荣誉奖章。``维数灾难''一词也是他首创的。贝尔曼方程如今是强化学习和最优控制的核心。}
+\storynote{John von Neumann}{1903--1957，20世纪最伟大的数学家之一，博弈论奠基人。他还发明了冯·诺伊曼计算机架构、参与曼哈顿计划、创立量子力学数学基础。据说他能用心算积分，智商估计超过180。}
 
-1953年的一个下午，美国数学家理查德·贝尔曼（Richard Bellman）正在兰德公司的办公室里思考一个看似简单的问题：如何做出一系列最优决策？
+在前面的章节中，我们一直在解决"一个智能体对抗环境"的问题：
+\begin{itemize}
+    \item 最优控制：一个控制器操控一个动力系统
+    \item 强化学习：一个智能体在环境中最大化累积奖励
+    \item 反向传播与序列建模：一个网络拟合一份数据
+\end{itemize}
 
-当时正值冷战，美国国防部需要优化各种军事后勤问题——补给路线、资源分配、作战规划。这些问题有一个共同特点：今天的决策会影响明天的选择，明天的选择又会影响后天......决策像多米诺骨牌一样环环相扣。
-
-贝尔曼发现了一个优美的原理：\textbf{无论你现在处于什么状态，从现在到终点的最优策略，不依赖于你是怎么到达现在这个状态的}。换句话说，"过去的就让它过去吧"——最优决策只需要看当前状态和未来，不需要纠结历史。
-
-贝尔曼后来回忆，他选择"动态规划"（Dynamic Programming）这个名字是为了"听起来很厉害"，好让国防部的官员们批准研究经费。"Programming"在当时指"规划"而非"编程"，而"Dynamic"则是为了避开当时国防部长对"数学研究"的反感。
-
-这个原理被称为\textbf{最优性原理}（Principle of Optimality），由此推导出的方程被命名为\textbf{贝尔曼方程}（Bellman Equation）。七十年后的今天，这个方程正在AlphaGo的棋盘上、ChatGPT的对话中、波士顿动力机器狗的每一步里默默运行。
-
-但贝尔曼方程从何而来？教科书通常把它当作"定义"直接给出。本章将揭示一个更深刻的事实：\textbf{贝尔曼方程是约束优化问题的KKT条件}，而值函数 $V(s)$（准确地说，是它对状态的梯度；状态离散时就是 $V$ 本身）正是我们熟悉的拉格朗日乘子！
-
-\vspace{0.3cm}
-\noindent\textit{为什么下棋程序不需要"记住"整盘棋的历史，只看当前局面就够了？为什么导航软件可以从终点倒着算回来？为什么"一个状态值多少分"这件事，和第1章的"影子价格"是同一回事？}
+但真实世界远比这复杂。想象以下场景：
 
 \begin{quote}
-\textbf{本章目标}：让你看清贝尔曼方程不是定义，而是约束优化的一阶条件——动力学是约束，值函数（的梯度）是乘子。我们先用最短路问题把"对偶上升"与"原始改进"两种求解思路看清楚，再用它们给强化学习的各种算法定位。
+\textit{早高峰时，每个司机都想选择最快的路线。但"最快"取决于其他人的选择——如果大家都选同一条路，这条路反而最慢。}
+\end{quote}
+
+\begin{quote}
+\textit{在电力市场中，每个发电厂都想最大化利润。但电价取决于所有发电厂的总供应量——你的最优策略取决于别人怎么做。}
+\end{quote}
+
+\begin{quote}
+\textit{一群无人机需要协作完成搜索任务。每架无人机的最优路径取决于其他无人机去哪里——你不想和别人重复搜索同一区域。}
+\end{quote}
+
+这些问题的共同特点是：\textbf{我的最优决策取决于你的决策，而你的最优决策也取决于我的决策}。
+
+这就是\textbf{博弈论}（Game Theory）的领域。
+
+\vspace{0.3cm}
+\noindent\textit{为什么给城市多修一条路，反而可能让所有人都更堵？为什么"每个人都最优"和"整体最优"不是一回事？为什么当人多到数不清时，博弈论会变成流体力学？}
+
+\begin{quote}
+\textbf{本章目标}：当决策者不止一个时，"最优"这个词本身就要重新定义。本章要让你看到：纳什均衡不是新数学，而是把第1章的 KKT 条件同时写 $N$ 份；看似混乱的交通、市场和无人机群，背后常常藏着一个大家在共同最小化的势函数；而当玩家多到数不清时，博弈会自然地变成一对前向--后向的偏微分方程。
 \end{quote}
 
 \begin{tcolorbox}[colback=green!5, colframe=green!60!black, title=学完这章，你将能够...]
 \begin{itemize}
-    \item 把序贯决策问题写成约束优化形式
-    \item 推导并求解简单MDP的贝尔曼方程
-    \item 实现Value Iteration和Policy Iteration算法
-    \item 理解Q-learning、DQN、PPO等算法的核心思想
-    \item 分析值函数作为拉格朗日乘子的经济学含义
+    \item 用KKT条件计算简单博弈的纳什均衡
+    \item 分析交通流量分配中的Wardrop均衡
+    \item 理解QMIX、MAPPO等多智能体RL算法的核心思想
+    \item 解释平均场博弈如何将$N$体问题简化为连续极限
+    \item 用拉格朗日方法分析带约束的博弈问题
 \end{itemize}
 \end{tcolorbox}
-\preview{本章只有一个智能体。第15章会问：当环境里还有别的智能体、大家都在做最优决策时会发生什么——贝尔曼方程变成纳什均衡。第16章的世界模型则是"有模型强化学习"的极致：把环境本身学出来。}
 
-% ------------------------------------------------------------------------------------
-\section{智能体的决策问题}
-% ------------------------------------------------------------------------------------
+% ====================================================================================
+\section{博弈论基础：从优化到均衡}
+% ====================================================================================
 
-\subsection{问题描述}
+\subsection{从单人优化到多人博弈}
 
-想象你在玩一个游戏。在每个时刻$t$：
+\review{第1章}{KKT 条件：驻点、可行、乘子非负、互补松弛。本章要做的只是把它写 $N$ 遍——每个玩家一遍——再要求它们同时成立。}
+回顾单人优化问题：
+\begin{equation}
+    \min_{x} f(x) \quad \text{s.t.} \quad g(x) \leq 0
+\end{equation}
+
+最优解$x^*$满足KKT条件。这里只有一个决策者，目标函数$f(x)$只依赖于自己的决策$x$。
+
+现在考虑\textbf{两人博弈}：
+
+\begin{definition}[二人博弈]
+一个二人博弈由以下元素组成：
 \begin{itemize}
-    \item 你处于某个\textbf{状态} $s_t$（比如棋盘局面、机器人的位置和速度）
-    \item 你选择一个\textbf{动作} $a_t$（比如落子位置、关节力矩）
-    \item 环境给你一个\textbf{奖励} $r_t$（比如吃掉对方棋子得分、向目标前进得分）
-    \item 环境进入下一个状态 $s_{t+1}$
+    \item \textbf{玩家1的策略空间}$\mathcal{A}_1$：玩家1可以选择的所有策略的集合
+    \item \textbf{玩家2的策略空间}$\mathcal{A}_2$：玩家2可以选择的所有策略的集合
+    \item \textbf{玩家1的代价函数}$J_1(a_1, a_2)$：玩家1要最小化的目标，\textbf{同时依赖于双方的策略}
+    \item \textbf{玩家2的代价函数}$J_2(a_1, a_2)$：玩家2要最小化的目标，同样依赖于双方的策略
+\end{itemize}
+\end{definition}
+
+\begin{remark}[与优化问题的关键区别]
+在单人优化中，目标函数$f(x)$只依赖于决策者自己的选择$x$。但在博弈中，$J_1(a_1, a_2)$不仅依赖于玩家1的选择$a_1$，还依赖于玩家2的选择$a_2$。这意味着：
+\begin{itemize}
+    \item 玩家1想最小化$J_1$，但他控制不了$a_2$
+    \item 玩家2想最小化$J_2$，但他控制不了$a_1$
+    \item 双方的决策相互影响，形成一个"耦合"的系统
+\end{itemize}
+\end{remark}
+
+每个玩家都想最小化自己的代价，但代价取决于对方的选择。这就产生了一个根本性的问题：
+
+\begin{quote}
+\textit{什么是"好"的策略组合？}
+\end{quote}
+
+\subsection{纳什均衡：没有人想单方面改变}
+\review{第2章}{你其实已经见过纳什均衡：第2章把拉格朗日函数看成 $x$ 与 $\lambda$ 的零和博弈，强对偶成立时的鞍点 $(x^*, \lambda^*)$ 就是一个纳什均衡。}
+
+\begin{definition}[纳什均衡]
+策略组合$(a_1^*, a_2^*)$是一个\textbf{纳什均衡}（Nash Equilibrium），如果：
+\begin{align}
+    J_1(a_1^*, a_2^*) &\leq J_1(a_1, a_2^*), \quad \forall a_1 \in \mathcal{A}_1 \\
+    J_2(a_1^*, a_2^*) &\leq J_2(a_1^*, a_2), \quad \forall a_2 \in \mathcal{A}_2
+\end{align}
+即：给定对方的策略，没有人能通过单方面改变自己的策略来降低代价。
+\end{definition}
+
+\begin{remark}[纳什均衡的直观理解]
+让我们用更通俗的语言解释纳什均衡：
+
+想象你和朋友在玩一个游戏。如果你们达到了纳什均衡状态，那意味着：
+\begin{itemize}
+    \item 你看了朋友的策略后，觉得"我现在的选择已经是最好的了，换别的只会更差"
+    \item 你的朋友看了你的策略后，也觉得"我现在的选择已经是最好的了"
+    \item 双方都没有动力去改变，系统达到一种"稳定"状态
 \end{itemize}
 
-\sidenoteplain{\textbf{有趣的历史}：在强化学习中，动作叫action，记作$a$；而在控制理论中，控制量却几乎总是记作$u(t)$。
+\textbf{关键词}：单方面。纳什均衡不是说大家都开心，而是说没人想\textbf{单独}改变。
+\end{remark}
 
-原因来自前苏联控制论传统——"控制"在俄语中是«{\cyrillicfont управление}»（u-prav-lé-nie），首字母正是俄文字母«{\cyrillicfont У}»（对应拉丁字母U），因此控制量自然记为$u$。
+\begin{example}[囚徒困境——博弈论最经典的例子]
+\label{ex:prisoners}
+两个囚犯分别被审讯，每人可以选择"合作"（保持沉默）或"背叛"（揭发对方）。
 
-也就是说，RL的$a$和控制论的$u$来自冷战时期两套独立发展的理论体系，最终在现代机器人学习中再次汇合。}
+\textbf{变量含义}：
+\begin{itemize}
+    \item $a_1 \in \{\text{合作}, \text{背叛}\}$：玩家1的策略
+    \item $a_2 \in \{\text{合作}, \text{背叛}\}$：玩家2的策略
+    \item $J_1(a_1, a_2)$：玩家1的刑期（年），希望越小越好
+    \item $J_2(a_1, a_2)$：玩家2的刑期（年），希望越小越好
+\end{itemize}
 
-你的目标是让\textbf{累积奖励最大}：
+代价矩阵（刑期）如下：
+
+\begin{center}
+\begin{tabular}{c|cc}
+& 玩家2合作 & 玩家2背叛 \\
+\hline
+玩家1合作 & (1年, 1年) & (3年, 0年) \\
+玩家1背叛 & (0年, 3年) & (2年, 2年) \\
+\end{tabular}
+\end{center}
+
+\textbf{如何解读这个表格}：
+\begin{itemize}
+    \item 如果双方都合作（保持沉默），证据不足，各判1年
+    \item 如果你背叛而对方合作，你当污点证人获释（0年），对方被重判（3年）
+    \item 如果双方都背叛，各判2年
+\end{itemize}
+
+\textbf{分析纳什均衡}——我们来做"最优响应分析"：
+
+\textit{假设玩家2选择合作}：
+\begin{itemize}
+    \item 玩家1选合作：刑期1年
+    \item 玩家1选背叛：刑期0年 $\leftarrow$ \textbf{更好！}
+\end{itemize}
+
+\textit{假设玩家2选择背叛}：
+\begin{itemize}
+    \item 玩家1选合作：刑期3年
+    \item 玩家1选背叛：刑期2年 $\leftarrow$ \textbf{更好！}
+\end{itemize}
+
+结论：\textbf{无论玩家2怎么选，玩家1选背叛总是更好}。这叫做"背叛是玩家1的\textbf{占优策略}"。
+
+由于博弈是对称的，玩家2也会得出同样结论。
+
+因此，\textbf{（背叛，背叛）是唯一的纳什均衡}，双方各判2年。
+
+\textbf{悖论所在}：如果双方都选合作，各判1年，明明对双方都更好！但理性的个体不会选择合作，因为背叛总是对自己更有利。
+
+这揭示了博弈论的一个深刻洞察：\textbf{个体理性不一定导致集体理性}。
+\end{example}
+\think{如果两人可以事先签一份"背叛者赔付 3 年"的合同，代价矩阵会怎样变？新的纳什均衡在哪里？（提示：合同就是一条新约束。）}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figs_chap10/prisoners_dilemma.pdf}
+\caption{囚徒困境的可视化分析。左图：支付矩阵热力图，红色虚线框标记纳什均衡（背叛，背叛）。右图：玩家1的最优响应分析，无论玩家2如何选择，背叛都是玩家1的更优选择。}
+\label{fig:prisoners}
+\end{figure}
+
+图\ref{fig:prisoners}展示了囚徒困境的两种分析视角。从右图可以清楚看到：不管对手选什么，选择背叛总能让自己的代价更低。这就是为什么理性的玩家会陷入（背叛，背叛）的均衡，尽管（合作，合作）对双方都更好。
+
+\subsection{连续策略博弈与最优响应}
+
+当策略空间是连续的（如$\mathcal{A}_i = \R$），我们可以用微积分来分析。
+
+\begin{definition}[最优响应]
+给定对手的策略$a_{-i}$，玩家$i$的\textbf{最优响应}（Best Response）是：
 \begin{equation}
-    J = r_0 + \gamma r_1 + \gamma^2 r_2 + \cdots = \sum_{t=0}^{\infty} \gamma^t r_t
+    BR_i(a_{-i}) = \arg\min_{a_i \in \mathcal{A}_i} J_i(a_i, a_{-i})
 \end{equation}
 
-这里$\gamma \in (0,1)$叫做\textbf{折扣因子}。为什么需要它？
+\textbf{直观理解}：如果我知道对手会选$a_{-i}$，我应该选什么来最小化自己的代价？答案就是$BR_i(a_{-i})$。
+\end{definition}
 
-\textbf{数学原因}：如果$\gamma = 1$且游戏永远不结束，无穷级数可能发散。$\gamma < 1$保证级数收敛。
-
-\textbf{现实原因}："一鸟在手胜过双鸟在林"——今天的一块钱比明天的一块钱更值钱。$\gamma$正是这种时间偏好的数学表达。
-\think{$\gamma = 0$ 时最优策略是什么？只看即时奖励——纯贪心。$\gamma = 0.99$ 时，多少步之后的奖励才"几乎不算数"？提示：有效视界约为 $1/(1-\gamma) = 100$ 步。}
-
-\subsection{关键洞察：动力学是约束}
-
-游戏有规则！你不能随意瞬移到任何状态，必须遵循状态转移方程：
+\begin{proposition}[纳什均衡的不动点特征]
+$(a_1^*, a_2^*)$是纳什均衡，当且仅当：
 \begin{equation}
-    s_{t+1} = f(s_t, a_t)
+    a_1^* = BR_1(a_2^*), \quad a_2^* = BR_2(a_1^*)
 \end{equation}
+即每个人的策略都是对方策略的最优响应。
+\end{proposition}
 
-停下来想一想：这个方程在说什么？
+\begin{remark}[不动点的直观含义]
+这个条件说的是：在纳什均衡点，形成了一个"自洽"的循环：
+\begin{itemize}
+    \item 玩家1选$a_1^*$是因为对手选了$a_2^*$
+    \item 玩家2选$a_2^*$是因为对手选了$a_1^*$
+    \item 谁也不想先改变，因为改变只会让自己更差
+\end{itemize}
 
-它说的是：给定当前状态$s_t$和你的动作$a_t$，下一个状态$s_{t+1}$就被\textbf{唯一确定}了。你没有选择的余地——这是物理世界的规则，是你必须遵守的\textbf{约束}。
+这正是数学中"不动点"的概念：$x^* = f(x^*)$，即函数作用在某个点上还是它自己。
+\end{remark}
 
-于是，强化学习问题可以写成我们熟悉的约束优化形式：
+这给出了一个寻找纳什均衡的算法思路：\textbf{迭代最优响应}（Iterated Best Response）。
 
-\begin{keyformula}[title=强化学习的约束优化形式]
-\begin{equation}
-    \max_{\{a_t\}_{t=0}^{\infty}} \sum_{t=0}^{\infty} \gamma^t r(s_t, a_t) \quad \text{subject to} \quad s_{t+1} = f(s_t, a_t), \quad \forall t \geq 0
-\end{equation}
-\end{keyformula}
+\begin{algorithm}
+\caption{迭代最优响应（伪代码）}
+\begin{algorithmic}[1]
+\State \textbf{输入}: 初始策略 $a_1^{(0)}, a_2^{(0)}$，迭代次数 $K$
+\State \textbf{输出}: 近似纳什均衡 $(a_1^{(K)}, a_2^{(K)})$
+\For{$k = 0, 1, 2, \ldots, K-1$}
+    \State $a_1^{(k+1)} \leftarrow BR_1(a_2^{(k)})$ \Comment{玩家1对玩家2当前策略的最优响应}
+    \State $a_2^{(k+1)} \leftarrow BR_2(a_1^{(k+1)})$ \Comment{玩家2对玩家1新策略的最优响应}
+\EndFor
+\State \Return $(a_1^{(K)}, a_2^{(K)})$
+\end{algorithmic}
+\end{algorithm}
 
-这和我们在前面章节学过的约束优化问题有着完全相同的结构！唯一的区别是这里有无穷多个时刻，因此有无穷多个约束。
-\clarify{对比一下：第3章变分法的约束是$y_{k+1} - y_k = v_k\Delta x$，第5章力学的约束是$\dot{q} = v$，这里的约束是$s_{t+1} = f(s_t, a_t)$。形式完全一样！只是变量名不同：位置/状态/state，速度/动作/action。}
+\begin{warning}[title=迭代最优响应不一定收敛]
+迭代最优响应可能：
+\begin{itemize}
+    \item \textbf{收敛到纳什均衡}（如果博弈是"好"的）
+    \item \textbf{陷入循环}（如石头剪刀布）
+    \item \textbf{发散}
+\end{itemize}
+收敛性取决于博弈的结构，我们稍后会看到一类保证收敛的"势博弈"。
+\end{warning}
+\preview{下一节的 Beckmann 势函数就是这样的例子：每个司机各自为政，宏观上却在最小化同一个凸函数 $\Phi$——博弈又变回了第1章的优化。}
+
+% ====================================================================================
+\section{物理约束下的静态博弈}
+% ====================================================================================
 
 \begin{tcolorbox}[colback=yellow!10, colframe=orange!80, title=本章的核心观点]
-\textbf{强化学习不是什么新东西——它就是第1章的拉格朗日乘子法，只不过约束从一条变成了无穷多条（每个时刻一条动力学方程），而乘子有了一个新名字：值函数（的梯度）。}贝尔曼方程不是定义，而是这个约束优化问题的一阶条件。
+\textbf{本章的问题就是第1章的拉格朗日乘子法，只是要同时写 $N$ 份——每个玩家一份，各自只对自己的变量求导，却共享同一组变量。}
+
+这不是比喻：广义纳什均衡的定义，就是"$N$ 组 KKT 条件同时成立"。
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabular}{lll}
+\toprule
+\textbf{概念} & \textbf{第1章（单人优化）} & \textbf{本章（博弈）} \\
+\midrule
+变量 & 一个向量 $x$ & $N$ 个玩家各自的 $a_i$，合起来 $(a_1, \ldots, a_N)$ \\
+目标 & 一个 $f(x)$ & $N$ 个 $J_i(a_i, a_{-i})$，玩家 $i$ 只管自己的 \\
+约束 & $g(x) \le 0$ & $g_i(a_i, a_{-i}) \le 0$，可能依赖别人的选择 \\
+乘子 & $\lambda$：影子价格 & 每人一组 $\lambda_i$；Wardrop 中 $\lambda_w$ = 均衡旅行时间 \\
+一阶条件 & 一组 KKT & $N$ 组 KKT 同时成立 $=$ 广义纳什均衡 \\
+特例 & --- & 势博弈：$N$ 组 KKT 恰好是同一个 $\Phi$ 的一组 KKT \\
+\bottomrule
+\end{tabular}
+\end{center}
 \end{tcolorbox}
 
-\begin{center}
-\renewcommand{\arraystretch}{1.4}
-\small
-\begin{tabular}{lll}
-\toprule
-\textbf{概念} & \textbf{第1章} & \textbf{本章} \\
-\midrule
-变量 & $x \in \R^n$ & 动作序列 $a_0, a_1, \ldots$（及状态 $s_1, s_2, \ldots$） \\
-目标 & $f(x)$ & $\sum_t \gamma^t r(s_t, a_t)$ \\
-约束 & $g(x) = 0$ & $s_{t+1} - f(s_t, a_t) = 0$，$\forall t$（无穷多条） \\
-乘子 & $\lambda$：影子价格 & $\lambda_t = \gamma^{t+1} \nabla V(s_{t+1})$：值函数的梯度 \\
-一阶条件 & $\nabla f + \lambda^\top \nabla g = 0$ & $\nabla_a [r(s,a) + \gamma V(f(s,a))] = 0$ $\Rightarrow$ 贝尔曼方程 \\
-\bottomrule
-\end{tabular}
-\end{center}
+\subsection{广义纳什均衡与KKT条件}
 
-\begin{keyidea}[强化学习问题的输入与输出——给大二同学的说明]
-\textbf{你在解决什么问题？}
-
-一个智能体在环境中行动，每一步都会获得奖励。你的目标是找到最优策略，使得累积奖励最大。
-
-\textbf{输入（你需要知道的）}：
+在实际问题中，每个玩家的策略通常受到\textbf{物理约束}：
 \begin{itemize}
-    \item \textbf{状态空间}$\mathcal{S}$：智能体可能处于的所有状态（如机器人的位置、速度）
-    \item \textbf{动作空间}$\mathcal{A}$：智能体可以采取的所有动作（如"向左"、"向右"）
-    \item \textbf{动力学}$f(s,a) \to s'$：执行动作后状态如何变化
-    \item \textbf{奖励函数}$r(s,a)$：在状态$s$执行动作$a$获得多少奖励
-    \item \textbf{折扣因子}$\gamma \in (0,1)$：未来奖励的"打折"程度（$\gamma=0.99$表示明天的1元约等于今天的0.99元）
+    \item 能量上限：$\|a_i\|^2 \leq E_{\max}$
+    \item 位置限制：$a_i \in [0, L]$
+    \item 资源预算：$c^T a_i \leq B$
 \end{itemize}
 
-\textbf{输出（你要求的）}：
-\begin{itemize}
-    \item \textbf{最优值函数}$V^*(s)$：从状态$s$出发，采用最优策略能获得的最大累积奖励
-    \item \textbf{最优策略}$\pi^*(s)$：在状态$s$应该采取什么动作
-\end{itemize}
+\begin{definition}[广义纳什均衡问题]
+$N$个玩家的\textbf{广义纳什均衡问题}（Generalized Nash Equilibrium Problem, GNEP）：
 
-\textbf{关键概念——折扣因子$\gamma$}：
-\begin{itemize}
-    \item $\gamma < 1$保证无穷级数收敛（数学上需要）
-    \item $\gamma$越接近1，越重视长远利益；$\gamma$越接近0，越"急功近利"
-    \item 例子：$\gamma = 0.9$时，10步后的奖励只值今天的$0.9^{10} \approx 0.35$倍
-\end{itemize}
-
-\textbf{终止条件}：当智能体到达目标状态$s_{\text{goal}}$时，通常设$V(s_{\text{goal}}) = 0$（任务完成，不再有后续奖励）。
-\end{keyidea}
-
-% ------------------------------------------------------------------------------------
-\section{用拉格朗日乘子法推导贝尔曼方程}
-% ------------------------------------------------------------------------------------
-
-既然是约束优化问题，我们就可以使用拉格朗日乘子法。让我们一步一步来：从带动力学约束的无限视界最优控制问题出发，推导强化学习中的贝尔曼最优方程。
-\review{第1章}{如果你忘了拉格朗日乘子法：目标函数$f$加约束$g=0$，构造$\mathcal{L}=f+\lambda g$。令$\nabla\mathcal{L}=0$得到最优条件。乘子$\lambda$的物理含义是"约束的边际价值"。}
-
-\subsection{拉格朗日函数}
-
-考虑优化问题
-\[
-\max_{\{a_t\}_{t\ge0}} \sum_{t=0}^{\infty} \gamma^{t} r(s_t,a_t),
-\qquad
-s_{t+1}=f(s_t,a_t).
-\]
-
-对每个约束 $s_{t+1}-f(s_t,a_t)=0$ 引入乘子 $\lambda_t$，构造拉格朗日函数：
+每个玩家$i$求解：
 \begin{equation}
-    \mathcal{L}
-    =
-    \sum_{t=0}^{\infty}
-    \left[
-        \gamma^{t} r(s_t,a_t)
-        +
-        \lambda_t^{\top} (f(s_t,a_t)-s_{t+1})
-    \right].
+    \min_{a_i} J_i(a_i, a_{-i}) \quad \text{s.t.} \quad g_i(a_i, a_{-i}) \leq 0
 \end{equation}
 
-\subsection{一阶必要条件}
+\textbf{变量说明}：
+\begin{itemize}
+    \item $a_i$：玩家$i$的策略（决策变量）
+    \item $a_{-i}$：除玩家$i$外所有其他玩家的策略
+    \item $J_i$：玩家$i$的代价函数
+    \item $g_i$：玩家$i$面临的约束（可能依赖于其他玩家的策略）
+\end{itemize}
+\end{definition}
 
-\subsubsection*{对状态求导}
+\begin{keyinsight}
+纳什均衡可以用\textbf{KKT条件系统}来刻画！
 
-对 $s_{t+1}$ 求偏导，注意其在第 $t$ 项与第 $t+1$ 项中均出现，得
+在纳什均衡$(a_1^*, \ldots, a_N^*)$处，每个玩家$i$的策略$a_i^*$必须满足其优化问题的KKT条件：
 \begin{align}
-    \frac{\partial \mathcal{L}}{\partial s_{t+1}}
-    &=
-    -\lambda_t
-    +
-    \gamma^{t+1}\nabla_s r(s_{t+1},a_{t+1})
-    +
-    \left(\nabla_s f(s_{t+1},a_{t+1})\right)^{\!\top} \lambda_{t+1}
-    =0,
+    \nabla_{a_i} J_i(a_i^*, a_{-i}^*) + \sum_j \lambda_{ij}^* \nabla_{a_i} g_{ij}(a_i^*, a_{-i}^*) &= 0 \quad \text{（驻点条件）} \\
+    \lambda_{ij}^* &\geq 0 \quad \text{（乘子非负）} \\
+    \lambda_{ij}^* g_{ij}(a_i^*, a_{-i}^*) &= 0 \quad \text{（互补松弛）} \\
+    g_{ij}(a_i^*, a_{-i}^*) &\leq 0 \quad \text{（可行性）}
 \end{align}
-即伴随方程
-\begin{equation}
-    \lambda_t
-    =
-    \gamma^{t+1}\nabla_s r(s_{t+1},a_{t+1})
-    +
-    \left(\nabla_s f(s_{t+1},a_{t+1})\right)^{\!\top} \lambda_{t+1}.
-    \label{eq:adjoint}
-\end{equation}
 
-\subsubsection*{对动作求导}
+这是$N$组KKT条件\textbf{同时成立}！
+\end{keyinsight}
+\clarify{单人优化是"一个目标、一组 KKT"；博弈是"$N$ 个目标、$N$ 组 KKT"，它们共享变量，却各自只对自己的 $a_i$ 求导。所以均衡一般不是任何一个函数的极小点——除非它是势博弈。}
 
-对 $a_t$ 求偏导得到动作的最优性条件：
-\begin{equation}
-    \gamma^{t}\nabla_a r(s_t,a_t)
-    +
-    \left(\nabla_a f(s_t,a_t)\right)^{\!\top} \lambda_t
-    =0.
-    \label{eq:kkt-action}
-\end{equation}
-
-\subsection{乘子与值函数的关系}
-
-定义从状态 $s_t$ 出发的最优值函数：
-\begin{equation}
-    V(s_t)
-    =
-    \max_{\{a_k\}_{k\ge t}}
-    \sum_{k=t}^{\infty}
-        \gamma^{k-t} r(s_k,a_k),
-    \qquad s_{k+1}=f(s_k,a_k).
-\end{equation}
-
-全局目标函数可写为
-\[
-J^*
-=
-\left(\sum_{k=0}^{t-1} \gamma^k r(s_k,a_k)\right)
-+
-\gamma^{t} V(s_t).
-\]
-
-按照拉格朗日乘子的灵敏度含义，对约束 $s_{t+1}=f(s_t,a_t)$ 的乘子满足
-\[
-\lambda_t
-=
-\frac{\partial J^*}{\partial s_{t+1}}
-=
-\gamma^{t+1}\nabla_s V(s_{t+1}),
-\]
-即
-\begin{equation}
-    \boxed{
-    \lambda_t = \gamma^{t+1}\nabla_s V(s_{t+1})
-    }.
-    \label{eq:lambda-value}
-\end{equation}
-\clarify{注意：乘子是 $V$ 的\textbf{梯度} $\gamma^{t+1}\nabla V$，不是 $V$ 本身。第1章末尾预告的"$\lambda$ = 值函数"指的就是这层关系。到了下一节的最短路（离散状态），梯度退化为差分，$V_i$ 本身才成为乘子。}
-\review{第8章}{这就是第8章协态方程 $\dot{\lambda} = -\partial H/\partial x$ 的离散时间版本：$\lambda_t$ 由 $\lambda_{t+1}$ 决定，必须从终点往回算。第9章反向传播的误差信号也是同一件事。}
-
-\subsection{从最优性条件得到贝尔曼方程}
-
-将 \eqref{eq:lambda-value} 代入动作的最优性条件 \eqref{eq:kkt-action}。原条件为
-\begin{equation}
-    \gamma^{t}\nabla_a r(s_t,a_t)
-    +
-    \left(\nabla_a f(s_t,a_t)\right)^{\!\top} \lambda_t
-    =0.
-\end{equation}
-代入 
-\(
-\lambda_t=\gamma^{t+1}\nabla_s V(s_{t+1})
-\)
-得到
-\begin{align}
-0
-&= \gamma^{t}\nabla_a r(s_t,a_t)
-   +\left(\nabla_a f(s_t,a_t)\right)^{\!\top} 
-      \big(\gamma^{t+1}\nabla_s V(s_{t+1})\big)  \\
-&= \gamma^{t}\Big[
-        \nabla_a r(s_t,a_t)
-        +\gamma
-        \left(\nabla_a f(s_t,a_t)\right)^{\!\top} 
-        \nabla_s V(s_{t+1})
-    \Big].
-\end{align}
-由于 $\gamma^t>0$，约去即得
-\begin{equation}
-    \nabla_a r(s_t,a_t)
-    +\gamma\,
-    \left(\nabla_a f(s_t,a_t)\right)^{\!\top}\nabla_s V(s_{t+1})
-    =0.
-    \label{eq:kkt-expand-final}
-\end{equation}
-
-
-
-接下来注意 $s_{t+1}=f(s_t,a_t)$，因此 $V(s_{t+1})$ 是关于动作 $a_t$ 的复合函数：
-\[
-V(s_{t+1}) = V(f(s_t,a_t)).
-\]
-应用链式法则可得
-\begin{equation}
-\nabla_a V(f(s_t,a_t))
-    =
-    \big(\nabla_a f(s_t,a_t)\big)^{\!\top}
-    \nabla_s V(s_{t+1}).  
-    \label{eq:chain-rule}
-\end{equation}
-
-
-\begin{center}
-\fbox{%
-\parbox{0.92\linewidth}{%
-\textbf{维度与链式法则说明.}
-设 $s_t\in\mathbb{R}^{d_s}$, $a_t\in\mathbb{R}^{d_a}$，则
-$f:\mathbb{R}^{d_s}\times\mathbb{R}^{d_a}\to\mathbb{R}^{d_s}$，
-$V:\mathbb{R}^{d_s}\to\mathbb{R}$。于是
-$\nabla_s V(s_{t+1})\in\mathbb{R}^{d_s}$ 为 $d_s\times 1$ 向量，
-$\nabla_a f(s_t,a_t)\in\mathbb{R}^{d_s\times d_a}$ 为 Jacobian 矩阵。
-
-记
-\[
-f(s_t,a_t)
-=
-\begin{pmatrix}
-f_1(s_t,a_t)\\
-\vdots\\
-f_{d_s}(s_t,a_t)
-\end{pmatrix},
-\qquad
-s_{t+1}=f(s_t,a_t),
-\]
-则复合函数
-\(
-V(f(s_t,a_t))
-\)
-关于第 $i$ 个动作分量 $a_i$ 的偏导为
-\[
-\frac{\partial}{\partial a_i} V(f(s_t,a_t))
-=
-\sum_{j=1}^{d_s}
-\frac{\partial V}{\partial s_j}(s_{t+1})\,
-\frac{\partial f_j}{\partial a_i}(s_t,a_t),
-\qquad i=1,\dots,d_a.
-\]
-把这 $d_a$ 个标量方程写成向量形式，即得到
-\[
-\nabla_a V(f(s_t,a_t))
-=
-\big(\nabla_a f(s_t,a_t)\big)^\top \nabla_s V(s_{t+1}),
-\]
-其中 $(d_s\times d_a)^\top (d_s\times 1) = d_a\times 1$，
-与 $\nabla_a V\in\mathbb{R}^{d_a}$ 维度一致。这正是链式法则在
-当前多变量设置中的具体表达。
-}%
-}
-\end{center}
-
-
-
-将 \eqref{eq:chain-rule} 代入 \eqref{eq:kkt-expand-final} 得到
-\begin{equation}
-    \nabla_a r(s_t,a_t)
-    +\gamma\,\nabla_a V(f(s_t,a_t))
-    =0.
-\end{equation}
-即
-\begin{equation}
-    \nabla_a\Big[
-        r(s_t,a_t) 
-        +\gamma V(f(s_t,a_t))
-    \Big]
-    =0.
-\end{equation}
-因此最优动作满足
-\begin{equation}
-a_t^*
-=
-\arg\max_{a}
-\left[
-r(s_t,a)+\gamma V(f(s_t,a))
-\right].
-\end{equation}
-
-
-再用最优性原理：沿最优轨迹，$V(s_t) = r(s_t, a_t^*) + \gamma V(s_{t+1})$（今天的最优价值 = 今天的奖励 + 折扣后明天的最优价值）。把 $a_t^*$ 代入，就得到
-
-\begin{keytheorem}[title=贝尔曼最优方程]
-\begin{equation}
-    \boxed{
-    V(s)
-    =
-    \max_a
-    \left[
-        r(s,a)
-        +
-        \gamma V(s')
-    \right]},
-    \qquad s'=f(s,a).
-\end{equation}
-\end{keytheorem}
-
-
-值函数由此满足一个自洽的递推关系：  
-\textbf{最优价值 = 即时奖励 + 折扣后未来最优价值}。
-
-
-
-\textbf{这个方程不是凭空定义的，而是从一阶最优性条件（KKT）加上最优性原理自然推导出来的！}
-
-让我们欣赏一下这个方程的优美：它说的是，一个状态的最优价值，等于"现在的即时奖励"加上"折扣后的未来最优价值"，而且你应该选择让这个总和最大的动作。
-
-% ------------------------------------------------------------------------------------
-\section{一个简单的例子：最短路问题}
-% ------------------------------------------------------------------------------------
-
-贝尔曼方程看起来很抽象。让我们用一个更简单、更直观的问题来建立理解——\textbf{最短路问题}。
-
-\subsection{问题描述}
-
-想象你在一座城市里，想从家（起点$s$）走到学校（终点$t$）。城市的道路网络可以用一张\textbf{图}来表示：
-
+\begin{remark}[KKT条件的物理意义]
+回忆一下KKT条件的含义：
 \begin{itemize}
-    \item 每个路口是一个\textbf{顶点}（vertex）
-    \item 每条道路是一条\textbf{边}（edge），连接两个顶点
-    \item 每条边有一个\textbf{权重}（weight），表示走这条路的代价（比如时间或距离）
+    \item \textbf{驻点条件}：在最优点，目标函数的梯度被约束的梯度"抵消"了
+    \item \textbf{互补松弛}：约束要么不起作用（$g < 0$），要么起作用但乘子为正（$\lambda > 0$）
 \end{itemize}
 
-你的目标是找到一条从$s$到$t$的路径，使得\textbf{总代价最小}。
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[
-    node distance=2.5cm,
-    vertex/.style={circle, draw, minimum size=10mm, font=\small},
-    edge/.style={->, thick}
-]
-    % 顶点
-    \node[vertex, fill=blue!20] (s) at (0,0) {$s$};
-    \node[vertex] (a) at (2.5,1.5) {$a$};
-    \node[vertex] (b) at (2.5,-1.5) {$b$};
-    \node[vertex] (c) at (5,0) {$c$};
-    \node[vertex, fill=green!20] (t) at (7.5,0) {$t$};
-    
-    % 边和权重
-    \draw[edge] (s) -- node[above left] {$2$} (a);
-    \draw[edge] (s) -- node[below left] {$5$} (b);
-    \draw[edge] (a) -- node[above] {$1$} (c);
-    \draw[edge] (a) -- node[right] {$3$} (b);
-    \draw[edge] (b) -- node[below] {$2$} (c);
-    \draw[edge] (c) -- node[above] {$1$} (t);
-    \draw[edge] (b) to[bend right=20] node[below] {$6$} (t);
-\end{tikzpicture}
-\caption{一个简单的有向图。从$s$到$t$有多条路径，最短的是$s \to a \to c \to t$，总代价为$2+1+1=4$。}
-\end{figure}
-
-\subsection{最短路的递归结构}
-
-设$d(v)$为从顶点$v$到终点$t$的最短距离。显然$d(t) = 0$。
-
-对于其他顶点$v$，想一想：从$v$出发的最短路是什么样的？
-
-你必须先走一步到某个邻居$u$，然后再从$u$走到$t$。总代价是"这一步的代价"加上"从$u$到$t$的最短距离"。而你应该选择让总代价最小的那个邻居。
-
-用数学语言：
-\begin{equation}
-    d(v) = \min_{u \in \text{neighbors}(v)} \left[ w_{vu} + d(u) \right]
-\end{equation}
-
-这就是最短路问题的\textbf{贝尔曼方程}！
-\tryit{用递归写 d(v) = min(w + d(u))，再给函数加上 @functools.lru\_cache——这一行就是"记忆化"，也就是动态规划。}
-
-\sidenoteplain{对比强化学习的贝尔曼方程$V(s) = \max_a[r + \gamma V(s')]$：
-\begin{itemize}
-    \item 最短路是最小化代价，RL是最大化奖励
-    \item 最短路没有折扣（$\gamma = 1$）
-    \item 最短路的"动作"就是选择下一个顶点
-\end{itemize}}
-
-
-\subsection{手工计算最短路径}
-
-让我们逐步分析这个图，找出从 $s$ 到 $t$ 的最短路径。我们将介绍三种方法，它们体现了不同的计算思路。
-
-\subsubsection{方法一：枚举所有路径}
-
-对于这个小规模的图，我们可以直接枚举所有可能的路径：
-
-\begin{enumerate}
-    \item 路径 $s \to a \to c \to t$：代价 $2 + 1 + 1 = 4$
-    \item 路径 $s \to b \to c \to t$：代价 $5 + 2 + 1 = 8$
-    \item 路径 $s \to b \to t$：代价 $5 + 6 = 11$
-    \item 路径 $s \to a \to b \to c \to t$：代价 $2 + 3 + 2 + 1 = 8$
-    \item 路径 $s \to a \to b \to t$：代价 $2 + 3 + 6 = 11$
-\end{enumerate}
-
-比较可知，最短路径是 $s \to a \to c \to t$，总代价为 $4$。
-
-枚举法虽然直观，但当图的规模增大时，路径数量会\textbf{指数级增长}，变得不可行。我们需要更聪明的方法。
-
-\subsubsection{方法二：深度优先搜索（从终点回溯）}
-
-深度优先搜索（Depth-First Search, DFS）的思想是：\textbf{沿着一条路径走到底，再回溯尝试其他分支}。我们从终点 $t$ 出发，逆向计算每个节点的最短距离。
-
-定义 $V(x)$ 为从顶点 $x$ 到终点 $t$ 的最短距离。计算过程如下：
-
-\begin{enumerate}
-    \item \textbf{求 $V(s)$}：$s$ 有两个邻居 $a$ 和 $b$，需要先知道 $V(a)$ 和 $V(b)$
-    
-    \item \textbf{递归求 $V(a)$}：$a$ 有两个邻居 $c$ 和 $b$，需要先知道 $V(c)$ 和 $V(b)$
-    
-    \item \textbf{递归求 $V(c)$}：$c$ 只有一个邻居 $t$
-    \[
-        V(c) = w(c,t) + V(t) = 1 + 0 = 1 \quad \checkmark
-    \]
-    
-    \item \textbf{递归求 $V(b)$}（从 $a$ 的分支触发）：$b$ 有两个邻居 $c$ 和 $t$
-    \[
-        V(b) = \min\{w(b,c) + V(c), \; w(b,t) + V(t)\} = \min\{2+1, \; 6+0\} = 3 \quad \checkmark
-    \]
-    
-    \item \textbf{回到 $V(a)$}：现在 $V(c)=1$，$V(b)=3$ 都已知
-    \[
-        V(a) = \min\{w(a,c) + V(c), \; w(a,b) + V(b)\} = \min\{1+1, \; 3+3\} = 2 \quad \checkmark
-    \]
-    
-    \item \textbf{回到 $V(s)$}：现在 $V(a)=2$，$V(b)=3$ 都已知
-    \[
-        V(s) = \min\{w(s,a) + V(a), \; w(s,b) + V(b)\} = \min\{2+2, \; 5+3\} = 4 \quad \checkmark
-    \]
-\end{enumerate}
-
-图 \ref{fig:dfs-tree} 展示了这个递归调用的过程。
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[
-    level distance=1.5cm,
-    sibling distance=3cm,
-    every node/.style={draw, rounded corners, minimum width=1.2cm, minimum height=0.8cm},
-    edge from parent/.style={draw, ->, thick},
-    level 1/.style={sibling distance=4cm},
-    level 2/.style={sibling distance=2.5cm}
-]
-    \node {$V(s)$?}
-        child {node {$V(a)$?}
-            child {node {$V(c)$?}
-                child {node[fill=green!20] {$V(t)=0$}}
-            }
-            child {node {$V(b)$?}
-                child {node[fill=gray!20] {$V(c)$}}
-                child {node[fill=green!20] {$V(t)=0$}}
-            }
-        }
-        child {node[fill=gray!20] {$V(b)$}};
-\end{tikzpicture}
-\caption{深度优先搜索的递归调用树。灰色节点表示已经计算过，可以直接返回缓存结果（这就是\textbf{记忆化}）。}
-\label{fig:dfs-tree}
-\end{figure}
-
-\begin{remark}
-注意到 $V(b)$ 被请求了两次（一次从 $a$，一次从 $s$），但我们只需要计算一次，第二次直接返回缓存的结果。这种技术叫做\textbf{记忆化}（memoization），它把朴素递归的指数时间复杂度降低到多项式时间。
+在博弈中，每个玩家都在自己的约束下做优化，所以每个人的KKT条件都要满足。纳什均衡就是这$N$组条件的公共解。
 \end{remark}
 
-\subsubsection{方法三：广度优先/逐层更新（Bellman-Ford 风格）}
+\subsection{案例一：图博弈——邻居之间的互动}
 
-另一种思路是\textbf{逐层更新}：不是沿着一条路径走到底，而是每一轮同时更新所有节点的估计值，直到收敛。
+\begin{definition}[图博弈]
+在\textbf{图博弈}（Network Game）中：
+\begin{itemize}
+    \item 玩家位于图$G = (V, E)$的节点上
+    \item 玩家$i$的代价只依赖于自己和\textbf{邻居}的策略：
+    \begin{equation}
+        J_i(a_i, a_{N(i)}) = f_i(a_i) + \sum_{j \in N(i)} \phi_{ij}(a_i, a_j)
+    \end{equation}
+    其中$N(i)$是$i$的邻居集合
+\end{itemize}
+\end{definition}
 
-初始化：$V^{(0)}(t) = 0$，其他节点 $V^{(0)}(x) = \infty$。
-
-\textbf{第 1 轮更新}：考虑所有能一步到达 $t$ 的节点
-\begin{align*}
-    V^{(1)}(c) &= w(c,t) + V^{(0)}(t) = 1 + 0 = 1 \\
-    V^{(1)}(b) &= w(b,t) + V^{(0)}(t) = 6 + 0 = 6
-\end{align*}
-
-\textbf{第 2 轮更新}：基于第 1 轮的结果继续更新
-\begin{align*}
-    V^{(2)}(a) &= \min\{w(a,c) + V^{(1)}(c), \; w(a,b) + V^{(1)}(b)\} = \min\{1+1, \; 3+6\} = 2 \\
-    V^{(2)}(b) &= \min\{V^{(1)}(b), \; w(b,c) + V^{(1)}(c)\} = \min\{6, \; 2+1\} = 3 \quad \text{（更新！）}
-\end{align*}
-
-\textbf{第 3 轮更新}：
-\begin{align*}
-    V^{(3)}(s) &= \min\{w(s,a) + V^{(2)}(a), \; w(s,b) + V^{(2)}(b)\} = \min\{2+2, \; 5+3\} = 4
-\end{align*}
-
-第 4 轮更新后所有值不再变化，算法收敛。
-
-\begin{table}[htbp]
-\centering
-\begin{tabular}{c|ccccc}
-\toprule
-轮次 & $V(s)$ & $V(a)$ & $V(b)$ & $V(c)$ & $V(t)$ \\
-\midrule
-初始 & $\infty$ & $\infty$ & $\infty$ & $\infty$ & $0$ \\
-第 1 轮 & $\infty$ & $\infty$ & $6$ & $1$ & $0$ \\
-第 2 轮 & $\infty$ & $2$ & $3$ & $1$ & $0$ \\
-第 3 轮 & $4$ & $2$ & $3$ & $1$ & $0$ \\
-\bottomrule
-\end{tabular}
-\caption{广度优先/逐层更新的迭代过程}
-\end{table}
-
-\subsubsection{两种策略的比较}
-
-上述两种方法对应了求解贝尔曼方程的两种基本策略：
-
-\begin{table}[htbp]
-\centering
-\begin{tabular}{lll}
-\toprule
-\textbf{特性} & \textbf{深度优先（DFS）} & \textbf{广度优先/逐层更新} \\
-\midrule
-计算顺序 & 沿路径深入，遇到未知再递归 & 每轮同时更新所有节点 \\
-核心技术 & 递归 + 记忆化 & 迭代 + 值更新 \\
-典型算法 & 记忆化搜索、策略迭代 & Bellman-Ford、值迭代 \\
-适用场景 & 状态空间稀疏、只需部分解 & 状态空间稠密、需要全局解 \\
-\bottomrule
-\end{tabular}
-\caption{深度优先与广度优先策略的比较}
-\end{table}
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.6\textwidth]{figs_chap10/chap10_shortest_path.png}
-\caption{最短路问题示意图。红色箭头标示最优路径$s \to a \to c \to t$，总代价为4。每个节点旁标注的$V$值是从该点到终点的最短距离。}
-\label{fig:shortest_path}
-\end{figure}
-
-\subsection{最短路的线性规划形式}
-
-最短路问题可以写成一个优雅的\textbf{线性规划}。这个视角将帮助我们深入理解求解算法的本质。
-
-\subsubsection{原始问题：流量视角}
-
-想象每条边上有"流量"$x_{ij}$。我们要把一单位的流量从$s$送到$t$，使得总代价最小：
-
+\begin{example}[线性二次图博弈——一个完整的求解过程]
+\label{ex:lq_network}
+考虑代价函数：
 \begin{equation}
-    \begin{aligned}
-        \min_{x} \quad & \sum_{(i,j) \in E} w_{ij} \cdot x_{ij} \\
-        \text{s.t.} \quad & \sum_{j} x_{ij} - \sum_{k} x_{ki} = \begin{cases}
-            1 & \text{if } i = s \\
-            -1 & \text{if } i = t \\
-            0 & \text{otherwise}
-        \end{cases} \\
-        & x_{ij} \geq 0, \quad \forall (i,j) \in E
-    \end{aligned}
+    J_i = \frac{1}{2}(a_i - a_{i,0})^2 + \delta \cdot a_i \sum_{j \in N(i)} a_j
 \end{equation}
 
-这里的约束叫做\textbf{流量守恒}：除了起点（流出1单位）和终点（流入1单位），其他每个顶点流入等于流出。
+\textbf{变量含义详解}：
+\begin{itemize}
+    \item $a_i \in \R$：玩家$i$的策略/行动（比如生产量、投入的努力等）
+    \item $a_{i,0}$：玩家$i$的"理想状态"或"目标值"（如果没有邻居影响，他想选择的值）
+    \item $\delta$：交互强度参数，决定邻居对你的影响有多大
+    \item $N(i)$：玩家$i$的邻居集合（图中与$i$相连的节点）
+\end{itemize}
 
-\subsubsection{对偶问题：势能视角}
+\textbf{代价函数的物理解释}：
+\begin{itemize}
+    \item \textbf{第一项} $(a_i - a_{i,0})^2/2$：偏离理想状态的代价。你想待在$a_{i,0}$附近，离得越远代价越大
+    \item \textbf{第二项} $\delta \cdot a_i \sum_{j \in N(i)} a_j$：与邻居的交互代价
+    \begin{itemize}
+        \item 如果$\delta > 0$（\textbf{策略替代}）：邻居做得多，你做得多会增加代价。类似于竞争关系——市场上对手生产越多，你再多生产就越亏
+        \item 如果$\delta < 0$（\textbf{策略互补}）：邻居做得多，你做得多反而减少代价。类似于协作关系——朋友都在学习，你学习效果也更好
+    \end{itemize}
+\end{itemize}
 
-现在我们来写这个线性规划的对偶问题。
+\textbf{求解纳什均衡}：
 
-为每个顶点 $i$ 的流量守恒约束引入对偶变量 $V_i$（你可以把它想象成顶点的"势能"或"位置"）。根据线性规划对偶理论，对偶问题是：
+每个玩家$i$想最小化$J_i$，将$a_i$视为决策变量，$a_{-i}$视为已知。
 
-\begin{keyformula}[title=最短路的对偶问题]
+对$a_i$求导并令其为零（一阶最优性条件）：
 \begin{equation}
-    \begin{aligned}
-        \max_{V} \quad & V_t - V_s \\
-        \text{s.t.} \quad & V_j - V_i \leq w_{ij}, \quad \forall (i,j) \in E
-    \end{aligned}
-\end{equation}
-\end{keyformula}
-
-\review{第2章}{线性规划对偶：$\min c^\top x$, $Ax = b$, $x \ge 0$ 的对偶是 $\max b^\top y$, $A^\top y \le c$。这里 $A$ 是图的关联矩阵，每条边一列（起点 $+1$、终点 $-1$），所以对偶约束是"每条边一个不等式 $V_j - V_i \le w_{ij}$"。}
-
-\paragraph{物理直觉：绳网模型}
-\clarify{约定提醒：这一节把起点 $s$ 固定在墙上，$V$ 表示"离起点多远"；前面的最短路图里 $V$ 表示"离终点多远"。两种约定互为镜像，最短路本身不变。}
-
-这个对偶问题有一个美妙的物理解释。想象每条边 $(i,j)$ 是一根\textbf{长度为 $w_{ij}$ 的绳子}，连接顶点 $i$ 和 $j$。现在：
-
-\begin{itemize}
-    \item 把起点 $s$ 固定在左边的墙壁上
-    \item 把终点 $t$ 尽可能向右拉
-    \item 绳子不能被拉断——相邻顶点的水平距离不能超过绳长
-\end{itemize}
-
-你能把 $t$ 拉到离墙多远？答案正是从 $s$ 到 $t$ 的最短路长度！
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[scale=1.1]
-    % 距离标尺
-    \draw[->] (0,-3) -- (8.5,-3) node[right] {势能 $V$};
-    \foreach \x in {0,1,2,3,4} {
-        \draw (\x*2,-3.1) -- (\x*2,-2.9) node[below=2pt] {\small \x};
-    }
-    
-    % 松弛的绳子（用抛物线/悬链线表示下垂）
-    % s -> b: 绳长5，水平距离1，大量松弛
-    \draw[thick, blue!60, decorate, decoration={snake, amplitude=0pt}] 
-        (0,0) .. controls (0.5,-1.5) and (1.5,-2) .. (2,-1.5);
-    \node[blue!60] at (0.6,-1.3) {\small $w=5$};
-    
-    % a -> b: 绳长3，松弛
-    \draw[thick, blue!60] 
-        (4,0) .. controls (3.5,-0.8) and (2.5,-1.2) .. (2,-1.5);
-    \node[blue!60] at (2.7,-0.6) {\small $w=3$};
-    
-    % b -> c: 绳长2，水平距离2，恰好绷直（见正文）
-    \draw[thick, blue!60] 
-        (2,-1.5) .. controls (3,-1.8) and (5,-0.8) .. (6,0);
-    \node[blue!60] at (4,-1.5) {\small $w=2$};
-    
-    % b -> t: 绳长6，水平距离3，大量松弛
-    \draw[thick, blue!60] 
-        (2,-1.5) .. controls (4,-2.5) and (6,-1.5) .. (8,0);
-    \node[blue!60] at (5.5,-2.3) {\small $w=6$};
-    
-    % 顶点（先画顶点，再画线和标签，确保标签在最上层）
-    \node[circle, draw, fill=blue!20, minimum size=10mm] (s) at (0,0) {$s$};
-    \node[circle, draw, fill=white, minimum size=10mm] (a) at (4,0) {$a$};
-    \node[circle, draw, fill=white, minimum size=10mm] (b) at (2,-1.5) {$b$};
-    \node[circle, draw, fill=white, minimum size=10mm] (c) at (6,0) {$c$};
-    \node[circle, draw, fill=green!20, minimum size=10mm] (t) at (8,0) {$t$};
-
-    % 拉紧的绳子（水平直线）- 最短路径，在节点之间
-    \draw[red, very thick] (s.east) -- (a.west);
-    \draw[red, very thick] (a.east) -- (c.west);
-    \draw[red, very thick] (c.east) -- (t.west);
-
-    % 拉紧标签（放在线的上方，避开节点）
-    \node[red, fill=white, inner sep=1pt] at (2,0.25) {\scriptsize $w=2$};
-    \node[red, fill=white, inner sep=1pt] at (5,0.25) {\scriptsize $w=1$};
-    \node[red, fill=white, inner sep=1pt] at (7,0.25) {\scriptsize $w=1$};
-    
-    % 势能标注
-    \node[above] at (0,0.6) {$V_s = 0$};
-    \node[above] at (4,0.6) {$V_a = 2$};
-    \node[below] at (2,-2.1) {$V_b = 1$};
-    \node[above] at (6,0.6) {$V_c = 3$};
-    \node[above] at (8,0.6) {$V_t = 4$};
-    
-    % 固定墙壁（左）
-    \fill[gray!40] (-0.8,-2.5) rectangle (-0.5,1.5);
-    \draw[thick] (-0.5,-2.5) -- (-0.5,1.5);
-    \foreach \y in {-2,-1.5,...,1} {
-        \draw[thick] (-0.8,\y) -- (-0.5,\y+0.3);
-    }
-    
-    % 固定点
-    \draw[thick] (-0.5,0) -- (0,0);
-    \node[left] at (-0.8,0) {\small 固定};
-    
-    % 向右拉的箭头
-    \draw[->, very thick, red!70] (8.6,0) -- (9.4,0) node[right] {拉！};
-    
-\end{tikzpicture}
-\caption{绳网模型：把 $s$ 固定在墙壁，向右拉 $t$。红色的边被完全拉紧成水平直线，构成最短路径 $s \to a \to c \to t$。蓝色的边是松弛的，自然下垂。$t$ 到墙壁的水平距离（$4$）就是最短路长度。}
-\label{fig:rope-network}
-\end{figure}
-
-\paragraph{为什么这是对的？}
-
-\begin{itemize}
-    \item \textbf{约束 $V_j - V_i \leq w_{ij}$}：绳子的长度限制。如果 $j$ 比 $i$ 向右超出绳长 $w_{ij}$，绳子就会被拉断。
-    
-    \item \textbf{目标 $\max(V_t - V_s)$}：我们想把 $t$ 拉得尽可能远离墙壁。
-    
-    \item \textbf{最优解}：当我们把 $t$ 拉到极限时，从 $s$ 到 $t$ 必有一条"全部拉紧"的路径——沿着这条路径，每根绳子都水平绑紧，即 $V_j - V_i = w_{ij}$。把这些等式沿路径相加：
-    \[
-        V_t - V_s = \sum_{\text{路径上的边}} w_{ij}
-    \]
-    这正是路径的总长度！而且因为其他路径的绳子在下垂（没拉紧），这条路径一定是最短的。
-\end{itemize}
-
-\begin{remark}
-这个绳网模型揭示了最短路问题的\textbf{对偶结构}：
-\begin{itemize}
-    \item \textbf{原问题}（流的视角）：寻找从 $s$ 到 $t$ 的最小代价流
-    \item \textbf{对偶问题}（势能视角）：寻找满足"绳长约束"的最大水平距离
-\end{itemize}
-强对偶定理告诉我们：最小流量代价 $=$ 最大势能差。这个等式在图 \ref{fig:rope-network} 中的体现是：$t$ 能被拉到的距离（$4$）恰好等于最短路的长度（$4$）。
-\end{remark}
-
-\paragraph{紧致条件与最短路径}
-
-在最优解中，哪些边的约束取等号（$V_j - V_i = w_{ij}$）？\textbf{最短路径上的边一定取等号}！
-
-这些边在图中被完全拉成水平直线——水平距离恰好等于绳长。回到我们的例子：
-\begin{align*}
-    V_a - V_s &= 2 - 0 = 2 = w_{sa} \quad \text{（水平拉紧 }\checkmark\text{）} \\
-    V_c - V_a &= 3 - 2 = 1 = w_{ac} \quad \text{（水平拉紧 }\checkmark\text{）} \\
-    V_t - V_c &= 4 - 3 = 1 = w_{ct} \quad \text{（水平拉紧 }\checkmark\text{）}
-\end{align*}
-
-而非最短路径上的边则是松弛下垂的：
-\begin{align*}
-    V_b - V_s &= 1 - 0 = 1 < 5 = w_{sb} \quad \text{（下垂，剩余长度 $4$）} \\
-    V_t - V_b &= 4 - 1 = 3 < 6 = w_{bt} \quad \text{（下垂，剩余长度 $3$）} \\
-    V_b - V_a &= 1 - 2 = -1 < 3 = w_{ab} \quad \text{（下垂）}
-\end{align*}
-
-有一条边比较微妙：$V_c - V_b = 3 - 1 = 2 = w_{bc}$，也恰好绷直，但 $b$ 并不在最短路上。原因是 $b$ 的位置并不唯一——只要 $1 \le V_b \le 5$，所有绳子都不会被拉断；图中取 $V_b = 1$，恰好让 $b \to c$ 绷紧。所以"绷直"是最短路边的\textbf{必要}条件，不是充分条件。
-\think{对偶解不唯一，意味着什么？提示：第2章的互补松弛说"紧约束才有正价格"。$b$ 不在最短路上，所以经过 $b$ 的边在原问题里流量为零——它们绷不绷直都不影响最优值。}
-
-这给了我们一个识别最短路径的方法：找到那些被水平拉紧的边，沿着它们从 $s$ 一路走到 $t$。
-
-\begin{remark}
-松弛变量的物理意义也很清楚：它是绳子的\textbf{下垂量}（更准确地说，是绳长减去水平投影的差值）。绳子下垂得越厉害，说明这条边离"最短路"越远。如果 $V_b - V_s = 1$ 而 $w_{sb} = 5$，说明这根绳子还可以再水平拉伸 $4$ 个单位才会绑紧——这告诉我们走 $s \to b$ 这条路，后面还需要额外 $4$ 的代价才能"追上"最短路径。
-\end{remark}
-% ------------------------------------------------------------------------------------
-\section{两种求解思路：对偶上升与原始改进}
-% ------------------------------------------------------------------------------------
-
-现在我们有了最短路问题的原始-对偶结构。如何求解？
-
-有两种根本不同的策略，它们对应着你可能听说过的两类算法。
-
-\subsection{策略一：对偶上升——维护最优性}
-
-\textbf{核心思想}：从势能函数$V$出发，始终保持$V$满足所有约束（对偶可行），逐步提升目标$V_t - V_s$。
-
-想象你是一个"保守派"：你不愿意冒险，每一步都要确保自己的解是"合法"的。
-
-具体做法：
-\begin{enumerate}
-    \item 初始化：$V_s = 0$，其他 $V_j = -\infty$（把所有绳子都松着堆在起点旁边——显然满足所有约束）
-    \item 找到一个可以"提升"的顶点 $j$：它还没有顶到绳子的极限，即 $V_j < \min_i\,(V_i + w_{ij})$
-    \item 更新：$V_j \leftarrow \min_i\,(V_i + w_{ij})$（把 $j$ 拉到某根绳子刚好绷紧的位置，让约束紧绑）
-    \item 重复，直到无法再提升
-\end{enumerate}
-
-\textbf{关键性质}：每次更新都让某个 $V_j$ 变大、最终让目标 $V_t$ 变大（势能像波浪一样从 $s$ 向 $t$ 传播），而且每一步的 $V$ 都满足所有约束。
-
-这就是\textbf{Dijkstra算法}的本质！它从一个端点开始，像水波一样向外扩展势能等值面。（Dijkstra 也可以从终点 $t$ 反向运行：固定 $V_t = 0$，向 $s$ 传播——下图画的就是这个镜像版本，对应"$V$ = 到终点的距离"的约定。）
-\think{Dijkstra 要求边权非负。用绳网模型想一想：一根"负长度"的绳子意味着什么？为什么这会让"一旦确定就不再改"的策略失效？}
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[scale=0.9]
-    % 波纹
-    \fill[blue!10] (0,0) circle (2.5);
-    \fill[blue!20] (0,0) circle (1.8);
-    \fill[blue!30] (0,0) circle (1.1);
-    \fill[blue!50] (0,0) circle (0.4);
-    
-    \node[font=\small] at (0,0) {$t$};
-    \node[font=\footnotesize] at (0.8,0.8) {$V=1$};
-    \node[font=\footnotesize] at (1.4,1.4) {$V=2$};
-    \node[font=\footnotesize] at (2,2) {$V=3$};
-    
-    \node[below, font=\small] at (0,-3) {势能等值面从终点向外扩展};
-\end{tikzpicture}
-\caption{Dijkstra算法的几何直观：对偶上升}
-\end{figure}
-
-\subsection{策略二：原始改进——维护可行性}
-
-\textbf{核心思想}：从一条实际路径出发，始终保持有一条从$s$到$t$的路（原始可行），逐步缩短路径长度。
-
-想象你是一个"冒险家"：你先冲到终点再说，然后慢慢优化路线。
-
-具体做法：
-\begin{enumerate}
-    \item 随便找一条从$s$到$t$的路径（可能很绕）
-    \item 检查：有没有"捷径"可以替换当前路径的某一段？
-    \item 如果有，更新路径
-    \item 重复，直到找不到更短的路
-\end{enumerate}
-
-\textbf{关键性质}：每次更新都让路径变短，而且每一步都有一条完整的可行路径。
-
-这就是\textbf{Bellman-Ford算法}的精神！它通过反复"松弛"所有边，让最短距离信息逐渐传播。
-
-\subsection{两种策略的对比}
-
-\begin{table}[htbp]
-\centering
-\caption{对偶上升 vs 原始改进}
-\begin{tabular}{lcc}
-\toprule
-& \textbf{对偶上升（Dijkstra风格）} & \textbf{原始改进（Bellman-Ford风格）} \\
-\midrule
-维护什么 & 势能函数$V$（对偶变量） & 具体路径（原始变量） \\
-解的状态 & 对偶可行，但可能"不完整" & 原始可行，但可能"不最优" \\
-每步做什么 & 扩展确定区域 & 改进当前路径 \\
-收敛时 & 对偶目标达到最优 & 原始目标达到最优 \\
-界的变化 & 下界$\uparrow$上升 & 上界$\downarrow$下降 \\
-\midrule
-适用条件 & 需要边权非负 & 允许负边权 \\
-时间复杂度 & $O(E \log V)$ & $O(VE)$ \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{physicalmeaning}
-\textbf{选择哪种策略？}
-
-这取决于你的问题结构：
-\begin{itemize}
-    \item 如果约束容易满足，但找最优解难——用\textbf{对偶上升}（先保证最优，再扩展可行域）
-    \item 如果找最优解容易，但满足约束难——用\textbf{原始改进}（先保证可行，再改进目标）
-\end{itemize}
-
-在最短路问题中，找一条路（原始可行）很容易，但要找最短的那条（最优）较难，所以Dijkstra（对偶上升）通常更高效。
-\end{physicalmeaning}
-
-% ------------------------------------------------------------------------------------
-\section{从最短路到强化学习：算法设计的核心权衡}
-% ------------------------------------------------------------------------------------
-
-在最短路问题中，我们见识了两种截然不同的求解思路，它们正好对应上一节的"原始改进"与"对偶上升"：
-\begin{itemize}
-    \item \textbf{深度优先}（原始改进）：始终握着一条完整、可行的路径（原始变量），沿着它走到底看看总代价，再回溯换一条更好的
-    \item \textbf{动态规划}（对偶上升）：维护每个节点的势能 $V$（对偶变量），从终点往回推，逐步抬高到绷紧为止
-\end{itemize}
-
-这两种思路的差异，其实反映了算法设计中一个根本性的权衡。当我们从最短路走向更复杂的强化学习问题时，这个权衡会变得更加关键，同时还会出现新的挑战。
-
-本节我们将建立一个"算法坐标系"，帮助你理解各种强化学习算法的设计逻辑。
-
-% ------------------------------------------------------------------------------------
-\subsection{核心权衡：探索深度 vs. 计算代价}
-% ------------------------------------------------------------------------------------
-
-让我们先聚焦于两个最基本的维度：\textbf{我们要探索多深}，以及\textbf{我们对环境了解多少}。
-
-\subsubsection{维度一：更新深度——走多远再回头？}
-
-\begin{keyidea}[核心问题]
-更新价值函数时，我们应该走多少步再回头总结经验？
-\end{keyidea}
-
-回想最短路的两种算法：
-
-\textbf{深度优先搜索}必须走完一整条路径才能知道这条路的代价。如果路径很长，中间有很多岔路，每条岔路又有岔路……搜索空间会指数爆炸。
-
-\textbf{动态规划}则聪明得多：它只看"一步"。从终点开始，先算出离终点一步的节点的最优值；再算离终点两步的；依此类推。每一步都利用之前算好的结果，避免了重复计算。
-
-这两种思路在强化学习中分别对应：
-
-\paragraph{蒙特卡洛方法（MC）——"走到底再算账"}
-
-就像深度优先搜索，MC方法必须完成一整个\textbf{回合}（episode），才能计算这条轨迹的总回报：
-\begin{equation}
-    G_t = r_t + \gamma r_{t+1} + \gamma^2 r_{t+2} + \cdots + \gamma^{T-t} r_T
+    \frac{\partial J_i}{\partial a_i} = (a_i - a_{i,0}) + \delta \sum_{j \in N(i)} a_j = 0
 \end{equation}
 
-\paragraph{时序差分方法（TD）——"走一步就更新"}
-
-就像动态规划，TD方法只看一步，然后用对下一状态的\textbf{估计值}来补全剩余部分：
+解这个方程得到\textbf{最优响应}：
 \begin{equation}
-    \text{TD目标} = r_t + \gamma \hat{V}(s_{t+1})
+    a_i^* = a_{i,0} - \delta \sum_{j \in N(i)} a_j^*
 \end{equation}
 
-这种"用估计更新估计"的技巧叫做\textbf{自举}（Bootstrapping）——就像拽着自己的鞋带把自己提起来。
+\textbf{解读}：如果$\delta > 0$（竞争），邻居行动越大，你的最优响应越小。如果$\delta < 0$（协作），邻居行动越大，你也应该行动更大。
 
-\paragraph{直观理解：期中考 vs. 期末考}
+\textbf{矩阵形式}：
 
-假设你是老师，想预测学生的学习效果：
+把所有$N$个玩家的最优响应方程写在一起：
+\begin{equation}
+    \mathbf{a}^* = \mathbf{a}_0 - \delta A \mathbf{a}^*
+\end{equation}
+其中$A$是图的邻接矩阵：$A_{ij} = 1$如果$i$和$j$是邻居，否则为0。
 
-\begin{itemize}
-    \item \textbf{TD思路}：期中考完就预测期末成绩。反馈快，但可能不准（有\textbf{偏差}）。
-    \item \textbf{MC思路}：等期末考完再看真实成绩。绝对准确（\textbf{无偏}），但如果学生那天生病或超常发挥，结果波动很大（高\textbf{方差}）。
-\end{itemize}
+移项整理：
+\begin{equation}
+    (I + \delta A) \mathbf{a}^* = \mathbf{a}_0
+\end{equation}
 
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[scale=0.85, >=stealth]
-    % 时间轴
-    \draw[->, thick] (0,0) -- (14,0) node[right] {时间};
-    
-    % 状态节点
-    \foreach \i/\label in {0/$s_t$, 2.5/$s_{t+1}$, 5/$s_{t+2}$, 9/$s_{t+3}$, 12.5/终点} {
-        \fill (\i, 0) circle (3pt);
-        \node[below] at (\i, -0.3) {\label};
-    }
-    \node at (7, 0) {$\cdots$};
-    \node at (11, 0) {$\cdots$};
-    
-    % 奖励
-    \foreach \i/\r in {1.25/$r_t$, 3.75/$r_{t+1}$, 6/$r_{t+2}$} {
-        \node[above, blue] at (\i, 0.3) {\small \r};
-    }
-    
-    % TD(0)：只看一步
-    \draw[red, very thick, ->] (0, 1.2) -- (2.5, 1.2);
-    \node[red, above] at (1.25, 1.2) {\textbf{TD(0)}};
-    \node[red, right, font=\small] at (2.7, 1.2) {$r_t + \gamma \hat{V}(s_{t+1})$};
-    \draw[red, dashed] (2.5, 1) -- (2.5, 0.2);
-    
-    % n-step
-    \draw[orange, very thick, ->] (0, 2.2) -- (5, 2.2);
-    \node[orange, above] at (2.5, 2.2) {\textbf{n-step TD}};
-    \draw[orange, dashed] (5, 2) -- (5, 0.2);
-    
-    % MC：走到底
-    \draw[green!60!black, very thick, ->] (0, 3.2) -- (12.5, 3.2);
-    \node[green!60!black, above] at (6.25, 3.2) {\textbf{Monte Carlo}};
-    \node[green!60!black, right, font=\small] at (12.7, 3.2) {$G_t = \sum \gamma^k r_{t+k}$};
-    
-\end{tikzpicture}
-\caption{不同的更新深度：TD只看一步，n-step看若干步，MC走到终点}
-\end{figure}
+解得纳什均衡：
+\begin{equation}
+    \boxed{\mathbf{a}^* = (I + \delta A)^{-1} \mathbf{a}_0}
+\end{equation}
 
-\subsubsection{维度二：模型依赖——能不能"想象"？}
-
-\begin{keyidea}[核心问题]
-我们知道环境的运作规则吗？能在脑中"推演"吗？
-\end{keyidea}
-
-回想最短路问题：我们知道图的完整结构——哪些节点相连、每条边的权重。有了这些信息，动态规划才能施展威力。
-
-但如果你\textbf{不知道}图的结构呢？你只能从起点出发，走一步看一步，通过不断试错来摸清地形。
-
-这就是\textbf{有模型}与\textbf{无模型}的区别：
-
-\paragraph{有模型方法（Model-based）}
-
-你知道（或者学会了）环境的"规则"：
-\begin{itemize}
-    \item 状态转移：从状态 $s$ 采取动作 $a$，会到达什么状态 $s'$？
-    \item 奖励函数：这一步能获得多少奖励？
-\end{itemize}
-
-有了模型，你可以在"脑海中"推演，不需要真的和环境交互。就像下棋高手，不需要真的落子，就能在脑中预判十几步之后的局面。
-
-\paragraph{无模型方法（Model-free）}
-
-你对环境一无所知，只能通过\textbf{真实的试错}来学习。每次想知道某个动作好不好，都必须真的去做，承受后果。
-
-\begin{table}[htbp]
-\centering
-\renewcommand{\arraystretch}{1.4}
-\begin{tabular}{p{2.5cm}|p{5.5cm}|p{5.5cm}}
-\toprule
-& \textbf{有模型 (Model-based)} & \textbf{无模型 (Model-free)} \\
-\midrule
-\textbf{类比} & 知道棋盘规则，脑中推演 & 不知规则，只能试错 \\
-\midrule
-\textbf{优势} & 
-数据效率极高；可以"想象"从未经历的情况；可以谨慎避免危险
- & 
-实现简单；不怕模型不准；渐进性能通常更好
- \\
-\midrule
-\textbf{劣势} & 
-模型难以精确获得；模型偏差会导致策略失效
- & 
-需要海量真实交互；每次学习都要真的"摔跤"
- \\
-\midrule
-\textbf{代表算法} & AlphaZero、MuZero、Dreamer & DQN、PPO、SAC \\
-\bottomrule
-\end{tabular}
-\caption{有模型 vs. 无模型方法的对比}
-\end{table}
-
-\subsubsection{二维图谱：算法的基本定位}
-
-现在我们可以用这两个维度画出一张"算法地图"：
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[scale=1.15, >=stealth]
-    % 坐标轴
-    \draw[->, very thick] (-5.2,0) -- (5.2,0);
-    \draw[->, very thick] (0,-3.5) -- (0,3.8);
-    
-    % 轴标签
-    \node[above] at (0, 3.8) {\textbf{模型依赖}};
-    \node[right] at (5.2, 0) {\textbf{更新深度}};
-    
-    \node[below, font=\small, align=center] at (-4,0) {深 (MC)\\ \scriptsize 无偏·高方差};
-    \node[below, font=\small, align=center] at (4,0) {浅 (TD)\\ \scriptsize 有偏·低方差};
-    \node[left, font=\small, align=right] at (0,3) {有模型\\ \scriptsize 可以规划};
-    \node[left, font=\small, align=right] at (0,-3) {无模型\\ \scriptsize 只能试错};
-    
-    % --- 四个象限 ---
-    
-    % 右上：动态规划
-    \node[draw=blue!80, thick, rounded corners, fill=blue!10, text width=3cm, align=center] at (3.3, 2.3) {
-        \textbf{动态规划}\\[3pt]
-        \footnotesize Value Iteration\\
-        Policy Iteration\\[3pt]
-        \scriptsize 理论最优解
-    };
-    
-    % 左上：规划搜索
-    \node[draw=green!60!black, thick, rounded corners, fill=green!10, text width=3cm, align=center] at (-3.3, 2.3) {
-        \textbf{树搜索}\\[3pt]
-        \footnotesize MCTS\\
-        AlphaZero\\[3pt]
-        \scriptsize 围棋、国际象棋
-    };
-    
-    % 左下：蒙特卡洛RL
-    \node[draw=red!80, thick, rounded corners, fill=red!10, text width=3cm, align=center] at (-3.3, -2.3) {
-        \textbf{蒙特卡洛 RL}\\[3pt]
-        \footnotesize REINFORCE\\
-        GRPO\\[3pt]
-        \scriptsize 大模型训练
-    };
-    
-    % 右下：时序差分RL
-    \node[draw=orange!80, thick, rounded corners, fill=orange!10, text width=3cm, align=center] at (3.3, -2.3) {
-        \textbf{时序差分 RL}\\[3pt]
-        \footnotesize Q-Learning, DQN\\
-        SARSA\\[3pt]
-        \scriptsize 游戏AI
-    };
-    
-    % 中间：Actor-Critic
-    \node[draw=purple!80, thick, dashed, rounded corners, fill=purple!10, text width=3.2cm, align=center] at (0, -2.3) {
-        \textbf{Actor-Critic}\\[3pt]
-        \footnotesize PPO, SAC, A3C\\[3pt]
-        \scriptsize 工业界主流
-    };
-    
-    % 连接线
-    \draw[dashed, gray] (-1.6, -2.3) -- (-3.3+1.5, -2.3);
-    \draw[dashed, gray] (1.6, -2.3) -- (3.3-1.5, -2.3);
-    
-    % 对角线箭头表示权衡
-    \draw[->, thick, gray, dashed] (-3.5, -3) -- (3.5, 3) node[pos=0.85, above, sloped, font=\small] {单步计算代价 $\uparrow$};
-    
-\end{tikzpicture}
-\caption{强化学习算法的基本图谱。横轴是更新深度，纵轴是模型依赖程度。对角线方向代表计算代价的增加。}
-\label{fig:rl-2d-map}
-\end{figure}
-
-\paragraph{图谱解读}
-
-\begin{itemize}
-    \item \textbf{右上角（动态规划）}：最短路问题就在这里！我们知道完整的图结构（有模型），用自举更新（TD式）。这是理论上最理想的情况——如果你能准确描述环境，动态规划给出的就是最优解。
-    
-    \item \textbf{左上角（树搜索）}：AlphaZero在这里。它知道棋盘规则（有模型），通过蒙特卡洛树搜索（MCTS）进行深度推演。计算量大，但效果惊人。
-    
-    \item \textbf{右下角（时序差分RL）}：DQN、Q-Learning在这里。不知道环境规则（无模型），只能通过试错学习，但每一步都及时更新（TD），收敛相对较快。
-    
-    \item \textbf{左下角（蒙特卡洛RL）}：REINFORCE、GRPO在这里。不知道模型，还必须走完整条轨迹才能更新。听起来最"笨"，但在某些场景下（如大语言模型训练）反而有独特优势。
-    
-    \item \textbf{中央（Actor-Critic）}：PPO、SAC等算法介于TD和MC之间，是目前工业界最常用的方法。
-\end{itemize}
-
-\begin{remark}
-注意对角线方向：从右下到左上，计算代价递增。无模型+浅层更新单步最"便宜"；有模型+深度搜索单步最"昂贵"但也最强大。选择算法时，需要根据问题特点和计算预算来权衡。
-\end{remark}
-\preview{图谱左上角的"学习模型"（MuZero、Dreamer）会在第16章展开——世界模型就是把这条纵轴推到极致。第11章的 Transformer 也进入了这张图：Decision Transformer 把强化学习变成序列建模。}
-
-% ------------------------------------------------------------------------------------
-\subsection{两个关键因素：数据的来源与使用}
-% ------------------------------------------------------------------------------------
-
-上面的二维图谱描述了"怎么计算"的问题。但在实际应用中，还有另一个同样重要的问题：\textbf{数据从哪来、怎么用}？
-
-这涉及两个额外的维度，它们决定了算法的\textbf{数据效率}和\textbf{适用场景}。
-
-\subsubsection{维度三：数据新鲜度（On-policy vs. Off-policy）}
-
-\begin{keyidea}[核心问题]
-训练数据必须来自当前策略吗？能不能用"过时"的数据？
-\end{keyidea}
-
-\paragraph{类比：学游泳}
-
-你现在的游泳姿势是A，游了一圈后，教练给你反馈，你调整成姿势B。
-
-问题来了：\textbf{刚才用姿势A游的那一圈数据，还能用来改进姿势B吗？}
-
-\begin{itemize}
-    \item \textbf{On-policy（同策略）}：不能。姿势A和姿势B的水感不同，旧数据可能产生误导。每次更新后，旧数据必须丢弃。
-    
-    \item \textbf{Off-policy（异策略）}：可以！通过数学技巧（如重要性采样），我们可以"修正"旧数据，使其对新策略也有参考价值。
-\end{itemize}
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[scale=0.85, >=stealth]
-    % On-policy
-    \begin{scope}[xshift=-5cm]
-        \node[font=\bfseries] at (0, 3.2) {On-policy};
-        \node[font=\small, gray] at (0, 2.7) {"数据保鲜期：一次"};
-        
-        \node[draw, rounded corners, fill=blue!20, minimum width=2cm, minimum height=0.7cm] (pi) at (0, 1.8) {策略 $\pi_\theta$};
-        \node[draw, rounded corners, fill=green!20, minimum width=2cm, minimum height=0.7cm] (env) at (0, 0) {环境};
-        \node[draw, rounded corners, fill=orange!20, minimum width=1.4cm, minimum height=0.5cm] (data) at (2.5, 0.9) {\small 数据};
-        
-        \draw[->, thick] (pi) -- node[left, font=\small] {交互} (env);
-        \draw[->, thick] (env) -- (data);
-        \draw[->, thick] (data) -- node[above, font=\small] {更新} (pi);
-        
-        \node[draw, rounded corners, fill=red!15, font=\small] at (2.5, -0.5) {丢弃};
-        \draw[->, thick, red] (data) -- (2.5, -0.1);
-    \end{scope}
-    
-    % Off-policy
-    \begin{scope}[xshift=5cm]
-        \node[font=\bfseries] at (0, 3.2) {Off-policy};
-        \node[font=\small, gray] at (0, 2.7) {"数据可以反复使用"};
-        
-        \node[draw, rounded corners, fill=blue!20, minimum width=2cm, minimum height=0.7cm] (pi2) at (0, 1.8) {策略 $\pi_\theta$};
-        \node[draw, rounded corners, fill=green!20, minimum width=2cm, minimum height=0.7cm] (env2) at (0, 0) {环境};
-        \node[draw, rounded corners, fill=yellow!30, minimum width=1.8cm, minimum height=1cm] (buffer) at (2.8, 0.9) {\small 经验池};
-        
-        \draw[->, thick] (pi2) -- node[left, font=\small] {交互} (env2);
-        \draw[->, thick] (env2) -- (buffer);
-        \draw[->, thick] (buffer) -- node[above, font=\small] {采样} (pi2);
-        
-        \draw[->, thick, green!60!black] (buffer.south) arc (-90:180:0.25) -- (buffer.west);
-        \node[green!60!black, font=\scriptsize] at (1.8, -0.1) {保留};
-    \end{scope}
-\end{tikzpicture}
-\caption{On-policy每次更新后丢弃数据，Off-policy把数据存入经验池反复使用}
-\end{figure}
-
-\begin{table}[htbp]
-\centering
-\renewcommand{\arraystretch}{1.3}
-\begin{tabular}{p{2.5cm}|p{5.2cm}|p{5.2cm}}
-\toprule
-& \textbf{On-policy} & \textbf{Off-policy} \\
-\midrule
-\textbf{数据要求} & 必须是当前策略产生的 & 可以是任意策略产生的 \\
-\textbf{数据利用} & 用一次就丢弃 & 存入经验池，反复使用 \\
-\textbf{优势} & 理论简洁，训练稳定 & 数据效率高 \\
-\textbf{劣势} & 浪费数据 & 需要额外技巧保证稳定 \\
-\textbf{代表} & PPO, REINFORCE, GRPO & DQN, SAC, TD3 \\
-\bottomrule
-\end{tabular}
-\caption{On-policy vs. Off-policy}
-\end{table}
-
-\subsubsection{维度四：交互模式（Online vs. Offline）}
-
-\begin{keyidea}[核心问题]
-训练时能不能和环境实时交互？还是只能用已有的历史数据？
-\end{keyidea}
-
-这个维度在大模型时代变得尤为重要。
-
-\paragraph{类比：学开车}
-
-\begin{itemize}
-    \item \textbf{Online（在线学习）}：你坐在真车里，边开边学。教练随时给反馈，你随时调整。
-    
-    \item \textbf{Offline（离线学习）}：你不能碰车。只能看一大堆别人的行车记录视频，从中学习。
-\end{itemize}
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[scale=0.85, >=stealth]
-    % Online
-    \begin{scope}[xshift=-5cm]
-        \node[font=\bfseries] at (0, 2.8) {Online};
-        \node[font=\small, gray] at (0, 2.3) {"边做边学"};
-        
-        \node[draw, rounded corners, fill=blue!20, minimum width=2cm, minimum height=0.7cm] (agent) at (0, 1.2) {智能体};
-        \node[draw, rounded corners, fill=green!20, minimum width=2cm, minimum height=0.7cm] (env) at (0, -0.8) {环境};
-        
-        \draw[->, thick] (agent.south west) -- node[left, font=\small] {动作} (env.north west);
-        \draw[->, thick] (env.north east) -- node[right, font=\small] {反馈} (agent.south east);
-        
-        \node[font=\scriptsize, gray] at (0, -1.8) {可以实时交互};
-    \end{scope}
-    
-    % Offline
-    \begin{scope}[xshift=5cm]
-        \node[font=\bfseries] at (0, 2.8) {Offline};
-        \node[font=\small, gray] at (0, 2.3) {"只看不做"};
-        
-        \node[draw, rounded corners, fill=blue!20, minimum width=2cm, minimum height=0.7cm] (agent2) at (0, 1.2) {智能体};
-        \node[draw, rounded corners, fill=gray!30, minimum width=2.5cm, minimum height=1cm] (data) at (0, -0.8) {\small 历史数据集};
-        
-        \draw[->, thick] (data) -- node[right, font=\small] {学习} (agent2);
-        
-        \node[draw, rounded corners, fill=green!10, minimum width=1.5cm, minimum height=0.5cm] (env2) at (3, -0.8) {\small 环境};
-        \draw[thick, red] (agent2.east) -- ++(0.5,0) -- ++(0,-1.3) node[midway, right, font=\scriptsize, red] {禁止} -- (env2.north);
-        \draw[red, thick] (2.2, -0.3) -- (2.6, -0.7);
-        \draw[red, thick] (2.2, -0.7) -- (2.6, -0.3);
-        
-        \node[font=\scriptsize, gray] at (0, -2) {不能和环境交互};
-    \end{scope}
-\end{tikzpicture}
-\caption{Online可以实时与环境交互，Offline只能从固定数据集学习}
-\end{figure}
-
-\paragraph{为什么需要Offline RL？}
-
-在很多实际场景中，我们\textbf{无法}进行在线交互：
-
-\begin{itemize}
-    \item \textbf{医疗}：不能让AI在真实病人身上"试错"
-    \item \textbf{自动驾驶}：让一辆不会开车的AI上路太危险
-    \item \textbf{推荐系统}：随意推荐会损失用户和收入
-    \item \textbf{大模型对齐}：每次生成都要人类标注太昂贵
-\end{itemize}
-
-但我们通常有大量的\textbf{历史数据}：过去的诊疗记录、人类司机的驾驶日志、用户的点击历史、人类写的高质量文本……
-
-Offline RL的目标就是：\textbf{只用这些历史数据，不做任何新的交互，训练出好的策略}。
-
-\begin{table}[htbp]
-\centering
-\renewcommand{\arraystretch}{1.3}
-\begin{tabular}{p{2.5cm}|p{5.2cm}|p{5.2cm}}
-\toprule
-& \textbf{Online} & \textbf{Offline} \\
-\midrule
-\textbf{数据来源} & 实时与环境交互产生 & 固定的历史数据集 \\
-\textbf{能否探索} & 可以尝试新动作 & 只能用数据中出现过的 \\
-\textbf{优势} & 可以主动探索最优策略 & 安全、成本低 \\
-\textbf{核心挑战} & 探索的代价（安全/成本） & 分布偏移（数据不够多样） \\
-\textbf{代表} & DQN, PPO, SAC & CQL, IQL, Decision Transformer \\
-\bottomrule
-\end{tabular}
-\caption{Online vs. Offline：交互模式的权衡}
-\end{table}
-
-\begin{example}[大模型训练中的Online vs. Offline]
-训练ChatGPT这样的对话模型时：
-
-\textbf{Offline阶段}：用大量人类写的文本做预训练（SFT）。这是纯Offline的——模型只是"看"人类怎么写，自己不产生任何输出。
-
-\textbf{Online阶段}：RLHF训练时，模型生成回答，人类给反馈，模型根据反馈调整。这是Online的——模型在"边做边学"。
-
-实际中，由于人类标注昂贵，很多工作探索如何用更少的Online交互，更多地利用Offline数据。
+这是一个漂亮的闭式解！只需要知道图结构（邻接矩阵$A$）和每个人的理想状态（$\mathbf{a}_0$），就能直接算出均衡。
+\tryit{用 NumPy 构造 6 节点环形图的邻接矩阵，分别取 $\delta = 0.15$ 和 $\delta = 0.6$ 计算 $(I + \delta A)^{-1}\mathbf{a}_0$，再跑迭代最优响应。哪个 $\delta$ 下迭代发散？和 $A$ 的谱半径比一比。}
 \end{example}
 
-\begin{remark}
-On/Off-policy 和 Online/Offline 是两个不同的维度，容易混淆：
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figs_chap10/network_game.pdf}
+\caption{图博弈的数值实验。左图：6个玩家组成的网络，节点颜色表示均衡策略的大小。中图：迭代最优响应过程，从零初始化出发，每个玩家的策略逐渐收敛到纳什均衡（虚线）。右图：收敛误差随迭代次数呈指数下降，表明算法线性收敛。参数：$\delta = 0.15$（策略替代）。}
+\label{fig:network_game}
+\end{figure}
+
+图\ref{fig:network_game}展示了图博弈的实际计算结果。可以观察到：
 \begin{itemize}
-    \item \textbf{On/Off-policy}：问的是"数据是不是当前策略产生的"
-    \item \textbf{Online/Offline}：问的是"能不能边和环境交互边训练"
+    \item 迭代最优响应算法确实收敛到了纳什均衡
+    \item 收敛速度是\textbf{线性}的（在对数坐标下误差直线下降）
+    \item 不同位置的玩家（中心节点vs边缘节点）有不同的均衡策略
 \end{itemize}
-一个Off-policy算法（如DQN）通常用于Online场景；而Offline RL是一个独立的研究领域，需要专门设计的算法（如CQL）。
-\end{remark}
 
-% ------------------------------------------------------------------------------------
-\section{算法全景：四维定位与选择指南}
-% ------------------------------------------------------------------------------------
+\subsection{案例二：交通均衡与Braess悖论}
 
-现在我们有了四个维度，可以像GPS定位一样精确地描述任何强化学习算法。
-\sidenoteplain{\textbf{为什么DeepSeek选择MC方法？}
+\begin{example}[Wardrop交通均衡]
+\label{ex:wardrop}
+考虑一个交通网络：
+\begin{itemize}
+    \item $W$个OD对（Origin-Destination，起点-终点对）
+    \item 每个OD对$w$有需求$d_w$（单位时间内要从起点到终点的车辆数）
+    \item 每个OD对有多条可选路径$P_w$
+    \item 每条边$a$有时间函数$t_a(x_a)$，其中$x_a$是边$a$的流量
+\end{itemize}
 
-传统RL中MC因高方差被避免，但大模型场景有特殊性：
+\textbf{Wardrop第一原理}（用户均衡）：在均衡状态下，每个OD对所有被使用的路径具有\textbf{相同且最小}的旅行时间。
+
+\textbf{直观理解}：如果有一条更快的路，司机会切换过去。切换的人多了，那条路就变慢了。最终达到平衡：所有在用的路一样快，没人想换。
+\end{example}
+
+\begin{example}[Braess悖论——增加道路反而更堵！]
+\label{ex:braess}
+\storynote{Dietrich Braess}{德国数学家（1938--）。1968 年他研究交通网络的数值方法时发现：给路网加一条边，可能让所有人的均衡旅行时间变长。这篇德语论文沉寂多年，直到规划者在纽约、首尔的真实道路上看到同样现象才广为人知。}
+这是交通领域最著名的悖论之一。考虑从起点S到终点E的交通网络：
+
+\textbf{网络结构}：
+\begin{itemize}
+    \item 节点：S（起点）、A、B、E（终点）
+    \item 边SA：时间函数$t_{SA}(x) = x/100$（流量越大越慢）
+    \item 边AE：固定时间$t_{AE} = 45$分钟
+    \item 边SB：固定时间$t_{SB} = 45$分钟
+    \item 边BE：时间函数$t_{BE}(x) = x/100$
+    \item 边AB（Braess边）：时间$t_{AB} = 0$（\textbf{免费捷径！}）
+\end{itemize}
+
+总需求：4000辆车从S到E。
+
+\textbf{情况1：没有AB边}
+
+可选路径：
+\begin{itemize}
+    \item 路径1：S $\to$ A $\to$ E，时间 = $x_{SA}/100 + 45$
+    \item 路径2：S $\to$ B $\to$ E，时间 = $45 + x_{BE}/100$
+\end{itemize}
+
+由对称性，均衡时各2000辆车：
+\begin{itemize}
+    \item 路径1时间：$2000/100 + 45 = 20 + 45 = 65$分钟
+    \item 路径2时间：$45 + 2000/100 = 45 + 20 = 65$分钟 $\checkmark$
+\end{itemize}
+
+\textbf{所有人旅行时间：65分钟}
+
+\textbf{情况2：有AB边（免费捷径）}
+
+新增路径3：S $\to$ A $\to$ B $\to$ E，时间 = $x_{SA}/100 + 0 + x_{BE}/100$
+
+\textbf{关键分析}：假设所有4000辆车都走路径3（S$\to$A$\to$B$\to$E）：
+\begin{itemize}
+    \item 路径3时间：$4000/100 + 0 + 4000/100 = 40 + 0 + 40 = 80$分钟
+\end{itemize}
+
+验证这是纳什均衡——有人想换路吗？
+\begin{itemize}
+    \item 换到路径1（S$\to$A$\to$E）：$40 + 45 = 85$分钟 > 80分钟，更差！
+    \item 换到路径2（S$\to$B$\to$E）：$45 + 40 = 85$分钟 > 80分钟，更差！
+\end{itemize}
+
+没人想换，所以\textbf{所有人走S$\to$A$\to$B$\to$E确实是纳什均衡}。
+
+\textbf{所有人旅行时间：80分钟}
+
+\textbf{悖论}：增加了一条\textbf{免费}道路，所有人的旅行时间反而从65分钟增加到80分钟！增加了约23\%！
+
+\textbf{为什么会这样？}
+\begin{itemize}
+    \item 免费捷径看起来很诱人
+    \item 每个人都"理性"地选择它
+    \item 但大家都这么想，导致SA和BE两条边都拥挤了
+    \item 如果政府\textbf{禁止}这条免费道路，反而能让所有人更快到达！
+\end{itemize}
+
+这再次说明：\textbf{个体理性 $\neq$ 集体理性}。
+\end{example}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figs_chap10/braess_paradox.pdf}
+\caption{Braess悖论的数值验证。左图：有免费道路（红色AB边）时，所有车辆都选择S$\to$A$\to$B$\to$E路径，平均旅行时间80分钟。中图：没有免费道路时，车辆均匀分布在两条路径上，平均旅行时间65分钟。右图：柱状对比显示，移除免费道路可减少约18.8\%的旅行时间。}
+\label{fig:braess}
+\end{figure}
+
+图\ref{fig:braess}直观展示了Braess悖论。这个悖论在现实中确实存在——1990年代，纽约市关闭了第42街的一段道路后，周围的交通状况反而改善了！首尔在2003年拆除了一条高架路后，交通拥堵也得到缓解。
+
+\subsection{势博弈：自私博弈的隐藏秩序}
+
+\begin{theorem}[Beckmann势函数]
+如果边时间函数$t_a(x_a)$是连续且非递减的，则Wardrop用户均衡是以下\textbf{凸优化问题}的解：
+\begin{equation}
+    \min_{\mathbf{f}} \Phi(\mathbf{x}(\mathbf{f})) = \sum_{a} \int_0^{x_a} t_a(s) \, ds
+\end{equation}
+\begin{equation}
+    \text{s.t.} \quad \sum_{p \in P_w} f_p = d_w, \quad f_p \geq 0, \quad x_a = \sum_{p \ni a} f_p
+\end{equation}
+
+\textbf{变量说明}：
+\begin{itemize}
+    \item $f_p$：路径$p$上的流量
+    \item $x_a$：边$a$上的总流量（所有经过边$a$的路径流量之和）
+    \item $d_w$：OD对$w$的总需求
+    \item $\Phi$：Beckmann势函数
+\end{itemize}
+\end{theorem}
+
+\begin{proof}[用KKT条件证明Wardrop均衡]
+这是一个经典的``优化 $\Leftrightarrow$ 均衡''对应。让我们用KKT条件来证明Beckmann问题的解恰好满足Wardrop用户均衡条件。
+
+\textbf{Step 1：写出拉格朗日函数}
+
+对于路径流量$f_p$的约束优化问题，拉格朗日函数为：
+\begin{equation}
+    \mathcal{L} = \sum_{a} \int_0^{x_a} t_a(s) \, ds - \sum_w \lambda_w \left( \sum_{p \in P_w} f_p - d_w \right) - \sum_p \mu_p f_p
+\end{equation}
+其中：
+\begin{itemize}
+    \item $\lambda_w$：OD对$w$的需求约束的乘子
+    \item $\mu_p \geq 0$：路径流量非负约束$f_p \geq 0$的乘子
+\end{itemize}
+（这里把 $f_p \ge 0$ 写成 $-f_p \le 0$，并用减号引入乘子；与第1章的 $\Lag = f + \lambda g + \mu h$ 只差记号约定。）
+
+\textbf{Step 2：对$f_p$求偏导}
+
+注意$x_a = \sum_{p \ni a} f_p$，所以$\frac{\partial x_a}{\partial f_p} = 1$（如果路径$p$经过边$a$）。因此：
+\begin{equation}
+    \frac{\partial \mathcal{L}}{\partial f_p} = \sum_{a \in p} t_a(x_a) - \lambda_w - \mu_p = 0
+\end{equation}
+即：\textbf{路径$p$的总旅行时间} = $\lambda_w + \mu_p$
+
+\textbf{Step 3：互补松弛条件}
+
+KKT的互补松弛条件要求：$\mu_p \cdot f_p = 0$
+\begin{itemize}
+    \item 若$f_p > 0$（路径被使用），则$\mu_p = 0$，故路径时间 $= \lambda_w$
+    \item 若$f_p = 0$（路径未被使用），则$\mu_p \geq 0$，故路径时间 $\geq \lambda_w$
+\end{itemize}
+
+\textbf{Step 4：这正是Wardrop条件！}
+
+上述结论可以总结为：
+\begin{center}
+\fbox{\parbox{0.8\textwidth}{
+\textbf{所有被使用的路径}（$f_p > 0$）具有\textbf{相同的}旅行时间$\lambda_w$；\\
+\textbf{所有未被使用的路径}（$f_p = 0$）旅行时间$\geq \lambda_w$。
+}}
+\end{center}
+
+这正是Wardrop第一原理的数学表述！乘子$\lambda_w$就是OD对$w$的\textbf{均衡旅行时间}。
+\end{proof}
+\clarify{这正是第1章的影子价格：$\partial \Phi^*/\partial d_w = \lambda_w$，再多派一辆车走 OD 对 $w$，势函数恰好增加这辆车自己经历的旅行时间。它不等于系统总旅行时间的增量——后者还要加上这辆车给别人添的堵，两者之差 $x_a t_a'(x_a)$ 就是"拥堵费"。}
+
+\begin{keyinsight}
+\textbf{自私博弈的隐藏秩序}：
+
+看似混乱的交通系统——每个司机都在自私地最小化自己的旅行时间——在宏观上却等价于在优化一个系统的``总势能''$\Phi$。
+
+这类博弈被称为\textbf{势博弈}（Potential Game）：存在一个势函数$\Phi$，每个玩家改变策略导致的代价变化等于势函数的变化。
+
+势博弈有很好的性质：
+\begin{itemize}
+    \item 纳什均衡一定存在（$\Phi$的最小值点）
+    \item 最优响应动态一定收敛（因为$\Phi$单调下降）
+    \item 可以用优化算法求解均衡
+\end{itemize}
+\end{keyinsight}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figs_chap10/potential_game.pdf}
+\caption{势博弈的收敛性质。左图：势函数$\Phi(a_1, a_2)$的等高线，红星标记纳什均衡（势函数最小值点）。中图：从不同初始点出发的迭代最优响应轨迹，都收敛到纳什均衡。右图：势函数沿轨迹单调下降，保证收敛性。}
+\label{fig:potential}
+\end{figure}
+
+图\ref{fig:potential}展示了势博弈的核心性质：势函数沿着迭代最优响应的轨迹\textbf{单调下降}。这就像一个小球在山谷中滚动，总会滚到最低点（纳什均衡）。这也是为什么势博弈特别"好"——我们可以把博弈问题转化为优化问题来求解。
+
+% ====================================================================================
+\section{深度多智能体强化学习}
+% ====================================================================================
+
+前面我们讨论的都是\textbf{静态博弈}——玩家同时做出决策，博弈只进行一轮。
+
+现在我们加入\textbf{时间}维度：智能体需要在多个时间步做出决策，当前决策会影响未来状态。这就是\textbf{动态博弈}，或更具体地说，\textbf{马尔可夫博弈}（Markov Game）。
+
+\subsection{从静态到动态：马尔可夫博弈}
+
+\begin{definition}[马尔可夫博弈]
+一个$N$人\textbf{马尔可夫博弈}（又称随机博弈）由以下元素组成：
+\begin{itemize}
+    \item \textbf{状态空间}$\mathcal{S}$：系统可能处于的所有状态
+    \item \textbf{动作空间}$\mathcal{A}_i$：每个智能体$i$可选择的动作
+    \item \textbf{状态转移}$P(s' | s, a_1, \ldots, a_N)$：给定当前状态和所有人的动作，下一个状态的概率分布
+    \item \textbf{奖励函数}$r_i(s, a_1, \ldots, a_N)$：每个智能体在每一步获得的即时奖励
+    \item \textbf{折扣因子}$\gamma \in [0,1)$：未来奖励的折扣率
+\end{itemize}
+
+每个智能体$i$的目标是最大化累积奖励：
+\begin{equation}
+    \max_{\pi_i} \E\left[ \sum_{t=0}^{\infty} \gamma^t r_i(s_t, a_{1,t}, \ldots, a_{N,t}) \right]
+\end{equation}
+\end{definition}
+
+\review{第9章}{第9章里 Q 学习、策略梯度的收敛性都假设转移概率固定。这里 $\pi_{-i}$ 在变，等于地基在动——单智能体的收敛保证从根上失效。}
+\begin{warning}[title=多智能体RL的核心困难：非平稳性]
+\textbf{问题}：从智能体$i$的视角看，环境的转移概率是：
+\begin{equation}
+    P(s' | s, a_i) = \sum_{a_{-i}} P(s' | s, a_i, a_{-i}) \pi_{-i}(a_{-i} | s)
+\end{equation}
+
+但其他智能体也在学习，所以$\pi_{-i}$在不断变化！
+
+\textbf{后果}：
+\begin{itemize}
+    \item 环境对于单个智能体是\textbf{非平稳}的（规则在变）
+    \item 单智能体RL的收敛性保证不再成立
+    \item "追逐移动目标"问题——你刚学会应对对手的策略，对手又变了
+\end{itemize}
+
+\textbf{类比}：想象你在学下棋，但对手每天都在变强。你昨天赢他的策略，今天可能就不管用了。
+\end{warning}
+
+\subsection{CTDE范式：集中训练，分散执行}
+
+解决非平稳性的一个关键思想是\textbf{CTDE}（Centralized Training with Decentralized Execution）：
+
+\begin{itemize}
+    \item \textbf{训练时}：可以使用全局信息（所有智能体的观测和动作）
+    \item \textbf{执行时}：每个智能体只能使用自己的局部观测
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figs_chap10/ctde_comparison.pdf}
+\caption{三种多智能体学习范式的对比。左：独立学习（IQL），每个智能体独立与环境交互，面临非平稳性问题。中：CTDE范式，训练时使用全局信息（集中式Critic），执行时只用局部观测（分散式Actor）。右：完全集中式，由单一控制器指挥所有智能体，存在可扩展性和通信瓶颈问题。}
+\label{fig:ctde}
+\end{figure}
+
+图\ref{fig:ctde}对比了三种学习范式。CTDE是目前最流行的方法，因为它在\textbf{训练效率}和\textbf{执行灵活性}之间取得了很好的平衡。
+
+\subsection{价值分解方法：QMIX}
+
+QMIX是CTDE范式下\textbf{价值分解}（Value Decomposition）方法的代表。
+
+\begin{definition}[IGM原则——核心思想]
+\textbf{IGM}（Individual-Global-Max）原则要求：
+\begin{equation}
+    \arg\max_{\mathbf{a}} Q_{tot}(s, \mathbf{a}) = \begin{pmatrix} \arg\max_{a_1} Q_1(o_1, a_1) \\ \vdots \\ \arg\max_{a_N} Q_N(o_N, a_N) \end{pmatrix}
+\end{equation}
+
+\textbf{直观理解}：最大化全局Q值的联合动作，等于每个智能体分别最大化自己局部Q值的动作组合。
+
+\textbf{为什么重要}：这保证了分散执行的一致性——每个智能体贪婪地选择自己的最优动作，组合起来就是全局最优！
+\end{definition}
+
+\begin{theorem}[QMIX的单调性约束]
+如果$Q_{tot}$关于每个$Q_i$是单调递增的：
+\begin{equation}
+    \frac{\partial Q_{tot}}{\partial Q_i} \geq 0, \quad \forall i
+\end{equation}
+则IGM原则自动满足。
+\end{theorem}
+
+\begin{proof}
+设$a_i^* = \arg\max_{a_i} Q_i(o_i, a_i)$。
+
+对于任意其他动作$a_i'$，有$Q_i(o_i, a_i^*) \geq Q_i(o_i, a_i')$。
+
+由单调性（$Q_{tot}$ 对每个 $Q_i$ 非减），对任意联合动作 $a' = (a_1', \ldots, a_N')$，逐个坐标替换：
+\begin{equation}
+    Q_{tot}(s, a_1^*, a_2^*, \ldots, a_N^*) \geq Q_{tot}(s, a_1', a_2^*, \ldots, a_N^*) \geq Q_{tot}(s, a_1', a_2', \ldots, a_N^*) \geq \cdots \geq Q_{tot}(s, a')
+\end{equation}
+每一步只换一个坐标，用一次单调性。所以$(a_1^*, \ldots, a_N^*)$最大化$Q_{tot}$。
+\end{proof}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.8\textwidth]{figs_chap10/qmix_architecture.pdf}
+\caption{QMIX架构示意图。每个智能体有自己的Q网络$Q_i(o_i, a_i)$，只使用局部观测。混合网络将各个局部Q值组合成全局Q值$Q_{tot}$。关键：混合网络的权重由超网络（Hypernetwork）根据全局状态$s$生成，且保证对$Q_i$的偏导非负（单调性约束），从而满足IGM原则。}
+\label{fig:qmix}
+\end{figure}
+
+\textbf{QMIX架构的关键组件}（见图\ref{fig:qmix}）：
 \begin{enumerate}
-    \item 答案对错明确（如数学题）
-    \item Critic网络训练成本极高
-    \item 可并行采样多条轨迹降低方差
+    \item \textbf{局部Q网络}：每个智能体$i$有一个Q网络$Q_i(o_i, a_i)$，只使用自己的观测
+    \item \textbf{混合网络}：将所有局部Q值组合成全局Q值
+    \item \textbf{超网络}：根据全局状态$s$生成混合网络的权重
+    \item \textbf{非负权重}：通过绝对值或指数函数保证权重非负，从而满足单调性
 \end{enumerate}
-这使"古老"的蒙特卡洛方法焕发新生。
-}
 
-\subsection{主流算法的四维属性表}
+\begin{algorithm}
+\caption{QMIX训练流程（伪代码）}
+\begin{algorithmic}[1]
+\State \textbf{输入}: 经验回放池，学习率$\alpha$，目标网络更新率$\tau$
+\For{每个训练步}
+    \State 从回放池采样一批经验 $(o, a, r, o', s, s', done)$
+    \State \Comment{$o$: 各智能体观测, $a$: 各智能体动作, $s$: 全局状态}
 
-\begin{table}[htbp]
-\centering
-\small
-\renewcommand{\arraystretch}{1.35}
-\caption{主流强化学习算法的四维定位（第一部分）}
-\begin{tabular}{l|c|c|c|c|p{3.5cm}}
+    \State \textbf{计算当前Q值}:
+    \For{每个智能体 $i$}
+        \State $Q_i \leftarrow Q_i(o_i, a_i; \theta_i)$ \Comment{局部Q网络}
+    \EndFor
+    \State $Q_{tot} \leftarrow \text{MixingNetwork}(Q_1, \ldots, Q_N; s)$ \Comment{混合得到全局Q}
+
+    \State \textbf{计算目标Q值}:
+    \For{每个智能体 $i$}
+        \State $Q'_i \leftarrow \max_{a'_i} Q^{target}_i(o'_i, a'_i)$ \Comment{目标网络}
+    \EndFor
+    \State $Q'_{tot} \leftarrow \text{MixingNetwork}^{target}(Q'_1, \ldots, Q'_N; s')$
+    \State $y \leftarrow r + \gamma (1 - done) \cdot Q'_{tot}$ \Comment{TD目标}
+
+    \State \textbf{更新网络}:
+    \State $\mathcal{L} \leftarrow (Q_{tot} - y)^2$ \Comment{TD损失}
+    \State 梯度下降更新所有网络参数
+    \State 软更新目标网络: $\theta^{target} \leftarrow \tau \theta + (1-\tau) \theta^{target}$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\begin{physicalintuition}
+QMIX的单调性约束有深刻的物理意义：
+
+\textbf{总能量是子系统能量的非线性叠加}。
+
+想象一个物理系统由$N$个子系统组成，每个子系统有能量$E_i$。如果：
+\begin{equation}
+    \frac{\partial E_{tot}}{\partial E_i} \geq 0
+\end{equation}
+
+这意味着：任何子系统能量的增加都会导致总能量增加。没有"负能量贡献"。
+
+QMIX假设的是一个\textbf{协作博弈}：每个智能体的"贡献"都是正向的。这在很多团队任务中是合理的（如星际争霸的微操、机器人协作搬运等）。
+
+但如果智能体之间存在竞争关系（零和或混合博弈），QMIX的表达能力就不足了——这时需要其他方法。
+\end{physicalintuition}
+
+\subsection{策略梯度方法：MAPPO}
+
+MAPPO是将PPO（近端策略优化）扩展到多智能体设置的方法。
+
+\begin{definition}[MAPPO]
+MAPPO使用Actor-Critic架构：
+\begin{itemize}
+    \item \textbf{Actor}（分散）：每个智能体$i$有自己的策略网络$\pi_i(a_i | o_i)$，只依赖局部观测
+    \item \textbf{Critic}（集中）：一个共享的价值网络$V(s)$，使用全局状态
+\end{itemize}
+
+\review{第9章}{$L^{\text{CLIP}}$ 的来历见第9章扩展阅读"PPO：用裁剪代替约束"——它是把信赖域约束 $\mathrm{KL}(\pi_\theta \| \pi_{\theta_{\rm old}}) \le \delta$ 的拉格朗日形式换成一个便宜的替代品。}
+策略更新使用PPO的裁剪目标：
+\begin{equation}
+    L^{\text{CLIP}}_i = \E\left[ \min\left( r_t(\theta) \hat{A}_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon) \hat{A}_t \right) \right]
+\end{equation}
+其中：
+\begin{itemize}
+    \item $r_t(\theta) = \frac{\pi_\theta(a_t | o_t)}{\pi_{\theta_{\text{old}}}(a_t | o_t)}$：新旧策略的概率比
+    \item $\hat{A}_t$：优势函数估计（这个动作比平均好多少）
+    \item $\epsilon$：裁剪参数（通常取0.1-0.2）
+\end{itemize}
+\end{definition}
+
+\begin{remark}[MAPPO vs QMIX]
+\begin{center}
+\begin{tabular}{l|cc}
 \toprule
-\textbf{算法} & \textbf{模型} & \textbf{深度} & \textbf{新鲜度} & \textbf{交互} & \textbf{典型应用} \\
+& \textbf{QMIX} & \textbf{MAPPO} \\
 \midrule
-\multicolumn{6}{l}{\textit{经典基础}} \\
-\midrule
-Q-Learning & 无 & TD & Off-policy & Online & 理论基石 \\
-SARSA & 无 & TD & On-policy & Online & Q-Learning的保守版 \\
-REINFORCE & 无 & MC & On-policy & Online & 最纯粹的策略梯度 \\
-\midrule
-\multicolumn{6}{l}{\textit{深度强化学习}} \\
-\midrule
-DQN & 无 & TD & Off-policy & Online & Atari游戏 \\
-PPO & 无 & n-step & On-policy & Online & \textbf{ChatGPT}、机器人 \\
-SAC & 无 & TD & Off-policy & Online & 机器人控制 \\
-TD3 & 无 & TD & Off-policy & Online & 连续控制 \\
+方法类型 & 价值分解 & 策略梯度 \\
+动作空间 & 离散为主 & 离散/连续都可 \\
+训练稳定性 & 较稳定 & 需要仔细调参 \\
+表达能力 & 受单调性限制 & 更灵活 \\
+适用场景 & 纯协作博弈 & 更广泛 \\
 \bottomrule
 \end{tabular}
-\end{table}
-
-\begin{table}[htbp]
-\centering
-\small
-\renewcommand{\arraystretch}{1.35}
-\caption{主流强化学习算法的四维定位（第二部分）}
-\begin{tabular}{l|c|c|c|c|p{3.5cm}}
-\toprule
-\textbf{算法} & \textbf{模型} & \textbf{深度} & \textbf{新鲜度} & \textbf{交互} & \textbf{典型应用} \\
-\midrule
-\multicolumn{6}{l}{\textit{有模型方法}} \\
-\midrule
-AlphaZero & 有 & MCTS & Off-policy & Online & 围棋、国际象棋 \\
-MuZero & 学习 & MCTS & Off-policy & Online & 不知规则的游戏 \\
-Dreamer & 学习 & 想象 & On-policy & Online & 视觉控制任务 \\
-\midrule
-\multicolumn{6}{l}{\textit{大模型对齐}} \\
-\midrule
-RLHF (PPO) & 无 & n-step & On-policy & Online & \textbf{ChatGPT}对齐 \\
-GRPO & 无 & MC & On-policy & Online & \textbf{DeepSeek}推理 \\
-DPO & 无 & -- & Off-policy & Offline & 无需奖励模型的对齐 \\
-\midrule
-\multicolumn{6}{l}{\textit{离线强化学习}} \\
-\midrule
-CQL & 无 & TD & Off-policy & Offline & 医疗、机器人离线学习 \\
-IQL & 无 & TD & Off-policy & Offline & 离线控制 \\
-BC & 无 & -- & -- & Offline & 模仿学习基线 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-
-
-
-\subsection{如何选择算法？}
-
-\begin{lstlisting}[style=decision, caption={强化学习算法选择指南}]
-def 选择算法(问题):
-    
-    # 第一步：能否在线交互？
-    if 不能和环境实时交互（安全/成本限制）:
-        if 只有专家演示数据:
-            return 行为克隆 / IQL
-        else:
-            return CQL / Decision Transformer
-    
-    # 第二步：有没有环境模型？
-    if 有精确的模拟器或已知规则:
-        return AlphaZero / MCTS / MuZero
-    
-    # 第三步：动作空间类型？
-    if 动作是离散的（如游戏按键）:
-        return DQN / Rainbow
-    
-    # 第四步：连续动作的权衡
-    if 动作是连续的（如机械臂角度）:
-        if 优先训练稳定性:
-            return PPO  # 默认选择
-        if 优先数据效率:
-            return SAC / TD3
-    
-    # 第五步：大模型场景
-    if 训练大语言模型:
-        if 有人类偏好数据但不想训练RM:
-            return DPO
-        if 显存受限:
-            return GRPO
-        else:
-            return PPO  # OpenAI的选择
-    
-    # 兜底
-    return PPO  # 不知道选什么？先试PPO
-\end{lstlisting}
-
-\begin{remark}
-在实际工程中，\textbf{PPO}是最安全的起点。它可能不是任何单一指标上的最优，但它在几乎所有任务上都能给出不错的结果，而且调参相对容易。先用PPO建立baseline，再根据需要尝试其他算法，是一个明智的策略。
+\end{center}
 \end{remark}
 
-% -------------------------------------------------------------------------
-\section{代码示例：值迭代与 Q-Learning}
-% ------------------------------------------------------------------------------------
+% ====================================================================================
+\section{宏观极限：平均场博弈}
+% ====================================================================================
 
-为了让大家更直观地理解"\textbf{需要环境模型的最优控制}（值迭代）"
-和"\textbf{不需要模型的强化学习}（Q-Learning）"之间的区别，
-我们用一个 5×5 的简单格子世界（GridWorld）演示。
+\subsection{维度灾难与平均场近似}
 
-智能体要从左上角 $(0,0)$ 出发，走到右下角 $(4,4)$。
-每走一步都会损失 $1$ 的奖励（即奖励为 $-1$），
-因此最短路径等价于最大化奖励。
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[scale=0.9]
-    % 画网格
-    \draw[step=1, gray!50, thin] (0,0) grid (5,5);
-
-    % 起点背景
-    \fill[blue!30] (0,4) rectangle (1,5);
-    % 起点标签移到左上方
-    \node[font=\scriptsize, blue!70!black] at (-0.3, 4.8) {起点};
-
-    % 终点
-    \fill[green!30] (4,0) rectangle (5,1);
-    \node[font=\small\bfseries] at (4.5, 0.5) {终点};
-
-    % 智能体（红色圆圈表示当前位置）
-    \node[circle, fill=red!70, minimum size=0.5cm] at (0.5, 4.5) {};
-
-    % 坐标标注
-    \node[above, font=\scriptsize] at (0.5, 5) {$(0,0)$};
-    \node[below, font=\scriptsize] at (4.5, 0) {$(4,4)$};
-
-    % 动作箭头示意
-    \begin{scope}[xshift=7cm, yshift=2.5cm]
-        \node[font=\bfseries] at (0, 1.8) {四个动作};
-        \draw[->, thick] (0, 0.5) -- (0, 1.1) node[above, font=\small] {上};
-        \draw[->, thick] (0, 0.5) -- (0, -0.1) node[below, font=\small] {下};
-        \draw[->, thick] (0, 0.5) -- (-0.6, 0.5) node[left, font=\small] {左};
-        \draw[->, thick] (0, 0.5) -- (0.6, 0.5) node[right, font=\small] {右};
-        \fill[red!70] (0, 0.5) circle (0.15);
-    \end{scope}
-
-    % 奖励说明
-    \begin{scope}[xshift=7cm, yshift=-0.5cm]
-        \node[font=\small, align=left] at (0, 0) {
-            每走一步：$r = -1$\\
-            目标：最短路径到终点
-        };
-    \end{scope}
-
-\end{tikzpicture}
-\caption{5×5 GridWorld 环境。智能体（红色）从起点出发，每一步获得 $-1$ 奖励，目标是尽快到达终点。}
-\end{figure}
-
-\subsection{环境定义}
-
-在代码中，环境就是一个函数：输入当前状态和动作，输出下一状态与奖励。
-
-\begin{lstlisting}[language=Python]
-class GridWorld:
-    """5x5 网格世界"""
-    def __init__(self, size=5):
-        self.size = size
-        self.goal = (size-1, size-1)          # 终点位置
-        self.actions = [(-1,0), (1,0), (0,-1), (0,1)]  # 上、下、左、右
-    
-    def step(self, state, action):
-        """执行动作，返回 (新状态, 奖励, 是否结束)"""
-        i, j = state
-        di, dj = self.actions[action]
-        
-        # 移动（撞墙则停在原地）
-        ni = max(0, min(i + di, self.size - 1))
-        nj = max(0, min(j + dj, self.size - 1))
-        new_state = (ni, nj)
-        
-        reward = -1                            # 每一步代价为 1
-        done = (new_state == self.goal)        # 到达终点则结束
-        return new_state, reward, done
-\end{lstlisting}
-
-这和我们在数学上写的转移方程是一样的：
-\[
-s_{t+1} = f(s_t, a_t), \qquad r_t = r(s_t, a_t)
-\]
-
-% ------------------------------------------------------------------------------------
-\subsection{值迭代：在脑中推演所有可能}
-% ------------------------------------------------------------------------------------
-
-值迭代是一种\textbf{有模型}方法。因为我们可以直接调用 \texttt{env.step()} 来"想象"每个动作的后果，所以不需要真的和环境交互。
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[scale=0.75]
-    % 标题
-    \node[font=\bfseries] at (2.5, 6.2) {值迭代：遍历所有格子};
-    
-    % 画网格
-    \draw[step=1, gray!50, thin] (0,0) grid (5,5);
-    
-    % 当前正在计算的格子
-    \fill[yellow!50] (1,3) rectangle (2,4);
-    \node[font=\small] at (1.5, 3.5) {$V(s)$};
-    
-    % 四个可能的下一步
-    \draw[->, thick, blue] (1.5, 3.5) -- (1.5, 4.3) node[above, font=\scriptsize] {$r + \gamma V$};
-    \draw[->, thick, blue] (1.5, 3.5) -- (1.5, 2.7) node[below, font=\scriptsize] {$r + \gamma V$};
-    \draw[->, thick, blue] (1.5, 3.5) -- (0.7, 3.5) node[left, font=\scriptsize] {$r + \gamma V$};
-    \draw[->, thick, blue] (1.5, 3.5) -- (2.3, 3.5) node[right, font=\scriptsize] {$r + \gamma V$};
-    
-    % 终点
-    \fill[green!30] (4,0) rectangle (5,1);
-    \node[font=\scriptsize] at (4.5, 0.5) {$V=0$};
-    
-    % 说明
-    \begin{scope}[xshift=6.5cm, yshift=2.5cm]
-        \node[align=left, font=\small] at (0, 0) {
-            对每个格子 $s$：\\[3pt]
-            1. 枚举 4 个动作\\
-            2. 用模型算出 $s', r$\\
-            3. 计算 $Q = r + \gamma V(s')$\\
-            4. 取最大：$V(s) = \max_a Q$
-        };
-    \end{scope}
-\end{tikzpicture}
-\caption{值迭代在每个格子上"想象"四个方向的后果，选择最优的那个更新 $V(s)$。}
-\end{figure}
-
-\begin{lstlisting}[language=Python]
-def value_iteration(env, gamma=1.0, threshold=1e-6):
-    """
-    值迭代算法
-    - 输入：环境模型 env（可以调用 env.step 模拟任意动作）
-    - 输出：最优值函数 V(s)
-    """
-    V = np.zeros((env.size, env.size))  # 初始化 V(s) = 0
-    
-    for iteration in range(1000):
-        delta = 0  # 记录本轮最大变化
-        
-        # === 遍历所有状态 ===
-        for i in range(env.size):
-            for j in range(env.size):
-                if (i,j) == env.goal:
-                    continue  # 终点 V=0，不用更新
-                
-                state = (i, j)
-                old_v = V[i, j]
-                
-                # === 枚举所有动作，用模型"想象"结果 ===
-                q_values = []
-                for action in range(4):
-                    # 关键：这里调用模型，但不是真的执行！
-                    next_state, reward, _ = env.step(state, action)
-                    q = reward + gamma * V[next_state]
-                    q_values.append(q)
-                
-                # === Bellman 最优方程：取最大值 ===
-                V[i, j] = max(q_values)
-                delta = max(delta, abs(old_v - V[i, j]))
-        
-        # 收敛判断
-        if delta < threshold:
-            print(f"值迭代：{iteration+1} 轮后收敛")
-            break
-    
-    return V
-\end{lstlisting}
-\tryit{代码里 gamma=1.0——回合制任务一定会到终点，允许不打折扣。把 gamma 改成 0.9 再跑一次：V 还是"负曼哈顿距离"吗？为什么远处的格子变得"更不怕"？}
-
-\paragraph{算法要点}
+当智能体数量很大时（如$N = 10000$个无人机、百万级的交通参与者），直接处理$N$体博弈面临\textbf{维度灾难}：
 \begin{itemize}
-    \item \textbf{每轮迭代}：遍历全部 $5 \times 5 = 25$ 个状态
-    \item \textbf{每个状态}：枚举 4 个动作，用模型计算 $Q(s,a) = r + \gamma V(s')$
-    \item \textbf{更新规则}：$V(s) \leftarrow \max_a Q(s,a)$（Bellman 最优方程）
-    \item \textbf{收敛条件}：所有状态的值变化小于阈值
-    \item \textbf{计算量}：每轮 $25 \times 4 = 100$ 次模型调用，约 9 轮收敛
+    \item 联合状态空间：$\mathcal{S}^N$
+    \item 联合动作空间：$\mathcal{A}^N$
+    \item 存储和计算指数增长
 \end{itemize}
 
-\begin{figure}[htbp]
-\centering
-\begin{minipage}{0.48\textwidth}
-    \centering
-    \includegraphics[width=\textwidth]{figs_chap10/chap10_value_iteration.png}
-\end{minipage}
-\hfill
-\begin{minipage}{0.48\textwidth}
-    \centering
-    \includegraphics[width=\textwidth]{figs_chap10/chap10_value_heatmap.png}
-\end{minipage}
-\caption{值迭代结果（$5\times5$ GridWorld，每步 $-1$，$\gamma=1$）。\textbf{左}：对角线上 5 个状态的 $V_k(s)$ 随迭代轮数的变化——离终点 $d$ 步的状态恰好在第 $d$ 轮到位，9 轮后全部收敛；\textbf{右}：收敛后的值函数热力图，颜色越绿表示离目标越近、期望回报越高，数值正是``负的曼哈顿距离''。}
-\label{fig:value_iteration}
-\end{figure}
+\textbf{平均场近似}的思想来自统计物理：
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.45\textwidth]{figs_chap10/chap10_policy.png}
-\caption{值迭代得到的最优策略。箭头指向每个状态的最佳动作；``下''与``右''同样最优的格子画出了两个箭头——曼哈顿网格上最短路不唯一，任何一条只沿箭头走的路径都恰好 8 步。}
-\label{fig:policy}
-\end{figure}
+\begin{quote}
+\textit{当粒子数量趋于无穷时，忽略具体个体，只关注群体的统计分布。}
+\end{quote}
 
-% ------------------------------------------------------------------------------------
-\subsection{Q-Learning：从试错中学习}
-% ------------------------------------------------------------------------------------
+\sidenoteplain{\textbf{平均场博弈创始人}：MFG由法国数学家Jean-Michel Lasry和Pierre-Louis Lions于2006年合作提出；几乎同时，Huang、Malhamé 和 Caines 在加拿大独立提出了同样的思想。Lions是1994年菲尔兹奖得主（数学界最高荣誉），专长非线性PDE。他在法兰西公学院的MFG课程推动了该领域的蓬勃发展。}
 
-\sidenoteplain{\textbf{Q-Learning的诞生}：Q-Learning由剑桥大学博士生Christopher Watkins在1989年博士论文中提出，1992年与Peter Dayan合作发表于\textit{Machine Learning}期刊。论文证明了Q-Learning在一定条件下收敛到最优Q函数，这个简洁的算法成为后来深度强化学习的基石。}
-
-Q-Learning 是一种\textbf{无模型}方法。它不知道执行动作会发生什么，只能像小孩学走路一样——走一步、摔一跤、记住教训。
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[scale=0.75]
-    % 标题
-    \node[font=\bfseries] at (2.5, 6.2) {Q-Learning：边走边学};
-    
-    % 画网格
-    \draw[step=1, gray!50, thin] (0,0) grid (5,5);
-    
-    % 一条轨迹
-    \fill[blue!20] (0,4) rectangle (1,5);
-    \fill[blue!20] (1,4) rectangle (2,5);
-    \fill[blue!20] (1,3) rectangle (2,4);
-    \fill[blue!20] (2,3) rectangle (3,4);
-    \fill[blue!20] (2,2) rectangle (3,3);
-    
-    % 轨迹箭头
-    \draw[->, very thick, red!70] (0.5, 4.5) -- (1.3, 4.5);
-    \draw[->, very thick, red!70] (1.5, 4.5) -- (1.5, 3.7);
-    \draw[->, very thick, red!70] (1.5, 3.5) -- (2.3, 3.5);
-    \draw[->, very thick, red!70] (2.5, 3.5) -- (2.5, 2.7);
-    
-    % 当前位置
-    \node[circle, fill=red!70, minimum size=0.5cm] at (2.5, 2.5) {};
-    
-    % 终点
-    \fill[green!30] (4,0) rectangle (5,1);
-    
-    % 说明
-    \begin{scope}[xshift=6.5cm, yshift=2.5cm]
-        \node[align=left, font=\small] at (0, 0) {
-            每一步：\\[3pt]
-            1. 选动作（探索/利用）\\
-            2. 执行，观察 $s', r$\\
-            3. 计算 TD 误差\\
-            4. 更新 $Q(s,a)$\\
-            5. 移动到 $s'$
-        };
-    \end{scope}
-\end{tikzpicture}
-\caption{Q-Learning 通过实际走动来学习。红色箭头表示智能体走过的轨迹，每走一步就更新一次 $Q$ 值。}
-\end{figure}
-
-\begin{lstlisting}[language=Python]
-def q_learning(env, episodes=2000, gamma=1.0, alpha=0.1, epsilon=0.1):
-    """
-    Q-Learning 算法
-    - 输入：环境 env（只能通过交互获取信息）
-    - 输出：学到的 Q(s,a) 函数
-    - 超参数：
-        - episodes: 训练回合数
-        - alpha: 学习率（每次更新的步长）
-        - epsilon: 探索概率
-    """
-    Q = np.zeros((env.size, env.size, 4))  # Q(s, a) 初始化为 0
-    
-    for episode in range(episodes):
-        state = (0, 0)  # 每个回合从起点开始
-        
-        # === 一个回合：从起点走到终点 ===
-        while True:
-            # --- 第一步：选择动作（epsilon-贪婪）---
-            if np.random.random() < epsilon:
-                action = np.random.randint(4)      # 10% 概率随机探索
-            else:
-                action = np.argmax(Q[state[0], state[1]])  # 90% 选当前最优；注意python张量特性
-            
-            # --- 第二步：执行动作，观察结果 ---
-            # 注意：这是真实交互，不是模拟！
-            next_state, reward, done = env.step(state, action)
-            
-            # --- 第三步：计算 TD 目标和误差 ---
-            if done:
-                td_target = reward  # 终点没有未来
-            else:
-                td_target = reward + gamma * np.max(Q[next_state])
-            
-            td_error = td_target - Q[state[0], state[1], action]
-            
-            # --- 第四步：更新 Q 值 ---
-            # Q(s,a) <- Q(s,a) + alpha * (TD目标 - Q(s,a))
-            Q[state[0], state[1], action] += alpha * td_error
-            
-            # --- 第五步：移动到下一状态 ---
-            state = next_state
-            if done:
-                break  # 到达终点，结束本回合
-    
-    print(f"Q-Learning：训练了 {episodes} 个回合")
-    return Q
-\end{lstlisting}
-\think{Q-Learning 的 TD 目标用 $\max_{a'} Q(s', a')$，和智能体实际走的下一步无关——这正是它是 Off-policy 的原因。如果把 $\max$ 换成"实际采取的 $a'$"，就得到 SARSA（On-policy）。两者学到的策略会不同吗？}
-
-\paragraph{算法要点}
+\begin{definition}[平均场博弈]
+在\textbf{平均场博弈}（Mean Field Game, MFG）中：
 \begin{itemize}
-    \item \textbf{每个回合}：从起点走到终点，大约 8-20 步（取决于探索）
-    \item \textbf{每一步}：只更新当前 $(s, a)$ 对应的 $Q$ 值（而不是所有状态）
-    \item \textbf{探索 vs 利用}：$\epsilon = 0.1$ 意味着 10\% 概率随机探索，90\% 选当前最优
-    \item \textbf{学习率}：$\alpha = 0.1$ 控制每次更新的幅度
-    \item \textbf{计算量}：2000 回合 $\times$ 平均 10 步 $=$ 约 20000 次真实交互
+    \item 有无穷多个同质（相同）智能体
+    \item 每个智能体与群体分布$m(x, t)$交互，而不是与具体个体交互
+    \item 群体分布由所有智能体的策略决定
 \end{itemize}
 
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[>=stealth]
-    % TD 更新公式可视化
-    \node[draw, rounded corners, fill=blue!10, minimum width=2.5cm, minimum height=1cm] (old) at (0, 0) {$Q(s,a)$};
-    \node[draw, rounded corners, fill=green!10, minimum width=4cm, minimum height=1cm] (target) at (6, 0) {$r + \gamma \max_{a'} Q(s',a')$};
-    \node[draw, rounded corners, fill=orange!10, minimum width=2.5cm, minimum height=1cm] (new) at (3, -2) {$Q(s,a)_{new}$};
-    
-    \draw[->, thick] (old) -- node[above] {TD 误差} (target);
-    \draw[->, thick] (old) -- node[left] {$+ \alpha \cdot$} (new);
-    \draw[->, thick] (target) -- node[right] {误差} (new);
-    
-    \node[below, font=\small, gray] at (3, -3) {$Q(s,a) \leftarrow Q(s,a) + \alpha \cdot \big[ \underbrace{r + \gamma \max_{a'} Q(s',a')}_{\text{TD 目标}} - Q(s,a) \big]$};
-\end{tikzpicture}
-\caption{Q-Learning 的更新规则：让 $Q(s,a)$ 向 TD 目标靠近一小步}
-\end{figure}
+\textbf{核心简化}：把``与$N$个具体对手的博弈''替换为``与群体分布的博弈''。
+\end{definition}
 
-% ------------------------------------------------------------------------------------
-\subsection{对比：两种方法的本质区别}
-% ------------------------------------------------------------------------------------
+\begin{example}[平均场近似的直观理解]
+想象你是一滴水在大海中。
 
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[scale=0.8, >=stealth]
-    % 值迭代
-    \begin{scope}[xshift=-5.5cm]
-        \node[font=\bfseries] at (2, 4.5) {值迭代};
-        \node[font=\small, gray] at (2, 4) {"在脑中推演"};
-        
-        \draw[step=0.6, gray!30, thin] (0,0) grid (3,3);
-        
-        % 遍历所有格子
-        \foreach \i in {0,...,4} {
-            \foreach \j in {0,...,4} {
-                \fill[blue!30, opacity=0.5] (0.6*\i, 0.6*\j) rectangle (0.6*\i+0.6, 0.6*\j+0.6);
-            }
-        }
-        
-        \node[below, font=\small, align=center] at (1.5, -0.5) {每轮遍历\\所有状态};
-    \end{scope}
-    
-    % Q-Learning
-    \begin{scope}[xshift=2.5cm]
-        \node[font=\bfseries] at (2, 4.5) {Q-Learning};
-        \node[font=\small, gray] at (2, 4) {"边走边学"};
-        
-        \draw[step=0.6, gray!30, thin] (0,0) grid (3,3);
-        
-        % 只走过的格子
-        \fill[red!30] (0, 2.4) rectangle (0.6, 3);
-        \fill[red!30] (0.6, 2.4) rectangle (1.2, 3);
-        \fill[red!30] (1.2, 2.4) rectangle (1.8, 3);
-        \fill[red!30] (1.8, 1.8) rectangle (2.4, 2.4);
-        \fill[red!30] (2.4, 1.2) rectangle (3, 1.8);
-        \fill[red!30] (2.4, 0.6) rectangle (3, 1.2);
-        \fill[red!30] (2.4, 0) rectangle (3, 0.6);
-        
-        % 轨迹线
-        \draw[->, very thick, red!70] (0.3, 2.7) -- (0.9, 2.7) -- (1.5, 2.7) -- (2.1, 2.1) -- (2.7, 1.5) -- (2.7, 0.9) -- (2.7, 0.3);
-        
-        \node[below, font=\small, align=center] at (1.5, -0.5) {每回合只走\\一条轨迹};
-    \end{scope}
-\end{tikzpicture}
-\caption{值迭代每轮更新所有状态；Q-Learning 每回合只更新走过的状态}
-\end{figure}
+\textbf{微观视角}：你要考虑周围每一滴水的位置和速度（几乎不可能）
 
-运行两种算法，最终得到相同的值函数：
-\newpage
-\begin{verbatim}
-=== 值迭代（需要模型）===
-值迭代：9 轮后收敛
+\textbf{平均场视角}：你只需要知道周围水的"平均流动方向"（密度场和速度场）
 
-    [[-8. -7. -6. -5. -4.]
-     [-7. -6. -5. -4. -3.]
-     [-6. -5. -4. -3. -2.]
-     [-5. -4. -3. -2. -1.]
-     [-4. -3. -2. -1.  0.]]
-
-=== Q-Learning（不需要模型）===
-Q-Learning：训练了 2000 个回合
-
-    [[-8. -7. -6. -5. -4.]
-     [-7. -6. -5. -4. -3.]
-     [-6. -5. -4. -3. -2.]
-     [-5. -4. -3. -2. -1.]
-     [-4. -3. -2. -1.  0.]]
-\end{verbatim}
-
-每个格子的最优价值 $=$ 到终点的曼哈顿距离的负值（因为每步 $-1$）。
-
-\begin{table}[htbp]
-\centering
-\renewcommand{\arraystretch}{1.4}
-\begin{tabular}{p{3cm}|p{5cm}|p{5cm}}
-\toprule
-& \textbf{值迭代} & \textbf{Q-Learning} \\
-\midrule
-\textbf{需要模型？} & 是（可以调用 \texttt{env.step} 模拟） & 否（只能真实交互） \\
-\midrule
-\textbf{每轮做什么} & 遍历所有 25 个状态 & 走一条轨迹（约 10 步） \\
-\midrule
-\textbf{收敛速度} & 9 轮（快！） & 2000 回合（慢） \\
-\midrule
-\textbf{计算量} & $9 \times 25 \times 4 = 900$ 次模型调用 & $\approx 20000$ 次真实交互 \\
-\midrule
-\textbf{适用场景} & 模型已知或可学习 & 模型未知或太复杂 \\
-\bottomrule
-\end{tabular}
-\caption{值迭代 vs Q-Learning：速度与信息需求的权衡}
-\end{table}
-
-\begin{remark}
-这个对比揭示了强化学习的核心权衡：
+类似地，在有大量智能体的博弈中：
 \begin{itemize}
-    \item \textbf{有模型} $\Rightarrow$ 可以"想象"，数据效率高，但模型可能不准
-    \item \textbf{无模型} $\Rightarrow$ 必须试错，数据效率低，但不怕模型偏差
+    \item 你不需要知道每个对手的具体策略
+    \item 你只需要知道对手群体的"分布"——有多少比例在做什么
+    \item 基于这个分布，你做出最优响应
+    \item 当每个人都这样做时，形成一个自洽的均衡
 \end{itemize}
-在真实世界中，精确的环境模型往往难以获得，这就是为什么 Q-Learning 及其后继者（DQN、SAC 等）成为深度强化学习的主流方法。
+\end{example}
+
+\subsection{MFG的核心思想：两步不动点}
+
+理解MFG最关键的是把它看成一个\textbf{两步迭代过程}，最终要找的是一个\textbf{不动点}：
+
+\begin{keyidea}[MFG的不动点结构——给大二同学的直观解释]
+想象你是无数智能体中的一个，你需要做两件事：
+
+\textbf{第一步：猜测别人的行为}
+
+你不知道每个具体对手会做什么，但你可以``猜''一个群体分布$m(x,t)$——表示``在时刻$t$，有多少比例的智能体在位置$x$附近''。
+
+\textbf{第二步：基于猜测，优化自己}
+
+假设群体分布就是$m$，那么你面临的是一个\textbf{单人最优控制问题}——环境（别人的分布）已经固定了，你只需要最小化自己的代价。解这个问题得到\textbf{最优策略}$\pi^*(m)$和对应的\textbf{价值函数}$u(x,t)$。
+
+\textbf{第三步：验证猜测是否自洽}
+
+如果每个智能体都用$\pi^*(m)$这个策略，那么所有人的运动会产生一个新的密度分布$m'$。问题来了：$m'$和你最初猜的$m$一样吗？
+
+\textbf{不动点条件}：如果$m' = m$，说明你的猜测是自洽的——每个人基于这个分布做最优决策，而这些最优决策恰好产生了这个分布。这就是\textbf{纳什均衡}！
+
+\begin{center}
+\begin{tikzpicture}[>=stealth, scale=0.9]
+    \node[draw, rounded corners, fill=blue!15, minimum width=3cm, minimum height=1.2cm, align=center] (m) at (0, 0) {群体分布\\$m(x,t)$};
+    \node[draw, rounded corners, fill=orange!15, minimum width=3cm, minimum height=1.2cm, align=center] (u) at (6, 0) {最优策略/价值函数\\$u(x,t), \pi^*$};
+
+    \draw[->, thick] (m.east) -- node[above, font=\small] {固定$m$，解最优控制} node[below, font=\small, gray] {(HJB方程)} (u.west);
+    \draw[->, thick] (u.south) .. controls (6, -2) and (0, -2) .. node[below, font=\small] {按$\pi^*$行动，推导密度} node[above, font=\small, gray] {(FP方程)} (m.south);
+
+    \node[font=\small, red] at (3, -2.8) {\textbf{不动点}：$m \xrightarrow{\text{HJB}} u \xrightarrow{\text{FP}} m$};
+\end{tikzpicture}
+\end{center}
+\end{keyidea}
+
+\subsection{MFG的数学方程}
+
+上面的直觉对应两个偏微分方程：
+
+\begin{keyformula}[title=平均场博弈方程组]
+\textbf{1. HJB方程}（``给定$m$，求最优策略''）：
+\begin{equation}
+    -\frac{\partial u}{\partial t} - \nu \Delta u + H(x, \nabla u, m) = 0, \quad u(x, T) = g(x), \qquad H(x, p, m) = \max_v \left[ -p \cdot v - L(x, v, m) \right]
+\end{equation}
+这是一个\textbf{后向方程}：从终端条件$g(x)$出发，往回算每个时刻的最优代价$u(x,t)$；$\nu \Delta u$ 项来自智能体受到的布朗运动扰动。
+\review{第7章}{$u(x, t)$ 就是第7章的值函数 / 协态：HJB 从终端条件倒着算，和伴随方程"从未来往回算影响"是同一件事。这里的新意只在于 $H$ 里多了一个群体分布 $m$。}
+
+\textbf{2. FP方程}（``给定最优策略，算密度演化''）：
+\begin{equation}
+    \frac{\partial m}{\partial t} + \nabla \cdot (m \cdot v^*) - \nu \Delta m = 0, \quad m(x, 0) = m_0(x)
+\end{equation}
+这是一个\textbf{前向方程}：从初始分布$m_0(x)$出发，根据最优速度场$v^* = -\nabla_p H$往前推演密度如何变化。
+
+\textbf{耦合与不动点}：
+\begin{itemize}
+    \item HJB需要$m$：你的最优策略取决于别人在哪里（拥挤效应等）
+    \item FP需要$u$：密度演化取决于大家的最优运动方向
+    \item \textbf{纳什均衡} = 同时满足两个方程的$(u^*, m^*)$
+\end{itemize}
+\end{keyformula}
+
+\begin{remark}[物理直觉]
+\begin{itemize}
+    \item \textbf{HJB方程}：类似量子力学中的Schrödinger方程，描述``价值波''的演化
+    \item \textbf{FP方程}：就是连续性方程/扩散方程，描述概率密度的输运
+\end{itemize}
+MFG是统计力学和最优控制的交叉——群体行为的``热力学''。
 \end{remark}
 
-% ------------------------------------------------------------------------------------
-% Q-Learning 实验结果
+\begin{example}[线性二次MFG——一个可以精确求解的例子]
+为了让上面的抽象方程变得具体，我们考虑一个最简单的MFG问题：
+
+\textbf{场景}：无穷多个智能体在一维空间$x \in \mathbb{R}$上运动，时间$t \in [0, T]$。
+
+\textbf{每个智能体的目标}：最小化自己的代价
+\begin{equation}
+    J = \int_0^T \left[ \frac{1}{2}v^2 + \frac{\alpha}{2}(x - \bar{x})^2 \right] dt + \frac{1}{2}x(T)^2
+\end{equation}
+其中：
+\begin{itemize}
+    \item $\frac{1}{2}v^2$：控制代价——速度越大，``油费''越贵
+    \item $\frac{\alpha}{2}(x - \bar{x})^2$：\textbf{跟随代价}——$\alpha > 0$ 时希望靠近群体平均位置$\bar{x} = \int x \, m(x,t) dx$（$\alpha < 0$ 则变成拥挤代价，越远越好）
+    \item $\frac{1}{2}x(T)^2$：终端代价——最后希望靠近原点
+\end{itemize}
+
+\textbf{动力学}：每个智能体按$\dot{x} = v$运动，并受布朗运动扰动（扩散系数$\nu$）。
+
+\textbf{初始条件}：所有智能体初始集中在原点附近，$m_0(x) \sim \mathcal{N}(0, \sigma_0^2)$。
+
+这个问题的MFG方程可以用有限差分法数值求解：HJB 从 $T$ 往回算、FP 从 $0$ 往前算，交替迭代直到不动点。图\ref{fig:mfg}就是这样算出来的一个\textbf{真实数值解}——为了让``别人对我的价格''看得见，图中把跟随代价换成了\textbf{拥挤代价}：$F(x,m)=\frac{\alpha}{2}(x-x_{\rm target})^2+\kappa\, m(x,t)$（想去目标点 $x_{\rm target}=1$，但当地人越多越贵），群体从 $x\approx-1$ 出发，终端代价 $g(x)=\frac{\alpha}{2}(x-x_{\rm target})^2$，参数 $\alpha=3$、$\kappa=2$、$\nu=0.05$、$T=1.5$。
+\end{example}
+
 \begin{figure}[htbp]
 \centering
-\begin{minipage}{0.55\textwidth}
-    \centering
-    \includegraphics[width=\textwidth]{figs_chap10/chap10_qlearning_sarsa.png}
-\end{minipage}
-\hfill
-\begin{minipage}{0.42\textwidth}
-    \centering
-    \includegraphics[width=\textwidth]{figs_chap10/chap10_qtable.png}
-\end{minipage}
-\caption{\textbf{左}：Q-Learning 与 SARSA 的学习曲线（2000 回合，$\alpha=0.1$，$\epsilon=0.1$；10 个随机种子的 50 回合滑动平均，阴影为种子间标准差，纵轴为 symlog）。两种无模型算法都从回报约 $-40$ 的随机游走出发，约 500 回合后贴近最优回报 $-8$（黑色虚线）；执行时仍有 10\% 随机探索，所以稳态略低于 $-8$。\textbf{右}：Q-Learning 学到的 $\max_a Q(s,a)$ 热力图，与图\ref{fig:value_iteration}右图使用同一色标——训练方式完全不同（无模型 vs 有模型），学到的值函数却逐格相同。}
-\label{fig:qlearning_results}
+\includegraphics[width=0.95\textwidth]{figs_chap10/mfg_solution.pdf}
+\caption{一维平均场博弈的数值解（有限差分 + 阻尼不动点迭代，代码 \texttt{code\_chap10/chap15\_mfg\_solver.py}）。每个人的运行代价是 $\frac12 v^2+\frac{\alpha}{2}(x-x_{\rm target})^2+\kappa\, m(x,t)$：想去目标点 $x_{\rm target}=1$（黑色点线），但讨厌拥挤。(a) 密度 $m(x,t)$：群体从 $x=-1$ 整体迁往目标点；红色虚线是沿最优速度场 $\dot x=-\partial_x u$ 积分出的个体轨迹——个体随群体一起走，但走在最前面的人会越过目标点，给后面的人让位。(b) 价值函数 $u(x,t)$（离目标越远代价越高）与最优速度 $v^*=-\partial_x u$（箭头）：$u$ 就是第7章的协态、本章的 $\lambda$，它的梯度直接告诉每个人该往哪走、走多快。(c) 不同时刻的密度剖面：有拥挤惩罚（$\kappa=2$）时，$t=T$ 的群体铺成峰值 $1.3$、标准差 $0.28$ 的宽平台；把 $\kappa$ 设为 $0$（灰色虚线）群体就挤成峰值 $2.6$、标准差 $0.16$ 的尖峰。(d) 不动点迭代残差：$m\to$HJB$\to u\to$FP$\to\tilde m$ 每一轮的变化量按指数衰减，约 110 轮后降到 $10^{-8}$——$(u^*,m^*)$ 确实是自洽的纳什均衡，不是画出来的。}
+\label{fig:mfg}
 \end{figure}
 
-% ------------------------------------------------------------------------------------
+\textbf{从图中可以观察到}：
+\begin{itemize}
+    \item \textbf{(a)}：群体整体从 $x=-1$ 迁往目标点，但并不是每个人都停在目标点上——个体轨迹在 $t=T$ 时分散在 $x\approx0.5$ 到 $1.3$ 之间，前面的人越过目标点给后面的人让位。这就是拥挤代价 $\kappa m$ 在起作用：它是群体分布 $m$ 反过来施加给每个个体的``价格''
+    \item \textbf{(b)}：价值函数在离目标远的地方最大（深色），越靠近目标越平缓；最优速度 $v^*=-\partial_x u$ 在目标点两侧相向指向目标，靠近目标后箭头变短——个体只按自己所在位置的 $\nabla u$ 行动，不需要知道别人的具体位置，这正是平均场近似的含义
+    \item \textbf{(c)}：把 $\kappa$ 从 $2$ 调到 $0$，$t=T$ 的密度从宽平台变成尖峰。拥挤惩罚让个体宁可离目标远一点也要避开人群，宏观上就是群体``摊开''
+    \item \textbf{(d)}：HJB 需要 $m$、FP 需要 $u$，两者互为约束；纳什均衡是这对方程组的不动点，残差按指数衰减到 $10^{-8}$ 说明它被真正算出来了（迭代时要加阻尼 $m\leftarrow(1-\theta)m+\theta\tilde m$，否则``人多的地方大家都想离开''会让迭代来回振荡）
+\end{itemize}
+
+% ====================================================================================
 \section{本章小结}
-% ------------------------------------------------------------------------------------
-
-让我们回顾这一章的核心内容：
+% ====================================================================================
 
 \begin{enumerate}
-    \item \textbf{贝尔曼方程的来源}：它不是凭空定义的，而是强化学习约束优化问题的KKT条件。值函数的梯度 $\gamma^{t+1}\nabla V$ 正是动力学约束的拉格朗日乘子；状态离散时（最短路、表格 MDP），$V(s)$ 本身就是流量守恒约束的对偶变量。
-    
-    \item \textbf{最短路的启示}：通过最短路问题，我们看到了原始-对偶结构。Dijkstra代表"对偶上升"（维护最优性），Bellman-Ford代表"原始改进"（维护可行性）。
-    
-    \item \textbf{两个核心维度}：
-    \begin{itemize}
-        \item 模型可获取性：有模型（可以脑中模拟）vs 无模型（只能真实交互）
-        \item 决策深度：浅（用估计值，低方差高偏差）vs 深（用真实回报，高方差低偏差）
-    \end{itemize}
-    
-    \item \textbf{算法图谱}：动态规划、MCTS、蒙特卡洛、时序差分四大流派，以及它们的现代变体（PPO、GRPO等）。
+    \item \textbf{从优化到博弈}：单人优化只有一个决策者；多人博弈里每个人的最优依赖于他人的选择。纳什均衡是"没有人想单方面改变"的稳定状态。
+    \item \textbf{静态博弈的分析工具}：广义纳什均衡 = 所有玩家的 KKT 条件同时成立；势博弈的自私行为恰好在优化一个全局势函数（保证收敛）；图博弈只有局部交互，可分布式计算；Braess 悖论说明增加选择反而可能让所有人更差。
+    \item \textbf{动态博弈与深度 MARL}：CTDE 范式集中训练、分散执行；QMIX 用单调性约束保证 IGM；MAPPO 用集中式 Critic + 分散式 Actor。
+    \item \textbf{宏观极限——平均场博弈}：$N \to \infty$ 时多体交互变成个体--场交互，HJB（后向）+ FP（前向）耦合方程组把博弈论接到了偏微分方程与统计物理。
 \end{enumerate}
 
 \begin{physicalmeaning}
-强化学习的本质是：在\textbf{动力学约束}下，通过\textbf{试错与估计}找到最优决策。
-
-不同算法的区别在于两个权衡：
+\textbf{$\lambda$ 在本章的意义}：
 \begin{itemize}
-    \item 你知道多少规则？（模型）——决定能否"想象"而不必"实践"
-    \item 你愿意看多远？（深度）——决定偏差与方差的取舍
+    \item \textbf{玩家自己的约束}：$\lambda_{ij}$ 是玩家 $i$ 为放松第 $j$ 条约束愿意付出的代价——第1章的影子价格原封不动，只是每人各有一份。
+    \item \textbf{交通均衡}：需求约束的乘子 $\lambda_w = \partial \Phi^*/\partial d_w$ 等于均衡旅行时间；非负约束的乘子 $\mu_p$ 是路径 $p$ 比最短路"慢多少"。把 $t_a$ 换成边际社会成本后，多出来的 $x_a t_a'(x_a)$ 就是拥堵费。
+    \item \textbf{平均场极限}：值函数 $u(x, t)$ 是 $\lambda$ 的连续版本（第7章的协态），$\nabla u$ 直接给出每个人的最优速度。
 \end{itemize}
-
-从RLHF到GRPO，大语言模型对齐的最新进展告诉我们：当绝对的"奖励"难以定义时，"相对比较"（组内排序）是一条可行之路——这正是"原始改进"思想的现代演绎。
+第5章 $\lambda$ = 约束力，第7章 $\lambda(t)$ = 伴随变量，第9章 $\lambda$ = 值函数梯度；本章它变成了"别人对我的价格"。下一章（第16章）它将以"安全约束的斥力"再次出现。
 \end{physicalmeaning}
 
-\begin{physicalmeaning}[title=$\lambda$ 在本章的意义]
-本章的约束是动力学 $s_{t+1} = f(s_t, a_t)$，它的乘子是
-\[
-\lambda_t = \frac{\partial J^*}{\partial s_{t+1}} = \gamma^{t+1} \nabla V(s_{t+1}).
-\]
-含义：\textbf{把 $t+1$ 时刻的状态"偷偷推一点点"，最优总回报会变多少}——这是状态的影子价格。
-\begin{itemize}
-    \item 第8章：$\lambda(t) = \partial J^*/\partial x(t)$ 是协态变量，本章是它的离散时间版本
-    \item 第9章：同一个 $\lambda$ 叫"误差信号"，从输出层往回传；本章从终点往回传
-    \item 最短路 / 表格 MDP：状态离散，梯度退化为差分，$V(s)$ 本身就是流量守恒约束的对偶变量——所以"值函数是影子价格"
-    \item 第15章：多个智能体各有各的 $V$，贝尔曼方程变成纳什均衡条件
-\end{itemize}
-\end{physicalmeaning}
+\begin{unification}[title=从微观到宏观的统一视角]
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+\textbf{维度} & \textbf{微观} & \textbf{中观} & \textbf{宏观} \\
+\midrule
+\textbf{智能体数} & 少量（2-10） & 中等（10-1000） & 无穷 \\
+\textbf{核心对象} & 个体动作 $a_i$ & 联合动作 $\mathbf{a}$ & 密度分布 $m(x)$ \\
+\textbf{静态模型} & 纳什均衡 & 图博弈/势博弈 & Wardrop均衡 \\
+\textbf{动态模型} & 两人马尔可夫博弈 & Markov Game & MFG (HJB-FP) \\
+\textbf{AI算法} & 自博弈（AlphaZero） & QMIX/MAPPO & Neural MFG \\
+\textbf{物理类比} & 质点力学 & 多体系统 & 流体力学/统计物理 \\
+\bottomrule
+\end{tabular}
+\end{center}
 
-% ------------------------------------------------------------------------------------
+这个表格展示了一个美妙的对应：随着智能体数量的增加，我们从离散的个体视角逐渐过渡到连续的场视角，就像从牛顿力学过渡到流体力学一样。
+\end{unification}
+
+% ====================================================================================
 \section{习题}
-% ------------------------------------------------------------------------------------
+% ====================================================================================
 
 \paragraph{计算题}
 \begin{enumerate}
-    \item 写出最短路问题的原始LP和对偶LP，验证强对偶性成立。
+    \item \textbf{纳什均衡的理解}：
+    考虑以下"协调博弈"：两个人要选择在哪里见面，可以选A地或B地。如果选同一个地方就能见面（代价0），选不同地方就见不到（代价1）。
+    \begin{enumerate}
+        \item 写出代价矩阵
+        \item 找出所有纳什均衡
+        \item 解释为什么会有多个纳什均衡
+        \item 这个博弈是势博弈吗？为什么？
+    \end{enumerate}
     
-    \item 证明：当$\gamma < 1$时，贝尔曼算子$T$是压缩映射，即
-    \[
-        \|TV_1 - TV_2\|_\infty \leq \gamma \|V_1 - V_2\|_\infty
-    \]
-    （提示：利用$|\max f - \max g| \leq \max |f - g|$）
+    \item \textbf{Braess悖论的变种}：
+    在Braess悖论的例子中，如果免费道路AB的时间不是0，而是一个正数$c$，问：
+    \begin{enumerate}
+        \item $c$取什么范围时，悖论仍然存在（有免费道路更差）？
+        \item $c$取什么值时，有道路和没道路的均衡时间相同？
+        \item 给出直观解释。
+    \end{enumerate}
+    
+    \item \textbf{图博弈的KKT条件}：
+    对于代价函数$J_i = \frac{1}{2}(a_i - a_{i,0})^2 + \delta a_i \sum_{j \in N(i)} a_j$和约束$a_i \in [0, L]$：
+    \begin{enumerate}
+        \item 写出每个玩家的拉格朗日函数（提示：需要两个乘子，分别对应$a_i \geq 0$和$a_i \leq L$）
+        \item 推导KKT条件
+        \item 证明投影最优响应$a_i = \Pi_{[0,L]}(a_{i,0} - \delta \sum_{j} a_j)$满足KKT条件
+        \item 其中$\Pi_{[0,L]}(x) = \max(0, \min(x, L))$是到区间$[0,L]$的投影
+    \end{enumerate}
+    
+\end{enumerate}
+
+\paragraph{证明题}
+\begin{enumerate}
+    \setcounter{enumi}{3}
+    \item \textbf{QMIX的IGM证明}：
+    证明：如果$\frac{\partial Q_{tot}}{\partial Q_i} \geq 0$对所有$i$成立，则IGM原则满足。
+    
+    提示：用反证法，假设存在$a'$使得$Q_{tot}(s, a') > Q_{tot}(s, a^*)$，其中$a_i^* = \arg\max Q_i$，推导矛盾。
+    
 \end{enumerate}
 
 \paragraph{编程题}
 \begin{enumerate}
-    \setcounter{enumi}{2}
-    \item 修改GridWorld代码，添加一个"陷阱"格子（奖励$-10$）。观察值函数如何变化。
+    \setcounter{enumi}{4}
+    \item \textbf{实现迭代最优响应}：
+    对于例\ref{ex:lq_network}中的线性二次图博弈：
+    \begin{enumerate}
+        \item 用Python实现迭代最优响应算法
+        \item 在一个10节点的随机图上测试收敛性
+        \item 画出收敛曲线，验证线性收敛率
+        \item 探索：$\delta$取什么值时算法不收敛？与图的谱半径有什么关系？
+    \end{enumerate}
     
-    \item 实现TD($\lambda$)算法，在GridWorld上比较$\lambda = 0, 0.5, 1$的学习曲线。
+    \item \textbf{Braess悖论的数值验证}：
+    参考本章的Python代码（\texttt{chap15\_generate\_figures.py}）：
+    \begin{enumerate}
+        \item 复现Braess悖论的计算
+        \item 修改需求量（从4000变为其他值），观察悖论是否仍然存在
+        \item 设计一个你自己的交通网络，尝试找到/构造Braess悖论
+    \end{enumerate}
     
-    \item （挑战）实现一个简化版的GRPO：对同一个状态采样多个动作，用组内排序来更新策略。
 \end{enumerate}
 
 \paragraph{思考题}
 \begin{enumerate}
-    \setcounter{enumi}{5}
-    \item 用你自己的话解释：为什么说"值函数（的梯度）是拉格朗日乘子"？状态离散时，为什么可以去掉"梯度"三个字？
+    \setcounter{enumi}{6}
+    \item Wardrop 均衡的乘子 $\lambda_w$ 是均衡旅行时间。如果政府按边际社会成本 $x_a t_a'(x_a)$ 对每条路收拥堵费，新的均衡会变成什么？它和"系统最优"是什么关系？谁受益、谁受损？
     
-    \item Dijkstra算法为什么不能处理负权边？用"对偶上升"的视角解释。
-    
-    \item TD学习的偏差来自哪里？在什么情况下这个偏差会特别严重？
-    
-    \item GRPO为什么不需要单独训练价值网络（Critic）？它和PPO有什么本质区别？
+    \item 第2章把拉格朗日函数看成 $x$ 与 $\lambda$ 的零和博弈。本章的势博弈是"$N$ 组 KKT 恰好是同一个函数的 KKT"。两者有什么共同点？一个非零和博弈什么时候会退化成单人优化？
 \end{enumerate}
-
-% ------------------------------------------------------------------------------------
-\begin{tcolorbox}[colback=gray!5, colframe=gray!50, title=扩展阅读导读：五篇选读，各取所需]
-本章正文到此结束。下面五篇扩展阅读彼此独立，都以正文的"贝尔曼方程 = 伴随方程、值函数 = 乘子"为出发点，可以按需要选读：
-\begin{enumerate}
-    \item \textbf{从表格到神经网络}：$Q$ 表存不下时怎么办——DQN、策略梯度、Actor-Critic 的来龙去脉。想跑深度强化学习代码的同学先读这篇。
-    \item \textbf{深度强化学习与约束优化的深层联系}：TRPO/PPO 的"信赖域"就是本书的约束优化，PPO 那个裁剪公式是对拉格朗日乘子的工程近似。
-    \item \textbf{强化学习的采样理论基础}：需要多少数据才够——Hoeffding 不等式、PAC 框架、UCB 探索。偏理论，可以留到需要时再读。
-    \item \textbf{从迷宫到机械臂}：连续状态、连续动作的控制问题，把本章的 GridWorld 与第7、8章的机器人接上。
-    \item \textbf{为什么强化学习必须针对任务设计奖励函数}：奖励函数就是目标函数 $f$，改奖励就是换问题；做实际项目前必读。
-\end{enumerate}
-\end{tcolorbox}
-
-\section*{扩展阅读：从表格到神经网络}
-\addcontentsline{toc}{section}{扩展阅读：从表格到神经网络}
-
-\begin{tcolorbox}[colback=gray!5, colframe=gray!50, title=本节导读]
-正文里的 $Q$ 表只有 $25 \times 4$ 个格子。本节回答：状态多到存不下时，怎样用神经网络近似 $Q(s,a)$ 或 $\pi(a|s)$，以及这样做之后本章"值函数 = 乘子"的视角还剩下什么。需要正文的贝尔曼方程与 Q-Learning 更新式。
-\end{tcolorbox}
-% ------------------------------------------------------------------------------------
-
-\sidenoteplain{\textbf{Sutton与Barto}：Richard Sutton和Andrew Barto是强化学习领域的``教父''。他们1998年合著的《Reinforcement Learning: An Introduction》是该领域的圣经，免费在线阅读。Sutton提出了TD学习、策略梯度等核心算法，2024年获图灵奖提名。}
-
-在前面的 GridWorld 例子中，我们用一个 $5 \times 5 \times 4$ 的数组来存储 $Q(s, a)$。这在状态空间很小的时候完全可行，但如果状态是一张 $84 \times 84$ 的游戏画面呢？
-
-可能的状态数 $\approx 256^{84 \times 84} \approx 10^{17000}$
-
-这个数字比宇宙中的原子数还要多得多。我们不可能为每个状态都存一个 $Q$ 值。
-
-解决方案很自然：用\textbf{神经网络}来近似 $Q(s, a)$ 或 $\pi(a|s)$。这就是\textbf{深度强化学习}（Deep RL）的核心思想。
-
-\begin{insightbox}
-\textbf{为什么现代AI都围绕矩阵运算发展？}
-
-你可能注意到了一个规律：从第9章扩展阅读的矩阵求导，到第9章的反向传播，再到本章的强化学习，所有算法的核心都是\textbf{矩阵运算}。这不是巧合：
-
-\begin{enumerate}
-    \item \textbf{数学统一性}：神经网络的前向传播就是一系列矩阵乘法 $\bm{y} = \bm{W}\bm{x} + \bm{b}$；反向传播也是矩阵乘法的链式法则
-    \item \textbf{硬件适配}：GPU 天生擅长并行矩阵运算，一块 A100 GPU 可以每秒完成 $10^{15}$ 次浮点矩阵运算
-    \item \textbf{批量处理}：把 64 个样本打包成一个矩阵，一次前向传播就能处理所有样本
-\end{enumerate}
-
-所以，\textbf{理解矩阵运算 = 理解现代AI的计算基础}。这也是为什么第9章的扩展阅读花大量篇幅讲矩阵求导的规则。
-\end{insightbox}
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[>=stealth, scale=0.9]
-    % 表格方法
-    \begin{scope}[xshift=-5cm]
-        \node[font=\bfseries] at (0, 3) {表格方法};
-        
-        % 表格
-        \draw (0,0) grid[step=0.6] (1.8, 1.8);
-        \foreach \i in {0,1,2} {
-            \foreach \j in {0,1,2} {
-                \node[font=\tiny] at (0.3+0.6*\i, 0.3+0.6*\j) {$Q$};
-            }
-        }
-        
-        \node[below, font=\small] at (0.9, -0.3) {每个格子存一个值};
-        
-        \draw[->, thick] (0, -1) -- (0, -1.8) node[below, font=\small, align=center] {状态数爆炸\\无法存储};
-    \end{scope}
-    
-    % 箭头
-    \draw[->, very thick] (-2, 1) -- (0, 1) node[midway, above, font=\small] {深度学习};
-    
-    % 神经网络方法
-    \begin{scope}[xshift=3cm]
-        \node[font=\bfseries] at (1.5, 3) {函数近似};
-        
-        % 输入
-        \node[draw, rounded corners, fill=blue!20, minimum width=1.2cm, minimum height=1.5cm] (input) at (0, 1) {\small 状态 $s$};
-        
-        % 神经网络
-        \node[draw, rounded corners, fill=orange!20, minimum width=1.5cm, minimum height=1.8cm, align=center] (nn) at (2.2, 1) {\small 神经\\网络};
-        
-        % 输出
-        \node[draw, rounded corners, fill=green!20, minimum width=1.2cm, minimum height=1.5cm] (output) at (4.4, 1) {\small $Q(s,\cdot)$};
-        
-        \draw[->, thick] (input) -- (nn);
-        \draw[->, thick] (nn) -- (output);
-        
-        \node[below, font=\small, align=center] at (2.2, -0.5) {网络参数 $\theta$\\可以泛化到未见过的状态};
-    \end{scope}
-\end{tikzpicture}
-\caption{从表格方法到函数近似：神经网络用有限的参数表示无限状态空间上的值函数}
-\end{figure}
-
-% ------------------------------------------------------------------------------------
-\subsection{Stable Baselines3：工业级深度强化学习库}
-% ------------------------------------------------------------------------------------
-
-\href{https://stable-baselines3.readthedocs.io/}{Stable Baselines3}（简称 SB3）是目前最流行的深度强化学习库。它实现了 DQN、PPO、SAC 等主流算法，代码清晰、文档完善，非常适合学习。
-
-\begin{lstlisting}[language=Python, caption={用 SB3 训练一个 PPO 智能体}]
-from stable_baselines3 import PPO
-import gymnasium as gym
-
-# 创建环境
-env = gym.make("CartPole-v1")
-
-# 创建智能体（一行代码！）
-model = PPO("MlpPolicy", env, verbose=1)
-
-# 训练
-model.learn(total_timesteps=10000)
-
-# 测试
-obs, _ = env.reset()
-for _ in range(1000):
-    action, _ = model.predict(obs)
-    obs, reward, done, _, _ = env.step(action)
-    if done:
-        obs, _ = env.reset()
-\end{lstlisting}
-
-看起来很简单，但背后隐藏着大量的工程细节。让我们深入源代码，看看这些算法到底是怎么实现的。
-
-% ------------------------------------------------------------------------------------
-\subsection{DQN：从 Q-Learning 到深度网络}
-% ------------------------------------------------------------------------------------
-
-\sidenoteplain{\textbf{DeepMind与DQN}：2013年，伦敦创业公司DeepMind（由Demis Hassabis、Shane Legg等创立）在arXiv发布DQN论文，用神经网络玩Atari游戏达到人类水平。2014年Google以约6亿美元收购DeepMind。2015年DQN正式发表于Nature，开启深度强化学习时代。两年后AlphaGo击败世界围棋冠军，震惊世界。}
-
-\sidenoteplain{\textbf{Demis Hassabis}(1976--)：DeepMind联合创始人兼CEO，2024年诺贝尔化学奖得主（因AlphaFold蛋白质结构预测）。他是国际象棋神童，13岁时已是世界第二年轻的大师。他先后在剑桥和UCL获得学位，是少数同时在AI和神经科学两个领域做出重要贡献的人。}
-
-DQN 是深度强化学习的开山之作（Mnih et al., 2015）。它的核心思想是用神经网络代替 Q 表格，但这带来了两个新问题：
-
-\begin{enumerate}
-    \item \textbf{数据相关性}：连续的游戏帧高度相关，直接训练会导致网络"过拟合"到最近的经验
-    \item \textbf{目标不稳定}：TD 目标 $r + \gamma \max_{a'} Q(s', a')$ 依赖于 $Q$ 网络本身，形成"追逐移动靶心"
-\end{enumerate}
-
-DQN 的两个关键技巧正是为了解决这两个问题：
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[>=stealth, scale=0.85]
-    % 经验回放
-    \begin{scope}[xshift=-4.5cm]
-        \node[font=\bfseries] at (0, 3.5) {技巧一：经验回放};
-        
-        % 经验池
-        \node[draw, rounded corners, fill=yellow!20, minimum width=3cm, minimum height=2cm] (buffer) at (0, 1.5) {};
-        \node at (0, 2.2) {\small 经验池};
-        
-        % 经验条目
-        \node[font=\tiny] at (0, 1.8) {$(s_1, a_1, r_1, s_1')$};
-        \node[font=\tiny] at (0, 1.4) {$(s_2, a_2, r_2, s_2')$};
-        \node[font=\tiny] at (0, 1.0) {$\vdots$};
-        
-        % 随机采样
-        \draw[->, thick] (0, 0.3) -- (0, -0.5) node[below, font=\small, align=center] {随机采样\\打破相关性};
-    \end{scope}
-    
-    % 目标网络
-    \begin{scope}[xshift=3.5cm]
-        \node[font=\bfseries] at (0, 3.5) {技巧二：目标网络};
-        
-        % 当前网络
-        \node[draw, rounded corners, fill=blue!20, minimum width=2cm, minimum height=1cm] (q) at (-1.2, 2) {\small $Q_\theta$};
-        \node[below, font=\tiny] at (-1.2, 1.4) {每步更新};
-        
-        % 目标网络
-        \node[draw, rounded corners, fill=green!20, minimum width=2cm, minimum height=1cm] (qt) at (1.2, 2) {\small $Q_{\theta^-}$};
-        \node[below, font=\tiny] at (1.2, 1.4) {定期复制};
-        
-        % 箭头
-        \draw[->, thick, dashed] (q) -- node[above, font=\tiny] {周期性} (qt);
-        
-        % 说明
-        \node[below, font=\small, align=center] at (0, 0) {用 $Q_{\theta^-}$ 计算目标\\稳定训练过程};
-    \end{scope}
-\end{tikzpicture}
-\caption{DQN 的两个核心技巧}
-\end{figure}
-
-以下是 DQN 的核心训练逻辑（简化自 SB3 源码）。
-
-\begin{insightbox}
-\textbf{代码说明}：本节的 DQN、PPO、SAC 代码是\textbf{算法结构概览}，用于帮助理解核心逻辑。完整可运行的代码见 \texttt{code/chap10\_rl.py}（值迭代、Q-Learning、SARSA）和 Stable-Baselines3 库。
-
-\textbf{为什么这里用概览代码？} 真实的 DQN/PPO 实现涉及大量工程细节（网络定义、数据加载、日志记录等），会淹没核心算法思想。我们先理解"骨架"，再去看完整实现。
-\end{insightbox}
-
-\begin{lstlisting}[language=Python, caption={DQN 核心算法（算法概览）}]
-class DQN:
-    def __init__(self, env):
-        self.q_network = NeuralNetwork()        # Q 网络
-        self.target_network = copy(self.q_network)  # 目标网络
-        self.buffer = ReplayBuffer(size=100000)  # 经验池
-        self.gamma = 0.99
-        self.epsilon = 0.1  # 探索率
-        
-    def select_action(self, state):
-        """epsilon-贪婪策略"""
-        if random() < self.epsilon:
-            return env.action_space.sample()  # 随机探索
-        else:
-            q_values = self.q_network(state)
-            return argmax(q_values)  # 选最优
-    
-    def train_step(self, batch_size=64):
-        """一步训练"""
-        # 1. 从经验池随机采样
-        states, actions, rewards, next_states, dones = \
-            self.buffer.sample(batch_size)
-        
-        # 2. 计算 TD 目标（用目标网络！）
-        with torch.no_grad():
-            next_q_values = self.target_network(next_states)
-            max_next_q = next_q_values.max(dim=1)
-            td_target = rewards + self.gamma * max_next_q * (1 - dones)
-        
-        # 3. 计算当前 Q 值
-        current_q = self.q_network(states)
-        current_q = current_q.gather(1, actions)  # 选出执行动作的Q值
-        
-        # 4. 计算损失并更新（这就是 Bellman 误差！）
-        loss = F.mse_loss(current_q, td_target)
-        
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-        
-    def update_target_network(self):
-        """定期更新目标网络"""
-        self.target_network.load_state_dict(
-            self.q_network.state_dict()
-        )
-\end{lstlisting}
-
-\begin{keyidea}[DQN 的损失函数就是 Bellman 误差]
-\begin{equation}
-    \mathcal{L}(\theta) = \mathbb{E}_{(s,a,r,s') \sim \mathcal{D}} \left[ \left( Q_\theta(s, a) - \underbrace{\left( r + \gamma \max_{a'} Q_{\theta^-}(s', a') \right)}_{\text{TD 目标（用目标网络）}} \right)^2 \right]
-\end{equation}
-这正是让 Bellman 方程"左边等于右边"的 L2 损失！
-\end{keyidea}
-
-% ------------------------------------------------------------------------------------
-\subsection{PPO：稳健的策略梯度}
-% ------------------------------------------------------------------------------------
-
-\sidenoteplain{\textbf{PPO与OpenAI}：PPO由OpenAI的John Schulman等人于2017年提出。Schulman此前还提出了TRPO（2015），但TRPO计算复杂。PPO通过简单的``裁剪''技巧获得类似效果，实现简单、调参容易，成为工业界标配。2022年ChatGPT的RLHF训练正是使用PPO，让AI学会遵循人类偏好。}
-
-PPO（Proximal Policy Optimization）是目前工业界最常用的算法，ChatGPT 的 RLHF 训练就用的它。
-
-与 DQN 不同，PPO 不是去拟合 Bellman 方程，而是\textbf{直接优化策略}。它的目标很直接：让好动作的概率变高，坏动作的概率变低。
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[>=stealth, scale=0.9]
-    % Actor-Critic 结构
-    \node[draw, rounded corners, fill=blue!20, minimum width=2cm, minimum height=1.2cm] (state) at (0, 0) {状态 $s$};
-    
-    \node[draw, rounded corners, fill=orange!20, minimum width=2.5cm, minimum height=1.2cm] (actor) at (4, 1) {Actor $\pi_\theta$};
-    \node[draw, rounded corners, fill=green!20, minimum width=2.5cm, minimum height=1.2cm] (critic) at (4, -1) {Critic $V_\phi$};
-    
-    \node[draw, rounded corners, fill=red!10, minimum width=2cm, minimum height=0.8cm] (action) at (8, 1) {动作 $a$};
-    \node[draw, rounded corners, fill=purple!10, minimum width=2cm, minimum height=0.8cm] (value) at (8, -1) {价值 $V(s)$};
-    
-    \draw[->, thick] (state) -- (actor);
-    \draw[->, thick] (state) -- (critic);
-    \draw[->, thick] (actor) -- (action);
-    \draw[->, thick] (critic) -- (value);
-    
-    \node[below, font=\small, gray] at (4, 1.8) {输出动作分布};
-    \node[below, font=\small, gray] at (4, -0.2) {估计状态价值};
-\end{tikzpicture}
-\caption{PPO 的 Actor-Critic 结构：Actor 决定做什么，Critic 评估好不好}
-\end{figure}
-
-PPO 的核心创新是\textbf{Clip 机制}——限制每次更新的幅度，防止策略变化太大导致训练崩溃。
-
-\begin{lstlisting}[language=Python, caption={PPO 核心算法}]
-class PPO:
-    def __init__(self, env):
-        self.actor = PolicyNetwork()   # 策略网络 pi(a|s)
-        self.critic = ValueNetwork()   # 价值网络 V(s)
-        self.gamma = 0.99
-        self.gae_lambda = 0.95  # GAE 参数
-        self.clip_range = 0.2   # PPO 的核心：裁剪范围
-        
-    def collect_rollout(self, n_steps):
-        """收集一段轨迹（On-policy：必须用当前策略！）"""
-        trajectory = []
-        state = self.env.reset()
-        
-        for _ in range(n_steps):
-            with torch.no_grad():
-                # Actor 输出动作分布，采样一个动作
-                action_dist = self.actor(state)
-                action = action_dist.sample()
-                log_prob = action_dist.log_prob(action)
-                value = self.critic(state)
-            
-            next_state, reward, done = self.env.step(action)
-            trajectory.append({
-                'state': state,
-                'action': action,
-                'log_prob': log_prob,  # 记住旧策略的概率
-                'value': value,
-                'reward': reward,
-                'done': done
-            })
-            state = next_state
-            
-        return trajectory
-    
-    def compute_gae(self, trajectory):
-        """计算广义优势估计（GAE）"""
-        advantages = []
-        gae = 0
-        
-        # 从后往前计算
-        for t in reversed(range(len(trajectory))):
-            if t == len(trajectory) - 1:
-                next_value = 0
-            else:
-                next_value = trajectory[t+1]['value']
-            
-            # TD 误差
-            delta = trajectory[t]['reward'] + \
-                    self.gamma * next_value * (1 - trajectory[t]['done']) - \
-                    trajectory[t]['value']
-            
-            # GAE 递推
-            gae = delta + self.gamma * self.gae_lambda * gae
-            advantages.insert(0, gae)
-            
-        return advantages
-    
-    def train(self, trajectory, advantages):
-        """PPO 更新（可以用同一批数据更新多次！）"""
-        
-        # 计算回报（用于训练 Critic）
-        returns = [adv + traj['value'] 
-                   for adv, traj in zip(advantages, trajectory)]
-        
-        # 多个 epoch 更新（数据复用，但有 clip 保护）
-        for epoch in range(K_EPOCHS):
-            for batch in make_batches(trajectory):
-                # --- Actor 损失：PPO-Clip ---
-                
-                # 新策略下的 log 概率
-                new_dist = self.actor(batch['states'])
-                new_log_prob = new_dist.log_prob(batch['actions'])
-                
-                # 概率比率 r(theta) = pi_new / pi_old
-                ratio = torch.exp(new_log_prob - batch['old_log_probs'])
-                
-                # PPO 核心：裁剪目标
-                surr1 = ratio * batch['advantages']
-                surr2 = torch.clamp(ratio, 
-                                    1 - self.clip_range,
-                                    1 + self.clip_range) * batch['advantages']
-                actor_loss = -torch.min(surr1, surr2).mean()
-                
-                # --- Critic 损失：简单的 MSE ---
-                value_pred = self.critic(batch['states'])
-                critic_loss = F.mse_loss(value_pred, batch['returns'])
-                
-                # --- 总损失 ---
-                loss = actor_loss + 0.5 * critic_loss
-                
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
-        
-        # On-policy：用完就丢！
-        trajectory.clear()
-\end{lstlisting}
-
-\begin{keyidea}[PPO 的 Clip 机制]
-\begin{equation}
-    \mathcal{L}^{CLIP}(\theta) = \mathbb{E}_t \left[ \min \left( r_t(\theta) A_t, \; \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon) A_t \right) \right]
-\end{equation}
-其中 $r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{old}}(a_t|s_t)}$ 是新旧策略的概率比。
-
-当 $A_t > 0$（好动作）时，我们想增加 $r_t$，但最多增加到 $1+\epsilon$；\\
-当 $A_t < 0$（坏动作）时，我们想减少 $r_t$，但最多减少到 $1-\epsilon$。
-
-这样就防止了策略更新"步子迈太大"。
-\end{keyidea}
-
-% ------------------------------------------------------------------------------------
-\subsection{SAC：最大熵强化学习}
-% ------------------------------------------------------------------------------------
-
-\sidenoteplain{\textbf{SAC与Berkeley}：SAC由UC Berkeley的Tuomas Haarnoja等人于2018年提出，导师是Pieter Abbeel和Sergey Levine——两位机器人强化学习的领军人物。SAC的``最大熵''思想来自信息论，让策略保持适度随机性以增强探索和鲁棒性，在机器人操作任务中表现出色。}
-
-SAC（Soft Actor-Critic）是连续控制任务的首选算法，在机器人控制领域表现优异。
-
-SAC 的核心思想是：不仅要最大化奖励，还要最大化策略的\textbf{熵}（随机性）。这听起来很奇怪——我们不是应该找到最优动作然后一直执行吗？
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[>=stealth, scale=0.9]
-    % 普通 RL
-    \begin{scope}[xshift=-4cm]
-        \node[font=\bfseries] at (0, 3.5) {普通 RL};
-        
-        \draw[->] (-1.5, 0) -- (1.5, 0) node[right] {$a$};
-        \draw[->] (0, 0) -- (0, 2) node[above] {$\pi(a|s)$};
-        
-        % 尖峰分布
-        \draw[thick, blue, fill=blue!20] (-0.1, 0) -- (0, 1.8) -- (0.1, 0) -- cycle;
-        
-        \node[below, font=\small] at (0, -0.5) {确定性策略};
-        \node[below, font=\tiny, gray] at (0, -1) {容易陷入局部最优};
-    \end{scope}
-    
-    % SAC
-    \begin{scope}[xshift=4cm]
-        \node[font=\bfseries] at (0, 3.5) {SAC（最大熵）};
-        
-        \draw[->] (-1.5, 0) -- (1.5, 0) node[right] {$a$};
-        \draw[->] (0, 0) -- (0, 2) node[above] {$\pi(a|s)$};
-        
-        % 高斯分布
-        \draw[thick, red, fill=red!20, domain=-1.3:1.3, samples=50] 
-            plot (\x, {1.5*exp(-2*\x*\x)});
-        
-        \node[below, font=\small] at (0, -0.5) {随机策略};
-        \node[below, font=\tiny, gray] at (0, -1) {保持探索，更鲁棒};
-    \end{scope}
-\end{tikzpicture}
-\caption{普通 RL 学出尖锐的确定性策略，SAC 保持策略的随机性}
-\end{figure}
-
-为什么要保持随机性？
-\begin{itemize}
-    \item \textbf{更好的探索}：随机策略能发现更多可能性
-    \item \textbf{更强的鲁棒性}：面对扰动时不会彻底崩溃
-    \item \textbf{避免局部最优}：不会过早锁死在某个策略上
-\end{itemize}
-
-\begin{lstlisting}[language=Python, caption={SAC 核心算法}]
-class SAC:
-    def __init__(self, env):
-        # SAC 有 5 个网络！
-        self.actor = GaussianPolicy()     # 输出动作的均值和方差
-        self.critic_1 = QNetwork()        # Q1(s, a)
-        self.critic_2 = QNetwork()        # Q2(s, a) - 双Q减少过估计
-        self.target_critic_1 = copy(self.critic_1)
-        self.target_critic_2 = copy(self.critic_2)
-        
-        self.alpha = 0.2  # 熵系数（温度）
-        self.buffer = ReplayBuffer()
-        
-    def select_action(self, state):
-        """从高斯分布采样动作"""
-        mean, std = self.actor(state)
-        dist = Normal(mean, std)
-        action = dist.rsample()  # 重参数化采样（可导！）
-        return torch.tanh(action)  # 压缩到 [-1, 1]
-    
-    def train_step(self, batch_size=256):
-        batch = self.buffer.sample(batch_size)
-        
-        # --- 更新 Critic ---
-        with torch.no_grad():
-            # 用当前策略采样下一个动作
-            next_action, next_log_prob = self.actor.sample(
-                batch['next_states']
-            )
-            
-            # 双Q网络：取较小的那个（悲观估计）
-            target_q1 = self.target_critic_1(
-                batch['next_states'], next_action
-            )
-            target_q2 = self.target_critic_2(
-                batch['next_states'], next_action
-            )
-            target_q = torch.min(target_q1, target_q2)
-            
-            # SAC 的目标：Q - alpha * log_prob（软Q值）
-            target = batch['rewards'] + self.gamma * (
-                target_q - self.alpha * next_log_prob
-            )
-        
-        # Critic 损失
-        q1 = self.critic_1(batch['states'], batch['actions'])
-        q2 = self.critic_2(batch['states'], batch['actions'])
-        critic_loss = F.mse_loss(q1, target) + F.mse_loss(q2, target)
-        
-        self.critic_optimizer.zero_grad()
-        critic_loss.backward()
-        self.critic_optimizer.step()
-        
-        # --- 更新 Actor ---
-        # 重参数化技巧：a = tanh(mu + sigma * epsilon)
-        new_action, log_prob = self.actor.rsample(batch['states'])
-        
-        q_value = torch.min(
-            self.critic_1(batch['states'], new_action),
-            self.critic_2(batch['states'], new_action)
-        )
-        
-        # Actor 目标：最大化 Q - alpha * log_prob
-        # 等价于最小化 alpha * log_prob - Q
-        actor_loss = (self.alpha * log_prob - q_value).mean()
-        
-        self.actor_optimizer.zero_grad()
-        actor_loss.backward()
-        self.actor_optimizer.step()
-        
-        # --- 软更新目标网络（Polyak 平均）---
-        for target_param, param in zip(
-            self.target_critic_1.parameters(),
-            self.critic_1.parameters()
-        ):
-            target_param.data.copy_(
-                0.995 * target_param.data + 0.005 * param.data
-            )
-        # target_critic_2 同理
-\end{lstlisting}
-
-\begin{keyidea}[SAC 的优化目标]
-SAC 最大化的不是普通的累积奖励，而是带熵正则的目标：
-\begin{equation}
-    J(\pi) = \sum_{t=0}^{\infty} \mathbb{E}_{(s_t, a_t) \sim \pi} \left[ r(s_t, a_t) + \alpha \underbrace{\mathcal{H}(\pi(\cdot|s_t))}_{\text{策略熵}} \right]
-\end{equation}
-其中 $\alpha$ 是温度系数，控制"探索 vs 利用"的权衡。
-\end{keyidea}
-
-% ------------------------------------------------------------------------------------
-\subsection{三种算法的对比总结}
-% ------------------------------------------------------------------------------------
-
-\begin{table}[htbp]
-\centering
-\small
-\renewcommand{\arraystretch}{1.4}
-\caption{DQN、PPO、SAC 的核心对比}
-\begin{tabular}{p{2.2cm}|p{3.8cm}|p{3.8cm}|p{3.8cm}}
-\toprule
-& \textbf{DQN} & \textbf{PPO} & \textbf{SAC} \\
-\midrule
-\textbf{学什么} & Q 值函数 $Q(s,a)$ & 策略 $\pi(a|s)$ + 价值 $V(s)$ & 策略 $\pi(a|s)$ + Q值 $Q(s,a)$ \\
-\midrule
-\textbf{动作空间} & 离散 & 离散或连续 & 连续 \\
-\midrule
-\textbf{数据策略} & Off-policy（经验回放） & On-policy（用完即弃） & Off-policy（经验回放） \\
-\midrule
-\textbf{核心技巧} & 目标网络 & Clip 裁剪 & 最大熵 + 双Q网络 \\
-\midrule
-\textbf{损失函数} & Bellman 误差 (MSE) & Clip 策略损失 + 价值 MSE & 软 Bellman 误差 + 策略熵 \\
-\midrule
-\textbf{典型应用} & Atari 游戏 & ChatGPT、机器人 & 机器人控制 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[scale=0.9]
-    % 坐标轴
-    \draw[->, thick] (-0.5, 0) -- (10, 0) node[right] {实现复杂度};
-    \draw[->, thick] (0, -0.5) -- (0, 5) node[above] {样本效率};
-    
-    % 算法位置
-    \node[draw, circle, fill=blue!30, minimum size=1.2cm] (dqn) at (2, 2) {DQN};
-    \node[draw, circle, fill=orange!30, minimum size=1.2cm] (ppo) at (5, 3) {PPO};
-    \node[draw, circle, fill=green!30, minimum size=1.2cm] (sac) at (8, 4.5) {SAC};
-    
-    % 标注
-    \node[below, font=\small] at (2, 1.2) {简单、入门};
-    \node[below, font=\small] at (5, 2.2) {稳健、通用};
-    \node[below, font=\small] at (8, 3.7) {高效、复杂};
-    
-    % 箭头表示演进
-    \draw[->, dashed, gray] (dqn) -- (ppo);
-    \draw[->, dashed, gray] (ppo) -- (sac);
-\end{tikzpicture}
-\caption{三种算法的定位：从简单到复杂，从低效到高效}
-\end{figure}
-
-% ------------------------------------------------------------------------------------
-\subsection{动手实践：用 SB3 训练经典控制任务}
-% ------------------------------------------------------------------------------------
-
-以下代码展示如何用 SB3 在经典控制任务上训练和对比三种算法：
-
-\begin{lstlisting}[language=Python, caption={用 SB3 对比三种算法}]
-import gymnasium as gym
-from stable_baselines3 import DQN, PPO, SAC
-import matplotlib.pyplot as plt
-
-# CartPole: 离散动作，适合 DQN 和 PPO
-env_discrete = gym.make("CartPole-v1")
-
-# Pendulum: 连续动作，适合 PPO 和 SAC
-env_continuous = gym.make("Pendulum-v1")
-
-# --- 训练 DQN（离散动作）---
-dqn_model = DQN(
-    "MlpPolicy", 
-    env_discrete,
-    learning_rate=1e-3,
-    buffer_size=50000,      # 经验池大小
-    learning_starts=1000,   # 开始训练前先收集多少数据
-    target_update_interval=500,  # 目标网络更新频率
-    verbose=1
-)
-dqn_model.learn(total_timesteps=20000)
-
-# --- 训练 PPO（通用）---
-ppo_model = PPO(
-    "MlpPolicy",
-    env_discrete,
-    learning_rate=3e-4,
-    n_steps=2048,           # 每次收集多少步
-    batch_size=64,          # 小批量大小
-    n_epochs=10,            # 每批数据训练几轮
-    clip_range=0.2,         # PPO clip 参数
-    verbose=1
-)
-ppo_model.learn(total_timesteps=20000)
-
-# --- 训练 SAC（连续动作）---
-sac_model = SAC(
-    "MlpPolicy",
-    env_continuous,
-    learning_rate=3e-4,
-    buffer_size=100000,
-    learning_starts=1000,
-    tau=0.005,              # 软更新系数
-    verbose=1
-)
-sac_model.learn(total_timesteps=20000)
-\end{lstlisting}
-
-\begin{remark}
-SB3 的强大之处在于：\textbf{把这里的 \texttt{CartPole} 换成你的自定义环境，代码几乎不用改}。
-
-只要你的问题能封装成 Gymnasium 接口：
-\begin{itemize}
-    \item \texttt{reset()} 返回初始状态
-    \item \texttt{step(action)} 返回 (下一状态, 奖励, 是否结束, 信息)
-\end{itemize}
-
-那么 SB3 就能直接训练。把 CartPole 的物理方程换成飞行器动力学，就是飞行控制；换成流体方程，就是流体控制。
-\end{remark}
-
-
-
-
-\section*{扩展阅读：深度强化学习与约束优化的深层联系}
-\addcontentsline{toc}{section}{扩展阅读：深度强化学习与约束优化的深层联系}
-
-\begin{tcolorbox}[colback=gray!5, colframe=gray!50, title=本节导读]
-本节把 TRPO 与 PPO 放回本书的主线：策略更新是一个带"信赖域"约束的优化问题，KL 约束的乘子决定步长，PPO 的裁剪只是把这个乘子换成了一个工程近似。需要第1章的 KKT 条件和第2章的对偶。
-\end{tcolorbox}
-% ------------------------------------------------------------------------------------
-
-在本章开头，我们用拉格朗日乘子法推导出了贝尔曼方程。现在让我们反过来思考：既然强化学习本质上是一个约束优化问题，那么现代算法（如 PPO）是如何处理这些约束的？
-
-这一节我们将揭示 PPO 背后的优化理论，以及从 TRPO 到 PPO 的演化过程中，研究者是如何用工程技巧来近似复杂的约束优化的。
-
-% ------------------------------------------------------------------------------------
-\subsection{策略优化的本质困难}
-% ------------------------------------------------------------------------------------
-
-假设我们想直接优化策略 $\pi_\theta$，最大化累积奖励：
-\begin{equation}
-    \max_\theta \; J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=0}^{T} \gamma^t r_t \right]
-\end{equation}
-
-这看起来就是一个普通的优化问题，用梯度上升不就行了吗？
-
-\begin{equation}
-    \theta \leftarrow \theta + \alpha \nabla_\theta J(\theta)
-\end{equation}
-
-问题在于：\textbf{策略梯度的方差极大，而且步长很难选择}。
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[>=stealth, scale=0.9]
-    % 损失曲面
-    \draw[thick, domain=-3:3, samples=100, blue] 
-        plot (\x, {0.3*\x*\x - 0.5*cos(3*\x r) + 2});
-    
-    % 当前位置
-    \fill[red] (-1.5, 2.175) circle (3pt);
-    \node[above right, font=\small] at (-1.5, 2.175) {当前策略 $\theta$};
-    
-    % 小步长
-    \draw[->, thick, green!60!black] (-1.5, 2.175) -- (-0.8, 1.8);
-    \node[below, font=\scriptsize, green!60!black] at (-1.15, 1.8) {小步长：安全但慢};
-    
-    % 大步长（跳过去）
-    \draw[->, thick, red, dashed] (-1.5, 2.175) -- (1.5, 2.5);
-    \node[above, font=\scriptsize, red] at (0, 2.8) {大步长：可能跳到很差的地方};
-    
-    % 悬崖
-    \fill[red!20] (0.8, 0) rectangle (1.2, 3.5);
-    \node[font=\scriptsize, red] at (1, 3.8) {性能悬崖};
-    
-    \draw[->] (-3.5, 0) -- (3.5, 0) node[right] {$\theta$};
-    \draw[->] (-3, -0.5) -- (-3, 4) node[above] {$-J(\theta)$};
-\end{tikzpicture}
-\caption{策略优化的困难：损失曲面高度非凸，步长太大可能跳入"性能悬崖"}
-\end{figure}
-
-更糟糕的是，策略的微小变化可能导致\textbf{采样分布的巨大变化}。想象一下：
-
-\begin{itemize}
-    \item 旧策略 $\pi_{old}$：在状态 $s$ 有 90\% 概率选动作 $a_1$
-    \item 新策略 $\pi_{new}$：在状态 $s$ 有 90\% 概率选动作 $a_2$
-\end{itemize}
-
-虽然参数 $\theta$ 可能只变了一点点，但智能体的行为完全不同了！这就是为什么普通的梯度下降在策略优化中经常失败。
-
-% ------------------------------------------------------------------------------------
-\subsection{信任域方法：把优化问题变成约束优化}
-% ------------------------------------------------------------------------------------
-
-解决方案是：\textbf{限制每次更新的幅度}。
-
-这正是\textbf{信任域方法}（Trust Region Methods）的核心思想。我们不是在整个参数空间里找最优，而是在当前点附近的一个"信任域"里找最优。
-
-\begin{keyidea}[信任域优化]
-每一步解决以下约束优化问题：
-\begin{equation}
-    \begin{aligned}
-        \max_\theta \quad & L(\theta) = \mathbb{E}_{s,a \sim \pi_{old}} \left[ \frac{\pi_\theta(a|s)}{\pi_{old}(a|s)} A^{\pi_{old}}(s,a) \right] \\
-        \text{s.t.} \quad & D(\pi_\theta, \pi_{old}) \leq \delta
-    \end{aligned}
-\end{equation}
-其中 $D$ 是某种"距离"度量，$\delta$ 是信任域半径。
-\end{keyidea}
-
-这里的 $L(\theta)$ 叫做\textbf{替代目标}（Surrogate Objective）。它的含义是：
-
-\begin{itemize}
-    \item $\frac{\pi_\theta(a|s)}{\pi_{old}(a|s)}$：新旧策略的概率比
-    \item $A^{\pi_{old}}(s,a)$：在旧策略下，动作 $a$ 比平均水平好多少（优势函数）
-    \item 整体意义：如果 $A > 0$（好动作），增大概率比；如果 $A < 0$（坏动作），减小概率比
-\end{itemize}
-
-% ------------------------------------------------------------------------------------
-\subsection{TRPO：用拉格朗日对偶求解}
-% ------------------------------------------------------------------------------------
-
-TRPO（Trust Region Policy Optimization）选择 KL 散度作为距离度量：
-
-\begin{equation}
-    \begin{aligned}
-        \max_\theta \quad & L(\theta) \\
-        \text{s.t.} \quad & \bar{D}_{KL}(\pi_{old} \| \pi_\theta) \leq \delta
-    \end{aligned}
-\end{equation}
-
-其中 $\bar{D}_{KL}$ 是对所有状态取平均的 KL 散度。
-
-\paragraph{拉格朗日对偶}
-
-这是一个不等式约束优化问题，自然想到用拉格朗日乘子法：
-
-\begin{equation}
-    \mathcal{L}(\theta, \lambda) = L(\theta) - \lambda \left( \bar{D}_{KL}(\pi_{old} \| \pi_\theta) - \delta \right)
-\end{equation}
-
-对偶问题是：
-\begin{equation}
-    \min_{\lambda \geq 0} \max_\theta \mathcal{L}(\theta, \lambda)
-\end{equation}
-
-\paragraph{二阶近似与自然梯度}
-
-TRPO 的关键洞察是：在 $\theta_{old}$ 附近，可以用泰勒展开近似：
-
-\begin{align}
-    L(\theta) &\approx L(\theta_{old}) + g^T (\theta - \theta_{old}) \\
-    \bar{D}_{KL} &\approx \frac{1}{2} (\theta - \theta_{old})^T F (\theta - \theta_{old})
-\end{align}
-
-其中 $g = \nabla_\theta L|_{\theta_{old}}$ 是策略梯度，$F$ 是\textbf{Fisher 信息矩阵}：
-
-\begin{equation}
-    F = \mathbb{E}_{s \sim \pi_{old}} \left[ \nabla_\theta \log \pi_\theta(a|s) \nabla_\theta \log \pi_\theta(a|s)^T \right]_{\theta = \theta_{old}}
-\end{equation}
-
-这样，约束优化问题变成了一个\textbf{二次规划}：
-
-\begin{equation}
-    \begin{aligned}
-        \max_{\Delta\theta} \quad & g^T \Delta\theta \\
-        \text{s.t.} \quad & \frac{1}{2} \Delta\theta^T F \Delta\theta \leq \delta
-    \end{aligned}
-\end{equation}
-
-用 KKT 条件可以得到解析解：
-
-\begin{equation}
-    \Delta\theta^* = \sqrt{\frac{2\delta}{g^T F^{-1} g}} F^{-1} g
-\end{equation}
-
-这就是\textbf{自然梯度}（Natural Gradient）！它的方向是 $F^{-1} g$，不是普通梯度 $g$。
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[>=stealth, scale=1.0]
-    % 椭圆等高线（KL 约束）
-    \draw[thick, blue, rotate=30] (0,0) ellipse (2 and 1);
-    \draw[thick, blue!60, rotate=30] (0,0) ellipse (1.5 and 0.75);
-    \draw[thick, blue!30, rotate=30] (0,0) ellipse (1 and 0.5);
-    
-    % 当前点
-    \fill[red] (0, 0) circle (3pt);
-    \node[below left, font=\small] at (0, 0) {$\theta_{old}$};
-    
-    % 普通梯度方向
-    \draw[->, very thick, green!60!black] (0, 0) -- (1.5, 0.8);
-    \node[right, font=\small, green!60!black] at (1.5, 0.8) {普通梯度 $g$};
-    
-    % 自然梯度方向
-    \draw[->, very thick, red] (0, 0) -- (1.2, -0.3);
-    \node[right, font=\small, red] at (1.2, -0.3) {自然梯度 $F^{-1}g$};
-    
-    % 信任域边界
-    \node[blue, font=\small] at (2.2, 1.5) {KL $= \delta$};
-    
-    % 说明
-    \node[below, font=\small, align=center] at (0, -2) {自然梯度考虑了参数空间的"形状"\\在 KL 约束下是最优方向};
-\end{tikzpicture}
-\caption{普通梯度 vs 自然梯度。椭圆是 KL 散度的等高线，自然梯度是在 KL 约束下的最优方向。}
-\end{figure}
-
-\paragraph{TRPO 的数值困难}
-
-TRPO 理论很漂亮，但实现很困难：
-
-\begin{enumerate}
-    \item \textbf{Fisher 矩阵太大}：如果网络有 $n$ 个参数，$F$ 是 $n \times n$ 矩阵。对于百万参数的网络，存储和求逆都不可行。
-    
-    \item \textbf{需要共轭梯度法}：TRPO 用共轭梯度（CG）来近似求解 $F^{-1}g$，需要多次计算 $Fv$（Fisher-向量乘积）。
-    
-    \item \textbf{需要线搜索}：二阶近似可能不准，TRPO 还需要做线搜索来确保约束真的满足。
-\end{enumerate}
-
-\begin{lstlisting}[language=Python, caption={TRPO 的核心步骤（简化版）}]
-def trpo_update(policy, states, actions, advantages):
-    # 1. 计算策略梯度
-    g = compute_policy_gradient(policy, states, actions, advantages)
-    
-    # 2. 用共轭梯度法求解 F^{-1} g
-    def fisher_vector_product(v):
-        # 计算 Fv，不需要显式构造 F
-        return compute_fvp(policy, states, v)
-    
-    step_dir = conjugate_gradient(fisher_vector_product, g, max_iter=10)
-    
-    # 3. 计算步长
-    shs = 0.5 * step_dir.dot(fisher_vector_product(step_dir))
-    step_size = sqrt(2 * delta / shs)
-    full_step = step_size * step_dir
-    
-    # 4. 线搜索：确保 KL 约束满足且目标提升
-    for shrink in [1, 0.5, 0.25, 0.125]:
-        new_params = old_params + shrink * full_step
-        if kl_divergence(new_policy, old_policy) <= delta:
-            if surrogate_loss(new_policy) > surrogate_loss(old_policy):
-                break
-    
-    return new_params
-\end{lstlisting}
-
-% ------------------------------------------------------------------------------------
-\subsection{PPO：用裁剪代替约束}
-% ------------------------------------------------------------------------------------
-
-PPO 的核心洞察是：\textbf{与其精确求解约束优化，不如用一个简单的裁剪来近似}。
-
-回顾 TRPO 的目标：
-\begin{equation}
-    \max_\theta \; \mathbb{E} \left[ \frac{\pi_\theta(a|s)}{\pi_{old}(a|s)} A(s,a) \right] \quad \text{s.t.} \quad D_{KL} \leq \delta
-\end{equation}
-
-PPO 的想法是：与其用 KL 散度约束概率比 $r(\theta) = \frac{\pi_\theta}{\pi_{old}}$，不如\textbf{直接裁剪概率比}！
-
-\begin{keyidea}[PPO-Clip 目标函数]
-\begin{equation}
-    L^{CLIP}(\theta) = \mathbb{E} \left[ \min \left( r(\theta) A, \; \text{clip}(r(\theta), 1-\epsilon, 1+\epsilon) A \right) \right]
-\end{equation}
-其中 $\epsilon$ 通常取 $0.1$ 或 $0.2$。
-\end{keyidea}
-
-让我们仔细理解这个公式：
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[>=stealth, scale=0.85]
-    % A > 0 的情况
-    \begin{scope}[xshift=-5cm]
-        \node[font=\bfseries] at (2, 4) {当 $A > 0$（好动作）};
-        
-        \draw[->] (0, 0) -- (4.5, 0) node[right] {$r(\theta)$};
-        \draw[->] (0, -0.5) -- (0, 3.5) node[above] {目标};
-        
-        % 未裁剪的目标
-        \draw[thick, blue, dashed] (0, 0) -- (4, 3.2);
-        \node[blue, font=\scriptsize] at (3.8, 2.5) {$rA$};
-        
-        % 裁剪后的目标
-        \draw[very thick, red] (0, 0) -- (2.4, 1.92);
-        \draw[very thick, red] (2.4, 1.92) -- (4, 1.92);
-        
-        % 裁剪点
-        \draw[dashed, gray] (2.4, 0) -- (2.4, 1.92);
-        \node[below, font=\scriptsize] at (2.4, 0) {$1+\epsilon$};
-        \node[below, font=\scriptsize] at (1, 0) {$1$};
-        \draw[dashed, gray] (1, 0) -- (1, 0.8);
-        
-        \node[below, font=\small, align=center] at (2, -1) {概率比超过 $1+\epsilon$ 后\\目标不再增加};
-    \end{scope}
-    
-    % A < 0 的情况
-    \begin{scope}[xshift=4cm]
-        \node[font=\bfseries] at (2, 4) {当 $A < 0$（坏动作）};
-        
-        \draw[->] (0, 0) -- (4.5, 0) node[right] {$r(\theta)$};
-        \draw[->] (0, -2.5) -- (0, 1) node[above] {目标};
-        
-        % 未裁剪的目标
-        \draw[thick, blue, dashed] (0, 0) -- (4, -3.2);
-        \node[blue, font=\scriptsize] at (3.8, -2.5) {$rA$};
-        
-        % 裁剪后的目标
-        \draw[very thick, red] (0, 0) -- (0.8, -0.64);
-        \draw[very thick, red] (0.8, -0.64) -- (4, -0.64);
-        
-        % 裁剪点
-        \draw[dashed, gray] (0.8, 0) -- (0.8, -0.64);
-        \node[below, font=\scriptsize] at (0.8, 0) {$1-\epsilon$};
-        \node[below, font=\scriptsize] at (2, 0) {$1$};
-        \draw[dashed, gray] (2, 0) -- (2, -0.5);
-        
-        \node[below, font=\small, align=center] at (2, -3.5) {概率比低于 $1-\epsilon$ 后\\目标不再减少};
-    \end{scope}
-\end{tikzpicture}
-\caption{PPO 裁剪机制的效果。左：对于好动作，限制概率增加的幅度。右：对于坏动作，限制概率减少的幅度。}
-\end{figure}
-
-\paragraph{为什么裁剪有效？}
-
-\begin{itemize}
-    \item 当 $A > 0$（好动作）：我们想增大 $r(\theta)$，但超过 $1+\epsilon$ 后梯度消失，防止过度增加
-    \item 当 $A < 0$（坏动作）：我们想减小 $r(\theta)$，但低于 $1-\epsilon$ 后梯度消失，防止过度减少
-\end{itemize}
-
-这相当于\textbf{隐式地}限制了策略的变化幅度，而不需要显式计算 KL 散度或 Fisher 矩阵！
-
-\paragraph{PPO vs TRPO 的数值比较}
-
-\begin{table}[htbp]
-\centering
-\renewcommand{\arraystretch}{1.4}
-\begin{tabular}{p{3cm}|p{5cm}|p{5cm}}
-\toprule
-& \textbf{TRPO} & \textbf{PPO} \\
-\midrule
-\textbf{约束方式} & 显式 KL 散度约束 & 隐式裁剪 \\
-\midrule
-\textbf{需要计算} & Fisher 矩阵、共轭梯度、线搜索 & 只需要普通梯度 \\
-\midrule
-\textbf{每次更新} & 一步精确求解 & 多个 epoch 小步迭代 \\
-\midrule
-\textbf{实现难度} & 高（约 500 行核心代码） & 低（约 50 行核心代码） \\
-\midrule
-\textbf{计算成本} & 高（每步需要多次前向/反向传播） & 低（标准梯度下降） \\
-\midrule
-\textbf{性能} & 理论最优 & 实践中相当甚至更好 \\
-\bottomrule
-\end{tabular}
-\caption{TRPO vs PPO：复杂度与性能的权衡}
-\end{table}
-
-% ------------------------------------------------------------------------------------
-\subsection{PPO 的完整优化流程}
-% ------------------------------------------------------------------------------------
-
-让我们详细看看 PPO 的一次完整更新：
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[>=stealth, scale=0.85, 
-    block/.style={draw, rounded corners, minimum width=2.5cm, minimum height=1cm, align=center}]
-    
-    % 流程图
-    \node[block, fill=blue!20] (collect) at (0, 0) {收集轨迹\\$\{s, a, r, \log\pi_{old}\}$};
-    \node[block, fill=green!20] (gae) at (5, 0) {计算优势\\GAE};
-    \node[block, fill=orange!20] (epoch) at (10, 0) {多轮训练\\K epochs};
-    \node[block, fill=red!20] (discard) at (10, -2.5) {丢弃数据\\(On-policy)};
-    
-    \draw[->, thick] (collect) -- (gae);
-    \draw[->, thick] (gae) -- (epoch);
-    \draw[->, thick] (epoch) -- (discard);
-    \draw[->, thick, dashed] (discard) -- (0, -2.5) -- (collect);
-    
-    % epoch 内部
-    \begin{scope}[xshift=10cm, yshift=-5.5cm]
-        \node[font=\bfseries] at (-5, 2.5) {每个 Epoch 内部};
-        
-        \node[block, fill=yellow!20, minimum width=2cm] (batch) at (0, 1.5) {采样 batch};
-        \node[block, fill=purple!20, minimum width=2cm] (ratio) at (0, 0) {计算 $r(\theta)$};
-        \node[block, fill=cyan!20, minimum width=2cm] (clip) at (0, -1.5) {裁剪 + 损失};
-        \node[block, fill=gray!20, minimum width=2cm] (grad) at (0, -3) {梯度下降};
-        
-        \draw[->, thick] (batch) -- (ratio);
-        \draw[->, thick] (ratio) -- (clip);
-        \draw[->, thick] (clip) -- (grad);
-    \end{scope}
-\end{tikzpicture}
-\caption{PPO 的完整训练流程}
-\end{figure}
-
-\begin{lstlisting}[language=Python, caption={PPO 优化的详细实现}]
-class PPOTrainer:
-    def __init__(self, policy, value_net, clip_range=0.2):
-        self.policy = policy          # Actor: pi(a|s)
-        self.value_net = value_net    # Critic: V(s)
-        self.clip_range = clip_range
-        self.gamma = 0.99
-        self.gae_lambda = 0.95
-        self.n_epochs = 10            # 每批数据训练几轮
-        self.batch_size = 64
-        
-    def compute_gae(self, rewards, values, dones):
-        """
-        广义优势估计 (Generalized Advantage Estimation)
-        平衡 TD (低方差高偏差) 和 MC (高方差低偏差)
-        """
-        advantages = []
-        gae = 0
-        
-        for t in reversed(range(len(rewards))):
-            if t == len(rewards) - 1:
-                next_value = 0
-            else:
-                next_value = values[t + 1]
-            
-            # TD 误差: delta = r + gamma * V(s') - V(s)
-            delta = rewards[t] + self.gamma * next_value * (1 - dones[t]) \
-                    - values[t]
-            
-            # GAE 递推: A_t = delta_t + (gamma * lambda) * A_{t+1}
-            # lambda=0 时退化为 TD(0)
-            # lambda=1 时退化为 MC
-            gae = delta + self.gamma * self.gae_lambda * (1 - dones[t]) * gae
-            advantages.insert(0, gae)
-        
-        return torch.tensor(advantages)
-    
-    def compute_loss(self, batch, old_log_probs, advantages, returns):
-        """计算 PPO 的损失函数"""
-        
-        # --- Actor 损失 (PPO-Clip) ---
-        
-        # 当前策略的 log 概率
-        new_dist = self.policy(batch['states'])
-        new_log_probs = new_dist.log_prob(batch['actions'])
-        
-        # 概率比 r(theta) = pi_new / pi_old = exp(log_new - log_old)
-        ratio = torch.exp(new_log_probs - old_log_probs)
-        
-        # 裁剪
-        clipped_ratio = torch.clamp(ratio, 
-                                    1 - self.clip_range, 
-                                    1 + self.clip_range)
-        
-        # PPO 目标：取两者较小值（悲观估计）
-        surr1 = ratio * advantages
-        surr2 = clipped_ratio * advantages
-        actor_loss = -torch.min(surr1, surr2).mean()
-        
-        # --- Critic 损失 (简单 MSE) ---
-        value_pred = self.value_net(batch['states'])
-        critic_loss = F.mse_loss(value_pred, returns)
-        
-        # --- 熵正则化（鼓励探索）---
-        entropy = new_dist.entropy().mean()
-        entropy_loss = -0.01 * entropy  # 负号因为我们要最大化熵
-        
-        # --- 总损失 ---
-        total_loss = actor_loss + 0.5 * critic_loss + entropy_loss
-        
-        return total_loss, {
-            'actor_loss': actor_loss.item(),
-            'critic_loss': critic_loss.item(),
-            'entropy': entropy.item(),
-            'clip_fraction': ((ratio - 1).abs() > self.clip_range).float().mean().item()
-        }
-    
-    def update(self, trajectory):
-        """PPO 的一次完整更新"""
-        
-        # 1. 预处理轨迹数据
-        states = torch.stack([t['state'] for t in trajectory])
-        actions = torch.stack([t['action'] for t in trajectory])
-        rewards = [t['reward'] for t in trajectory]
-        dones = [t['done'] for t in trajectory]
-        old_log_probs = torch.stack([t['log_prob'] for t in trajectory])
-        values = torch.stack([t['value'] for t in trajectory])
-        
-        # 2. 计算 GAE 和回报
-        advantages = self.compute_gae(rewards, values.squeeze(), dones)
-        returns = advantages + values.squeeze()
-        
-        # 3. 归一化优势（减少方差，稳定训练）
-        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-        
-        # 4. 多轮训练（这是 PPO 相比 TRPO 的关键：同一批数据用多次）
-        dataset = TensorDataset(states, actions, old_log_probs, 
-                                advantages, returns)
-        dataloader = DataLoader(dataset, batch_size=self.batch_size, 
-                                shuffle=True)
-        
-        for epoch in range(self.n_epochs):
-            for batch in dataloader:
-                batch_states, batch_actions, batch_old_log_probs, \
-                    batch_advantages, batch_returns = batch
-                
-                loss, info = self.compute_loss(
-                    {'states': batch_states, 'actions': batch_actions},
-                    batch_old_log_probs,
-                    batch_advantages,
-                    batch_returns
-                )
-                
-                self.optimizer.zero_grad()
-                loss.backward()
-                
-                # 梯度裁剪（防止梯度爆炸）
-                torch.nn.utils.clip_grad_norm_(
-                    self.policy.parameters(), max_norm=0.5
-                )
-                torch.nn.utils.clip_grad_norm_(
-                    self.value_net.parameters(), max_norm=0.5
-                )
-                
-                self.optimizer.step()
-            
-            # 监控：如果 KL 散度太大，提前停止
-            # （这是 PPO 的"软约束"：虽然没有显式 KL 约束，但会监控）
-            approx_kl = (old_log_probs - new_log_probs).mean()
-            if approx_kl > 0.02:  # 经验阈值
-                print(f"Early stopping at epoch {epoch}: KL = {approx_kl:.4f}")
-                break
-        
-        # 5. On-policy 特性：用完就丢
-        return info
-\end{lstlisting}
-
-% ------------------------------------------------------------------------------------
-\subsection{GAE：优势估计的偏差-方差权衡}
-% ------------------------------------------------------------------------------------
-
-PPO 中的另一个关键组件是\textbf{广义优势估计}（GAE），它本质上是 TD 和 MC 的加权组合。
-
-回顾不同步长的优势估计：
-
-\begin{align}
-    \hat{A}^{(1)}_t &= r_t + \gamma V(s_{t+1}) - V(s_t) = \delta_t \quad &\text{(TD，低方差高偏差)} \\
-    \hat{A}^{(2)}_t &= r_t + \gamma r_{t+1} + \gamma^2 V(s_{t+2}) - V(s_t) &\text{(2-step)} \\
-    &\vdots \\
-    \hat{A}^{(\infty)}_t &= \sum_{k=0}^{\infty} \gamma^k r_{t+k} - V(s_t) = G_t - V(s_t) \quad &\text{(MC，高方差低偏差)}
-\end{align}
-
-GAE 用指数加权把它们结合起来：
-
-\begin{equation}
-    \hat{A}^{GAE}_t = \sum_{l=0}^{\infty} (\gamma \lambda)^l \delta_{t+l}
-\end{equation}
-
-其中 $\lambda \in [0, 1]$ 控制权衡：
-\begin{itemize}
-    \item $\lambda = 0$：退化为 TD(0)，低方差但高偏差
-    \item $\lambda = 1$：退化为 MC，高方差但无偏差
-    \item $\lambda \approx 0.95$：实践中的常用值，平衡两者
-\end{itemize}
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[>=stealth, scale=0.9]
-    \draw[->] (0, 0) -- (10, 0) node[right] {$\lambda$};
-    \draw[->] (0, 0) -- (0, 4) node[above] {};
-    
-    % 偏差曲线
-    \draw[thick, blue, domain=0:9.5, samples=50] 
-        plot (\x, {3 * exp(-0.3*\x)});
-    \node[blue, right] at (9.5, 0.5) {偏差};
-    
-    % 方差曲线
-    \draw[thick, red, domain=0:9.5, samples=50] 
-        plot (\x, {0.3 + 0.3*\x});
-    \node[red, right] at (9.5, 3.3) {方差};
-    
-    % 最优点
-    \draw[dashed, gray] (6, 0) -- (6, 2.5);
-    \node[below] at (6, 0) {$\lambda^*$};
-    \fill[green!60!black] (6, 1.8) circle (4pt);
-    \node[above right, font=\small, green!60!black] at (6, 1.8) {平衡点};
-    
-    % 标注
-    \node[below] at (0, 0) {$0$};
-    \node[below] at (9.5, 0) {$1$};
-    \node[below, font=\small] at (0, -0.8) {TD(0)};
-    \node[below, font=\small] at (9.5, -0.8) {MC};
-\end{tikzpicture}
-\caption{GAE 的偏差-方差权衡。$\lambda$ 越大，方差越高但偏差越低。}
-\end{figure}
-
-% ------------------------------------------------------------------------------------
-\subsection{数值稳定性技巧}
-% ------------------------------------------------------------------------------------
-
-在实际实现中，有很多数值稳定性的细节需要注意：
-
-\textbf{1. 优势函数归一化}
-
-\begin{lstlisting}[language=Python]
-# 归一化优势函数，减少方差
-advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-\end{lstlisting}
-
-为什么有效？归一化后，优势函数大约一半是正的、一半是负的，梯度更新更平衡。
-
-\textbf{2. 梯度裁剪}
-
-\begin{lstlisting}[language=Python]
-# 防止梯度爆炸
-torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=0.5)
-\end{lstlisting}
-
-策略梯度可能突然变得很大，导致参数更新过猛。
-
-\textbf{3. 学习率调度}
-
-\begin{lstlisting}[language=Python]
-# 线性衰减学习率
-def linear_schedule(progress):
-    return 1 - progress  # progress 从 0 到 1
-
-scheduler = LambdaLR(optimizer, lr_lambda=linear_schedule)
-\end{lstlisting}
-
-训练后期降低学习率有助于稳定收敛。
-
-\textbf{4. 价值函数裁剪（可选）}
-
-\begin{lstlisting}[language=Python]
-# 限制价值函数的更新幅度
-value_clipped = old_values + torch.clamp(
-    value_pred - old_values, -clip_range, clip_range
-)
-critic_loss = torch.max(
-    (value_pred - returns)**2,
-    (value_clipped - returns)**2
-).mean()
-\end{lstlisting}
-
-类似于策略裁剪，防止价值函数变化太大。
-
-% ------------------------------------------------------------------------------------
-\subsection{从优化角度看不同 RL 算法}
-% ------------------------------------------------------------------------------------
-
-现在我们可以从约束优化的角度统一理解各种算法：
-
-\begin{table}[htbp]
-\centering
-\small
-\renewcommand{\arraystretch}{1.5}
-\caption{从约束优化角度看 RL 算法}
-\begin{tabular}{p{2cm}|p{3.5cm}|p{4cm}|p{4cm}}
-\toprule
-\textbf{算法} & \textbf{优化目标} & \textbf{约束/正则} & \textbf{求解方法} \\
-\midrule
-\textbf{DQN} & Bellman 误差 & 目标网络（隐式稳定） & 随机梯度下降 \\
-\midrule
-\textbf{TRPO} & 替代目标 $L(\theta)$ & $D_{KL} \leq \delta$（显式约束） & 共轭梯度 + 线搜索 \\
-\midrule
-\textbf{PPO-Clip} & 裁剪后的替代目标 & 裁剪（隐式约束） & 随机梯度下降 \\
-\midrule
-\textbf{PPO-KL} & $L(\theta) - \beta D_{KL}$ & KL 惩罚（软约束） & 随机梯度下降 + 自适应 $\beta$ \\
-\midrule
-\textbf{SAC} & $J + \alpha \mathcal{H}$ & 熵正则化（软约束） & 交替优化 Actor/Critic \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{remark}
-PPO 的成功告诉我们一个深刻的道理：在深度学习时代，\textbf{简单的近似往往比精确的求解更有效}。
-
-TRPO 精确求解 KL 约束的优化问题，理论上是最优的。但 PPO 用一个简单的裁剪操作，配合多轮小步更新，实际效果相当甚至更好，而实现简单得多。
-
-这也是为什么 PPO 成为了工业界的默认选择——从 OpenAI 的 ChatGPT 到 DeepMind 的各种应用。
-\end{remark}
-
-% ------------------------------------------------------------------------------------
-\subsection{进阶：拉格朗日乘子的自适应调整}
-% ------------------------------------------------------------------------------------
-
-有一种 PPO 的变体叫 \textbf{PPO-KL}，它不用裁剪，而是显式地用 KL 惩罚：
-
-\begin{equation}
-    L(\theta) = \mathbb{E}\left[ r(\theta) A - \beta D_{KL}(\pi_{old} \| \pi_\theta) \right]
-\end{equation}
-
-这里 $\beta$ 就是拉格朗日乘子！关键是如何自适应地调整 $\beta$：
-
-\begin{lstlisting}[language=Python, caption={PPO-KL 的自适应拉格朗日乘子}]
-class PPO_KL:
-    def __init__(self, target_kl=0.01):
-        self.beta = 1.0        # 初始拉格朗日乘子
-        self.target_kl = target_kl
-        
-    def update(self, ...):
-        # 计算损失
-        loss = -surrogate_loss + self.beta * kl_divergence
-        
-        # 更新策略
-        optimize(loss)
-        
-        # 自适应调整 beta（对偶上升）
-        actual_kl = compute_kl(new_policy, old_policy)
-        
-        if actual_kl > 1.5 * self.target_kl:
-            # KL 太大，增加惩罚
-            self.beta *= 2
-        elif actual_kl < self.target_kl / 1.5:
-            # KL 太小，减少惩罚（允许更大更新）
-            self.beta /= 2
-\end{lstlisting}
-
-这正是\textbf{对偶上升法}（Dual Ascent）的思想：
-\begin{itemize}
-    \item 如果约束被违反（$D_{KL}$ 太大），增大乘子 $\beta$，加强惩罚
-    \item 如果约束有余量（$D_{KL}$ 太小），减小乘子 $\beta$，允许更大更新
-\end{itemize}
-
-这种自适应机制确保了策略更新既不会太保守（浪费计算），也不会太激进（破坏稳定性）。
-
-% ------------------------------------------------------------------------------------
-\subsection{总结：优化视角下的 RL 算法演进}
-% ------------------------------------------------------------------------------------
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[>=stealth, scale=0.85,
-    block/.style={draw, rounded corners, minimum width=3cm, minimum height=1cm, align=center}]
-    
-    % 时间线
-    \draw[->, thick] (0, -0.8) -- (12, -0.8) node[right] {时间/简化程度};
-    
-    % 算法节点
-    \node[block, fill=blue!20] (pg) at (1.5, 2) {策略梯度\\REINFORCE};
-    \node[block, fill=green!20] (npg) at (5, 2) {自然策略梯度\\NPG};
-    \node[block, fill=orange!20] (trpo) at (8.5, 2) {TRPO\\(约束优化)};
-    \node[block, fill=red!20] (ppo) at (12, 2) {PPO\\(裁剪近似)};
-    
-    % 箭头
-    \draw[->, thick] (pg) -- (npg);
-    \draw[->, thick] (npg) -- (trpo);
-    \draw[->, thick] (trpo) -- (ppo);
-    
-    % 标注
-    \node[below, font=\scriptsize, align=center] at (1.5, 0.8) {高方差\\不稳定};
-    \node[below, font=\scriptsize, align=center] at (5, 0.8) {考虑参数\\几何结构};
-    \node[below, font=\scriptsize, align=center] at (8.5, 0.8) {显式 KL 约束\\二阶优化};
-    \node[below, font=\scriptsize, align=center] at (12, 0.8) {简单裁剪\\一阶优化};
-    
-    % 权衡
-    \draw[<->, thick, gray] (1, -1.5) -- (13, -1.5);
-    \node[left, font=\small] at (1, -1.5) {理论严谨};
-    \node[right, font=\small] at (13, -1.5) {工程实用};
-\end{tikzpicture}
-\caption{策略优化算法的演进：从理论严谨走向工程实用}
-\end{figure}
-
-这一节我们看到了强化学习与约束优化的深层联系：
-
-\begin{enumerate}
-    \item \textbf{策略优化本质上是约束优化}：我们想最大化奖励，但要约束策略不能变化太大
-    
-    \item \textbf{TRPO 用拉格朗日对偶 + 二阶方法}精确求解，理论漂亮但实现复杂
-    
-    \item \textbf{PPO 用裁剪近似约束}，放弃精确性换取简单性，实践中效果更好
-    
-    \item \textbf{GAE 平衡偏差和方差}，是 TD 和 MC 的连续插值
-    
-    \item \textbf{数值稳定性技巧}（归一化、梯度裁剪、学习率调度）在实践中至关重要
-\end{enumerate}
-
-理解了这些，你就掌握了现代深度强化学习的核心优化思想。
-
-
-\section*{扩展阅读：强化学习的采样理论基础}
-\addcontentsline{toc}{section}{扩展阅读：强化学习的采样理论基础}
-
-\begin{tcolorbox}[colback=gray!5, colframe=gray!50, title=本节导读]
-前面讨论的都是"怎么更新"，本节讨论"要多少数据"：从多臂老虎机出发介绍 Hoeffding 不等式、PAC 框架与 UCB 探索，解释探索--利用权衡的来源。只需要概率论基础，与正文其余部分独立。
-\end{tcolorbox}
-
-
-% ------------------------------------------------------------------------------------
-
-到目前为止，我们讨论的都是"如何优化"——给定数据，怎么更新策略或值函数。但还有一个更基本的问题：\textbf{需要多少数据才能学到足够好的策略？}
-
-这个问题属于\textbf{采样复杂度}（Sample Complexity）的范畴，是强化学习理论的核心。本节我们将介绍一些基础工具：Hoeffding 不等式、PAC 学习框架、UCB 算法，以及它们如何帮助我们理解强化学习的样本效率。
-
-% ------------------------------------------------------------------------------------
-\subsection{从一个简单问题开始：多臂老虎机}
-% ------------------------------------------------------------------------------------
-\sidenoteplain{
-\textbf{前置知识提醒}
-
-本节需要概率论基础，包括：期望、方差、概率不等式等概念。
-
-本书的主线内容只假设读者具备微积分和线性代数背景。但强化学习的理论根基深植于概率论——毕竟我们研究的是\textbf{不确定性下的决策}。
-
-如果你还没学过概率论，可以先跳过本节的证明细节，只需记住结论：\textit{UCB 算法通过"乐观面对不确定性"，能以 $O(\ln \text{轨迹数量})$ 的遗憾找到最优臂，这在足够长的时间后遗憾平均趋近于0}。等学完概率论后再回来，会有更深的理解。
-}
-
-在深入强化学习之前，让我们先看一个更简单的问题——\textbf{多臂老虎机}（Multi-Armed Bandit, MAB）。
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[scale=0.9]
-    % 老虎机
-    \foreach \i in {1,2,3,4} {
-        \begin{scope}[xshift=\i*2.5cm]
-            % 机身
-            \draw[thick, fill=gray!20, rounded corners] (0, 0) rectangle (1.5, 2.5);
-            % 拉杆
-            \draw[very thick, red!70] (1.7, 2) -- (1.7, 1) -- (2, 0.8);
-            \fill[red!70] (2, 0.8) circle (0.15);
-            % 显示窗
-            \draw[thick, fill=yellow!30] (0.2, 1.5) rectangle (1.3, 2.2);
-            \node at (0.75, 1.85) {?};
-            % 标签
-            \node[below] at (0.75, 0) {臂 $\i$};
-            % 真实期望（隐藏）
-            \node[above, font=\scriptsize, gray] at (0.75, 2.5) {$\mu_\i = ?$};
-        \end{scope}
-    }
-    
-    % 说明
-    \node[below, align=center, font=\small] at (6.25, -1) {每个臂有未知的奖励分布\\目标：找到期望奖励最高的臂};
-\end{tikzpicture}
-\caption{多臂老虎机问题：有 $K$ 个臂，每个臂的奖励服从未知分布，目标是最大化累积奖励}
-\end{figure}
-
-\paragraph{问题设定}
-\begin{itemize}
-    \item 有 $K$ 个臂（动作），每个臂 $i$ 的奖励服从某个分布，期望为 $\mu_i$
-    \item 你不知道 $\mu_i$，只能通过拉臂来观察奖励
-    \item 目标：在 $T$ 轮内最大化累积奖励
-\end{itemize}
-
-\paragraph{探索与利用的困境}
-
-这个问题的核心难点是\textbf{探索-利用权衡}（Exploration-Exploitation Trade-off）：
-
-\begin{itemize}
-    \item \textbf{利用}（Exploitation）：根据目前观察，选当前看起来最好的臂
-    \item \textbf{探索}（Exploration）：尝试其他臂，可能发现更好的
-\end{itemize}
-
-如果只利用，可能错过真正最优的臂；如果只探索，会浪费很多次在差的臂上。
-
-\paragraph{遗憾的定义}
-
-我们用\textbf{遗憾}（Regret）来衡量算法的好坏：
-
-\begin{equation}
-    \text{Regret}(T) = T \cdot \mu^* - \sum_{t=1}^{T} \mu_{a_t}
-\end{equation}
-
-其中 $\mu^* = \max_i \mu_i$ 是最优臂的期望奖励，$a_t$ 是第 $t$ 轮选择的臂。
-
-遗憾衡量的是：\textbf{如果一开始就知道最优臂，能多获得多少奖励}。
-
-% ------------------------------------------------------------------------------------
-\subsection{集中不等式：Hoeffding 不等式}
-% ------------------------------------------------------------------------------------
-
-要分析采样算法，我们需要一个基本工具：\textbf{集中不等式}（Concentration Inequality）。它告诉我们：样本均值和真实期望有多接近？
-
-\begin{keyidea}[Hoeffding 不等式]
-设 $X_1, X_2, \ldots, X_n$ 是独立同分布的随机变量，$X_i \in [0, 1]$，期望为 $\mu$。令 $\hat{\mu} = \frac{1}{n} \sum_{i=1}^{n} X_i$ 为样本均值，则：
-\begin{equation}
-    \mathbb{P}\left( |\hat{\mu} - \mu| \geq \epsilon \right) \leq 2 \exp\left( -2n\epsilon^2 \right)
-\end{equation}
-\end{keyidea}
-
-\paragraph{直观理解}
-
-这个不等式说：样本均值偏离真实期望超过 $\epsilon$ 的概率，随样本数 $n$ \textbf{指数衰减}。
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[scale=0.9]
-    % 坐标轴
-    \draw[->] (0, 0) -- (8, 0) node[right] {样本数 $n$};
-    \draw[->] (0, 0) -- (0, 4) node[above] {$\mathbb{P}(|\hat{\mu} - \mu| \geq \epsilon)$};
-    
-    % 曲线
-    \draw[thick, blue, domain=0.5:7.5, samples=50] 
-        plot (\x, {3.5 * exp(-0.5*\x)});
-    
-    % 标注
-    \node[right, blue, font=\small] at (7, 0.3) {$2e^{-2n\epsilon^2}$};
-    
-    % 虚线
-    \draw[dashed, gray] (2, 0) -- (2, 1.3);
-    \draw[dashed, gray] (0, 1.3) -- (2, 1.3);
-    \node[left, font=\scriptsize] at (0, 1.3) {$\approx 0.37$};
-    \node[below, font=\scriptsize] at (2, 0) {$n = \frac{1}{\epsilon^2}$};
-    
-    % 高置信区域
-    \fill[green!20, opacity=0.5] (4, 0) rectangle (7.5, 0.5);
-    \node[font=\scriptsize] at (5.75, 0.25) {高置信};
-\end{tikzpicture}
-\caption{Hoeffding 不等式：偏差概率随样本数指数衰减}
-\end{figure}
-
-\paragraph{置信区间}
-
-反过来，如果我们想让偏差概率小于 $\delta$，需要多少样本？
-
-令 $2\exp(-2n\epsilon^2) \leq \delta$，解得：
-
-\begin{equation}
-    n \geq \frac{1}{2\epsilon^2} \ln\frac{2}{\delta}
-\end{equation}
-
-或者等价地，给定 $n$ 个样本，以概率至少 $1-\delta$：
-
-\begin{equation}
-    |\hat{\mu} - \mu| \leq \sqrt{\frac{\ln(2/\delta)}{2n}}
-\end{equation}
-
-这就是\textbf{置信区间}的宽度——样本越多，区间越窄。
-
-% ------------------------------------------------------------------------------------
-\subsection{UCB 算法：乐观面对不确定性}
-% ------------------------------------------------------------------------------------
-
-有了 Hoeffding 不等式，我们可以设计一个有理论保证的算法：\textbf{UCB}（Upper Confidence Bound）。
-
-\begin{keyidea}[UCB 算法的核心思想]
-对每个臂，维护一个\textbf{置信上界}：
-\begin{equation}
-    \text{UCB}_i(t) = \hat{\mu}_i + \sqrt{\frac{2\ln t}{n_i(t)}}
-\end{equation}
-其中 $\hat{\mu}_i$ 是臂 $i$ 的样本均值，$n_i(t)$ 是臂 $i$ 被拉的次数。
-
-每轮选择 UCB 值最大的臂：$a_t = \arg\max_i \text{UCB}_i(t)$
-\end{keyidea}
-
-\paragraph{为什么这样设计？}
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[
-    scale=0.9, 
-    y=8cm,  %关键：拉伸Y轴，让0.1的差距看起来像0.8cm
-    >=stealth % 箭头样式优化
-]
-    % 绘制坐标轴
-    \draw[->, thick] (-0.5, 0) -- (9, 0); % X轴
-    \draw[->, thick] (0, 0) -- (0, 0.9) node[left] {奖励 (Reward)}; % Y轴
-    
-    % 定义数据：位置/均值/样本数/名字
-    % 注意：为了配合你的描述让臂2的UCB最高，我微调了臂1的参数（或者你需要更小的N给臂2）
-    % 原数据：臂1 UCB=0.6+0.11=0.71, 臂2 UCB=0.4+0.22=0.62 (臂1其实更高)
-    % 这里的绘图将忠实反映计算结果，箭头指向计算出的UCB位置
-    \foreach \x/\mu/\n/\name in {2/0.6/20/臂1, 5/0.4/2/臂2, 8/0.5/50/臂3} {
-        \begin{scope}[xshift=\x cm]
-            % 计算置信区间 CI
-            \pgfmathsetmacro{\ci}{0.5/sqrt(\n)}
-            \pgfmathsetmacro{\ucb}{\mu+\ci}
-            \pgfmathsetmacro{\lcb}{\mu-\ci}
-            
-            % 1. 绘制置信区间线 (蓝色)
-            \draw[very thick, blue!80] (0, \lcb) -- (0, \ucb);
-            \draw[thick, blue!80] (-0.2, \lcb) -- (0.2, \lcb); % 下横线
-            \draw[thick, blue!80] (-0.2, \ucb) -- (0.2, \ucb); % 上横线（UCB）
-            
-            % 2. 绘制样本均值点 (红色)
-            \fill[red] (0, \mu) circle (2.5pt) node[right=2pt, font=\scriptsize, black] {$\hat{\mu}$};
-            
-            % 3. 绘制 UCB 点 (绿色)
-            \fill[green!60!black] (0, \ucb) circle (2.5pt);
-            \node[right=2pt, font=\scriptsize, green!60!black] at (0, \ucb) {UCB};
-            
-            % 4. 底部标签 (固定位置，不再乱跑)
-            \draw (0, 0) -- (0, -0.02); % x轴刻度
-            \node[below=5pt, font=\bfseries] at (0, 0) {\name};
-            \node[below=18pt, font=\scriptsize, gray] at (0, 0) {$n=\n$};
-            
-            % 特殊处理：如果是臂2，画箭头
-            \ifnum\x=5
-                \draw[<-, very thick, orange] (0, \ucb+0.05) -- (0, \ucb+0.25) node[above, font=\small] {Exploration!};
-            \fi
-        \end{scope}
-    }
-    
-    % 虚线辅助线（可选，看最大值水平）
-    %\draw[dashed, gray] (-0.5, 0.71) -- (9, 0.71); 
-\end{tikzpicture}
-\caption{UCB 算法示意图：虽然臂2的均值（红点）较低，但由于探索次数少（$n=2$），其不确定性范围大，导致置信上界（绿点）具有竞争力。}
-\end{figure}
-
-UCB 的设计体现了"\textbf{乐观面对不确定性}"（Optimism in the Face of Uncertainty）原则：
-
-\begin{itemize}
-    \item 对于采样多的臂，置信区间窄，UCB $\approx$ 样本均值
-    \item 对于采样少的臂，置信区间宽，UCB 可能很高
-    \item 这自动平衡了探索（采样少的臂 UCB 高）和利用（样本均值高的臂 UCB 高）
-\end{itemize}
-
-\paragraph{UCB 的遗憾分析}
-
-\begin{theorem}[UCB 遗憾上界]
-UCB 算法的期望遗憾满足：
-\begin{equation}
-    \mathbb{E}[\text{Regret}(T)] \leq 8 \sum_{i: \Delta_i > 0} \frac{\ln T}{\Delta_i} + \left(1 + \frac{\pi^2}{3}\right) \sum_i \Delta_i
-\end{equation}
-其中 $\Delta_i = \mu^* - \mu_i$ 是臂 $i$ 与最优臂的差距。
-\end{theorem}
-
-\paragraph{关键结论}
-\begin{itemize}
-    \item 遗憾是 $O(\ln T)$ 的，即\textbf{亚线性增长}
-    \item 这意味着平均每轮遗憾 $\to 0$，算法最终会集中在最优臂上
-    \item 而且可以证明 $\Omega(\ln T)$ 是下界——UCB 是\textbf{最优阶}的！
-\end{itemize}
-
-% ------------------------------------------------------------------------------------
-\subsection{UCB 遗憾分析的完整证明}
-% ------------------------------------------------------------------------------------
-
-让我们详细证明 UCB 的遗憾上界，这个证明展示了 Hoeffding 不等式的典型应用。
-
-\paragraph{记号}
-\begin{itemize}
-    \item $\mu^* = \max_i \mu_i$：最优臂的期望
-    \item $a^* = \arg\max_i \mu_i$：最优臂的索引
-    \item $\Delta_i = \mu^* - \mu_i$：臂 $i$ 的次优差距
-    \item $n_i(t)$：到时刻 $t$ 为止臂 $i$ 被拉的次数
-    \item $\hat{\mu}_i(t)$：臂 $i$ 在时刻 $t$ 的样本均值
-\end{itemize}
-
-\paragraph{遗憾分解}
-
-遗憾可以按臂分解：
-\begin{equation}
-    \text{Regret}(T) = \sum_{t=1}^{T} (\mu^* - \mu_{a_t}) = \sum_{i=1}^{K} \Delta_i \cdot n_i(T)
-\end{equation}
-
-所以我们只需要界定每个次优臂被拉的次数 $n_i(T)$。
-
-\paragraph{核心引理}
-
-\begin{lemma}[次优臂被拉的条件]
-如果在时刻 $t$ 选择了次优臂 $i$（即 $a_t = i \neq a^*$），则至少发生以下三种情况之一：
-\begin{enumerate}
-    \item $\hat{\mu}^*(t) + c_t(n^*(t)) < \mu^*$（最优臂的 UCB 低估了真实值）
-    \item $\hat{\mu}_i(t) > \mu_i + c_t(n_i(t))$（次优臂的样本均值高估了）
-    \item $\mu^* < \hat{\mu}_i(t) + 2c_t(n_i(t))$（次优臂采样太少）
-\end{enumerate}
-其中 $c_t(n) = \sqrt{\frac{2\ln t}{n}}$ 是置信半径。
-\end{lemma}
-
-\begin{proof}
-如果选了臂 $i$ 而不是 $a^*$，说明 $\text{UCB}_i(t) \geq \text{UCB}^*(t)$，即：
-\begin{equation}
-    \hat{\mu}_i(t) + c_t(n_i(t)) \geq \hat{\mu}^*(t) + c_t(n^*(t))
-\end{equation}
-
-如果情况 1 和 2 都不发生，则：
-\begin{align}
-    \mu^* &\leq \hat{\mu}^*(t) + c_t(n^*(t)) \quad \text{（1不发生）} \\
-    &\leq \hat{\mu}_i(t) + c_t(n_i(t)) \quad \text{（选了臂 $i$）} \\
-    &\leq \mu_i + 2c_t(n_i(t)) \quad \text{（2不发生）}
-\end{align}
-
-所以 $\mu^* - \mu_i \leq 2c_t(n_i(t))$，即 $\Delta_i \leq 2\sqrt{\frac{2\ln t}{n_i(t)}}$。
-
-解得 $n_i(t) \leq \frac{8\ln t}{\Delta_i^2}$。如果 $n_i(t) > \frac{8\ln t}{\Delta_i^2}$，则情况 3 不成立，矛盾。
-\end{proof}
-
-\paragraph{应用 Hoeffding 不等式}
-
-现在我们用 Hoeffding 不等式来界定情况 1 和 2 发生的概率。
-
-对于情况 1（$\hat{\mu}^* < \mu^* - c_t(n^*)$）：
-\begin{align}
-    \mathbb{P}(\text{情况 1}) &= \mathbb{P}\left(\hat{\mu}^* - \mu^* < -\sqrt{\frac{2\ln t}{n^*}}\right) \\
-    &\leq \exp\left(-2n^* \cdot \frac{2\ln t}{n^*}\right) \quad \text{（Hoeffding）} \\
-    &= \exp(-2\ln t) = t^{-2}
-\end{align}
-
-同理，情况 2 的概率也 $\leq t^{-2}$。
-
-\paragraph{汇总}
-
-次优臂 $i$ 在时刻 $t$ 被拉的概率：
-\begin{equation}
-    \mathbb{P}(a_t = i) \leq \mathbb{P}(\text{情况 1}) + \mathbb{P}(\text{情况 2}) + \mathbbm{1}\left[n_i(t) \leq \frac{8\ln t}{\Delta_i^2}\right]
-\end{equation}
-
-对 $n_i(T)$ 求期望：
-\begin{align}
-    \mathbb{E}[n_i(T)] &= \sum_{t=1}^{T} \mathbb{P}(a_t = i) \\
-    &\leq \frac{8\ln T}{\Delta_i^2} + \sum_{t=1}^{T} 2t^{-2} \\
-    &\leq \frac{8\ln T}{\Delta_i^2} + \frac{\pi^2}{3}
-\end{align}
-
-最后，总遗憾：
-\begin{equation}
-    \mathbb{E}[\text{Regret}(T)] = \sum_{i \neq a^*} \Delta_i \cdot \mathbb{E}[n_i(T)] \leq \sum_{i: \Delta_i > 0} \left( \frac{8\ln T}{\Delta_i} + \frac{\pi^2}{3} \Delta_i \right)
-\end{equation}
-
-这就完成了证明。$\square$
-
-% ------------------------------------------------------------------------------------
-\subsection{PAC 学习框架}
-% ------------------------------------------------------------------------------------
-
-除了遗憾界，还有另一种分析框架：\textbf{PAC 学习}（Probably Approximately Correct）。
-
-\begin{keyidea}[PAC 学习（Probably Approximately Correct）]
-我们希望：即使不知道真实环境的动态规律，算法也能靠有限的样本学到“足够好”的策略。
-
-设 $\pi$ 是算法学到的策略，$V^\pi$ 是它的价值，$V^*$ 是最优策略的价值。
-
-\textbf{定义：}  
-如果一个学习算法满足下面的性质，我们称它是 $(\epsilon,\delta)$-PAC 的：
-
-\[
-\mathbb{P}\!\left(\, V^\pi \ge V^* - \epsilon \,\right) \ge 1-\delta.
-\]
-
-这句话的含义是：
-
-\begin{itemize}
-    \item 输出的策略 $\pi$ 的表现 \emph{几乎} 和最优策略一样好（最多差 $\epsilon$）
-    \item 这种情况发生的概率至少为 $1-\delta$,而“失败”的概率只有 $\delta$
-\end{itemize}
-
-换句话说，一个 PAC 算法只要给它足够多的训练数据，就能 \textbf{以高概率学到接近最优的策略}。
-
-\vspace{0.5em}
-\textbf{样本复杂度} 指：  
-为了保证上面的性质成立，算法\emph{最少}需要多少条样本（交互步骤）。
-\end{keyidea}
-
-
-\paragraph{多臂老虎机的 PAC 界}
-
-对于 $K$ 臂老虎机，要找到 $\epsilon$-最优臂，需要多少样本？
-\sidenoteplain{
-这和微积分里的 $\varepsilon\text{-}\delta$ / $\varepsilon\text{-}N$ 语言很像。数列存在极限的定义是：对每个 $\varepsilon>0$，存在 $N(\varepsilon)$，使得
-当 $n\ge N(\varepsilon)$ 时有 $|a_n - L| < \varepsilon$。\\[0.3em]
-PAC 学习也是：给定容忍误差 $\epsilon$ 和失败概率 $\delta$，
-问“需要多少样本 $N(\epsilon,\delta)$ 才能保证
-$\mathbb{P}(V^\pi \ge V^*-\epsilon)\ge 1-\delta$？”——本质上都是在问：
-\textbf{‘要多大才算足够大？’}
-}
-
-\begin{theorem}[朴素 PAC 界]
-均匀采样每个臂 $n = \frac{2}{\epsilon^2} \ln\frac{2K}{\delta}$ 次，然后选样本均值最大的臂，是 $(\epsilon, \delta)$-PAC 的。总样本数：
-\begin{equation}
-    N = K \cdot \frac{2}{\epsilon^2} \ln\frac{2K}{\delta} = O\left(\frac{K}{\epsilon^2} \ln\frac{K}{\delta}\right)
-\end{equation}
-\end{theorem}
-
-\begin{proof}
-用 Hoeffding 不等式和 Union Bound：
-\begin{align}
-    \mathbb{P}(\text{选错臂}) &\leq \mathbb{P}\left(\exists i: |\hat{\mu}_i - \mu_i| > \frac{\epsilon}{2}\right) \\
-    &\leq \sum_{i=1}^{K} \mathbb{P}\left(|\hat{\mu}_i - \mu_i| > \frac{\epsilon}{2}\right) \quad \text{（Union Bound）} \\
-    &\leq \sum_{i=1}^{K} 2\exp\left(-\frac{n\epsilon^2}{2}\right) \quad \text{（Hoeffding）} \\
-    &= 2K \exp\left(-\frac{n\epsilon^2}{2}\right)
-\end{align}
-
-令 $2K \exp(-n\epsilon^2/2) \leq \delta$，解得 $n \geq \frac{2}{\epsilon^2}\ln\frac{2K}{\delta}$。
-\end{proof}
-
-% ------------------------------------------------------------------------------------
-\subsection{从老虎机到表格型强化学习}
-% ------------------------------------------------------------------------------------
-
-现在让我们把这些工具应用到完整的强化学习问题。考虑\textbf{表格型 MDP}：有限状态 $\mathcal{S}$，有限动作 $\mathcal{A}$，转移概率 $P(s'|s,a)$，奖励 $r(s,a)$。
-
-\paragraph{挑战}
-
-强化学习比老虎机难得多：
-\begin{itemize}
-    \item 动作的效果是\textbf{延迟}的——当前动作影响未来所有状态
-    \item 状态之间是\textbf{关联}的——探索某状态需要先到达它
-    \item 策略评估需要估计\textbf{整个值函数}，不只是单个期望
-\end{itemize}
-
-\paragraph{UCB 思想的推广：乐观初始化}
-
-一个简单但有效的方法是\textbf{乐观初始化}：将所有 Q 值初始化为最大可能值。
-
-\begin{lstlisting}[language=Python, caption={乐观初始化的 Q-Learning}]
-def optimistic_q_learning(env, episodes, gamma=0.99):
-    # 乐观初始化：Q 值设为最大可能回报
-    Q_max = 1 / (1 - gamma)  # 假设奖励在 [0,1]
-    Q = np.full((n_states, n_actions), Q_max)
-    
-    # 计数器
-    N = np.zeros((n_states, n_actions))
-    
-    for episode in range(episodes):
-        state = env.reset()
-        
-        while True:
-            # 选 Q 值最大的动作（乐观驱动探索）
-            action = np.argmax(Q[state])
-            
-            next_state, reward, done = env.step(action)
-            N[state, action] += 1
-            
-            # 学习率递减
-            alpha = 1 / N[state, action]
-            
-            # Q 更新
-            td_target = reward + gamma * np.max(Q[next_state]) * (1 - done)
-            Q[state, action] += alpha * (td_target - Q[state, action])
-            
-            state = next_state
-            if done:
-                break
-    
-    return Q
-\end{lstlisting}
-
-为什么乐观初始化能促进探索？因为未访问过的状态-动作对保持高 Q 值，算法会被"吸引"去探索它们。
-
-\paragraph{UCB-VI：值迭代中的 UCB}
-
-更精细的方法是在值迭代中显式使用置信区间。\textbf{UCB-VI}（UCB for Value Iteration）维护转移概率和奖励的置信区间，然后做"乐观规划"。
-
-核心思想：
-\begin{equation}
-    Q(s,a) = r(s,a) + \gamma \sum_{s'} \hat{P}(s'|s,a) V(s') + \text{Bonus}(s,a)
-\end{equation}
-
-其中 Bonus 项来自 Hoeffding 不等式：
-\begin{equation}
-    \text{Bonus}(s,a) = O\left(\sqrt{\frac{H \ln(SAT/\delta)}{n(s,a)}}\right)
-\end{equation}
-
-$H$ 是时间步长，$n(s,a)$ 是访问次数。
-
-% ------------------------------------------------------------------------------------
-\subsection{表格型 RL 的样本复杂度}
-% ------------------------------------------------------------------------------------
-
-\begin{theorem}[表格型 RL 的 PAC 界（简化版）]
-对于有 $S$ 个状态、$A$ 个动作、折扣因子 $\gamma$ 的 MDP，存在算法能以概率 $1-\delta$ 找到 $\epsilon$-最优策略，样本复杂度为：
-\begin{equation}
-    N = \tilde{O}\left( \frac{SA}{(1-\gamma)^3 \epsilon^2} \right)
-\end{equation}
-其中 $\tilde{O}$ 忽略对数因子。
-\end{theorem}
-
-\paragraph{理解这个界}
-\begin{itemize}
-    \item $SA$：需要探索所有状态-动作对
-    \item $1/(1-\gamma)^3$：折扣因子越接近 1，有效时间步长越长，需要更多样本
-    \item $1/\epsilon^2$：精度要求越高，需要样本越多（与 Hoeffding 一致）
-\end{itemize}
-
-\paragraph{下界}
-
-也可以证明 $\Omega\left(\frac{SA}{(1-\gamma)^3 \epsilon^2}\right)$ 是下界，说明这个样本复杂度是\textbf{紧的}。
-
-% ------------------------------------------------------------------------------------
-\subsection{探索奖励：内在动机}
-% ------------------------------------------------------------------------------------
-
-UCB 的思想也启发了深度强化学习中的\textbf{探索奖励}（Exploration Bonus）方法。由于深度 RL 中状态空间太大，不能像表格法那样精确计数。常用的近似方法包括：
-
-\paragraph{1. 基于计数的方法（Count-based）}
-
-用密度模型近似"伪计数"：
-\begin{equation}
-    \text{Bonus}(s) = \frac{\beta}{\sqrt{\hat{n}(s)}}
-\end{equation}
-
-其中 $\hat{n}(s)$ 是状态 $s$ 的伪计数，可以用像素变化、状态密度等方式估计。
-
-\paragraph{2. 好奇心驱动（Curiosity-driven）}
-
-用预测误差作为探索奖励：
-\begin{equation}
-    \text{Bonus}(s, a, s') = \| \hat{f}(s, a) - s' \|^2
-\end{equation}
-
-如果转移难以预测，说明这是"新奇"的状态，应该探索。
-
-\paragraph{3. Random Network Distillation (RND)}
-
-训练一个网络去预测另一个固定随机网络的输出：
-\begin{equation}
-    \text{Bonus}(s) = \| f_\theta(s) - f_{\text{random}}(s) \|^2
-\end{equation}
-
-未见过的状态预测误差大，获得高探索奖励。
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[>=stealth, scale=0.85]
-    % 三种方法
-    \begin{scope}[xshift=0cm]
-        \node[font=\bfseries] at (0, 3) {计数法};
-        \draw[thick, blue, domain=0.2:3, samples=50] plot (\x, {1.5/sqrt(\x)});
-        \draw[->] (0, 0) -- (3.5, 0) node[right, font=\small] {$n(s)$};
-        \draw[->] (0, 0) -- (0, 3) node[above, font=\small] {Bonus};
-        \node[font=\scriptsize, gray] at (1.5, -0.5) {$\propto 1/\sqrt{n}$};
-    \end{scope}
-    
-    \begin{scope}[xshift=5cm]
-        \node[font=\bfseries] at (0, 3) {好奇心};
-        \node[draw, rounded corners, fill=blue!20, minimum width=1.5cm] (pred) at (0, 1.5) {预测器};
-        \node[draw, rounded corners, fill=green!20, minimum width=1cm] (s) at (-1.5, 1.5) {$s,a$};
-        \node[draw, rounded corners, fill=green!20, minimum width=1cm] (sp) at (1.5, 1.5) {$s'$};
-        \draw[->, thick] (s) -- (pred);
-        \draw[->, thick] (pred) -- (sp);
-        \node[font=\scriptsize, gray] at (0, 0.5) {预测误差 = Bonus};
-    \end{scope}
-    
-    \begin{scope}[xshift=10cm]
-        \node[font=\bfseries] at (0, 3) {RND};
-        \node[draw, rounded corners, fill=orange!20, minimum width=1.5cm] (f1) at (-0.8, 1.8) {$f_\theta$};
-        \node[draw, rounded corners, fill=gray!30, minimum width=1.5cm] (f2) at (0.8, 1.8) {$f_{rand}$};
-        \node[draw, rounded corners, fill=green!20, minimum width=1cm] (s2) at (0, 0.8) {$s$};
-        \draw[->, thick] (s2) -- (f1);
-        \draw[->, thick] (s2) -- (f2);
-        \draw[<->, thick, red] (f1) -- node[above, font=\scriptsize] {差异} (f2);
-        \node[font=\scriptsize, gray] at (0, 0) {固定随机网络};
-    \end{scope}
-\end{tikzpicture}
-\caption{三种探索奖励方法的示意}
-\end{figure}
-
-% ------------------------------------------------------------------------------------
-\subsection{理论与实践的鸿沟}
-% ------------------------------------------------------------------------------------
-
-虽然我们有漂亮的 PAC 界和遗憾界，但在深度强化学习中，这些理论往往不能直接应用：
-
-\begin{table}[htbp]
-\centering
-\renewcommand{\arraystretch}{1.4}
-\begin{tabular}{p{4cm}|p{5cm}|p{5cm}}
-\toprule
-\textbf{方面} & \textbf{理论分析} & \textbf{深度 RL 实践} \\
-\midrule
-状态空间 & 有限、可枚举 & 连续、高维（如图像） \\
-\midrule
-函数近似 & 表格（精确） & 神经网络（近似） \\
-\midrule
-样本 & 独立同分布 & 高度相关（轨迹） \\
-\midrule
-更新 & 精确计算 & 随机梯度下降 \\
-\midrule
-探索 & UCB 等有保证 & $\epsilon$-贪婪、熵正则等启发式 \\
-\bottomrule
-\end{tabular}
-\caption{理论分析与深度 RL 实践的差异}
-\end{table}
-
-\paragraph{为什么理论仍然重要？}
-
-尽管有这些差距，理论分析仍然提供了重要的\textbf{定性指导}：
-
-\begin{itemize}
-    \item \textbf{探索的必要性}：纯贪婪策略的遗憾是线性的，必须探索
-    \item \textbf{样本复杂度的结构}：依赖于 $S, A, 1/(1-\gamma), 1/\epsilon$ 的方式
-    \item \textbf{乐观原则}：面对不确定性应该乐观，这启发了很多实用算法
-    \item \textbf{偏差-方差权衡}：TD vs MC 的本质是统计学的偏差-方差权衡
-\end{itemize}
-
-% ------------------------------------------------------------------------------------
-
-\begin{remark}
-采样理论告诉我们一个深刻的道理：\textbf{学习的本质是在有限样本下做统计推断}。Hoeffding 不等式量化了"样本均值有多可靠"，UCB 算法展示了如何利用这种量化来做决策。
-
-虽然深度强化学习的实践远比理论复杂，但理解这些基础概念，能帮助你在设计算法时做出更有原则的选择。
-\end{remark}
-
 
 % ====================================================================================
-\section*{扩展阅读：从迷宫到机械臂——连续控制的挑战}
-\addcontentsline{toc}{section}{扩展阅读：从迷宫到机械臂}
+\section*{扩展阅读：延伸文献}
+\addcontentsline{toc}{section}{扩展阅读：延伸文献}
 % ====================================================================================
 
-\begin{tcolorbox}[colback=gray!5, colframe=gray!50, title=本节导读]
-前面的GridWorld例子只有25个状态、4个动作——这对于理解RL原理很有帮助，但距离真实的机器人控制还很远。本节介绍\textbf{连续控制}（Continuous Control）问题，以机械臂和CartPole为例，展示强化学习如何应对高维、连续的状态和动作空间。
-\end{tcolorbox}
-
-% ------------------------------------------------------------------------------------
-\subsection*{一、为什么连续控制更难？}
-
-GridWorld的状态是离散的格子，动作是上下左右四个方向。但在机器人控制中：
-
-\begin{itemize}
-    \item \textbf{状态是连续的}：机械臂的关节角度$\theta \in \mathbb{R}^n$、角速度$\dot{\theta} \in \mathbb{R}^n$
-    \item \textbf{动作是连续的}：施加的力矩$\tau \in \mathbb{R}^n$，不是"左/右"而是"施加多少牛顿米"
-    \item \textbf{动力学是复杂的}：运动方程涉及质量矩阵、科里奥利力等非线性项
-\end{itemize}
-
-这意味着Q表格不再可行（状态空间无限大），必须用函数逼近（如神经网络）。
-
-% ------------------------------------------------------------------------------------
-\subsection*{二、机械臂的数学模型}
-
-考虑最简单的\textbf{二连杆平面机械臂}（图\ref{fig:arm_kinematics}）：两根杆通过旋转关节连接，第一根固定在基座上。
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{figs_chap10/arm_kinematics.pdf}
-\caption{二连杆机械臂运动学（$L_1=1$ m，$L_2=0.8$ m）。（a）正运动学：扫描关节角 $\theta_1,\theta_2\in[-90^\circ,90^\circ]$，末端位置扫出两条红色虚线之间的环形工作空间。（b）逆运动学：给定四个目标位置（方框），用余弦定理解出关节角（见图例）。（c）位形 $\theta=(45^\circ,30^\circ)$ 下的可操作性椭圆：单位关节速度圆经雅可比 $J$ 映射为末端速度椭圆，红色箭头为两个奇异方向，$\sigma_1=1.90$、$\sigma_2=0.21$——沿长轴一动就动很多，沿短轴几乎动不了。}
-\label{fig:arm_kinematics}
-\end{figure}
-
-\paragraph{正运动学}
-给定关节角度$(\theta_1, \theta_2)$，末端位置为：
-\begin{align}
-    x &= L_1 \cos\theta_1 + L_2 \cos(\theta_1 + \theta_2) \\
-    y &= L_1 \sin\theta_1 + L_2 \sin(\theta_1 + \theta_2)
-\end{align}
-
-\paragraph{逆运动学}
-给定目标位置$(x, y)$，需要求解$(\theta_1, \theta_2)$。这是一个非线性方程组，通常有多个解（对应不同的肘部朝向）。用余弦定理可得：
-\[
-\cos\theta_2 = \frac{x^2 + y^2 - L_1^2 - L_2^2}{2 L_1 L_2}
-\]
-
-\paragraph{雅可比矩阵}
-末端速度与关节速度的关系由\textbf{雅可比矩阵}描述：
-\[
-\begin{pmatrix} \dot{x} \\ \dot{y} \end{pmatrix} = J(\theta) \begin{pmatrix} \dot{\theta}_1 \\ \dot{\theta}_2 \end{pmatrix}
-\]
-
-雅可比矩阵的奇异值分解揭示了机械臂在不同方向的"灵活度"——椭圆长轴方向容易运动，短轴方向难以运动。
-
-% ------------------------------------------------------------------------------------
-\subsection*{三、传统控制 vs 强化学习}
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{figs_chap10/rl_control_comparison.pdf}
-\caption{控制方法对比（示意图）。（a）传统控制是一条串行的设计流水线：建模、控制器设计、稳定性分析、参数整定、实现与测试，不达标就回头改模型或增益；（b）强化学习只需定义奖励函数，智能体在与环境的闭环交互中采样、估计回报并更新策略参数，但需要大量训练样本和计算资源。}
-\label{fig:rl_control_comparison}
-\end{figure}
-
-\paragraph{传统方法：PD控制}
-最简单的控制策略是\textbf{PD控制器}：
-\[
-\tau = K_p (\theta_{\text{target}} - \theta) - K_d \dot{\theta}
-\]
-
-这需要：(1) 知道目标角度（需要逆运动学）；(2) 调节增益$K_p, K_d$；(3) 假设动力学足够简单。
-
-图\ref{fig:pd_control}展示了PD控制器跟踪圆形轨迹的效果——在简单任务上表现良好，但对模型误差和外部扰动敏感。
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{figs_chap10/pd_control_trajectory.pdf}
-\caption{PD 控制器跟踪圆形轨迹（$K_p=400$，$K_d=40$，力矩限幅 $\pm50$ N$\cdot$m，RK4 仿真）。（a）末端从右下角的伸直姿态甩入目标圆；（b）跟踪误差（对数轴）从 700 mm 降到约 34 mm 后不再减小——纯反馈控制对运动目标总有滞后；（c）关节角随时间变化；（d）控制力矩：启动瞬间打到限幅，之后很小。}
-\label{fig:pd_control}
-\end{figure}
-
-\paragraph{强化学习方法}
-RL不需要显式的逆运动学或动力学模型。智能体直接学习从状态到力矩的映射：
-\[
-\pi_\theta: (\theta_1, \theta_2, \dot{\theta}_1, \dot{\theta}_2, x_{\text{goal}}, y_{\text{goal}}) \mapsto (\tau_1, \tau_2)
-\]
-
-奖励设计示例：
-\[
-r = -\|p_{\text{end}} - p_{\text{goal}}\|^2 - 0.01 \|\tau\|^2
-\]
-第一项鼓励接近目标，第二项惩罚过大的力矩。
-
-% ------------------------------------------------------------------------------------
-\subsection*{四、CartPole：连续控制的入门任务}
-
-在动手实现机械臂RL之前，先用更简单的\textbf{CartPole}任务热身（图\ref{fig:cartpole_demo}）。
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{figs_chap10/cartpole_demo.pdf}
-\caption{CartPole 任务。（a）环境示意——小车上竖立一根杆，通过左右推动小车让杆保持竖直；状态是 4 维连续向量，动作是离散的（左/右），每坚持一步奖励 $+1$，每回合最多 200 步。（b）两个真实算法的学习曲线（各 5 个随机种子，均值 $\pm$ 标准差；环境按 Barto 等的标准方程自行实现，不依赖 gym）：交叉熵方法 + 线性策略在第 15 代（600 回合）达到``解决''阈值 195；把状态离散化的表格 Q-Learning 几百回合内升到 150--190 但不稳定、种子间差异大；随机策略始终徘徊在 22 左右。}
-\label{fig:cartpole_demo}
-\end{figure}
-
-CartPole的状态是4维向量$[x, \dot{x}, \theta, \dot{\theta}]$，目标是让杆保持竖直（$|\theta| < 12°$）且小车不出界（$|x| < 2.4$）。每坚持一步获得 +1 奖励，每回合最多 200 步，平均回报超过 195 即算``solved''。
-
-\paragraph{用Stable Baselines3训练}
-
-\begin{lstlisting}[language=Python]
-import gymnasium as gym
-from stable_baselines3 import PPO
-
-# 创建环境
-env = gym.make("CartPole-v1")
-
-# 创建并训练智能体
-model = PPO("MlpPolicy", env, verbose=1)
-model.learn(total_timesteps=50000)
-
-# 测试
-obs, _ = env.reset()
-for _ in range(200):
-    action, _ = model.predict(obs, deterministic=True)
-    obs, reward, done, truncated, info = env.step(action)
-    if done:
-        break
-\end{lstlisting}
-
-PPO（Proximal Policy Optimization）是目前最常用的策略梯度算法，在ChatGPT的RLHF训练中也使用了它。
-
-% ------------------------------------------------------------------------------------
-\subsection*{五、进阶：用RL控制机械臂}
-
-机械臂控制比CartPole复杂得多：
-\begin{itemize}
-    \item 动作空间是\textbf{连续}的（力矩值），需要用SAC或TD3等算法
-    \item 状态维度更高（关节+目标位置）
-    \item 奖励设计更关键（稀疏奖励很难学习）
-\end{itemize}
-
-推荐使用\texttt{gymnasium-robotics}库中的\texttt{FetchReach}等环境，或者MuJoCo物理引擎中的机械臂任务。
-
-\begin{lstlisting}[language=Python]
-import gymnasium as gym
-from stable_baselines3 import SAC
-
-# 机械臂到达任务（需要安装gymnasium-robotics）
-env = gym.make("FetchReach-v3")
-
-# SAC适合连续动作空间
-model = SAC("MultiInputPolicy", env, verbose=1)
-model.learn(total_timesteps=100000)
-\end{lstlisting}
-
-% ------------------------------------------------------------------------------------
-\subsection*{六、实践建议}
-
-\begin{insightbox}[title=连续控制学习路线]
 \begin{enumerate}
-    \item \textbf{入门}：CartPole + DQN/PPO，理解基本训练流程
-    \item \textbf{进阶}：Pendulum/MountainCarContinuous + SAC，体验连续动作空间
-    \item \textbf{挑战}：FetchReach/HalfCheetah，接触真实机器人仿真
-    \item \textbf{实战}：sim-to-real迁移，将仿真策略部署到真实机器人
+    \item \textbf{博弈论入门}：Osborne, M. J. (2004). \textit{An Introduction to Game Theory}. Oxford University Press. 非常适合本科生的博弈论教材。
+
+    \item \textbf{平均场博弈}：Lasry, J. M., \& Lions, P. L. (2007). Mean field games. \textit{Japanese Journal of Mathematics}, 2(1), 229-260. 平均场博弈的奠基性论文。
+
+    \item \textbf{QMIX}：Rashid, T., et al. (2018). QMIX: Monotonic value function factorisation for deep multi-agent reinforcement learning. \textit{ICML 2018}. 价值分解方法的里程碑。
+
+    \item \textbf{MAPPO}：Yu, C., et al. (2022). The surprising effectiveness of PPO in cooperative multi-agent games. \textit{NeurIPS 2022}. 展示了简单方法在多智能体RL中的强大能力。
+
+    \item \textbf{Braess悖论}：Braess, D. (1968). Über ein Paradoxon aus der Verkehrsplanung. \textit{Unternehmensforschung}, 12(1), 258-268. 原始论文（德语）。
+
+    \item \textbf{交通均衡}：Wardrop, J. G. (1952). Road paper. Some theoretical aspects of road traffic research. \textit{Proceedings of the Institution of Civil Engineers}, 1(3), 325-362. 交通均衡理论的经典。
 \end{enumerate}
-\end{insightbox}
-
-完整代码见\texttt{code\_chap10/robotic\_arm\_control.py}。
-
-\begin{remark}
-从GridWorld到机械臂，我们看到了强化学习的通用性：只要能定义状态、动作、奖励，同样的算法框架就能应用。但"能应用"不等于"好用"——连续控制的样本效率、奖励设计、sim-to-real差距都是活跃的研究方向。
-\end{remark}
-
-%======================================================================
-\section*{扩展阅读：为什么强化学习必须针对任务设计奖励函数}
-\addcontentsline{toc}{section}{扩展阅读：强化学习奖励函数设计}
-
-\begin{tcolorbox}[colback=gray!5, colframe=gray!50, title=本节导读]
-本书的目标函数 $f$ 在强化学习里叫奖励 $r$。本节说明：同一个环境换一个奖励就是换一个优化问题，奖励设计中的"塑形"与"约束"如何改变最优策略，以及为什么没有放之四海皆准的奖励。做实际项目前必读。
-\end{tcolorbox}
-%======================================================================
-
-强化学习中，环境动力学（状态转移）与奖励函数共同决定了优化问题的含义。在马尔可夫决策过程
-\[
-\mathcal{M} = (\mathcal{S}, \mathcal{A}, P, r, \gamma)
-\]
-中，$r:\mathcal{S}\times\mathcal{A}\to\mathbb{R}$ 是唯一进入目标函数的"任务描述"。在相同的状态空间 $\mathcal{S}$、动作空间 $\mathcal{A}$ 与转移核 $P$ 下，不同的奖励函数 $r$ 会对应完全不同的最优策略集合。
-
-换言之：
-
-\begin{center}
-\emph{"强化学习解决的是：在给定奖励函数的前提下，最大化期望回报的问题；而不是直接解决'任务描述'本身。"}
-\end{center}
-
-因此，奖励函数的设计实际上是将现实中的任务要求编码为一个可优化的数学目标。若奖励设计不当，即使算法和函数逼近器再强，也只会收敛到一个与真实目标不一致的"伪最优"策略。本节从三个角度说明这一点：目标对齐、可优化性、工程约束。
-
-%----------------------------------------------------------------------
-\subsection*{一、奖励函数是任务目标的唯一入口}
-%----------------------------------------------------------------------
-
-强化学习的优化目标通常写成：
-\[
-J(\pi) = \mathbb{E}_{\tau\sim\pi}\left[\sum_{t=0}^{T} \gamma^t r(s_t, a_t)\right],
-\]
-其中 $\tau=(s_0,a_0,s_1,a_1,\dots)$ 为按策略 $\pi$ 生成的轨迹。任何策略评估与改进算法（例如值迭代、策略迭代、Q-learning、策略梯度）最终都在试图提高 $J(\pi)$ 的数值。
-
-从形式上看，$P(s'|s,a)$ 描述"世界如何响应动作"，而 $r(s,a)$ 描述"在当前状态下执行某个动作的即时优劣"。强化学习算法不直接理解"任务语言"（例如"尽快到达终点"、"保持安全"、"节能"），只能通过标量奖励做判断。因此：
-
-\begin{itemize}
-  \item 若 $r(s,a)$ 精确刻画了任务要求，则最优策略 $\pi^\ast$ 具有明确实际意义；
-  \item 若 $r(s,a)$ 与真实目标存在偏差，学习过程会优化一个错误的目标，产生"看起来努力、实际偏题"的行为。
-\end{itemize}
-
-一个简单例子是迷宫导航任务。假设真实目标是"尽快到达终点并保持路径平滑"，但奖励函数只有终点奖励：
-\[
-r(s_t,a_t) =
-\begin{cases}
-1, & s_t \text{ 为终点},\\
-0, & \text{否则}.
-\end{cases}
-\]
-在这种描述下，任何能到达终点的策略都是最优策略，包括"绕迷宫多圈后再顺便走到终点"的策略。若希望体现"时间成本"，通常需要在每一步添加负奖励：
-\[
-r(s_t,a_t) =
-\begin{cases}
-1, & s_t \text{ 为终点},\\
-- \alpha, & \text{否则},
-\end{cases}
-\]
-其中 $\alpha>0$ 控制对路径长度的惩罚。这一修改将任务中"到达 + 尽量快"两项要求显式体现在奖励结构中。
-
-%----------------------------------------------------------------------
-\subsection*{二、奖励结构与可优化性}
-%----------------------------------------------------------------------
-
-奖励函数不仅决定"优化什么"，还强烈影响"是否容易优化"。
-
-\paragraph{稀疏奖励与信号传播}
-
-考虑只在终点给 1 分、其他状态给 0 的稀疏奖励：
-\[
-r(s_t,a_t)=
-\begin{cases}
-1, & s_t \text{ 为目标状态},\\
-0, & \text{否则}.
-\end{cases}
-\]
-
-在这种情况下，绝大多数轨迹的回报 $R(\tau)$ 都是 0。策略梯度估计
-\[
-\nabla_\theta J(\theta)
-= \mathbb{E}_{\tau\sim\pi_\theta}\left[\sum_{t}\nabla_\theta \log \pi_\theta(a_t\mid s_t)\, G_t\right]
-\]
-中，$G_t$ 的方差会极高，而有用的更新信号极少。除非初始策略有较大概率"随机撞上"终点，否则在可承受的样本量内难以获得有效梯度更新。
-
-为缓解这一问题，常见做法是构造更密集的奖励，例如引入到终点的距离函数 $d(s,s_{\text{goal}})$：
-\[
-r(s_t,a_t) = -d(s_t,s_{\text{goal}}),
-\]
-这样每一步都能产生有梯度意义的误差信号，使优化过程更可行。
-
-\paragraph{奖励塑形与潜在函数}
-
-Reward shaping 的目标是在不改变最优策略的前提下，调整奖励结构以改善学习效率。一个常用的理论框架是基于势函数的塑形（Potential-based Reward Shaping）：
-\[
-r'(s,a,s') = r(s,a,s') + \gamma\Phi(s') - \Phi(s),
-\]
-其中 $\Phi:\mathcal{S}\to\mathbb{R}$ 是任意势函数。该构造满足如下不变性：若 $\pi^\ast$ 为原问题最优策略，则 $\pi^\ast$ 在新奖励 $r'$ 下仍为最优策略。证明依赖于对累积回报的望向展开：
-\[
-\sum_{t=0}^{T}\gamma^t (\gamma\Phi(s_{t+1}) - \Phi(s_t))
-= -\Phi(s_0) + \gamma^{T+1}\Phi(s_{T+1}),
-\]
-在 $\gamma<1$ 且 $\Phi$ 有界时，末项对策略比较不产生影响。
-
-这一形式说明：通过选择合适的 $\Phi(s)$，可以引入"鼓励接近目标"或"惩罚远离安全集"的结构化信号，而不改变理论上的最优策略集合。
-
-\paragraph{误导性奖励与局部最优}
-
-奖励设计不当时，可能产生"误导性山谷"。例如，在平衡杆（CartPole）任务中，可以定义奖励为：
-\[
-r_t = 1 - \beta\,|\theta_t|,
-\]
-其中 $\theta_t$ 为杆与竖直方向的夹角。如果 $\beta$ 设置过大，策略可能选择"很快将车开出屏幕边界，使系统进入某个稳定状态"以避免得到更大负值，而非真正让杆保持平衡。在某些环境实现中，错误奖励甚至会鼓励"尽快终止任务"，因为终止后不再产生负奖励。
-
-因此，奖励函数应谨慎匹配任务的真实期望行为，否则可能出现所谓的"奖励投机行为"（reward hacking）。
-
-%----------------------------------------------------------------------
-\subsection*{三、奖励与真实目标的对齐问题}
-%----------------------------------------------------------------------
-
-\paragraph{代理目标与真实目标}
-
-在实际工程任务中，真实目标往往复杂且难以直接写成标量函数。例如：
-
-\begin{itemize}
-  \item 既要提高效率，又要保证安全；
-  \item 既要优化长期收益，又要限制短期风险；
-  \item 同时考虑多种物理约束与法规要求。
-\end{itemize}
-
-强化学习中常用"代理奖励"（proxy reward）来近似真实目标，例如：
-\[
-r(s,a) = w_1 r_{\text{efficiency}}(s,a)
-+ w_2 r_{\text{safety}}(s,a)
-+ w_3 r_{\text{comfort}}(s,a),
-\]
-其中 $w_i$ 为人工挑选的权重。这一线性加权形式是一个工程化假设：假定不同目标可以线性叠加，且相对重要性由固定常数刻画。若权重选择不当，最优策略可能偏向某一项，产生与真实意图不一致的行为。
-
-\paragraph{约束问题与软惩罚}
-
-很多任务本质上是约束优化问题：
-\[
-\max_\pi~ \mathbb{E}[R(\tau)] \quad
-\text{s.t.} \quad \mathbb{E}[C_i(\tau)] \le c_i,\ \forall i,
-\]
-其中 $C_i$ 表示某种违规代价（能耗、风险、超载次数等）。强化学习中常见处理方式是将约束软化为惩罚项：
-\[
-r_{\text{soft}}(s,a) = r_{\text{task}}(s,a) - \lambda \cdot c(s,a),
-\]
-从而将问题转化为无约束优化。这里 $\lambda$ 的选取决定了任务目标与约束之间的权衡。
-
-此类转换在工程上常用，但也带来新的问题：对 $\lambda$ 的敏感性、不同约束之间的尺度差异、以及在有限训练时间内难以实现严格约束满足。因此，奖励函数在本质上承担了"把复杂约束问题压缩成单一标量信号"的工作，结构设计直接决定了最终策略的性质。
-
-%----------------------------------------------------------------------
-\subsection*{四、典型例子：同一环境，不同奖励}
-%----------------------------------------------------------------------
-
-下面给出几个具体例子，说明同一环境在不同奖励下会产生完全不同的策略。
-
-\paragraph{迷宫导航：路径长度 vs 安全 vs 能量}
-
-环境：二维栅格迷宫，智能体需要从起点 $S$ 到终点 $G$。假设有三种不同奖励：
-
-\begin{enumerate}
-  \item 仅终点奖励：
-  \[
-  r_1(s_t,a_t) =
-  \begin{cases}
-    1, & s_t = G,\\[3pt]
-    0, & \text{否则},
-  \end{cases}
-  \]
-  对应的最优策略集合包含所有能到达 $G$ 的策略，无视路径长度。
-  \item 终点 + 步长惩罚：
-  \[
-  r_2(s_t,a_t) =
-  \begin{cases}
-    1, & s_t = G,\\[3pt]
-    -\alpha, & \text{否则},
-  \end{cases}
-  \]
-  最优策略偏向最短路径。
-  \item 加入危险区域惩罚：
-  \[
-  r_3(s_t,a_t) =
-  \begin{cases}
-    1, & s_t = G,\\[3pt]
-    -\alpha, & \text{否则},
-  \end{cases}
-  - \beta \cdot \mathbf{1}\{s_t \in \mathcal{D}\},
-  \]
-  其中 $\mathcal{D}$ 为危险区域。若 $\beta$ 足够大，策略会刻意绕开危险区域，即便增加路径长度。
-\end{enumerate}
-
-这里环境转移 $P(s'|s,a)$ 完全相同，只是奖励结构改变，就可以从"尽快到达"转变为"更安全地到达"。
-
-\paragraph{机械臂抓取：成功率 vs 平滑性 vs 碰撞}
-
-环境：机械臂从桌面上抓取物体。几种奖励设计如下：
-
-\begin{itemize}
-  \item 仅成功奖励：抓到物体给 $+1$，否则 $0$；
-  \item 成功 + 末端轨迹平滑惩罚：在上式基础上减去控制增量的范数 $\|a_t-a_{t-1}\|$；
-  \item 成功 + 碰撞惩罚：对碰撞或大力撞击行为增加惩罚；
-  \item 成功 + 时间惩罚 + 碰撞惩罚：综合考虑效率与安全。
-\end{itemize}
-
-不同奖励会导出不同风格的策略：仅成功奖励可能诱导"快速、大幅度动作"，而加入平滑惩罚后，策略更趋向连续、柔和动作。加入碰撞惩罚后，策略会主动避开高风险轨迹——这些都是奖励结构的直接结果。
-
-%----------------------------------------------------------------------
-\subsection*{五、奖励设计与工程可行性}
-%----------------------------------------------------------------------
-
-强化学习的训练往往受以下因素限制：
-
-\begin{itemize}
-  \item 环境交互次数有限；
-  \item 运行时间有限；
-  \item 算力有限；
-  \item 现实系统中安全约束严格。
-\end{itemize}
-
-奖励设计必须在这些约束下，使优化问题在有限资源内可解。过于稀疏或极端的奖励结构会导致样本效率极低或训练发散。
-
-从工程角度看，奖励设计常常遵循以下思路：
-
-\begin{enumerate}
-  \item 先从任务目标出发，写出"理想但可能难以直接优化"的表达式；
-  \item 再将其分解为若干可观测的中间指标（距离、安全裕度、能耗、控制平滑度等）；
-  \item 选择合适的权重与形式，将各指标组合为标量奖励；
-  \item 使用必要的 reward shaping 技巧，提高训练稳定性与样本效率；
-  \item 在仿真中检验是否出现违背直觉的"投机行为"，必要时迭代修改奖励结构。
-\end{enumerate}
-
-本质上，奖励函数是连接"任务语言"和"优化算法"的桥梁。在构建强化学习系统时，针对任务属性设计奖励函数，是将实际需求转换为可计算目标的关键步骤。

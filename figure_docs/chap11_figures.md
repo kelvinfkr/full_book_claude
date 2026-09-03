@@ -1,6 +1,6 @@
 # 第11章 图片说明
 
-两张图由 `code_chap11/chap11_figures.py` 生成（从仓库根目录运行 `python3 code_chap11/chap11_figures.py`，PyTorch CPU 单线程约 10 s），使用统一风格模块 `code/textbook_style.py`，同时输出 `figs_chap11/chap11_fig{1,2}.{pdf,png}`。旧的 `figs_chap11/chap12_fig1.png`、`chap12_fig2.png` 已删除（文件名错、注意力权重几乎均匀、位置编码热图有混叠）。
+两张图由 `code_chap11/chap11_figures.py` 生成（从仓库根目录运行 `python3 code_chap11/chap11_figures.py`，PyTorch CPU 单线程约 10 s），使用统一风格模块 `code/textbook_style.py`，同时输出 `figs_chap11/chap11_fig{1,2}.{pdf,png}`。旧的 `旧文件 chap12_fig1.png`、`appC_fig2.png` 已删除（文件名错、注意力权重几乎均匀、位置编码热图有混叠）。
 
 ---
 

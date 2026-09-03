@@ -1,5 +1,6 @@
 % ====================================================================================
-\chapter{物理世界模型：从约束优化到智能本质}
+\chapter{世界模型与安全控制：具身智能的数学基础}
+\chaptermark{世界模型与安全控制}
 % ====================================================================================
 
 \vspace{1cm}
@@ -13,14 +14,14 @@
 \section*{引言：约束优化的终极问题}
 % ====================================================================================
 
-\marginnote{这一章是全书的Grand Finale。我们将看到，从牛顿力学到深度学习，从机器人控制到世界模型，所有这些看似不同的领域，都可以用同一个数学语言来统一：\textbf{约束优化}。}
+这一章和下一章是全书的收官。我们将看到，从牛顿力学到深度学习，从机器人控制到世界模型，所有这些看似不同的领域，都可以用同一个数学语言来统一：\textbf{约束优化}。
 
 让我们回顾这本书的旅程：
 
 \begin{itemize}
     \item 第1章，我们从拉格朗日乘子出发；第5章，我们看到牛顿的 $F = ma$ 如何被\textbf{约束优化}重新表述
-    \item 中间的章节，我们把同一套语言用到了有限元、信息论、机器人、最优控制、深度学习、强化学习、Transformer，以及用神经网络求解PDE（PINN）、学习算子（神经算子）、处理多智能体博弈
-    \item 现在，站在全书的终点，我们要问一个更深刻的问题：
+    \item 中间的章节，我们把同一套语言用到了信息论、机器人、最优控制、深度学习、强化学习、多智能体博弈、Transformer 与大模型的后训练，以及有限元、用神经网络求解PDE（PINN）、学习算子（神经算子）
+    \item 现在，走到全书的最后两章，我们要问一个更深刻的问题：
 \end{itemize}
 
 \begin{quote}
@@ -41,7 +42,7 @@
 \textbf{本章目标}：把全书的语言用到最后一个、也是最难的对象上——智能体本身。你会看到，"世界模型"是学出来的广义坐标，"安全控制"是不等式约束的乘子在起作用，"可微物理"是把牛顿定律当成约束塞进反向传播，而"自由能原理"是第4章最大熵的另一张面孔。读完本章，你应当能对任何一个智能系统追问三个问题：目标是什么？约束是什么？$\lambda$代表什么？
 \end{quote}
 
-本章分六步走：什么是世界模型（从"拟合数据"到"理解结构"）$\to$ 具身智能的数学本质（物理约束下的安全控制）$\to$ 可微物理（当牛顿定律变成计算图）$\to$ 视觉--语言--动作模型（从"看图说话"到"看图做事"）$\to$ 展望：世界--动作模型与真机强化学习 $\to$ 终极猜想（自由能原理与智能的统一理论）。
+本章分四步走：什么是世界模型（从"拟合数据"到"理解结构"）$\to$ 具身智能的数学本质（物理约束下的安全控制）$\to$ 可微物理（当牛顿定律变成计算图）$\to$ 扩展阅读：终极猜想（自由能原理与智能的统一理论）。让机器人"看图做事"的视觉--语言--动作模型，以及它在真机上的强化学习，留给第17章。
 \begin{tcolorbox}[colback=green!5, colframe=green!60!black, title=学完这章，你将能够...]
 \begin{itemize}
     \item 解释世界模型与传统预测模型的本质区别
@@ -61,16 +62,17 @@
 
 \begin{center}
 \renewcommand{\arraystretch}{1.3}
-\small
-\begin{tabular}{llll}
+\setlength{\tabcolsep}{3pt}
+\footnotesize
+\begin{tabular}{p{1.0cm}p{2.0cm}p{3.6cm}p{4.3cm}}
 \toprule
 \textbf{概念} & \textbf{第1章} & \textbf{CBF 安全控制} & \textbf{可微物理 / 自由能} \\
 \midrule
 变量 & $x$ & 控制 $u$ & 参数 $\theta$ / 信念 $q(s)$ \\
 目标 & $f(x)$ & $\tfrac{1}{2}\|u - u_{\rm ref}\|^2$ & 轨迹误差 / 自由能 $F$ \\
-约束 & $g = 0$，$h \le 0$ & $L_f h + L_g h\, u + \alpha h \ge 0$ & $x_{t+1} = \text{PhysicsStep}(x_t, u_t; \theta)$ / $\sum_s q(s) = 1$ \\
+约束 & $g = 0$，$h \le 0$ & $L_f h + L_g h\, u + \alpha h \ge 0$ & $x_{t+1} = \mathrm{PhysicsStep}(x_t, u_t; \theta)$ / $\sum_s q(s) = 1$ \\
 乘子 & 影子价格 & $\lambda^*$：安全"斥力" & 伴随变量 $\lambda_t$ / $\log p(o) - 1$（负惊奇） \\
-一阶条件 & $\nabla f + \lambda \nabla g = 0$ & $u^* = u_{\rm ref} + \lambda^* (L_g h)^\top$ & 反向传播 / $q^* = p(s|o)$ \\
+一阶条件 & $\nabla f + \lambda \nabla g = 0$ & $u^* = u_{\rm ref} + \lambda^* (L_g h)^\top$ & 反向传播 / $q^* = p(s \mid o)$ \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -128,12 +130,11 @@
 
 \subsubsection{生成式世界模型（OpenAI/Sora路线）}
 
-\marginnote{Sora是OpenAI在2024年发布的视频生成模型，能够生成高度逼真的视频。它被一些人认为是"物理模拟器"，因为它似乎"理解"了物体如何运动。}
+\sidenoteplain{Sora 是 OpenAI 在 2024 年发布的视频生成模型，能够生成高度逼真的视频。它被一些人认为是"物理模拟器"，因为它似乎"理解"了物体如何运动。}
 
 核心思想：\textbf{预测原始像素}。
 
 如果一个模型能够准确预测视频的下一帧，那么它一定"理解"了物理规律——因为没有理解物理，就无法预测物体会怎么运动。
-\think{反例：一个把所有训练视频背下来的查表模型，也能"准确预测"训练集里的下一帧。它理解物理吗？预测精度和理解之间差了什么？}
 
 数学表述：学习条件概率分布
 \begin{equation}
@@ -154,10 +155,9 @@
 
 如果模型能预测这些，是不是意味着它"学会"了物理？
 \end{example}
+\think{反例：一个把所有训练视频背下来的查表模型，也能"准确预测"训练集里的下一帧。它理解物理吗？预测精度和理解之间差了什么？}
 
 \subsubsection{联合嵌入预测架构（LeCun/JEPA路线）}
-
-\marginnote{\textbf{Yann LeCun}(1960--)：2018年图灵奖得主（与Hinton、Bengio共获），卷积神经网络之父，曾长期担任Meta首席AI科学家。他在1990年代开发的LeNet是现代CNN的鼻祖。近年他大力推动``世界模型''研究方向，批评纯语言模型是``通往AGI的错误道路''。}
 
 Yann LeCun对生成式路线的批评是尖锐的：
 
@@ -175,6 +175,7 @@ Yann LeCun对生成式路线的批评是尖锐的：
     \item \textbf{比较特征}：预测的特征和真实的特征应该接近
 \end{enumerate}
 \end{definition}
+\storynote{Yann LeCun}{1960 年生，2018 年图灵奖得主（与 Hinton、Bengio 共获），卷积神经网络之父，曾长期担任 Meta 首席 AI 科学家。他在 1990 年代开发的 LeNet 是现代 CNN 的鼻祖。近年他大力推动"世界模型"研究方向，批评纯语言模型是"通往 AGI 的错误道路"。}
 
 用数学语言：
 \begin{itemize}
@@ -251,10 +252,8 @@ JEPA的哲学就是：\textbf{学习本质，忽略细节}。
 \label{fig:latent_dynamics}
 \end{figure}
 
-\review{第10章}{Dreamer 属于第10章表格里的"基于模型的 RL"，与 MuZero 同列：先学模型，再在模型里规划。区别是它在潜空间而不是像素空间里"做梦"。}
+\review{第9章}{Dreamer 属于第9章表格里的"基于模型的 RL"，与 MuZero 同列：先学模型，再在模型里规划。区别是它在潜空间而不是像素空间里"做梦"。}
 \begin{example}[Dreamer算法：在梦中学习]
-\marginnote{Dreamer是DeepMind提出的世界模型强化学习方法。它的核心思想是：在潜空间中"做梦"，想象可能的未来，然后在想象中学习策略。}
-
 Dreamer算法的工作流程就像人类做白日梦：
 
 \textbf{第一步：学习世界模型}
@@ -343,7 +342,7 @@ Dreamer算法的工作流程就像人类做白日梦：
 
 这里的约束$g(q) = 0$是\textbf{等式约束}——比如单摆必须沿圆弧运动，系统没有选择。
 
-\review{第1章}{等式约束的乘子可正可负；不等式约束的乘子必须非负，还要满足互补松弛 $\lambda h = 0$——这正是下面 CBF 控制器"只在贴近边界时才干预"的数学根源。第7章的接触力也是同一回事。}
+\review{第1章}{等式约束的乘子可正可负；不等式约束的乘子必须非负，还要满足互补松弛 $\lambda h = 0$——这正是下面 CBF 控制器"只在贴近边界时才干预"的数学根源。第6章的接触力也是同一回事。}
 但在机器人控制中，约束变成了\textbf{不等式约束}——有一片"禁区"，系统不能进入：
 \begin{itemize}
     \item \textbf{安全边界}：$\text{距离障碍物}(x) \geq d_{\min}$（不能撞墙）
@@ -536,7 +535,7 @@ CBF方法可以自然地扩展到\textbf{多障碍物}场景：对每个障碍�
 \end{equation}
 其中$\theta$是物理参数（质量、刚度、摩擦系数等），整个函数对$(x_t, u_t, \theta)$都是\textbf{可微的}——可以计算梯度！
 \end{definition}
-\review{第8章}{把每一步 $x_{t+1} = \text{PhysicsStep}(x_t, u_t; \theta)$ 看成一条等式约束，它的乘子 $\lambda_t$ 就是第8章的伴随变量；第9章告诉我们，反向传播算的正是这些 $\lambda_t$。"可微物理"就是让仿真器也加入这条伴随链。}
+\review{第7章}{把每一步 $x_{t+1} = \text{PhysicsStep}(x_t, u_t; \theta)$ 看成一条等式约束，它的乘子 $\lambda_t$ 就是第7章的伴随变量；第8章告诉我们，反向传播算的正是这些 $\lambda_t$。"可微物理"就是让仿真器也加入这条伴随链。}
 
 \begin{example}[为什么需要可微？]
 想象你在训练一个机器人走路：
@@ -563,7 +562,7 @@ CBF方法可以自然地扩展到\textbf{多障碍物}场景：对每个障碍�
     \phi^* = \arg\min_\phi \|x_{\text{真实}} - x_{\text{仿真}}(\phi)\|^2
 \end{equation}
 给定轨迹数据，反推质量、摩擦系数等。
-\review{第13章}{第13章用 PINN 做"逆问题"（从数据反推 PDE 参数）是同一件事：物理定律是约束，未知参数是决策变量。}
+\review{第14章}{第14章用 PINN 做"逆问题"（从数据反推 PDE 参数）是同一件事：物理定律是约束，未知参数是决策变量。}
 
 \textbf{3. Sim-to-Real迁移}——同时优化策略和物理参数，缩小仿真与现实的差距。
 \end{advantage}
@@ -571,7 +570,6 @@ CBF方法可以自然地扩展到\textbf{多障碍物}场景：对每个障碍�
 \textbf{局限}也要说清楚：接触、碰撞这类不连续事件会让梯度失真甚至爆炸；长时域仿真的梯度会像第11章的 RNN 一样消失或爆炸（这正是伴随链太长的代价）；仿真与现实的差距（sim-to-real gap）不会因为"可微"而消失。
 
 \subsection{实验：弹簧-质点系统的可微仿真}
-\clarify{本实验用 PyTorch 自动微分沿 200 步 RK4 积分器反向传播梯度——数学上就是第9章的伴随方程；Brax、Warp、DiffTaichi 等可微仿真器做的是同一件事，只是规模更大。}
 
 让我们用一个简单的例子来说明可微物理的威力：\textbf{弹簧-质点系统}。
 
@@ -601,6 +599,7 @@ CBF方法可以自然地扩展到\textbf{多障碍物}场景：对每个障碍�
     \item 外力：已知的 $u(t)=3\sin 2t+2\sin 5.5t$；只观测位置 $x$，噪声 $\sigma=0.03$
     \item 目标：从带噪声的观测数据中恢复真实参数
 \end{itemize}
+\clarify{本实验用 PyTorch 自动微分沿 200 步 RK4 积分器反向传播梯度——数学上就是第8章的伴随方程；Brax、Warp、DiffTaichi 等可微仿真器做的是同一件事，只是规模更大。}
 
 \textbf{实验结果分析}：
 \begin{enumerate}
@@ -634,335 +633,6 @@ CBF方法可以自然地扩展到\textbf{多障碍物}场景：对每个障碍�
 相空间是理解动力系统的重要工具——它让我们"一眼看出"系统的长期行为。
 
 % ====================================================================================
-\section{视觉--语言--动作模型：从"看图说话"到"看图做事"}
-% ====================================================================================
-
-前面三节谈的都是机器人的"内部"：世界模型在脑中模拟，CBF 在贴近边界时出手，可微物理把牛顿定律塞进反向传播。但一个机器人最终要面对的场景往往是这样的：桌上一堆杂物，有人对它说"把红色的杯子放进洗碗机"。它需要\textbf{看}（找到杯子和洗碗机）、\textbf{听}（理解这句话）、然后\textbf{做}（伸手、抓取、移动、放下）。
-\review{第11章}{第11章的视觉--语言模型（VLM）把图像切成视觉 token，与文本 token 一起送进同一个 Transformer 联合训练——模型于是"会看会说"。本节要在它后面再接一个输出头，让它"会做"。}
-
-第11章的视觉--语言模型（Vision-Language Model，VLM）已经解决了前两件事：它能看图，能回答"图里有什么、该先做什么"。缺的是第三件——\textbf{动作}。把动作也加进来，就得到\textbf{视觉--语言--动作模型}（Vision-Language-Action model，VLA）：
-\begin{equation}
-    \pi_\theta(a \mid o, \ell)
-\end{equation}
-其中 $o$ 是当前观测（一路或多路摄像头图像，加上关节角等本体感觉），$\ell$ 是语言指令，$a$ 是动作（例如机械臂末端的位姿增量，或各关节的目标角度）。
-
-\subsection{策略也是一个约束优化}
-
-用本书的语言，训练一个 VLA 就是在求解
-\begin{equation}
-    \min_\theta\ \underbrace{\E_{(o,\ell,a)\sim\mathcal{D}}\big[-\log \pi_\theta(a\mid o,\ell)\big]}_{\text{目标：模仿示教数据}} \quad \text{s.t.}\quad \underbrace{x_{t+1} = f(x_t, a_t)}_{\text{动力学}},\qquad \underbrace{h(x_t)\ge 0}_{\text{安全}}
-    \label{eq:vla_problem}
-\end{equation}
-目标可以是\textbf{模仿}（示教数据的负对数似然，第10章算法选择图里的"行为克隆"），也可以是\textbf{回报}（强化学习）；约束仍是本章前两节的那两条——物理动力学（等式）与安全集合（不等式）。此刻我们只用目标来训练：示教数据本身就是可行的（人做出来的动作当然满足动力学），安全约束则暂时靠"数据里没有危险动作"来隐式满足。这两条约束的乘子——它们各自的"价格"——留到下一节真机强化学习时再算。
-
-\subsection{动作怎么表示：token、动作块与压缩}
-
-VLM 的输出是文本 token，而机械臂需要的是连续的数值。中间怎么接？目前有三条路。
-
-\paragraph{路线一：把动作离散成 token。}
-最直接的做法是让动作"假装"成文字。RT-2（Google DeepMind，2023）把每个动作维度的数值量化成整数，再把整数当作词表里的 token，与文本共用同一个输出头——VLM 于是可以像续写句子一样"续写"动作。OpenVLA（2024）沿用了这个思路并开源：每个动作维度切成 256 个等宽的 bin，7 维动作就是 7 个 token。
-
-代价有两条。\textbf{精度}：256 个 bin 对夹爪开合够用，对需要毫米级对准的插孔任务就粗了；量化误差是硬伤，模型再大也补不回来。\textbf{速度}：自回归解码一次只出一个 token，一个动作要跑 7 次前向（第12章：解码阶段受显存带宽限制）；要让机械臂以 50 Hz 控制，每 20 ms 就得出一个动作，几十亿参数模型的逐 token 解码根本跟不上。
-
-\paragraph{路线二：连续动作加动作块。}
-既然一次出一个动作太慢，就一次出一段：\textbf{动作块}（action chunking）让策略一次预测未来 $H$ 步的动作序列 $a_{t:t+H}$，即 $(a_t, a_{t+1}, \ldots, a_{t+H-1})$，执行完（或执行一部分后）再重新预测。这样每 $H$ 步只需推理一次；同时动作块是一个 $H \times d$ 的连续张量，可以用回归或生成模型（扩散、流匹配）直接输出，不必量化。
-\review{第8章}{MPC 是"规划 $N$ 步、只执行 1 步"；动作块是"规划 $H$ 步、执行 $k$ 步（$1 \le k \le H$）"。两者都在用"多看几步"换取平滑与远见，区别是 MPC 有显式模型，动作块的"模型"藏在策略网络里。}
-
-动作块还有一个意外的好处：示教数据里人的动作常有停顿、犹豫和多模态（这次从左边绕，下次从右边绕）。逐步预测会把这些平均掉，得到一个"既不左也不右"的糟糕动作；预测整段则能把"一整条绕行路线"当作一个整体来学。
-
-\paragraph{路线三：先压缩再离散。}
-动作块是连续的，但 VLM 的自回归头只吃 token。$\pi_0$-FAST（2025）的折中是：先对动作块做\textbf{离散余弦变换}（DCT），把 $H \times d$ 的时间序列变成频域系数——平滑的动作序列高频分量接近零，可以扔掉——再把保留的系数量化、编码成少量 token。这和 JPEG 压缩图片是同一个思路：先变换、再量化、再熵编码。结果是同样一段动作块所需的 token 数大幅减少，自回归解码于是变得可以承受。
-
-\subsection{$\pi_0$：用流匹配生成动作块}
-
-Physical Intelligence 在 2024 年提出的 $\pi_0$ 是路线二的代表。它的结构分两块（图~\ref{fig:vla_arch}）：
-\begin{itemize}
-    \item \textbf{VLM 主干}：一个预训练的视觉--语言模型（PaliGemma 一类），负责把图像、指令与本体状态编码成一串 token 表示——"看"和"听"在这里完成。
-    \item \textbf{动作专家}（action expert）：一个较小的子网络，与主干共用注意力（动作 token 可以"看到"主干的 token），但有自己的一套权重；它不输出文本 token，而是输出一个连续的动作块（例如未来 50 步）。
-\end{itemize}
-
-训练分两阶段：先在\textbf{跨本体}（cross-embodiment）的大规模数据上预训练——数据来自多种不同的单臂、双臂平台，甚至移动操作机器人，动作维度不同就用零填充对齐；再在目标任务的高质量示教上做\textbf{后训练}（post-training）。这和第11章语言模型"预训练 + 微调"的配方是一样的。
-
-\begin{figure}[htbp]
-\centering
-\resizebox{0.98\textwidth}{!}{%
-\begin{tikzpicture}[>=Stealth, node distance=0.4cm and 0.7cm,
-    box/.style={draw, rounded corners, align=center, minimum height=1.0cm, font=\scriptsize},
-    input/.style={box, fill=green!15, minimum width=2.0cm},
-    vlm/.style={box, fill=blue!15, minimum width=2.4cm},
-    expert/.style={box, fill=orange!20, minimum width=2.6cm},
-    act/.style={box, fill=yellow!25, minimum width=1.6cm},
-    robot/.style={box, fill=gray!20, minimum width=1.8cm}]
-    \node[input] (img) {图像 $o_t$\\（多路相机）};
-    \node[input, below=of img] (lang) {语言指令 $\ell$\\（"把杯子放进去"）};
-    \node[input, below=of lang] (prop) {本体状态\\（关节角等）};
-    \node[vlm, right=of lang] (vlm) {VLM 主干\\视觉 token 与文本 token\\联合注意力};
-    \node[expert, right=1.3cm of vlm] (exp) {动作专家\\流匹配：从噪声 $a_0$ 出发\\对 $da/d\tau = v_\theta$ 积分到 $a_1$};
-    \node[act, right=of exp] (chunk) {动作块\\ $a_{t:t+H}$};
-    \node[robot, below=1.8cm of chunk] (rob) {机器人执行\\ $H$ 步（或前 $k$ 步）};
-    \draw[->, thick] (img) -- (vlm);
-    \draw[->, thick] (lang) -- (vlm);
-    \draw[->, thick] (prop) -- (vlm);
-    \draw[->, thick] (vlm) -- node[above, font=\tiny] {token 表示} (exp);
-    \draw[->, thick] (exp) -- (chunk);
-    \draw[->, thick] (chunk) -- (rob);
-    \draw[->, thick, dashed] (rob.west) -| node[pos=0.25, below, font=\scriptsize] {新观测 $o_{t+H}$ 回到输入} ($(img.west)+(-0.6,0)$) -- (img.west);
-    \begin{scope}[on background layer]
-        \node[draw, dashed, rounded corners, fill=blue!3, inner sep=6pt, fit=(vlm)(exp), label={[font=\scriptsize]above:VLA 模型 $\pi_\theta(a_{t:t+H} \mid o_t, \ell)$}] {};
-    \end{scope}
-\end{tikzpicture}%
-}
-\caption{$\pi_0$ 一类 VLA 的结构。图像、语言指令与本体状态进入 VLM 主干，得到一串 token 表示；动作专家以此为条件，用流匹配从噪声积分出一个连续的动作块 $a_{t:t+H}$；机器人执行整块（或前 $k$ 步）后，新的观测回到输入，开始下一轮。虚线框内是被训练的策略 $\pi_\theta$。}
-\label{fig:vla_arch}
-\end{figure}
-
-真正新的东西是动作专家怎么生成动作：它用的是\textbf{流匹配}（flow matching）。
-
-\subsubsection{流匹配：生成一段动作 = 解一个 ODE}
-
-我们想从条件分布 $p(a \mid o)$ 里采样（这里 $a$ 是整个动作块，$o$ 代表观测与指令）。流匹配的想法是：不直接学这个分布，而是学一个\textbf{速度场}，让噪声沿着它"流"成数据。
-
-取 $a_0 \sim \mathcal{N}(0, I)$ 为噪声，$a_1$ 为数据集里的真实动作块。在两者之间画一条直线：
-\begin{equation}
-    a_\tau = \tau\, a_1 + (1 - \tau)\, a_0, \qquad \tau \in [0, 1]
-\end{equation}
-沿这条直线的速度是常数：$\frac{d a_\tau}{d\tau} = a_1 - a_0$。于是训练一个网络 $v_\theta(a_\tau, \tau \mid o)$ 去拟合它：
-\review{第3章}{第3章用 E-L 方程证明"两点之间直线最短"。流匹配把噪声与数据之间的路径选成直线，取的正是这条"最省"的路径：它让待学的速度场尽量简单，推理时用很少的积分步就能走到头。}
-
-\begin{keyformula}[title=流匹配：训练是回归，推理是积分]
-\textbf{训练}（回归一个速度场）：
-\begin{equation}
-    \min_\theta\ \E_{\tau,\, a_0,\, (o, a_1)\sim\mathcal{D}} \Big\| v_\theta(a_\tau, \tau \mid o) - (a_1 - a_0) \Big\|^2, \qquad a_\tau = \tau a_1 + (1-\tau) a_0
-\end{equation}
-\textbf{推理}（解一个常微分方程）：从 $a_0 \sim \mathcal{N}(0, I)$ 出发，对
-\begin{equation}
-    \frac{d a}{d\tau} = v_\theta(a, \tau \mid o)
-\end{equation}
-从 $\tau = 0$ 积分到 $\tau = 1$（例如用 10 步欧拉法），终点就是生成的动作块。
-
-\textbf{一句话}：训练时学"从噪声到动作该往哪走"，推理时把这个方向场积分一遍。生成一段动作 $=$ 解一个 ODE。
-\end{keyformula}
-
-为什么这个损失是对的？固定一对 $(a_0, a_1)$ 时，"正确速度"就是 $a_1 - a_0$；但同一个中间点 $a_\tau$ 可能来自很多不同的 $(a_0, a_1)$ 对，最小二乘回归学到的是它们的\textbf{条件期望}，而这个平均速度场恰好把边缘分布 $p(a_0)$ 输运到 $p(a_1)$。证明超出本书范围，但结论很干净：\textbf{逐样本的直线，平均起来是一个合法的速度场}。
-
-\begin{insightbox}[title=流匹配与本书主线]
-\begin{itemize}
-    \item \textbf{推理是 ODE}：第8章把动力学 $\dot{x} = f(x, u)$ 当作约束，伴随变量是它的乘子；这里 $\frac{da}{d\tau} = v_\theta$ 是一条"人造的动力学"，$\tau$ 不是物理时间而是生成进度。生成一段动作，就是把一个 ODE 从噪声积分到数据。
-    \item \textbf{训练是回归}：目标函数是最小二乘，没有约束——"约束"全被直线插值吸收了。这和第9章"反向传播是逐层等式约束的乘子"形成对照：流匹配把约束消掉了，而不是给它配乘子；这正是第1章"代入消元"的做法。
-    \item \textbf{与扩散模型的关系}：扩散模型也是"噪声到数据"，但走的是弯曲的随机路径，推理往往要几十上百步；直线路径通常几步就够——这对需要高频控制的机器人至关重要。
-\end{itemize}
-\end{insightbox}
-
-\subsection{代表性设计一览}
-
-VLA 是一个变化很快的领域，表~\ref{tab:vla_compare}只记录几个有代表性的设计选择。重点看"动作输出"这一列——它决定了精度、速度与训练难度的权衡。GR00T N1（NVIDIA，2025）值得单独一提：它把"慢思考"与"快动作"明确拆成两个系统，VLM 负责低频的理解与规划，一个扩散 Transformer 负责高频地出动作——与 $\pi_0$ 的"主干 + 动作专家"殊途同归。
-\think{自回归 token 也是"逐步"生成：每一步条件于之前所有 token。流匹配也是"逐步"：每一步更新整个动作块。这两种"逐步"沿的是哪两个不同的维度？为什么后者更适合高频控制？}
-
-\begin{table}[htbp]
-\centering
-\small
-\renewcommand{\arraystretch}{1.3}
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{p{2.0cm}p{0.9cm}p{3.4cm}p{5.3cm}}
-\toprule
-\textbf{模型} & \textbf{年份} & \textbf{动作输出} & \textbf{特点} \\
-\midrule
-RT-2 & 2023 & 离散 token，与文本共用词表 & 直接把 VLM 微调成策略；网页知识可迁移到操作任务 \\
-OpenVLA & 2024 & 离散 token，每维 256 个 bin & 开源；在大规模跨本体数据集上训练 \\
-$\pi_0$ & 2024 & 流匹配，连续动作块 & VLM 主干 + 动作专家；跨本体预训练 + 任务后训练 \\
-$\pi_0$-FAST & 2025 & DCT 压缩后的离散 token & 自回归头也能输出动作块；token 数大幅减少 \\
-$\pi_{0.5}$ & 2025 & 离散 token 预训练，流匹配后训练 & 网页、多本体、多环境的异构数据共训练；泛化到未见过的家庭环境 \\
-GR00T N1 & 2025 & 扩散 Transformer，连续动作块 & 双系统：VLM 慢速理解 + 扩散头高频出动作 \\
-\bottomrule
-\end{tabular}
-\caption{几个代表性 VLA 的设计选择。年份为论文或技术报告首次公开的年份。}
-\label{tab:vla_compare}
-\end{table}
-
-\subsection{VLA 的三个未解之题}
-
-\textbf{数据}。语言模型有整个互联网，VLA 只有遥操作：一个人戴着设备控制机器人做一遍，才得到一条示教。把全球几十个实验室的数据合在一起的跨本体数据集，也不过是语言模型语料的零头。跨本体预训练的动机正是"能凑的都凑上"；而下一节的世界--动作模型，则是想把没有动作标注的视频也用上。
-
-\textbf{频率与延迟}。VLM 主干动辄数十亿参数，一次前向要几十到上百毫秒，而灵巧操作需要 50 Hz 上下的控制。动作块是目前的解药——推理一次、执行一段——但块内是\textbf{开环}的：这几十步里如果杯子被碰倒了，策略要等到下一次推理才知道。块越长，推理越省，反应越慢；这是一个反应速度与算力之间的权衡，没有免费午餐。
-
-\textbf{安全没有保证}。VLA 的安全完全来自"训练数据里没有危险动作"，这是统计意义上的保证，不是数学意义上的：遇到一个没见过的场景，模型可能输出任何东西。对比第~\ref{sec:cbf}~节：CBF 给出的是\textbf{前向不变}的证明——只要 $\dot{h} \ge -\alpha h$，就永远不会离开安全集合。一个自然的组合是把 VLA 的输出当作 $u_{\rm ref}$，外面套一层 CBF-QP 做安全滤波：学习负责"聪明"，约束负责"不出事"，$\lambda^*$ 负责在两者冲突时裁决。这正是下一节的起点。
-\preview{下一节把两条线拧在一起：世界模型（预测）与 VLA（行动）合成一个模型；而"安全的价格"$\lambda$ 从 CBF 的闭式解，变成真机强化学习里随违约上升的对偶变量。}
-
-% ====================================================================================
-\section{展望：世界--动作模型与真机强化学习}
-% ====================================================================================
-
-本章第一节讲世界模型：给定动作，预测未来。上一节讲 VLA：给定观测，输出动作。两者是同一枚硬币的两面——一个是 $p(o_{t+1} \mid o_t, a_t)$，一个是 $\pi(a_t \mid o_t)$——却常常被当作两个模型分别训练。本节是"展望"：谈两个正在发生、尚未定型的方向，一个是把两面合成一枚硬币，一个是让机器人在真实世界里从自己的经验中学习。这一节的口吻会比前面谨慎，因为很多细节还在变；但它们背后的约束优化结构，现在就可以写清楚。
-
-\subsection{世界--动作模型：预测与行动共用一个隐状态}
-
-\paragraph{动机：视频是免费的监督。}
-上一节末尾说过，VLA 的瓶颈是带动作标注的数据。但世界上有海量\textbf{没有}动作标注的视频——人做家务、拆快递、修自行车。这些视频里没有"关节角"，却有"世界怎么变"。如果模型除了输出动作，还被要求预测下一帧观测，那么预测下一帧本身就是一种监督：视频数据虽然不能教它"手该怎么动"，却能教它"手动了之后杯子会怎样"。
-
-\textbf{世界--动作模型}（World Action Model，WAM）的思想就是把两个任务放进同一个模型里联合训练：
-\begin{equation}
-\begin{aligned}
-    \min_\theta\ \ & \underbrace{\E\big[\|\hat{o}_{t+1} - o_{t+1}\|^2\big]}_{\text{预测未来观测}} + \lambda\, \underbrace{\E\big[\|\hat{a}_{t} - a_{t}\|^2\big]}_{\text{输出动作}} \\
-    \text{s.t.}\ \ & z_t = E(o_t, \ell),\qquad \hat{o}_{t+1} = D(z_t, a_t),\qquad \hat{a}_t = \pi(z_t)
-\end{aligned}
-    \label{eq:wam}
-\end{equation}
-这里的约束说的是：预测头 $D$ 和动作头 $\pi$ 必须从\textbf{同一个}隐状态 $z_t$ 出发。没有这条约束，两项损失可以各学各的，等于两个独立模型；有了它，隐状态必须同时"够预测"和"够行动"——这正是第一节"潜空间 = 广义坐标"的要求，只是现在多了一位用户。而 $\lambda$ 是两项之间的权重：它决定了隐状态更偏向"看得准"还是"做得对"。（上式为了简洁写成了均方误差；实际系统里两项通常都是生成模型的损失——扩散、流匹配或 token 的交叉熵——但结构不变。）
-\review{第13章}{PINN 损失 $L_{\rm PDE} + \rho L_{\rm BC}$ 里的 $\rho$ 也是两项之间的权重。第13章的教训：固定权重要靠试，自适应权重则按"哪项违约更多就给它涨价"的对偶上升来调。WAM 里的 $\lambda$ 面对的是同一个问题。}
-
-\paragraph{几个方向。}
-这类模型在 2025 年前后集中出现，路线不一：
-\begin{itemize}
-    \item \textbf{统一世界模型}（UWM，2025）把视频扩散与动作扩散放进同一个 Transformer，两种模态各有自己的噪声进度：把动作那边的噪声开到最大，模型就退化成纯视频预测器，于是无动作标注的视频可以直接拿来训练；反过来把视频那边的噪声开到最大，它就是一个策略。
-    \item \textbf{WorldVLA}（2025）用自回归 token 统一图像与动作：同一个模型既能"给定动作生成下一帧"，也能"给定图像生成动作"，两种任务互为对方的数据增强。
-    \item \textbf{V-JEPA 2-AC}（2025）走的是本章第一节 LeCun 的路线：先在海量互联网视频上自监督地学一个视频表示（不预测像素，预测表征），再用少量机器人数据训练一个\textbf{动作条件}的预测器，规划时在表征空间里搜索动作序列——这是 Dreamer 式的"在梦中规划"，只是梦是在 JEPA 的表征空间里做的。
-\end{itemize}
-这些设计谁会胜出，现在下结论为时过早。但它们都在回答同一个问题：如何让"预测"与"行动"共享一个表示，以及如何给这两项定价。
-
-\begin{physicalmeaning}[title=WAM 里的三样东西]
-\textbf{目标}：观测预测误差 $+$ 动作误差。\textbf{约束}：两者必须经过同一个隐状态。\textbf{$\lambda$}：两项的相对价格——它回答"为了让动作更准，我愿意让预测差多少"。这和第13章 PINN 里 $\rho$ 的角色完全一样，也一样需要自适应地调。
-\end{physicalmeaning}
-
-\subsection{真机强化学习为什么难}
-
-无论是 VLA 还是 WAM，上面讲的都是\textbf{模仿}：从人的示教里学。模仿的天花板是示教者：人会犹豫、会失误，机器人学到的也就是"平均水平的人"。要超过示教者，就得让机器人从\textbf{自己的}经验中学——这就是第10章的强化学习。可是第10章的实验都在仿真里跑：仿真里一秒能走几千步，重置不要钱，撞墙也不心疼。到了真机上，四件事同时变难：
-\begin{enumerate}
-    \item \textbf{样本贵}：每一步都是真实时间。仿真里一小时能采几百万步，真机上一小时也就几千步；而且机器人会磨损，电机会发热。
-    \item \textbf{复位}：一次尝试结束后，谁把杯子放回原处？仿真里一行 \texttt{env.reset()}，真机上要么有人守着，要么得再训练一个"把东西放回去"的策略。
-    \item \textbf{安全}：探索意味着尝试没做过的动作，而没做过的动作里有一部分会撞坏东西——包括机器人自己。仿真里探索是免费的，真机上探索是有价格的。
-    \item \textbf{奖励}：仿真器知道杯子的精确位置，能算出"离目标还有多远"；真机上只有摄像头图像，"成功了吗"本身就得靠一个分类器来判断，而分类器也会被策略"钻空子"。
-\end{enumerate}
-
-\subsection{五条路线}
-
-这四个困难没有一个通用解法，目前的实践是几条路线叠加。
-\storynote{Sergey Levine}{加州大学伯克利分校教授，把深度强化学习用于机器人的主要推动者之一，SERL、HIL-SERL 出自他的实验室；2024 年他与同事共同创立了 Physical Intelligence，$\pi_0$ 系列即出自该公司。}
-
-\paragraph{(a) 先在仿真里学，再搬到真机。}
-Sim-to-real 的做法是在仿真里做全部探索，然后把策略迁移到真机；为了让策略不依赖仿真的具体参数，训练时随机扰动质量、摩擦、光照、相机位置——\textbf{域随机化}（domain randomization）——逼策略对"仿真与真实之间的差距"鲁棒。本章"可微物理"一节的系统辨识是它的另一半：先用真机数据把仿真器校准得更像真实世界，再在里面训练。四足机器人行走是这条路线最成功的应用之一；灵巧操作则因为接触动力学难以仿真，迁移仍然困难。
-
-\paragraph{(b) 离线起步，在线微调。}
-第10章讲过离线强化学习：不与环境交互，只从固定数据集学。真机 RL 的实用配方是先用示教数据做行为克隆或离线 RL，得到一个"能用"的初始策略，再在真机上做少量在线交互微调——探索从一个不错的起点出发，样本贵的问题就轻了很多。
-
-\paragraph{(c) 人在回路的真机强化学习。}
-SERL（2024）和 HIL-SERL（2024）把上面的想法做成了一套可复用的系统：示教起步、离策略 RL（经验池里同时放示教与自身经验，第10章的 Off-policy）、\textbf{人在回路}——训练过程中人可以随时接管遥操作，纠正一段动作，纠正的片段也进经验池；再加一个从图像判断成败的奖励分类器。结果是几小时的真机训练就能把精密插装、翻转物体、装配这类任务的成功率提到接近百分之百，而且策略的动作比示教者更快。人类纠正在这里的角色很有意思：它既是探索的引导（省样本），也是安全网（防撞），还是奖励的补充（"我接管了"本身就是一种负反馈）。
-
-\paragraph{(d) 对 VLA 做强化学习后训练。}
-上一节的 VLA 是用模仿训练的。既然它已经"能用"，就可以把它当作路线 (b) 的起点，用真机经验继续改进。Physical Intelligence 在 2025 年的 $\pi^{*}_{0.6}$ 用一种叫 RECAP 的方法走了这条路，思想大致是：让机器人自己执行任务，收集成功与失败的经验，加上人类的纠正，训练一个价值函数估计"这个状态离成功还有多远"；策略不是直接最大化回报，而是以\textbf{优势}（advantage，第10章 PPO 里的 $A = Q - V$）为条件来训练——训练时告诉它"这段动作比平均好多少"，推理时要求它输出"比平均好"的动作。好处是不必改动 VLA 的架构与损失，只是输入里多了一个条件；思想上它是第10章策略改进的一种"温和"版本。细节仍在演进，这里只概述思路。
-
-\paragraph{(e) 把安全写进约束。}
-以上四条路线主要在解决样本、复位与奖励；安全需要单独处理。本章 CBF 一节给出了一种答案：安全是不等式约束 $h(x) \ge 0$，进入 KKT 后其乘子 $\lambda^*$ 是"安全的价格"，只在贴近边界时非零；把它套在 RL 策略外面做安全滤波，探索就被限制在安全集合内。另一种答案是\textbf{拉格朗日约束强化学习}：把"期望违约代价不超过预算 $\delta$"写成约束，
-\begin{equation}
-    \max_\pi\ \E\Big[\sum_t \gamma^t r_t\Big] \quad \text{s.t.}\quad \E\Big[\sum_t \gamma^t c_t\Big] \le \delta,
-\end{equation}
-其中 $c_t \ge 0$ 是第 $t$ 步的违约代价（例如碰撞记 1）。写出拉格朗日函数 $\Lag(\pi, \lambda) = \E[\sum_t \gamma^t r_t] - \lambda\big(\E[\sum_t \gamma^t c_t] - \delta\big)$，对 $\pi$ 做策略梯度上升，对 $\lambda$ 做对偶上升：
-\begin{equation}
-    \lambda \leftarrow \max\Big\{0,\ \lambda + \eta\Big(\E\Big[\sum_t \gamma^t c_t\Big] - \delta\Big)\Big\}.
-\end{equation}
-违约越多，$\lambda$ 涨得越快，惩罚越重；不违约时 $\lambda$ 降回零，策略专心追求回报。
-\review{第2章}{对偶上升 $\lambda \leftarrow \lambda + \eta g$：乘子沿"约束违反量"的方向走，是第2章对偶问题的梯度法，第13章的自适应权重用的是同一条更新式。这里的 $g$ 是违约代价超出预算的部分，$\max\{0,\cdot\}$ 保证不等式约束的乘子非负。}
-
-注意两种答案的分工：CBF 的 $\lambda^*$ 是每一时刻在 QP 里\textbf{解出来}的，给出逐步的硬保证；约束 RL 的 $\lambda$ 是在训练过程中\textbf{学出来}的，给出的是期望意义下的软保证。前者的代价是需要一个动力学模型和一个障碍函数 $h$，后者的代价是训练期间仍会违约——这正是为什么真机上两者常常叠用。
-
-\subsection{收束：三条约束，三个 $\lambda$}
-
-回头看，真机强化学习恰好是本书框架的终点：它把全书出现过的约束一次性全部请到场上。
-
-\begin{keyidea}[真机强化学习：本书框架的终点]
-\textbf{目标}：期望回报（或成功率），必要时加上模仿项以稳定起步。
-
-\textbf{约束}：三条同时在场——
-\begin{itemize}
-    \item \textbf{物理动力学} $x_{t+1} = f(x_t, a_t)$：等式约束（第4、8章）。乘子是伴随变量 / 值函数梯度，回答"状态多动一点，回报变多少"。
-    \item \textbf{安全集合} $h(x_t) \ge 0$：不等式约束（本章 CBF 一节）。乘子是安全的价格，只在贴近边界时非零。
-    \item \textbf{数据与时间预算}：真机交互步数 $\le N$，人类干预次数 $\le M$。乘子是"再多采一步真机数据值多少回报"——仿真预训练、离线起步、动作块、人类纠正，全都是在压低这个价格。
-\end{itemize}
-
-\textbf{$\lambda$}：三个乘子同时在算。它们的量纲都是"每放松一单位约束换来多少回报"，所以可以互相比较——当安全的价格远高于数据的价格时，就该多花数据换安全；反之亦然。全书的三个问题，在这里第一次要同时回答。
-\end{keyidea}
-
-一个机器人在真实世界里学习，就是在这三条约束之下，用有限的经验寻找更好的策略；而它每一次犹豫、每一次被人接管、每一次贴着边界绕行，都是某个 $\lambda$ 在起作用。
-
-% ====================================================================================
-\section{终极猜想：自由能原理与智能的统一理论}
-% ====================================================================================
-
-\marginnote{\textbf{Karl Friston}(1959--)：英国神经科学家，伦敦大学学院教授，英国皇家学会院士。他是世界上被引用最多的神经科学家，h-index超过250。他发明了脑成像分析的标准工具SPM，2000年代后致力于自由能原理，试图用单一数学框架统一大脑的感知、学习、决策。}
-
-在本章的最后，让我们探讨一个大胆的问题：\textbf{智能的本质是什么？}
-
-\subsection{惊奇最小化：一个统一的原理}
-
-Karl Friston提出的\textbf{自由能原理}（Free Energy Principle）给出了一个优雅的答案：
-
-\begin{philosophy}
-\textbf{核心观点}：生命体（智能体）存在的目的，就是\textbf{最小化变分自由能}。
-
-用更直白的话说：智能体试图\textbf{最小化惊奇}（Surprise）——让世界的行为符合自己的预期。
-\end{philosophy}
-
-\begin{example}[什么是"惊奇"？]
-\begin{itemize}
-    \item 你预期太阳从东边升起——太阳真的从东边升起——\textbf{不惊奇}
-    \item 你预期房间里有椅子——椅子还在——\textbf{不惊奇}
-    \item 你预期咖啡是热的——喝了一口是冰的——\textbf{惊奇！}
-\end{itemize}
-
-"惊奇"的数学定义是：$\text{惊奇} = -\log P(\text{观测})$
-
-观测越不可能（越意外），惊奇越大。
-\end{example}
-
-\begin{definition}[变分自由能——稍微技术一点]
-给定观测$o$和内部状态$s$（智能体的"信念"），\textbf{变分自由能}定义为：
-\begin{equation}
-    F = \E_{q(s)}[\log q(s) - \log p(s, o)]
-\end{equation}
-这可以分解为两部分：
-\begin{equation}
-    F = \underbrace{\text{KL}(q(s) \| p(s|o))}_{\text{信念与真实的差距}} + \underbrace{(-\log p(o))}_{\text{惊奇}}
-\end{equation}
-\end{definition}
-\review{第4章}{$F = \mathbb{E}_q[-\log p(s, o)] - H(q)$，形式上就是第4章的"能量减熵"。在归一化约束 $\sum_s q(s) = 1$ 下最小化 $F$：驻点条件给出 $q \propto p(s, o)$，归一化后 $q^* = p(s|o)$，而约束的乘子等于 $\log p(o) - 1$——正如最大熵里的乘子给出配分函数。}
-
-\subsection{感知与行动的统一}
-
-自由能原理最优美的地方在于：它用\textbf{同一个目标函数}统一了\textbf{感知}和\textbf{行动}。
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{figs_chap16/free_energy.png}
-\caption{自由能原理示意图。(a)惊奇的定义：观测越偏离预期，惊奇越大；(b)感知：更新信念使之匹配观测；(c)行动：改变世界使之匹配信念。两者都在最小化惊奇！}
-\label{fig:free_energy}
-\end{figure}
-
-\begin{keyformula}[title=感知与行动的统一]
-\textbf{感知}（Perception）：更新内部信念$s$以最小化自由能
-\begin{equation}
-    s^* = \arg\min_s F(s, o) \quad \text{（"我看到了什么？更新我的信念"）}
-\end{equation}
-
-\textbf{行动}（Action）：改变世界状态以最小化\textbf{期望}自由能
-\begin{equation}
-    a^* = \arg\min_a \E_{p(o|a)}[F(s, o)] \quad \text{（"世界不符合预期？改变它！"）}
-\end{equation}
-
-两者都是在最小化"惊奇"——感知通过改变信念，行动通过改变世界！
-\end{keyformula}
-
-\begin{example}[为什么人在黑暗中感到不安？]
-用自由能原理解释：
-\begin{itemize}
-    \item 在黑暗中，视觉输入的不确定性很高
-    \item 高不确定性 = 难以预测 = 高惊奇
-    \item 智能体天生"不喜欢"惊奇
-    \item 所以人会感到不安，并采取行动（开灯、走到明亮处）来减少不确定性
-\end{itemize}
-这个解释其实用到了一个上面的简化公式里没有的东西：\textbf{对未来不确定性的预期}。严格地说，行动最小化的是"期望自由能"，它除了"惊奇"还包含一项\textbf{信息增益}——正是这一项解释了探索和好奇心。
-\end{example}
-\think{反过来想：漆黑的房间视觉输入其实最"可预测"（全黑）。按上面的简化公式，智能体是不是应该喜欢待在黑屋子里？这就是著名的"黑屋问题"，它提示期望自由能里还缺一项"信息增益"。}
-
-% ====================================================================================
 \section{本章小结}
 % ====================================================================================
 
@@ -972,15 +642,13 @@ Karl Friston提出的\textbf{自由能原理}（Free Energy Principle）给出�
     \item \textbf{具身智能的约束从等式变成不等式}：条件 $\dot{h} \ge -\alpha h$ 使安全集合前向不变；CBF-QP 在所有安全控制中选最接近标称控制的那个，$u^* = u_{\rm ref} + \lambda^*(L_g h)^\top$，$\lambda^*$ 只在贴近边界时非零。
     \item \textbf{可微物理}：把物理定律写成可微计算图，每一步都是一条等式约束，其乘子即伴随变量；用途是策略优化、系统辨识与 Sim-to-Real。
     \item \textbf{自由能原理}：$F = \mathrm{KL}(q \| p(s|o)) - \log p(o)$；感知通过改变信念、行动通过改变世界，都在最小化惊奇；解释好奇心还需要期望自由能中的信息增益项。
-    \item \textbf{VLA}：$\pi_\theta(a \mid o, \ell)$ 把 VLM 的"会看会说"延伸为"会做"。动作可以离散成 token（RT-2、OpenVLA），也可以用动作块连续生成——$\pi_0$ 的流匹配：训练时回归速度场 $v_\theta \approx a_1 - a_0$，推理时对 $da/d\tau = v_\theta$ 从噪声积分到动作；或先 DCT 压缩再离散（FAST）。局限：数据靠遥操作、块内开环、安全只有统计意义的保证。
-    \item \textbf{世界--动作模型与真机强化学习}：WAM 让预测头与动作头共用一个隐状态，$\lambda$ 是两项损失的相对价格（第13章的 $\rho$）；真机 RL 难在样本、复位、安全、奖励，路线是仿真迁移、离线起步、人在回路、VLA 的 RL 后训练与拉格朗日约束 RL。三条约束（动力学、安全集、数据预算）同时在场，三个 $\lambda$ 同时在算。
-    \item \textbf{全书三问}：目标是什么？约束是什么？$\lambda$ 代表什么？——从牛顿力学到世界模型，答案的形式从未改变（图~\ref{fig:unified_view}）。
+    \item \textbf{全书三问}：目标是什么？约束是什么？$\lambda$ 代表什么？——从牛顿力学到世界模型，答案的形式从未改变（图~\ref{fig:unified_view}）。让机器人"看图做事"、并在真机上继续学习的视觉--语言--动作模型，见第17章。
 \end{enumerate}
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.85\textwidth]{figs_chap16/unified_view.png}
-\caption{全书的统一视角（示意图）。中心是 $\mathcal L=f+\lambda^\top g$ 与 KKT 条件；左列（物理与控制：第1、3、7--8、16章）与右列（学习与博弈：第9、10、13、15章）各写出该章的目标 $f$、约束 $g$、$\lambda$ 的身份和一阶条件。$\lambda$ 从影子价格、广义动量、协态变量、误差信号、值函数、损失权重、均衡价格到安全约束的价格，名字一直在变，结构从未改变。}
+\caption{全书的统一视角（示意图）。中心是 $\mathcal L=f+\lambda^\top g$ 与 KKT 条件；左列（物理与控制：第1、3、6--7、16章）与右列（学习与博弈：第8、9、14、10章）各写出该章的目标 $f$、约束 $g$、$\lambda$ 的身份和一阶条件。$\lambda$ 从影子价格、广义动量、协态变量、误差信号、值函数、损失权重、均衡价格到安全约束的价格，名字一直在变，结构从未改变。}
 \label{fig:unified_view}
 \end{figure}
 
@@ -988,11 +656,10 @@ Karl Friston提出的\textbf{自由能原理}（Free Energy Principle）给出�
 \textbf{$\lambda$ 在本章的意义}：
 \begin{itemize}
     \item \textbf{安全控制}：$\lambda^*$ 是安全约束的斥力。远离障碍物时约束不紧，$\lambda^* = 0$，控制器"懒惰"；贴近边界时 $\lambda^* > 0$，把控制沿 $\nabla h$ 推开——这就是第1章的互补松弛。
-    \item \textbf{可微物理}：每一步物理定律都是一条等式约束，乘子 $\lambda_t$ 就是第8章的伴随变量、第9章反向传播中的梯度信号：它回答"当前状态多动一点，最终损失变多少"。
+    \item \textbf{可微物理}：每一步物理定律都是一条等式约束，乘子 $\lambda_t$ 就是第7章的伴随变量、第8章反向传播中的梯度信号：它回答"当前状态多动一点，最终损失变多少"。
     \item \textbf{自由能}：归一化约束的乘子是 $\log p(o) - 1$，感知问题的最优值 $F^* = -\log p(o)$ 恰是它的影子价格——"惊奇"就是约束的价格。
-    \item \textbf{VLA 与真机强化学习}：模仿训练的 VLA 没有 $\lambda$——它只学"人怎么做"；一旦上真机做强化学习，动力学、安全集、数据预算三条约束同时在场，三个 $\lambda$ 同时在算：安全约束的乘子随违约上升（对偶上升），模型误差的乘子决定该信仿真还是信数据，样本预算的乘子决定探索该有多大胆。
 \end{itemize}
-回头看：第5章 $\lambda$ = 约束力，第7章 = 接触力，第8章 = 伴随变量，第10章 = 值函数梯度，第15章 = 别人对我的价格。全书自始至终只有一个 $\lambda$。
+回头看：第5章 $\lambda$ = 约束力，第6章 = 接触力，第7章 = 伴随变量，第9章 = 值函数梯度，第10章 = 别人对我的价格。全书自始至终只有一个 $\lambda$。当机器人上真机做强化学习时，这几个价格会同时出现在同一个问题里——那是第17章的事。
 \end{physicalmeaning}
 
 % ====================================================================================
@@ -1057,140 +724,84 @@ Karl Friston提出的\textbf{自由能原理}（Free Energy Principle）给出�
     \item \textbf{开放讨论}：
     本章提出"智能 = 在约束下寻找最优"。你认为这个观点能解释人类智能吗？有什么局限性？
     
-    \item \textbf{VLA 与安全滤波}：
-    设一个 VLA 策略每次输出 $H = 50$ 步的动作块 $a_{t:t+50}$，机器人以 50 Hz 执行，一次推理耗时 $T_{\rm inf}$。
-    \begin{enumerate}
-        \item 块内是开环的：如果执行到第 10 步时杯子被碰倒，策略最早在什么时候能"看到"这件事？用 $H$ 与 $T_{\rm inf}$ 写出反应延迟的上界，并说明只执行前 $k < H$ 步再重新推理会如何改变这个上界。
-        \item 现在把每一步动作先送进 CBF-QP 做安全滤波（把 VLA 的输出当作 $u_{\rm ref}$）。$\lambda^*$ 在什么情况下非零？这时机器人执行的还是 VLA "想"做的动作吗？
-        \item 流匹配的推理从噪声 $a_0$ 沿 $da/d\tau = v_\theta$ 积分到 $a_1$。如果在积分的每一步都做一次 CBF 投影，得到的还是原分布的样本吗？这与"先生成、再滤波"有什么区别？（提示：想想约束是加在"生成进度 $\tau$"上，还是加在"物理时间 $t$"上。）
-    \end{enumerate}
-    
 \end{enumerate}
 
 % ====================================================================================
-\section*{本章结语：从牛顿到智能}
-\addcontentsline{toc}{section}{本章结语}
+\section*{扩展阅读：终极猜想——自由能原理与智能的统一理论}
+\addcontentsline{toc}{section}{扩展阅读：自由能原理}
 % ====================================================================================
-\vspace{0.5cm}
 
-当牛顿在1687年写下$F = ma$时，他大概不会想到，这个简单的方程会成为理解智能的钥匙。
+\storynote{Karl Friston}{1959 年生，英国神经科学家，伦敦大学学院教授，英国皇家学会院士，世界上被引用最多的神经科学家之一。他发明了脑成像分析的标准工具 SPM，2000 年代后致力于自由能原理，试图用单一数学框架统一大脑的感知、学习与决策。}
 
-\vspace{0.3cm}
+在本章的最后，让我们探讨一个大胆的问题：\textbf{智能的本质是什么？}
 
-当拉格朗日在1788年用变分法重写力学时，他大概不会想到，他的$\lambda$乘子会在两百多年后被用来训练神经网络、控制机器人、理解大脑。
+\subsection*{惊奇最小化：一个统一的原理}
 
-\vspace{0.3cm}
+Karl Friston提出的\textbf{自由能原理}（Free Energy Principle）给出了一个优雅的答案：
 
-而今天，当我们站在人工智能革命的浪潮中，回望这本书走过的旅程：
-\begin{itemize}
-    \item 从\textbf{第1章}的KKT条件，到\textbf{第10章}的强化学习
-    \item 从\textbf{有限元}的$KU=F$，到\textbf{PINN}的物理信息损失
-    \item 从\textbf{单智能体}的最优控制，到\textbf{多智能体}的纳什均衡
-    \item 从\textbf{经典力学}的约束力，到\textbf{世界模型}的潜空间动力学
-\end{itemize}
-我们发现，所有这些看似迥异的领域，竟然都在诉说同一个故事：
-\begin{keyformula}[title=全书的核心信息]
-\begin{center}
-\Large
-\textbf{智能 = 在约束下寻找最优}
-\end{center}
-\vspace{0.3cm}
-无论是石头滚下山坡，还是AlphaGo落子博弈；无论是单摆的简谐振动，还是GPT生成流畅的文字——它们都在做同一件事：在各自的约束条件下，寻找某种意义上的"最优解"。
-\vspace{0.3cm}
-\textbf{约束}定义了可能性的边界，\textbf{优化}选择了边界内的最佳路径。
-\textbf{$\lambda$}不只是数学技巧，它是约束的"价格"，是物理的"力"，是信息的"代价"。
-\end{keyformula}
-\vspace{0.5cm}
 \begin{philosophy}
-\textbf{给读者的临别赠言}
-\vspace{0.3cm}
-如果你是大二的学生，正站在科学与工程的分岔路口，希望这本书能给你一个统一的视角：不要把物理、数学、计算机看成孤立的学科，它们是同一座大厦的不同房间。
-\vspace{0.3cm}
-当你下次遇到一个复杂问题时，不妨问自己三个问题：
-\begin{enumerate}
-    \item \textbf{目标是什么？}——我想最大化/最小化什么？
-    \item \textbf{约束是什么？}——什么条件必须满足？
-    \item \textbf{$\lambda$代表什么？}——约束的代价/价格/力是什么？
-\end{enumerate}
-这三个问题，能帮你把任何复杂问题，翻译成你已经熟悉的数学语言。
+\textbf{核心观点}：生命体（智能体）存在的目的，就是\textbf{最小化变分自由能}。
+
+用更直白的话说：智能体试图\textbf{最小化惊奇}（Surprise）——让世界的行为符合自己的预期。
 \end{philosophy}
-% ====================================================================================
-\section*{终章：Bitter Lesson与持续学习}
-\addcontentsline{toc}{section}{终章：Bitter Lesson与持续学习}
-% ====================================================================================
-\storynote{Richard Sutton}{强化学习之父，与 Andrew Barto 共获 2024 年图灵奖（2025 年公布）。他在1998年合著的教科书《Reinforcement Learning: An Introduction》是该领域的圣经。他的``Bitter Lesson''文章在AI社区引发了深远的讨论。}
-在结束这本书之前，我想和你分享一篇2019年震动AI界的短文——Richard Sutton的\textbf{``The Bitter Lesson''}（苦涩的教训）。
-\subsection*{苦涩的教训}
-Sutton观察了70年AI发展史，得出一个反直觉的结论：
-\begin{quote}
-\textit{``过去70年AI研究最重要的教训是：利用计算力的通用方法最终会战胜利用人类知识的方法。''}
-\end{quote}
-\textbf{例子1：国际象棋}
+
+\begin{example}[什么是"惊奇"？]
 \begin{itemize}
-    \item 1997年Deep Blue击败卡斯帕罗夫，靠的是暴力搜索（每秒2亿步）+ 少量人类知识
-    \item 研究者最初试图编码大师的``策略''和``模式''，但这些努力最终被纯粹的搜索力量击败
+    \item 你预期太阳从东边升起——太阳真的从东边升起——\textbf{不惊奇}
+    \item 你预期房间里有椅子——椅子还在——\textbf{不惊奇}
+    \item 你预期咖啡是热的——喝了一口是冰的——\textbf{惊奇！}
 \end{itemize}
-\textbf{例子2：围棋}
+
+"惊奇"的数学定义是：$\text{惊奇} = -\log P(\text{观测})$
+
+观测越不可能（越意外），惊奇越大。
+\end{example}
+
+\begin{definition}[变分自由能——稍微技术一点]
+给定观测$o$和内部状态$s$（智能体的"信念"），\textbf{变分自由能}定义为：
+\begin{equation}
+    F = \E_{q(s)}[\log q(s) - \log p(s, o)]
+\end{equation}
+这可以分解为两部分：
+\begin{equation}
+    F = \underbrace{\text{KL}(q(s) \| p(s|o))}_{\text{信念与真实的差距}} + \underbrace{(-\log p(o))}_{\text{惊奇}}
+\end{equation}
+\end{definition}
+\review{第4章}{$F = \mathbb{E}_q[-\log p(s, o)] - H(q)$，形式上就是第4章的"能量减熵"。在归一化约束 $\sum_s q(s) = 1$ 下最小化 $F$：驻点条件给出 $q \propto p(s, o)$，归一化后 $q^* = p(s|o)$，而约束的乘子等于 $\log p(o) - 1$——正如最大熵里的乘子给出配分函数。}
+
+\subsection*{感知与行动的统一}
+
+自由能原理最优美的地方在于：它用\textbf{同一个目标函数}统一了\textbf{感知}和\textbf{行动}。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figs_chap16/free_energy.png}
+\caption{自由能原理示意图。(a)惊奇的定义：观测越偏离预期，惊奇越大；(b)感知：更新信念使之匹配观测；(c)行动：改变世界使之匹配信念。两者都在最小化惊奇！}
+\label{fig:free_energy}
+\end{figure}
+
+\begin{keyformula}[title=感知与行动的统一]
+\textbf{感知}（Perception）：更新内部信念$s$以最小化自由能
+\begin{equation}
+    s^* = \arg\min_s F(s, o) \quad \text{（"我看到了什么？更新我的信念"）}
+\end{equation}
+
+\textbf{行动}（Action）：改变世界状态以最小化\textbf{期望}自由能
+\begin{equation}
+    a^* = \arg\min_a \E_{p(o|a)}[F(s, o)] \quad \text{（"世界不符合预期？改变它！"）}
+\end{equation}
+
+两者都是在最小化"惊奇"——感知通过改变信念，行动通过改变世界！
+\end{keyformula}
+
+\begin{example}[为什么人在黑暗中感到不安？]
+用自由能原理解释：
 \begin{itemize}
-    \item 围棋曾被认为需要``直觉''和``模式识别''，纯搜索不可能解决
-    \item 2016年AlphaGo用深度学习+蒙特卡洛树搜索击败李世石
-    \item 2017年AlphaGo Zero完全不用人类棋谱，从零自我对弈，变得更强
+    \item 在黑暗中，视觉输入的不确定性很高
+    \item 高不确定性 = 难以预测 = 高惊奇
+    \item 智能体天生"不喜欢"惊奇
+    \item 所以人会感到不安，并采取行动（开灯、走到明亮处）来减少不确定性
 \end{itemize}
-\textbf{例子3：语言理解}
-\begin{itemize}
-    \item 几十年来，NLP研究者手工设计语法规则、词性标注、语义分析……
-    \item GPT-3/4用千亿到万亿参数的Transformer+海量数据，``什么都不教''，效果碾压一切
-\end{itemize}
-\begin{tcolorbox}[colback=red!5, colframe=red!60!black, title=Bitter Lesson的核心]
-\textbf{苦涩之处}：研究者花费多年心血设计的``聪明''方法，往往被简单粗暴的``大力出奇迹''方法击败。
-\textbf{教训}：
-\begin{enumerate}
-    \item 计算力会持续增长（摩尔定律），而人类知识的编码很难扩展
-    \item 通用的学习和搜索方法（如梯度下降、蒙特卡洛搜索）最终会赢
-    \item 我们应该设计能\textbf{利用更多计算}的算法，而不是\textbf{绕过计算}的捷径
-\end{enumerate}
-\end{tcolorbox}
-\subsection*{这对你意味着什么？}
-作为一个刚学完这本书的学生，你可能会问：``既然大力出奇迹，我学这些数学有什么用？''
-答案是：\textbf{你学的恰恰是``大力''的基础}。
-\begin{itemize}
-    \item \textbf{梯度下降}（第9章）是深度学习的引擎
-    \item \textbf{贝尔曼方程}（第10章）是AlphaGo的核心
-    \item \textbf{变分法}（第3章）是物理信息神经网络的理论基础
-    \item \textbf{KKT条件}（第1章）是约束优化的通用语言
-\end{itemize}
-Bitter Lesson并不是说``数学没用''，而是说``\textbf{通用的数学方法+计算力} > 特定领域的手工设计''。
-\subsection*{持续学习：你的旅程才刚开始}
-这本书只是一个起点。以下是继续学习的建议：
-\begin{center}
-\renewcommand{\arraystretch}{1.4}
-\begin{tabular}{l|l}
-\toprule
-\textbf{如果你想深入...} & \textbf{推荐资源} \\
-\midrule
-凸优化 & Boyd \& Vandenberghe《Convex Optimization》（免费在线） \\
-深度学习 & Goodfellow等《Deep Learning》（花书） \\
-强化学习 & Sutton \& Barto《Reinforcement Learning》（免费在线） \\
-物理信息ML & Karniadakis等《Physics-Informed Machine Learning》 \\
-最优控制 & Bertsekas《Dynamic Programming and Optimal Control》 \\
-博弈论 & Fudenberg \& Tirole《Game Theory》 \\
-\bottomrule
-\end{tabular}
-\end{center}
-\textbf{最重要的建议}：\textbf{动手做项目}。理论再多，不如实际解决一个问题。
-\begin{itemize}
-    \item 用PINN解一个你感兴趣的PDE
-    \item 用强化学习训练一个玩游戏的agent
-    \item 用有限元分析一个简单的结构
-    \item 复现一篇你喜欢的论文
-\end{itemize}
-\vspace{0.8cm}
-\begin{center}
-\Large
-\textit{愿你在约束中找到自由，在优化中发现智慧。}
-\vspace{0.3cm}
-\textit{愿你在Bitter Lesson中学会谦逊，在持续学习中不断成长。}
-\vspace{0.5cm}
-\normalsize
-\textbf{全书完}
-\end{center} 
+这个解释其实用到了一个上面的简化公式里没有的东西：\textbf{对未来不确定性的预期}。严格地说，行动最小化的是"期望自由能"，它除了"惊奇"还包含一项\textbf{信息增益}——正是这一项解释了探索和好奇心。
+\end{example}
+\think{反过来想：漆黑的房间视觉输入其实最"可预测"（全黑）。按上面的简化公式，智能体是不是应该喜欢待在黑屋子里？这就是著名的"黑屋问题"，它提示期望自由能里还缺一项"信息增益"。}
