@@ -15,7 +15,7 @@
 
 SSH（Secure Shell）是连接远程服务器的标准方式。你在自己电脑上输入命令，实际在服务器上执行。
 
-\paragraph{基本连接命令}
+\paragraph{基本连接命令}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[language=bash, caption=SSH连接服务器]
 # 基本格式
@@ -151,7 +151,7 @@ Host cluster
 \caption{\texttt{nvidia-smi}输出示例：显示GPU型号、显存使用、运行中的进程}
 \end{figure}
 
-\paragraph{文件传输}
+\paragraph{文件传输}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[language=bash, caption=在本地和服务器之间传输文件]
 # 从本地上传到服务器
@@ -201,7 +201,7 @@ Git 记录你的每一次修改，所以任何时候都可以回退到之前的�
 \caption{Git工作流程}
 \end{figure}
 
-\paragraph{常用Git命令}
+\paragraph{常用Git命令}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[language=bash, caption=Git常用命令]
 # === 初始化 ===
@@ -229,7 +229,7 @@ git checkout -b new_feature # 创建并切换到新分支
 git merge new_feature       # 合并分支
 \end{lstlisting}
 
-\paragraph{典型工作流程示例}
+\paragraph{典型工作流程示例}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[language=bash, caption=一次完整的Git工作流程]
 # 1. 开始工作前，先拉取最新代码
@@ -291,7 +291,7 @@ outputs/
 
 不同项目常常需要不同版本的 PyTorch 和其他库，如果都装进同一个 Python 里，版本迟早会互相冲突，还会把系统自带的 Python 弄乱。虚拟环境把每个项目的依赖隔离开：各装各的版本，互不干扰；哪个环境出了问题，直接删掉重建就行，不会波及别的项目。
 
-\paragraph{Conda基本命令}
+\paragraph{Conda基本命令}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[language=bash, caption=Conda环境管理]
 # === 创建环境 ===
@@ -315,7 +315,7 @@ conda env export > environment.yml   # 导出环境配置
 conda env create -f environment.yml  # 从配置文件创建环境
 \end{lstlisting}
 
-\paragraph{典型深度学习环境配置}
+\paragraph{典型深度学习环境配置}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[language=bash, caption=配置一个深度学习环境]
 # 1. 创建新环境
@@ -367,7 +367,7 @@ python -c "import torch; print(torch.cuda.is_available())"
 三者的关系是分层的。\textbf{驱动}在最底层，同一台机器上只有一个；它向下兼容，所以驱动版本必须 $\geq$ CUDA Toolkit 版本。\textbf{CUDA Toolkit} 在中间，同一台机器上可以装多个版本。\textbf{PyTorch 的 CUDA 版本}在最上层，它必须与系统的 CUDA Toolkit 匹配。
 \end{keyidea}
 
-\paragraph{如何查看版本}
+\paragraph{如何查看版本}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[language=bash, caption=查看各种CUDA相关版本]
 # 1. 查看NVIDIA驱动版本（nvidia-smi右上角）
@@ -496,7 +496,7 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 
 SSH断开后，正在运行的程序会被终止。用\texttt{screen}或\texttt{tmux}可以让程序在后台持续运行。
 
-\paragraph{Screen基本用法}
+\paragraph{Screen基本用法}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[language=bash, caption=Screen使用方法]
 # 创建新的screen会话
@@ -598,7 +598,7 @@ tmux kill-session -t train
 
 先认识四个词。集群由许多台物理服务器组成，每一台叫一个\textbf{节点}（Node）；管理员把节点分成若干组，比如 gpu 分区、cpu 分区，每一组叫一个\textbf{分区}（Partition）。你提交给集群的任务叫\textbf{作业}（Job），而描述这个作业需要什么资源、要运行什么命令的文件，就是作业\textbf{脚本}（Script）。
 
-\paragraph{查看集群状态}
+\paragraph{查看集群状态}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[language=bash, caption=SLURM常用查询命令]
 # 查看所有分区和节点状态
@@ -617,7 +617,7 @@ scontrol show job <job_id>
 sacct -u $USER --starttime=2024-01-01
 \end{lstlisting}
 
-\paragraph{编写SLURM脚本}
+\paragraph{编写SLURM脚本}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[language=bash, caption=SLURM作业脚本示例（train.slurm）]
 #!/bin/bash
@@ -647,7 +647,7 @@ python train.py \
     --num_epochs 3
 \end{lstlisting}
 
-\paragraph{提交和管理作业}
+\paragraph{提交和管理作业}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[language=bash, caption=提交和管理SLURM作业]
 # 提交作业
@@ -682,7 +682,7 @@ python train.py     # 可以直接运行代码
 exit
 \end{lstlisting}
 
-\paragraph{多GPU训练脚本示例}
+\paragraph{多GPU训练脚本示例}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[language=bash, caption=多GPU分布式训练脚本]
 #!/bin/bash
@@ -721,7 +721,7 @@ srun torchrun \
 \addcontentsline{toc}{section}{实用技巧汇总}
 % ------------------------------------------------------------------------------------
 
-\paragraph{训练监控}
+\paragraph{训练监控}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[language=bash, caption=监控训练过程]
 # 实时查看训练日志
@@ -761,7 +761,7 @@ SSH连接断开程序终止 & 用tmux或screen \\
 \caption{常见问题与解决方法}
 \end{table}
 
-\paragraph{一个完整的实验流程}
+\paragraph{一个完整的实验流程}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[language=bash, caption=从零开始的完整实验流程]
 # === 1. 连接服务器 ===
@@ -855,7 +855,7 @@ my_project/
 
 Hugging Face是目前最流行的NLP/LLM工具生态，几乎是必学的。
 
-\paragraph{Transformers：模型加载与推理}
+\paragraph{Transformers：模型加载与推理}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[language=Python, caption=使用Transformers加载和使用模型]
 from transformers import AutoTokenizer, AutoModelForCausalLM
@@ -933,7 +933,7 @@ trainer.train()
 model.save_pretrained("./lora_weights")
 \end{lstlisting}
 
-\paragraph{Datasets：数据加载与处理}
+\paragraph{Datasets：数据加载与处理}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[language=Python, caption=使用Datasets处理数据]
 from datasets import load_dataset, Dataset
@@ -986,7 +986,7 @@ bitsandbytes & 4/8-bit量化 & \texttt{pip install bitsandbytes} \\
 
 显存不够时，量化是最直接的解决方案。
 
-\paragraph{BitsAndBytes：4-bit/8-bit量化}
+\paragraph{BitsAndBytes：4-bit/8-bit量化}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[language=Python, caption=4-bit量化加载模型]
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
@@ -1031,7 +1031,7 @@ model = get_peft_model(model, lora_config)
 # 现在可以在RTX 3080 (10GB) 上微调7B模型了！
 \end{lstlisting}
 
-\paragraph{GPTQ/AWQ：更高效的量化}
+\paragraph{GPTQ/AWQ：更高效的量化}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[language=Python, caption=加载GPTQ量化模型]
 from transformers import AutoModelForCausalLM
@@ -1098,7 +1098,7 @@ for output in outputs:
     print(output.outputs[0].text)
 \end{lstlisting}
 
-\paragraph{启动vLLM API服务}
+\paragraph{启动vLLM API服务}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[language=bash, caption=启动vLLM服务器]
 # 启动OpenAI兼容的API服务
@@ -1133,7 +1133,7 @@ Ollama & 一键运行本地模型 & 个人使用、快速体验 \\
 
 LangChain是构建LLM应用的流行框架，提供了链式调用、RAG、Agent等功能。
 
-\paragraph{基本使用}
+\paragraph{基本使用}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[language=Python, caption=LangChain基本使用]
 from langchain_openai import ChatOpenAI

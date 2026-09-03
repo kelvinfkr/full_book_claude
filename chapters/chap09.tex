@@ -3303,7 +3303,7 @@ class PPO_KL:
 
 UCB 的设计体现了“\textbf{乐观面对不确定性}”（Optimism in the Face of Uncertainty）原则：对于采样多的臂，置信区间窄，UCB $\approx$ 样本均值；对于采样少的臂，置信区间宽，UCB 可能很高。这就自动平衡了探索（采样少的臂 UCB 高）和利用（样本均值高的臂 UCB 高）。
 
-\paragraph{UCB 的遗憾分析}
+\paragraph{UCB 的遗憾分析}\mbox{}\par\nopagebreak
 
 \begin{theorem}[UCB 遗憾上界]
 UCB 算法的期望遗憾满足：
@@ -3334,7 +3334,7 @@ UCB 算法的期望遗憾满足：
 
 所以我们只需要界定每个次优臂被拉的次数 $n_i(T)$。
 
-\paragraph{核心引理}
+\paragraph{核心引理}\mbox{}\par\nopagebreak
 
 \begin{lemma}[次优臂被拉的条件]
 如果在时刻 $t$ 选择了次优臂 $i$（即 $a_t = i \neq a^*$），则至少发生以下三种情况之一：
@@ -3749,7 +3749,7 @@ r = -\|p_{\text{end}} - p_{\text{goal}}\|^2 - 0.01 \|\tau\|^2
 
 CartPole的状态是4维向量$[x, \dot{x}, \theta, \dot{\theta}]$，目标是让杆保持竖直（$|\theta| < 12°$）且小车不出界（$|x| < 2.4$）。每坚持一步获得 +1 奖励，每回合最多 200 步，平均回报超过 195 即算``solved''。
 
-\paragraph{用Stable Baselines3训练}
+\paragraph{用Stable Baselines3训练}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[language=Python]
 import gymnasium as gym

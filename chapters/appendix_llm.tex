@@ -1092,7 +1092,7 @@ FlashAttention的核心思想：\textbf{分块计算 + 重算而非存储}。
 \end{keyidea}
 \clarify{“计算 / 带宽比”叫算术强度。Decode 阶段每读 2 字节权重只做 2 次运算（约 1 FLOP/Byte），远低于 GPU 的平衡点，所以 decode 是带宽受限——带宽约束是紧的，算力约束是松的。}
 
-\paragraph{使用方法}
+\paragraph{使用方法}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[language=Python, caption=PyTorch 2.0+ 内置FlashAttention]
 import torch.nn.functional as F
@@ -1490,7 +1490,7 @@ CUDA 把一个计算任务组织成三层。最小的执行单元是 \textbf{Thr
 \caption{CUDA 的线程层次：Grid → Block → Thread}
 \end{figure}
 
-\paragraph{一个简单的 CUDA 核函数}
+\paragraph{一个简单的 CUDA 核函数}\mbox{}\par\nopagebreak
 
 \begin{lstlisting}[style=teaching, language=C]
 // 向量加法的 CUDA 实现
