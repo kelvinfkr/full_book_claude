@@ -534,7 +534,7 @@ y = x^2 + 2x + 1 \quad \Rightarrow \quad \frac{dy}{dx} = ?
 
 自动微分的核心思想只有一句话：让每个中间量都是一个 \texttt{Variable} 对象，运算时顺便搭建一棵\textbf{计算图}（函数树），最后由 \texttt{backward()} 走一遍这棵图，按链式法则把梯度往回传。下面分五步把它写出来。
 
-\subsection{Step 1：定义计算图节点——Variable类}
+\subsection{Step 1：计算图节点 Variable 类}
 
 \begin{lstlisting}[style=teaching, language=Python]
 import numpy as np
@@ -570,7 +570,7 @@ class Variable:
 
 可以把每个 \texttt{Variable} 想成计算图上的一个圆点：\texttt{data} 是它的``前向值''，\texttt{grad} 是它的``反向值''，\texttt{\_prev} 是它的入边。
 
-\subsection{Step 2：重载加法——记录``加法节点''}
+\subsection{Step 2：重载加法}
 
 \sidenoteplain{\footnotesize
 \textbf{什么是重载？}\\[2pt]
@@ -624,7 +624,7 @@ Python 就会自动调用你写的函数。\\
 \caption{加法运算在内存中建立的计算图结构}
 \end{figure}
 
-\subsection{Step 3：重载乘法——记录``乘法节点''}
+\subsection{Step 3：重载乘法}
 
 \begin{lstlisting}[style=teaching, language=Python]
     def __mul__(self, other):
@@ -644,7 +644,7 @@ Python 就会自动调用你写的函数。\\
 
 \textbf{关键洞察}：每一次运算都会新增一个节点，每个节点都带着``反向怎么走''的局部规则。这就是自动微分的本质——\textbf{记录计算过程 + 链式法则}。
 
-\subsection{Step 4：backward()——从输出往回走一遍计算图}
+\subsection{Step 4：backward() 沿计算图往回走}
 
 \begin{lstlisting}[style=teaching, language=Python]
     def backward(self):
@@ -680,7 +680,7 @@ Python 就会自动调用你写的函数。\\
 
 你可以把这看成两个动作：\texttt{build\_topo} 在内存里从 \texttt{self} 沿 \texttt{\_prev} 指针，把计算图``铺平''成一个列表；\texttt{reversed(topo)} 则从输出往叶子走一遍，把梯度一层层推回去。
 
-\subsection{Step 5：完整示例——生成一棵具体的计算图}
+\subsection{Step 5：完整示例}
 
 \begin{lstlisting}[style=teaching, language=Python]
 # 使用示例：y = x^2 + 2x + 1
@@ -2059,7 +2059,7 @@ K = \begin{bmatrix} 1 & 0 & -1\\ 1 & 0 & -1\\ 1 & 0 & -1 \end{bmatrix}.
 这一"缩小函数空间"的操作相当于引入明显且符合图像物理结构的归纳偏置，使得在相同参数规模下，卷积网络在图像任务上能够更高效地拟合正确映射。
 
 %----------------------------------------------------------------------
-\subsection*{四、序列建模：RNN 与 Transformer 对长依赖的处理}
+\subsection*{四、序列建模：RNN 与 Transformer 的长依赖}
 \preview{第11章会专门推导 RNN 的梯度消失（把本章的伴随方程沿时间展开）并介绍 Transformer 的注意力机制；这里只从"函数类"的角度做个预告。}
 %----------------------------------------------------------------------
 

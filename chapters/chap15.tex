@@ -73,14 +73,7 @@
 现在换一个初始条件$u_0(x) = \sin(2\pi x)$，我们必须\textbf{从头训练}另一个PINN得到$u_2(x,t)$。
 
 \begin{example}[PINN的计算成本]
-假设：
-\begin{itemize}
-    \item 训练一个PINN需要10分钟
-    \item 我们需要预测1000个不同初始条件下的解
-\end{itemize}
-那么总计算时间是$10 \times 1000 = 10000$分钟 $\approx$ 7天！
-
-这对于需要实时预测的应用（如天气预报）是完全不可接受的。
+假设训练一个PINN需要10分钟，而我们需要预测1000个不同初始条件下的解，那么总计算时间是$10 \times 1000 = 10000$分钟 $\approx$ 7天！这对于需要实时预测的应用（如天气预报）是完全不可接受的。
 \end{example}
 
 \subsection{算子学习的目标}
@@ -150,14 +143,7 @@
 
 传统方法是离散化：把函数$u(x)$在网格点$\{x_1, \ldots, x_n\}$上采样，得到向量$(u(x_1), \ldots, u(x_n))$，然后用传统神经网络处理。
 
-但这有几个问题：
-\begin{enumerate}
-    \item \textbf{分辨率绑定}：在$32 \times 32$网格上训练的网络，不能直接用于$64 \times 64$的输入
-    \item \textbf{缺乏泛化性}：网络学到的是"像素到像素"的映射，而不是"函数到函数"的映射
-    \item \textbf{网格依赖}：换一种网格划分方式，就需要重新训练
-\end{enumerate}
-
-神经算子的核心挑战是：如何设计一个\textbf{与离散化方式无关}的架构？
+但这样做，网络的输入维度就被采样点数绑死了：在$32 \times 32$网格上训练的网络，不能直接用于$64 \times 64$的输入；换一种网格划分方式，也需要重新训练。更根本的问题是，这样的网络学到的是"像素到像素"的映射，而不是"函数到函数"的映射，它并没有理解输入是一个连续对象。于是神经算子的核心挑战就是：如何设计一个\textbf{与离散化方式无关}的架构？
 
 % ====================================================================================
 \section{离散化无关性：神经算子的核心特性}
@@ -165,13 +151,10 @@
 
 \subsection{什么是离散化无关性}
 
+上一节把目标定为学习"函数到函数"的映射，本节要回答的是：什么样的架构才算真正学到了函数之间的映射，而不是像素之间的映射？判据就是下面这条性质。
+
 \begin{definition}[离散化无关性]
-一个神经算子$\mathcal{G}_\theta$具有\textbf{离散化无关性}（discretization invariance），如果：
-\begin{enumerate}
-    \item 它可以接受任意分辨率的输入
-    \item 它可以在任意分辨率上输出
-    \item 无论使用什么分辨率，它都在逼近同一个连续算子
-\end{enumerate}
+一个神经算子$\mathcal{G}_\theta$具有\textbf{离散化无关性}（discretization invariance），如果它可以接受任意分辨率的输入、可以在任意分辨率上输出，并且无论使用什么分辨率，它都在逼近同一个连续算子。
 \end{definition}
 
 用数学语言说：设$\mathcal{G}^*$是真实的连续算子，$\mathcal{G}_\theta^{(n)}$是在$n$个网格点上的离散近似。离散化无关性意味着：
@@ -181,17 +164,7 @@
 \clarify{离散化无关性保证的是：分辨率 $n \to \infty$ 时 $\mathcal{G}_\theta^{(n)}$ 收敛到某个与网格无关的连续算子 $\mathcal{G}_\theta$。它是否等于真实的 $\mathcal{G}^*$，取决于训练得好不好——那是另一回事。}
 
 \begin{example}[零样本超分辨率]
-这是离散化无关性最惊人的应用：
-
-假设我们在$32 \times 32$的粗网格上训练了一个FNO模型。训练完成后，我们可以：
-\begin{itemize}
-    \item 输入$64 \times 64$的数据，得到$64 \times 64$的输出
-    \item 输入$128 \times 128$的数据，得到$128 \times 128$的输出
-    \item 输入$256 \times 256$的数据，得到$256 \times 256$的输出
-\end{itemize}
-\textbf{无需任何额外训练！}
-
-这被称为\textbf{零样本超分辨率}（zero-shot super-resolution）。
+这是离散化无关性最惊人的应用。假设我们在$32 \times 32$的粗网格上训练了一个FNO模型，训练完成后，输入$64 \times 64$的数据就得到$64 \times 64$的输出，输入$128 \times 128$或$256 \times 256$的数据也同样得到相应分辨率的输出，\textbf{无需任何额外训练}。这被称为\textbf{零样本超分辨率}（zero-shot super-resolution）。
 \end{example}
 
 \subsection{为什么传统CNN不具有离散化无关性？}
@@ -201,21 +174,10 @@
     (k * u)_i = \sum_{j=-r}^{r} k_j \cdot u_{i+j}
 \end{equation}
 
-这里$k$是一个固定大小的卷积核（如$3 \times 3$）。问题在于：
-
-\begin{itemize}
-    \item 卷积核大小是固定的像素数，而不是固定的物理尺寸
-    \item 在不同分辨率下，同样大小的卷积核覆盖的物理区域不同
-\end{itemize}
+这里$k$是一个固定大小的卷积核（如$3 \times 3$）。问题在于，卷积核的大小是固定的像素数，而不是固定的物理尺寸，于是在不同分辨率下，同样大小的卷积核覆盖的物理区域并不相同。
 
 \begin{example}[卷积核的分辨率依赖]
-假设物理域是$[0, 1]$，使用$3 \times 3$卷积核：
-\begin{itemize}
-    \item 在$32$个网格点上：卷积核覆盖物理尺寸$3 \times \frac{1}{32} \approx 0.094$
-    \item 在$64$个网格点上：卷积核覆盖物理尺寸$3 \times \frac{1}{64} \approx 0.047$
-\end{itemize}
-
-同样的卷积核，在不同分辨率下"看到"的物理区域完全不同！
+假设物理域是$[0, 1]$，使用$3 \times 3$卷积核。在$32$个网格点上，卷积核覆盖的物理尺寸是$3 \times \frac{1}{32} \approx 0.094$；换到$64$个网格点上，它覆盖的物理尺寸就缩小为$3 \times \frac{1}{64} \approx 0.047$。同样的卷积核，在不同分辨率下"看到"的物理区域完全不同！
 \end{example}
 
 \subsection{如何实现离散化无关性？}
@@ -249,7 +211,7 @@
 \begin{center}
 \renewcommand{\arraystretch}{1.3}
 \small
-\begin{tabular}{lll}
+\begin{tabularx}{\linewidth}{l>{\raggedright\arraybackslash}p{4.2cm}>{\raggedright\arraybackslash}X}
 \toprule
  & \textbf{第1章 / 第13章} & \textbf{本章（神经算子）} \\
 \midrule
@@ -260,7 +222,7 @@
 一阶条件 & $\nabla f + \lambda^\top \nabla g = 0$ / $KU = F$ & $u = \int G(x, \xi) f(\xi)\,d\xi$，即 $U = K^{-1}F$ \\
 求解方式 & 组装 $K$，解方程 & 跳过组装，直接学 $K^{-1}$（$\kappa_\theta$、$R(k)$、$b_k t_k$） \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{center}
 \end{tcolorbox}
 
@@ -290,7 +252,7 @@
     \mathcal{L}[u](x) &= \mathcal{L}_x\left[\int_\Omega G(x, y) f(y) \, dy\right] \\
     &= \int_\Omega \mathcal{L}_x[G(x, y)] f(y) \, dy \quad \text{（线性性）} \\
     &= \int_\Omega \delta(x - y) f(y) \, dy \\
-    &= f(x) \quad \checkmark
+    &= f(x)
 \end{align}
 （边界条件由 $G(\cdot, y)$ 满足齐次边界条件保证。）
 \end{proof}
@@ -330,20 +292,15 @@
 \begin{equation}
     v(x) = \sigma\left( Wu(x) + \int_\Omega \kappa_\theta(x, y) u(y) \, dy + b(x) \right)
 \end{equation}
-其中：
-\begin{itemize}
-    \item $\kappa_\theta(x, y)$是\textbf{可学习的积分核}（类比格林函数）
-    \item $W$是局部线性变换
-    \item $\sigma$是非线性激活函数
-    \item $b(x)$是偏置
-\end{itemize}
+其中$\kappa_\theta(x, y)$是\textbf{可学习的积分核}（类比格林函数），$W$是局部线性变换，$\sigma$是非线性激活函数，$b(x)$是偏置。
 \end{keyformula}
 
 \begin{unification}[title=不同神经算子架构的统一]
 不同的神经算子架构，本质上是选择了不同的方式来参数化积分核$\kappa_\theta(x, y)$：
 
 \begin{center}
-\begin{tabular}{l|l}
+\small
+\begin{tabularx}{\linewidth}{l|>{\raggedright\arraybackslash}X}
 \toprule
 \textbf{架构} & \textbf{积分核的形式} \\
 \midrule
@@ -352,7 +309,7 @@ FNO & $\kappa(x, y) = \kappa(x - y)$（平移不变，频域表示） \\
 GNO & 图上的消息传递（非规则网格） \\
 Transformer & $\kappa(x, y) = \text{softmax}(Q(x)K(y)^T / \sqrt{d})$（数据依赖） \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{center}
 \end{unification}
 \think{分支网络 $b_k(u)$ 对 $u$ 是非线性的，所以 DeepONet 写不成对 $u$ 线性的 $\int \kappa(x, y) u(y)\,dy$。那它和积分算子框架"统一"在哪里？提示：把分支网络换成线性层，看看 $\kappa$ 长什么样。}
@@ -375,27 +332,15 @@ DeepONet的理论基础是Chen \& Chen在1995年证明的万能逼近定理：
 \end{theorem}
 
 \begin{remark}[直觉理解]
-这个定理说的是：任何算子都可以近似为"\textbf{系数}"乘以"\textbf{基函数}"的形式，其中：
-\begin{itemize}
-    \item 系数$g_k(u(y_1), \ldots, u(y_m))$依赖于输入函数在某些"传感器"位置的值
-    \item 基函数$f_k(x)$只依赖于输出位置
-\end{itemize}
-
-这类似于傅里叶级数$f(x) = \sum_k c_k e^{ikx}$，只是这里的"傅里叶系数"$c_k$变成了输入函数的非线性泛函。
+这个定理说的是：任何算子都可以近似为"\textbf{系数}"乘以"\textbf{基函数}"的形式，其中系数$g_k(u(y_1), \ldots, u(y_m))$依赖于输入函数在某些"传感器"位置的值，而基函数$f_k(x)$只依赖于输出位置。这类似于傅里叶级数$f(x) = \sum_k c_k e^{ikx}$，只是这里的"傅里叶系数"$c_k$变成了输入函数的非线性泛函。
 \end{remark}
 
 \subsection{DeepONet架构}
 
-基于万能逼近定理，DeepONet设计了一个"双塔"结构：
+定理给出的形式已经把"依赖于输入函数"和"依赖于输出位置"两部分分开了，剩下的问题只是用什么去逼近$g_k$和$f_k$。Lu Lu 等人正是从这个定理出发，用两个神经网络分别承担这两部分，设计出 DeepONet 的"双塔"结构：
 
 \begin{definition}[DeepONet]
-DeepONet由两个子网络组成：
-\begin{itemize}
-    \item \textbf{分支网络}（Branch Net）$\mathbf{b}_\theta$：输入为函数$u$在传感器位置的采样值$(u(y_1), \ldots, u(y_m))$，输出为$p$维向量$(b_1, \ldots, b_p)$
-    \item \textbf{主干网络}（Trunk Net）$\mathbf{t}_\phi$：输入为查询位置$x$，输出为$p$维向量$(t_1, \ldots, t_p)$
-\end{itemize}
-
-最终输出通过内积计算：
+DeepONet由两个子网络组成。\textbf{分支网络}（Branch Net）$\mathbf{b}_\theta$的输入是函数$u$在传感器位置的采样值$(u(y_1), \ldots, u(y_m))$，输出是$p$维向量$(b_1, \ldots, b_p)$；\textbf{主干网络}（Trunk Net）$\mathbf{t}_\phi$的输入是查询位置$x$，输出是$p$维向量$(t_1, \ldots, t_p)$。最终输出通过内积计算：
 \begin{equation}
     \mathcal{G}_{\theta, \phi}(u)(x) = \sum_{k=1}^{p} b_k(u) \cdot t_k(x) = \mathbf{b}_\theta(u) \cdot \mathbf{t}_\phi(x)
 \end{equation}
@@ -443,20 +388,10 @@ DeepONet的形式让人联想到\textbf{本征正交分解}（Proper Orthogonal 
 \end{equation}
 其中$\{\phi_k\}$是数据驱动的基函数，$\alpha_k(\mu)$是依赖于参数的系数。
 
-DeepONet可以看作是POD的\textbf{神经网络版本}：
-\begin{itemize}
-    \item 主干网络学习"基函数"$t_k(x)$
-    \item 分支网络学习"系数"$b_k(u)$对输入函数的依赖
-\end{itemize}
+DeepONet可以看作是POD的\textbf{神经网络版本}：主干网络学习的是基函数 $t_k(x)$，分支网络学习的是系数 $b_k(u)$ 对输入函数的依赖。
 
 \begin{remark}[为什么用内积？]
-内积$\mathbf{b} \cdot \mathbf{t}$是一种"双线性"操作：
-\begin{itemize}
-    \item 固定$u$，输出是$x$的非线性函数（通过主干网络）
-    \item 固定$x$，输出是$u$的非线性函数（通过分支网络）
-\end{itemize}
-
-这种结构允许两个网络独立地编码各自的信息，然后通过简单的内积组合。也可以用其他组合方式（如拼接后过MLP），但内积最简洁高效。
+内积$\mathbf{b} \cdot \mathbf{t}$是一种"双线性"操作：固定$u$，输出是$x$的非线性函数（通过主干网络）；固定$x$，输出是$u$的非线性函数（通过分支网络）。这种结构允许两个网络独立地编码各自的信息，然后通过简单的内积组合。也可以用其他组合方式（如拼接后过MLP），但内积最简洁高效。
 \end{remark}
 
 \subsection{完整代码实现}
@@ -693,7 +628,7 @@ if __name__ == "__main__":
 
 \subsection{卷积定理：空域积分 = 频域乘法}
 
-FNO的核心思想基于\textbf{卷积定理}：
+DeepONet 用两个网络把积分核拆成了"系数乘基函数"，但它没有利用核本身可能具有的结构。如果方程是常系数的、区域是周期的，那么核只依赖于$x - y$，这一点结构就足以让积分算子的计算量从$O(N^2)$降到$O(N \log N)$。2020 年，Zongyi Li 等人（出自 Anandkumar 组）提出的傅里叶神经算子（FNO）正是抓住了这一点，它的核心思想基于\textbf{卷积定理}：
 
 \begin{theorem}[卷积定理]
 设$f, g$是$L^2$函数，$\hat{f}, \hat{g}$是它们的傅里叶变换。那么：
@@ -723,11 +658,7 @@ FNO的核心思想基于\textbf{卷积定理}：
     \item 做逆傅里叶变换：$v = \mathcal{F}^{-1}(\hat{v})$
 \end{enumerate}
 
-这比直接计算积分高效得多：
-\begin{itemize}
-    \item 直接积分：$O(N^2)$
-    \item FFT方法：$O(N \log N)$
-\end{itemize}
+这比直接计算积分高效得多：直接在$N$个网格点上做积分需要$O(N^2)$次运算，而借助 FFT 只需要$O(N \log N)$。
 \end{insightbox}
 \clarify{对周期域上的常系数方程，格林函数是平移不变的 $G(x - y)$，它的傅里叶变换就是微分算子符号的倒数：$-u'' = f \Rightarrow \hat{G}(k) = 1/k^2$。FNO 在线性情形下学到的 $R(k)$ 就是 $1/k^2$——$K^{-1}$ 的谱表示。}
 
@@ -738,18 +669,13 @@ FNO中的一层（Fourier Layer）定义为：
 \begin{equation}
     v^{(l+1)}(x) = \sigma\left( Wv^{(l)}(x) + \mathcal{F}^{-1}\left(R^{(l)} \cdot \mathcal{F}(v^{(l)})\right)(x) + b \right)
 \end{equation}
-其中：
-\begin{itemize}
-    \item $W \in \mathbb{R}^{d_v \times d_v}$是局部线性变换
-    \item $R^{(l)} \in \mathbb{C}^{k_{\max} \times d_v \times d_v}$是频域中的可学习权重
-    \item $k_{\max}$是保留的最大频率模态数
-    \item $\sigma$是激活函数（如GELU）
-\end{itemize}
+其中$W \in \mathbb{R}^{d_v \times d_v}$是局部线性变换，$R^{(l)} \in \mathbb{C}^{k_{\max} \times d_v \times d_v}$是频域中的可学习权重，$k_{\max}$是保留的最大频率模态数，$\sigma$是激活函数（如GELU）。
 \end{definition}
 
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
+    xscale=0.85,
     box/.style={rectangle, draw, rounded corners, minimum width=1.5cm, minimum height=0.8cm, align=center, font=\small},
     arrow/.style={-{Stealth}, thick}
 ]
@@ -814,23 +740,11 @@ x_out = torch.fft.irfft(out_ft_padded, n=n_x, dim=1)
 \end{lstlisting}
 
 \begin{remark}[为什么截断高频？]
-\begin{enumerate}
-    \item \textbf{物理假设}：大多数PDE的解是\textbf{光滑}的，高频成分能量很小。保留低频就足以捕捉主要特征。
-    
-    \item \textbf{参数效率}：只学习$k_{\max}$个频率的权重，而不是$N$个。参数量从$O(N)$降到$O(k_{\max})$。
-    
-    \item \textbf{离散化无关性}：傅里叶系数$\hat{u}(k)$的物理意义与网格大小$N$无关——频率$k$代表的是函数的全局振荡特性。
-\end{enumerate}
+截断的第一个理由是物理假设：大多数PDE的解是\textbf{光滑}的，高频成分能量很小，保留低频就足以捕捉主要特征。第二个理由是参数效率：只学习$k_{\max}$个频率的权重而不是$N$个，参数量从$O(N)$降到$O(k_{\max})$。第三个理由最关键，它正是离散化无关性的来源：傅里叶系数$\hat{u}(k)$的物理意义与网格大小$N$无关——频率$k$代表的是函数的全局振荡特性，所以在$k_{\max}$个频率上学到的权重换一个分辨率仍然有意义。
 \end{remark}
 
 \begin{warning}[title = FNO的局限]
-低通滤波特性意味着FNO\textbf{不适合处理间断解}：
-\begin{itemize}
-    \item 激波、接触间断（流体力学）
-    \item 裂纹、相界面（固体力学）
-\end{itemize}
-
-这些间断在傅里叶空间表现为高频成分（Gibbs现象），被FNO截断后无法恢复。
+低通滤波特性意味着FNO\textbf{不适合处理间断解}，例如流体力学中的激波和接触间断，固体力学中的裂纹和相界面。这些间断在傅里叶空间表现为高频成分（Gibbs现象），被FNO截断后无法恢复。
 \end{warning}
 
 \subsection{完整FNO实现}
@@ -1033,7 +947,8 @@ def demo_fno_burgers():
             # "模拟"T时刻的解（这里简化为耗散+非线性变形）
             # 真实应用需要用数值方法
             decay = 0.5
-            uT = u0 * decay - 0.1 * u0 ** 2   # 注意：这是逐点映射，只为演示流程（见下文说明）
+            # 注意：这是逐点映射，只为演示流程
+            uT = u0 * decay - 0.1 * u0 ** 2
             
             U0.append(u0)
             UT.append(uT)
@@ -1236,12 +1151,7 @@ $1/N$ 因子是积分近似的求积权重。去掉 softmax 之后，$K^\top V$ 
     \frac{\partial T}{\partial t} + \mathbf{v} \cdot \nabla T &= Q
 \end{align}
 
-全球顶尖的数值预报系统（如ECMWF的IFS）：
-\begin{itemize}
-    \item 网格分辨率：约9km
-    \item 变量数：数十个（温度、湿度、风速、气压等）
-    \item 每次预报需要在超级计算机上运行数小时
-\end{itemize}
+全球顶尖的数值预报系统（如ECMWF的IFS）在约9km的网格分辨率上，同时演化温度、湿度、风速、气压等数十个变量，每次预报都需要在超级计算机上运行数小时。这正是本章开头说的处境：方程是固定的，每天变的只是初始状态，而每一次都要从头把方程解一遍。
 
 \subsection{神经算子方法}
 
@@ -1252,55 +1162,22 @@ $1/N$ 因子是积分近似的求积权重。去掉 softmax 之后，$K^\top V$ 
 \end{quote}
 
 \begin{example}[FourCastNet (NVIDIA, 2022)]
-基于\textbf{FNO}的架构：
-\begin{itemize}
-    \item 输入：当前时刻的气象场（20+变量）
-    \item 输出：6小时后的气象场
-    \item 多步预测：迭代应用模型
-\end{itemize}
-
-性能：
-\begin{itemize}
-    \item 推理速度：\textbf{秒级}（vs 数值模式的小时级）
-    \item 预报精度：短期、大尺度变量上接近欧洲中心的 IFS，降水等少数变量略优
-    \item 能耗：降低$10000\times$
-\end{itemize}
+FourCastNet 采用基于\textbf{FNO}的架构，输入当前时刻的气象场（20+变量），输出6小时后的气象场，更长时间的预报则通过迭代应用模型得到。它的推理速度是\textbf{秒级}的（数值模式则是小时级），能耗降低$10000\times$；预报精度在短期、大尺度变量上接近欧洲中心的 IFS，降水等少数变量略优。
 \end{example}
 \preview{第16章的"世界模型"学的正是"当前状态 $\to$ 下一状态"的映射。气象大模型是世界模型在地球尺度上的实例；把神经算子换成机器人或游戏引擎，就是第16章。}
 
 \begin{example}[GraphCast (DeepMind, 2023)]
-基于\textbf{图神经网络}的架构：
-\begin{itemize}
-    \item 将地球表面建模为图（节点=网格点，边=邻居关系）
-    \item 使用消息传递机制进行信息聚合
-    \item 更好地处理非规则网格（极地区域）
-\end{itemize}
-
-成就：
-\begin{itemize}
-    \item 在90\%的指标上超越ECMWF的HRES系统
-    \item 10天预报只需不到1分钟
-\end{itemize}
+GraphCast 采用基于\textbf{图神经网络}的架构：把地球表面建模为图（节点是网格点，边是邻居关系），用消息传递机制聚合信息，因此能更好地处理极地区域这类非规则网格。它在90\%的指标上超越了ECMWF的HRES系统，10天预报只需不到1分钟。
 \end{example}
+
+2023 年是这条路线被主流接受的一年：华为的盘古气象大模型发表在《自然》上，DeepMind 的 GraphCast 发表在《科学》上，两者都在中期预报上达到或超过了传统数值天气预报。
 
 \subsection{为什么神经算子在天气预报上成功？}
 
-\begin{enumerate}
-    \item \textbf{数据丰富}：ERA5再分析数据提供了40年的高质量全球气象数据，约250TB
-    
-    \item \textbf{物理约束较弱}：大气系统是混沌的，长期预测本质上是概率性的。神经算子不需要精确满足PDE，只需要统计上准确
-    
-    \item \textbf{分辨率需求适中}：天气预报关心的是大尺度模式（低频），而不是精细结构（高频），正好符合FNO的低通特性
-    
-    \item \textbf{速度至关重要}：气象部门需要在有限时间内生成多个集合预报成员，神经算子的速度优势是决定性的
-\end{enumerate}
+这个问题的答案不在架构上，而在问题本身的性质上。首先是数据丰富：ERA5再分析数据提供了40年的高质量全球气象数据，约250TB，足以支撑一个大模型。其次是物理约束较弱：大气系统是混沌的，长期预测本质上是概率性的，神经算子不需要精确满足PDE，只需要统计上准确。再次，分辨率需求适中：天气预报关心的是大尺度模式（低频），而不是精细结构（高频），正好符合FNO的低通特性。最后，速度至关重要：气象部门需要在有限时间内生成多个集合预报成员，神经算子的速度优势是决定性的。
 
 \begin{warning}[title = 神经算子在天气预报中的局限]
-\begin{itemize}
-    \item \textbf{物理一致性}：预测结果可能违反物理守恒律（如质量、能量守恒）
-    \item \textbf{可解释性}：难以理解模型为什么做出特定预测
-    \item \textbf{分布漂移}：气候变化可能导致训练数据分布与未来不同
-\end{itemize}
+神经算子的预测结果可能违反物理守恒律（如质量、能量守恒），这是物理一致性上的隐患；模型为什么做出特定预测难以理解，这是可解释性上的短板；而气候变化可能导致训练数据分布与未来不同，这是分布漂移的风险。
 \end{warning}
 
 % ====================================================================================

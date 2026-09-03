@@ -75,14 +75,14 @@
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    x=1cm, y=1cm,
-    chap/.style={draw, line width=0.8pt, rounded corners=2pt, text width=1.95cm, minimum height=1.0cm, align=center, font=\scriptsize, inner sep=1.5pt},
+    x=0.97cm, y=1cm,
+    chap/.style={draw, line width=0.8pt, rounded corners=2pt, text width=1.9cm, minimum height=1.0cm, align=center, font=\scriptsize, inner sep=1.5pt},
     core/.style={line width=1.2pt},
     opt/.style={dashed},
     math/.style={fill=gray!12},
     phys/.style={fill=blue!12},
     ml/.style={fill=orange!18},
-    partlab/.style={text width=1.75cm, align=center, font=\small\bfseries},
+    partlab/.style={text width=1.75cm, align=flush center, font=\small\bfseries},
     partbox/.style={draw=gray!60, rounded corners=4pt, fill=gray!4, inner sep=4pt},
     main/.style={-{Stealth[length=2mm]}, thick, gray!70!black},
     link/.style={-{Stealth[length=1.6mm]}, blue!60!black, thin, dashed},
@@ -129,11 +129,11 @@
     % ---- 跨部分依赖 ----
     \draw[link] (c3) -- node[left, font=\tiny, black, pos=0.5] {变分原理} (c5.north east);
     \draw[link] (c7) -- node[right, font=\tiny, black, pos=0.55] {伴随方程 / 贝尔曼} (c8.north east);
-    \draw[link] (c4) to[bend left=14] node[right, font=\tiny, black, pos=0.3] {softmax、玻尔兹曼} (c12.north);
-    \draw[link] (c3.south west) to[bend right=30] node[left, font=\tiny, black, pos=0.85] {能量极小} (c13.north west);
+    \draw[link] (c4) to[bend left=22] node[left, font=\tiny, black, pos=0.25] {softmax、玻尔兹曼} (c12.north);
+    \draw[link] (c3.south west) to[bend right=30] node[left, font=\tiny, black, pos=0.12] {能量极小} (c13.north west);
     \draw[link] (c8) -- node[right, font=\tiny, black, pos=0.5] {可微} (c14.north west);
-    \draw[link] (c7.south east) to[bend left=10] node[right, font=\tiny, black, pos=0.7] {动力学约束} (c16.north);
-    \draw[link] (c12) -- node[right, font=\tiny, black, pos=0.5] {后训练、数据} (c17);
+    \draw[link] (c7.south) to[bend right=12] node[right, font=\tiny, black, pos=0.14] {动力学约束} (c16.north);
+    \draw[link] (c12) -- node[left, font=\tiny, black, pos=0.5] {后训练、数据} (c17);
     % ---- 图例 ----
     \node[chap, core, fill=white, text width=1.4cm, minimum height=0.5cm] (lg1) at (2.2,-7.3) {核心章节};
     \node[chap, opt,  fill=white, text width=1.4cm, minimum height=0.5cm] (lg2) at (4.2,-7.3) {选读章节};

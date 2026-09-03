@@ -516,7 +516,7 @@ r(s_t,a)+\gamma V(f(s_t,a))
 注意到 $V(b)$ 被请求了两次（一次从 $a$，一次从 $s$），但我们只需要计算一次，第二次直接返回缓存的结果。这种技术叫做\textbf{记忆化}（memoization），它把朴素递归的指数时间复杂度降低到多项式时间。
 \end{remark}
 
-\subsubsection{方法三：广度优先/逐层更新（Bellman-Ford 风格）}
+\subsubsection{方法三：逐层更新（Bellman--Ford 风格）}
 
 另一种思路是\textbf{逐层更新}：不是沿着一条路径走到底，而是每一轮同时更新所有节点的估计值，直到收敛。
 
@@ -1056,7 +1056,7 @@ r(s_t,a)+\gamma V(f(s_t,a))
 
 这涉及两个额外的维度，它们决定了算法的\textbf{数据效率}和\textbf{适用场景}。
 
-\subsubsection{维度三：数据新鲜度（On-policy vs. Off-policy）}
+\subsubsection{维度三：数据新鲜度（On/Off-policy）}
 
 \begin{keyidea}[核心问题]
 训练数据必须来自当前策略吗？能不能用"过时"的数据？
@@ -1126,7 +1126,7 @@ r(s_t,a)+\gamma V(f(s_t,a))
 \caption{On-policy vs. Off-policy}
 \end{table}
 
-\subsubsection{维度四：交互模式（Online vs. Offline）}
+\subsubsection{维度四：交互模式（Online/Offline）}
 
 \begin{keyidea}[核心问题]
 训练时能不能和环境实时交互？还是只能用已有的历史数据？
@@ -1911,7 +1911,7 @@ Q-Learning：训练了 2000 个回合
 \end{figure}
 
 % ------------------------------------------------------------------------------------
-\subsection{Stable Baselines3：工业级深度强化学习库}
+\subsection{Stable Baselines3：工业级 RL 库}
 % ------------------------------------------------------------------------------------
 
 \href{https://stable-baselines3.readthedocs.io/}{Stable Baselines3}（简称 SB3）是目前最流行的深度强化学习库。它实现了 DQN、PPO、SAC 等主流算法，代码清晰、文档完善，非常适合学习。

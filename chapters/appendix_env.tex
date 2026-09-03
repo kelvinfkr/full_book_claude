@@ -1,6 +1,7 @@
 % ====================================================================================
 \chapter*{附录B：实验环境速成——服务器与环境配置}
 \addcontentsline{toc}{chapter}{附录B：实验环境速成——服务器与环境配置}
+\markboth{附录B\quad 实验环境速成}{附录B\quad 实验环境速成}
 % ====================================================================================
 
 \sidenoteplain{本附录原是"大模型工程"一章（现附录C）的扩展阅读，给完全没有服务器使用经验的同学准备。如果你已经熟悉 Linux 和 Git，可以跳过前面的基础部分。}
@@ -16,7 +17,7 @@
 
 SSH（Secure Shell）是连接远程服务器的标准方式。你在自己电脑上输入命令，实际在服务器上执行。
 
-\paragraph{基本连接命令}:SSH
+\paragraph{基本连接命令}
 
 \begin{lstlisting}[language=bash, caption=SSH连接服务器]
 # 基本格式
@@ -105,7 +106,7 @@ Host cluster
 \caption{常用文件操作命令}
 \end{table}
 
-\textbf{进程与资源监控}
+\paragraph{进程与资源监控}
 
 \begin{table}[htbp]
 \centering
@@ -152,7 +153,7 @@ Host cluster
 \caption{\texttt{nvidia-smi}输出示例：显示GPU型号、显存使用、运行中的进程}
 \end{figure}
 
-\textbf{文件传输}
+\paragraph{文件传输}
 
 \begin{lstlisting}[language=bash, caption=在本地和服务器之间传输文件]
 # 从本地上传到服务器
@@ -177,12 +178,7 @@ Git是代码版本管理的标准工具。即使只有你一个人写代码，�
 
 \paragraph{为什么要用Git？}
 
-\begin{itemize}
-    \item 记录每次修改，可以随时回退
-    \item 不用担心改坏代码（改坏了就回退）
-    \item 方便在多台机器（本地、服务器）之间同步代码
-    \item 方便与他人协作
-\end{itemize}
+Git 记录你的每一次修改，所以任何时候都可以回退到之前的某个版本；有了这层保险，你就不必担心改坏代码——改坏了就退回去。它还解决了另一个很实际的问题：代码要在本地和服务器等多台机器之间来回同步，多人合作时还要合并各自的改动，靠手工拷贝文件很快就会乱套，而 Git 正是为此设计的。
 
 \paragraph{Git基本工作流程}
 
@@ -207,7 +203,7 @@ Git是代码版本管理的标准工具。即使只有你一个人写代码，�
 \caption{Git工作流程}
 \end{figure}
 
-\textbf{常用Git命令}
+\paragraph{常用Git命令}
 
 \begin{lstlisting}[language=bash, caption=Git常用命令]
 # === 初始化 ===
@@ -235,7 +231,7 @@ git checkout -b new_feature # 创建并切换到新分支
 git merge new_feature       # 合并分支
 \end{lstlisting}
 
-\textbf{典型工作流程示例}
+\paragraph{典型工作流程示例}
 
 \begin{lstlisting}[language=bash, caption=一次完整的Git工作流程]
 # 1. 开始工作前，先拉取最新代码
@@ -295,14 +291,9 @@ outputs/
 
 \paragraph{为什么要用虚拟环境？}
 
-\begin{itemize}
-    \item 不同项目可能需要不同版本的PyTorch
-    \item 避免库版本冲突
-    \item 不会污染系统Python
-    \item 环境出问题了可以直接删掉重建
-\end{itemize}
+不同项目常常需要不同版本的 PyTorch 和其他库，如果都装进同一个 Python 里，版本迟早会互相冲突，还会把系统自带的 Python 弄乱。虚拟环境把每个项目的依赖隔离开：各装各的版本，互不干扰；哪个环境出了问题，直接删掉重建就行，不会波及别的项目。
 
-\textbf{Conda基本命令}
+\paragraph{Conda基本命令}
 
 \begin{lstlisting}[language=bash, caption=Conda环境管理]
 # === 创建环境 ===
@@ -326,7 +317,7 @@ conda env export > environment.yml   # 导出环境配置
 conda env create -f environment.yml  # 从配置文件创建环境
 \end{lstlisting}
 
-\textbf{典型深度学习环境配置}
+\paragraph{典型深度学习环境配置}
 
 \begin{lstlisting}[language=bash, caption=配置一个深度学习环境]
 # 1. 创建新环境
@@ -348,8 +339,8 @@ python -c "import torch; print(torch.cuda.is_available())"
 \end{lstlisting}
 
 % ------------------------------------------------------------------------------------
-\section*{CUDA与PyTorch版本：公用服务器的大坑}
-\addcontentsline{toc}{section}{CUDA与PyTorch版本：公用服务器的大坑}
+\section*{CUDA 与 PyTorch 版本的坑}
+\addcontentsline{toc}{section}{CUDA 与 PyTorch 版本的坑}
 % ------------------------------------------------------------------------------------
 
 \sidenoteplain{这一节是很多新手踩的最大坑：不理解CUDA版本、PyTorch版本、驱动版本之间的关系，随意升级，结果把组里老代码全搞挂了。}
@@ -362,7 +353,7 @@ python -c "import torch; print(torch.cuda.is_available())"
 \centering
 \small
 \renewcommand{\arraystretch}{1.4}
-\begin{tabular}{l|l|l|l}
+\begin{tabularx}{\textwidth}{l|X|l|l}
 \toprule
 \textbf{名称} & \textbf{是什么} & \textbf{谁负责安装} & \textbf{能否随意改} \\
 \midrule
@@ -370,16 +361,12 @@ python -c "import torch; print(torch.cuda.is_available())"
 \textbf{CUDA Toolkit} & GPU编程工具包 & 系统或用户 & 谨慎（见下文） \\
 \textbf{PyTorch CUDA版本} & PyTorch编译时用的CUDA & pip安装时选择 & 可以，但要匹配 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \caption{三种"CUDA版本"的区别}
 \end{table}
 
 \begin{keyidea}[版本兼容的关键原则]
-\begin{itemize}
-    \item \textbf{驱动版本} $\geq$ \textbf{CUDA Toolkit版本}（向下兼容）
-    \item \textbf{PyTorch CUDA版本}必须与系统CUDA Toolkit匹配
-    \item 同一台机器上，\textbf{驱动只有一个}，但可以有多个CUDA Toolkit版本
-\end{itemize}
+三者的关系是分层的。\textbf{驱动}在最底层，同一台机器上只有一个；它向下兼容，所以驱动版本必须 $\geq$ CUDA Toolkit 版本。\textbf{CUDA Toolkit} 在中间，同一台机器上可以装多个版本。\textbf{PyTorch 的 CUDA 版本}在最上层，它必须与系统的 CUDA Toolkit 匹配。
 \end{keyidea}
 
 \paragraph{如何查看版本}
@@ -467,7 +454,7 @@ CUDA_VISIBLE_DEVICES="" python train.py
 \centering
 \small
 \renewcommand{\arraystretch}{1.4}
-\begin{tabular}{p{7cm}|p{6cm}}
+\begin{tabularx}{\textwidth}{X|X}
 \toprule
 \textbf{报错信息} & \textbf{可能原因} \\
 \midrule
@@ -476,13 +463,16 @@ CUDA_VISIBLE_DEVICES="" python train.py
 \texttt{CUDA out of memory} & 显存不够，或别人在用这张卡 \\
 \texttt{RuntimeError: CUDA unknown error} & 驱动问题，尝试重启或联系管理员 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \caption{常见CUDA报错与原因}
 \end{table}
 
 \paragraph{安装正确版本的PyTorch}
 
-去 \url{https://pytorch.org/get-started/locally/} 选择对应你系统CUDA版本的安装命令：
+安装命令要和系统的 CUDA 版本匹配。PyTorch 官网的安装页面会根据你选择的系统与 CUDA 版本生成对应的命令：
+\begin{center}
+\small\url{https://pytorch.org/get-started/locally/}
+\end{center}
 
 \begin{lstlisting}[language=bash, caption=根据CUDA版本安装PyTorch]
 # 如果系统CUDA是11.8
@@ -496,21 +486,9 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 \end{lstlisting}
 
 \begin{example}[一个典型的"版本地狱"场景]
-\textbf{场景}：师兄的代码在服务器上跑得好好的。你为了跑一个新论文的代码，把系统CUDA从11.8升级到12.2。
+师兄的代码在服务器上跑得好好的。你为了跑一个新论文的代码，把系统 CUDA 从 11.8 升级到 12.2。结果，师兄的 PyTorch 是 cu118 版本，现在 \texttt{torch.cuda.is\_available()} 返回 False；师姐用的 TensorFlow 也挂了；导师开始问为什么大家的实验都跑不了了……
 
-\textbf{结果}：
-\begin{itemize}
-    \item 师兄的PyTorch是cu118版本，现在\texttt{torch.cuda.is\_available()}返回False
-    \item 师姐用的TensorFlow也挂了
-    \item 导师问为什么大家的实验都跑不了了……
-\end{itemize}
-
-\textbf{正确做法}：
-\begin{itemize}
-    \item 不改系统CUDA，用Conda创建新环境
-    \item 在新环境里装cu118版本的PyTorch（向下兼容没问题）
-    \item 或者联系管理员，在不影响现有环境的情况下添加新CUDA版本
-\end{itemize}
+正确的做法是不碰系统 CUDA：用 Conda 创建一个新环境，在里面装 cu118 版本的 PyTorch（驱动向下兼容，没有问题）；如果新代码确实需要更新的 CUDA，就联系管理员，在不影响现有环境的前提下另外添加一个版本。
 \end{example}
 
 % ------------------------------------------------------------------------------------
@@ -520,7 +498,7 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 
 SSH断开后，正在运行的程序会被终止。用\texttt{screen}或\texttt{tmux}可以让程序在后台持续运行。
 
-\textbf{Screen基本用法}
+\paragraph{Screen基本用法}
 
 \begin{lstlisting}[language=bash, caption=Screen使用方法]
 # 创建新的screen会话
@@ -604,9 +582,7 @@ tmux kill-session -t train
     \draw[<->, thick] (user) -- node[above] {SSH} (2, 0);
 
     % 注释
-    \node[right, font=\small, gray] at (7, 1) {SSH断开后};
-    \node[right, font=\small, gray] at (7, 0.5) {tmux里的程序};
-    \node[right, font=\small, gray] at (7, 0) {继续运行};
+    \node[font=\small, gray, align=center] at (6, -1.6) {SSH断开后\\tmux里的程序\\继续运行};
 
 \end{tikzpicture}
 \caption{Tmux让程序在后台持续运行}
@@ -622,14 +598,9 @@ tmux kill-session -t train
 
 \paragraph{SLURM基本概念}
 
-\begin{itemize}
-    \item \textbf{节点（Node）}：一台物理服务器
-    \item \textbf{分区（Partition）}：一组节点，比如gpu分区、cpu分区
-    \item \textbf{作业（Job）}：你提交的任务
-    \item \textbf{脚本（Script）}：描述任务需要什么资源、运行什么命令
-\end{itemize}
+先认识四个词。集群由许多台物理服务器组成，每一台叫一个\textbf{节点}（Node）；管理员把节点分成若干组，比如 gpu 分区、cpu 分区，每一组叫一个\textbf{分区}（Partition）。你提交给集群的任务叫\textbf{作业}（Job），而描述这个作业需要什么资源、要运行什么命令的文件，就是作业\textbf{脚本}（Script）。
 
-\textbf{查看集群状态}
+\paragraph{查看集群状态}
 
 \begin{lstlisting}[language=bash, caption=SLURM常用查询命令]
 # 查看所有分区和节点状态
@@ -648,7 +619,7 @@ scontrol show job <job_id>
 sacct -u $USER --starttime=2024-01-01
 \end{lstlisting}
 
-\textbf{编写SLURM脚本}
+\paragraph{编写SLURM脚本}
 
 \begin{lstlisting}[language=bash, caption=SLURM作业脚本示例（train.slurm）]
 #!/bin/bash
@@ -678,7 +649,7 @@ python train.py \
     --num_epochs 3
 \end{lstlisting}
 
-\textbf{提交和管理作业}
+\paragraph{提交和管理作业}
 
 \begin{lstlisting}[language=bash, caption=提交和管理SLURM作业]
 # 提交作业
@@ -713,7 +684,7 @@ python train.py     # 可以直接运行代码
 exit
 \end{lstlisting}
 
-\textbf{多GPU训练脚本示例}
+\paragraph{多GPU训练脚本示例}
 
 \begin{lstlisting}[language=bash, caption=多GPU分布式训练脚本]
 #!/bin/bash
@@ -752,7 +723,7 @@ srun torchrun \
 \addcontentsline{toc}{section}{实用技巧汇总}
 % ------------------------------------------------------------------------------------
 
-\textbf{训练监控}
+\paragraph{训练监控}
 
 \begin{lstlisting}[language=bash, caption=监控训练过程]
 # 实时查看训练日志
@@ -792,7 +763,7 @@ SSH连接断开程序终止 & 用tmux或screen \\
 \caption{常见问题与解决方法}
 \end{table}
 
-\textbf{一个完整的实验流程}
+\paragraph{一个完整的实验流程}
 
 \begin{lstlisting}[language=bash, caption=从零开始的完整实验流程]
 # === 1. 连接服务器 ===
@@ -870,15 +841,7 @@ my_project/
 \end{lstlisting}
 
 \begin{remark}
-养成良好的习惯：
-\begin{itemize}
-    \item 代码改动及时commit
-    \item 重要实验记录配置和结果
-    \item checkpoint定期清理（很占空间）
-    \item 给文件和变量起有意义的名字
-\end{itemize}
-
-这些习惯会在你做毕设或发论文时帮大忙。
+再养成几个习惯：代码改动及时 commit；重要的实验把配置和结果一起记下来；checkpoint 很占空间，要定期清理；给文件和变量起有意义的名字。这些习惯会在你做毕设或发论文时帮大忙。
 \end{remark}
 
 % ------------------------------------------------------------------------------------
@@ -888,13 +851,13 @@ my_project/
 
 深度学习生态有大量优秀的开源工具。这里介绍最常用的几类，帮你快速上手。
 
-\subsection*{Hugging Face生态：Transformers + PEFT + Datasets}
+\subsection*{Hugging Face 生态}
 
 \sidenoteplain{\textbf{Hugging Face}：由法国人Clément Delangue等于2016年创立，最初是一个聊天机器人。2019年开源Transformers库后爆发式增长，如今已成为AI开源社区的``GitHub''，托管超过50万个模型。公司估值超40亿美元。}
 
 Hugging Face是目前最流行的NLP/LLM工具生态，几乎是必学的。
 
-\textbf{Transformers：模型加载与推理}
+\paragraph{Transformers：模型加载与推理}
 
 \begin{lstlisting}[language=Python, caption=使用Transformers加载和使用模型]
 from transformers import AutoTokenizer, AutoModelForCausalLM
@@ -972,7 +935,7 @@ trainer.train()
 model.save_pretrained("./lora_weights")
 \end{lstlisting}
 
-\textbf{Datasets：数据加载与处理}
+\paragraph{Datasets：数据加载与处理}
 
 \begin{lstlisting}[language=Python, caption=使用Datasets处理数据]
 from datasets import load_dataset, Dataset
@@ -1025,7 +988,7 @@ bitsandbytes & 4/8-bit量化 & \texttt{pip install bitsandbytes} \\
 
 显存不够时，量化是最直接的解决方案。
 
-\textbf{BitsAndBytes：4-bit/8-bit量化}
+\paragraph{BitsAndBytes：4-bit/8-bit量化}
 
 \begin{lstlisting}[language=Python, caption=4-bit量化加载模型]
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
@@ -1070,7 +1033,7 @@ model = get_peft_model(model, lora_config)
 # 现在可以在RTX 3080 (10GB) 上微调7B模型了！
 \end{lstlisting}
 
-\textbf{GPTQ/AWQ：更高效的量化}
+\paragraph{GPTQ/AWQ：更高效的量化}
 
 \begin{lstlisting}[language=Python, caption=加载GPTQ量化模型]
 from transformers import AutoModelForCausalLM
@@ -1137,7 +1100,7 @@ for output in outputs:
     print(output.outputs[0].text)
 \end{lstlisting}
 
-\textbf{启动vLLM API服务}
+\paragraph{启动vLLM API服务}
 
 \begin{lstlisting}[language=bash, caption=启动vLLM服务器]
 # 启动OpenAI兼容的API服务
@@ -1172,7 +1135,7 @@ Ollama & 一键运行本地模型 & 个人使用、快速体验 \\
 
 LangChain是构建LLM应用的流行框架，提供了链式调用、RAG、Agent等功能。
 
-\textbf{基本使用}
+\paragraph{基本使用}
 
 \begin{lstlisting}[language=Python, caption=LangChain基本使用]
 from langchain_openai import ChatOpenAI
@@ -1269,7 +1232,7 @@ print(answer)
 
 \paragraph{Agent：让LLM使用工具}
 
-Agent可以让LLM调用外部工具（搜索、计算器、代码执行等）：
+Agent 可以让 LLM 调用外部工具（搜索、计算器、代码执行等）。下面用到的 ReAct 提示模板，实现的正是第 12 章里姚顺雨 2022 年提出的那套节奏：让模型交替地``想一步''和``做一步''，把工具返回的观察再喂回推理：
 
 \begin{lstlisting}[language=Python, caption=创建简单的Agent]
 from langchain_openai import ChatOpenAI
@@ -1529,10 +1492,5 @@ python finetune.py
 \end{lstlisting}
 
 \begin{remark}
-工具在快速迭代，API可能会变化。建议：
-\begin{itemize}
-    \item 遇到问题先看官方文档和GitHub Issues
-    \item 记录你使用的库版本（\texttt{pip freeze > requirements.txt}）
-    \item 从官方示例代码开始修改，而不是从零写起
-\end{itemize}
+这些工具都在快速迭代，API 随时可能变化。所以遇到问题先看官方文档和 GitHub Issues；用 \texttt{pip freeze > requirements.txt} 记下你实际使用的库版本，将来才能复现；写代码时从官方示例开始修改，而不是从零写起。
 \end{remark}

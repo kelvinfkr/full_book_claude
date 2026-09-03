@@ -1,17 +1,10 @@
 % ====================================================================================
 \chapter*{附录D：工程专题}
 \addcontentsline{toc}{chapter}{附录D：工程专题}
+\markboth{附录D\quad 工程专题}{附录D\quad 工程专题}
 % ====================================================================================
 
-\noindent\textit{本附录收录各章的工程类延伸内容}：它们原是第 13、6、8、9 章的扩展阅读，篇幅长、偏实践，放在正文里会把主线撑得很不均匀。各节相互独立，需要时再翻：
-\begin{itemize}
-    \item \textbf{大规模线性方程组的求解艺术}（配合第 13 章有限元）：直接法、共轭梯度、预条件、多重网格与条件数。
-    \item \textbf{CPU 并行计算的真正含义}（配合第 13 章）：并行到底并行了什么，为什么加核不一定加速。
-    \item \textbf{流固耦合有限元}（配合第 13 章）：Turek--Hron FSI2 基准算例的完整复现。
-    \item \textbf{从旋转矩阵到三维重建}（配合第 6 章机器人）：SO(3)、指数映射与从图像重建三维结构。
-    \item \textbf{Python 表达式求值}（配合第 8 章自动微分）：解释器怎样把 \texttt{x*x+2*x+1} 变成一棵计算图。
-    \item \textbf{用 SB3 训练经典控制任务}（配合第 9 章强化学习）：Stable Baselines3 的安装、训练与调参。
-\end{itemize}
+\noindent\textit{本附录收录各章的工程类延伸内容}：它们原是第 13、6、8、9 章的扩展阅读，篇幅长、偏实践，放在正文里会把主线撑得很不均匀。各节相互独立，需要时再翻。前三节配合第 13 章的有限元：\textbf{大规模线性方程组的求解艺术}讲直接法、共轭梯度、预条件、多重网格与条件数；\textbf{CPU 并行计算的真正含义}讲并行到底并行了什么、为什么加核不一定加速；\textbf{流固耦合有限元}完整复现 Turek--Hron FSI2 基准算例。后三节分别配合第 6、8、9 章：\textbf{从旋转矩阵到三维重建}从 $SO(3)$ 与指数映射讲到从图像重建三维结构；\textbf{Python 表达式求值}解释解释器怎样把 \texttt{x*x+2*x+1} 变成一棵计算图；\textbf{用 SB3 训练经典控制任务}介绍 Stable Baselines3 的安装、训练与调参。
 
 % ====================================================================================
 \section*{大规模线性方程组的求解艺术}
@@ -33,7 +26,7 @@
 
 考虑两个看起来很相似的方程组：
 
-\begin{minipage}[t]{0.48\textwidth}
+\noindent\begin{minipage}[t]{0.48\textwidth}
 \textbf{方程组 A}
 \[
 \begin{pmatrix} 1 & 0 \\ 0 & 1 \end{pmatrix}
@@ -72,24 +65,18 @@
 \subsubsection*{条件数的定义}
 
 \begin{keyformula}[title=条件数]
-矩阵 $A$ 的\textbf{条件数}定义为：
+矩阵 $A$ 的\textbf{条件数}定义为最大奇异值与最小奇异值之比：
 \begin{equation}
-\kappa(A) = \|A\| \cdot \|A^{-1}\| = \frac{\sigma_{\max}(A)}{\sigma_{\min}(A)} = \frac{\text{最大奇异值}}{\text{最小奇异值}}
+\kappa(A) = \|A\| \cdot \|A^{-1}\| = \frac{\sigma_{\max}(A)}{\sigma_{\min}(A)}
 \end{equation}
 
-对于对称正定矩阵（如有限元刚度矩阵）：
+对于对称正定矩阵（如有限元刚度矩阵），它就是最大特征值与最小特征值之比：
 \begin{equation}
-\kappa(K) = \frac{\lambda_{\max}(K)}{\lambda_{\min}(K)} = \frac{\text{最大特征值}}{\text{最小特征值}}
+\kappa(K) = \frac{\lambda_{\max}(K)}{\lambda_{\min}(K)}
 \end{equation}
 \end{keyformula}
 
-\textbf{条件数的意义}：
-
-\begin{itemize}
-    \item $\kappa \approx 1$：方程组"健康"，对扰动不敏感
-    \item $\kappa \gg 1$：方程组"病态"，小扰动可能导致大误差
-    \item $\kappa = \infty$：矩阵奇异，方程无唯一解
-\end{itemize}
+条件数衡量的是方程组把输入扰动放大了多少倍：$\kappa \approx 1$ 时方程组"健康"，对扰动不敏感；$\kappa \gg 1$ 时方程组"病态"，小扰动可能导致大误差；到了 $\kappa = \infty$，矩阵奇异，方程没有唯一解。
 
 \begin{figure}[htbp]
 \centering
@@ -159,48 +146,18 @@ K = \frac{1}{h}
 \lambda_k = \frac{4}{h} \sin^2\left(\frac{k\pi h}{2}\right), \quad k = 1, 2, \ldots, N-1
 \end{equation}
 
-\begin{itemize}
-    \item 最小特征值：$\lambda_1 \approx \frac{4}{h} \cdot \frac{\pi^2 h^2}{4} = \pi^2 h$
-    \item 最大特征值：$\lambda_{N-1} \approx \frac{4}{h}$
-\end{itemize}
-
-所以：
+当 $k = 1$ 时正弦的自变量很小，$\sin^2 x \approx x^2$，于是最小特征值 $\lambda_1 \approx \frac{4}{h} \cdot \frac{\pi^2 h^2}{4} = \pi^2 h$；当 $k = N-1$ 时自变量接近 $\pi/2$，最大特征值 $\lambda_{N-1} \approx \frac{4}{h}$。两者相除：
 \[
 \kappa(K) = \frac{\lambda_{\max}}{\lambda_{\min}} \approx \frac{4/h}{\pi^2 h} = \frac{4}{\pi^2 h^2} \sim O(h^{-2})
 \]
 
 \begin{physicalmeaning}
-条件数与物理的关系：
-
-\begin{itemize}
-    \item \textbf{最大特征值}对应高频振动模式（相邻节点反向运动）——局部、快速
-    \item \textbf{最小特征值}对应低频振动模式（整体缓慢变形）——全局、慢速
-\end{itemize}
-
-网格越细，高频和低频的差距越大，条件数越大。
-
-这就像一根弦：基频（整体振动）和高次谐波（局部振动）的频率差距可以很大。
+条件数有直接的物理含义。刚度矩阵的\textbf{最大特征值}对应高频振动模式——相邻节点反向运动，局部而快速；\textbf{最小特征值}对应低频振动模式——整体缓慢变形，全局而慢速。网格越细，高频和低频的差距越大，条件数也就越大。这就像一根弦：基频（整体振动）和高次谐波（局部振动）的频率差距可以很大。
 \end{physicalmeaning}
 
 \subsubsection*{条件数对计算的影响}
 
-条件数影响两件事：
-
-\textbf{1. 直接求解的精度}
-
-用 Gaussian 消元法求解时，舍入误差会被放大约 $\kappa$ 倍。
-
-如果 $\kappa = 10^{10}$，双精度浮点数（约15位有效数字）只能保证约5位精度！
-
-\textbf{2. 迭代求解的速度}
-
-很多迭代算法（如共轭梯度法）的收敛速度与条件数直接相关：
-
-\begin{equation}
-\text{迭代次数} \sim O(\sqrt{\kappa})
-\end{equation}
-
-$\kappa = 10^6$ 意味着需要约 $1000$ 次迭代！
+条件数影响两件事。第一是直接求解的精度：用高斯消元法求解时，舍入误差会被放大约 $\kappa$ 倍，如果 $\kappa = 10^{10}$，双精度浮点数（约 15 位有效数字）就只能保证约 5 位精度。第二是迭代求解的速度：很多迭代算法（如共轭梯度法）的收敛速度与条件数直接相关，所需的迭代次数是 $O(\sqrt{\kappa})$ 量级，$\kappa = 10^6$ 就意味着需要约 $1000$ 次迭代。
 
 % ------------------------------------------------------------------------------------
 \subsection*{二、稀疏矩阵：大自然的礼物}
@@ -214,20 +171,7 @@ $\kappa = 10^6$ 意味着需要约 $1000$ 次迭代！
 有限元刚度矩阵就是典型的稀疏矩阵！
 
 \begin{example}[波音787的有限元模型]
-假设有 $n = 10^7$（一千万）个节点：
-
-\begin{itemize}
-    \item 稠密矩阵：$10^7 \times 10^7 = 10^{14}$ 个元素
-        \begin{itemize}
-            \item 存储：$10^{14} \times 8$ bytes $= 800$ TB（存不下！）
-            \item 求解：$O(n^3) = 10^{21}$ 次运算（算不完！）
-        \end{itemize}
-    \item 稀疏矩阵：每行约 30 个非零元（三维问题）
-        \begin{itemize}
-            \item 存储：$3 \times 10^8$ 个非零元 $\approx 2.4$ GB（轻松！）
-            \item 求解：使用稀疏求解器，可行！
-        \end{itemize}
-\end{itemize}
+有限元与飞机结构的缘分由来已久（第 13 章开头提到的 1956 年波音机翼分析），我们也用一架飞机来估算规模。假设模型有 $n = 10^7$（一千万）个节点。若把刚度矩阵当作稠密矩阵存储，就有 $10^7 \times 10^7 = 10^{14}$ 个元素，占 $10^{14} \times 8$ 字节 $= 800$ TB，根本存不下；求解的运算量 $O(n^3) = 10^{21}$ 次，也根本算不完。但它其实是稀疏的：三维问题里每行只有约 30 个非零元，总共 $3 \times 10^8$ 个非零元，只需约 $2.4$ GB 内存；配上稀疏求解器，求解就变得可行。
 \end{example}
 
 \subsubsection*{三对角矩阵：最简单的稀疏结构}
@@ -248,28 +192,9 @@ b_2 & a_2 & c_2 & & \\
 
 \noindent\textbf{算法：Thomas 算法（三对角系统求解）}
 
-\medskip
-\noindent\textbf{步骤：}
-
 \begin{enumerate}
-  \item \textbf{前向消元（从上到下）}
-  \begin{enumerate}
-      \item 对 $i=2,\dots,n$：
-      \begin{itemize}
-          \item $w = b_i / a_{i-1}$\hfill{\footnotesize（使第 $i$ 行以第 $i\!-\!1$ 行为基准做消元）}
-          \item $a_i \leftarrow a_i - w \cdot c_{i-1}$\hfill{\footnotesize（更新主对角：消掉 $b_i$）}
-          \item $f_i \leftarrow f_i - w \cdot f_{i-1}$\hfill{\footnotesize（右端项同样做线性消元）}
-      \end{itemize}
-  \end{enumerate}
-
-  \item \textbf{回代（从下到上）}
-  \begin{enumerate}
-      \item 计算：$x_n = f_n / a_n$\hfill{\footnotesize（链条最末端最简单，从这里开始回传信息）}
-      \item 对 $i = n-1, n-2, \dots, 1$：
-      \begin{itemize}
-          \item $x_i = (f_i - c_i \cdot x_{i+1}) / a_i$\hfill{\footnotesize（依次向上回代解）}
-      \end{itemize}
-  \end{enumerate}
+  \item \textbf{前向消元（从上到下）}：对 $i=2,\dots,n$，令 $w = b_i / a_{i-1}$，然后更新 $a_i \leftarrow a_i - w \cdot c_{i-1}$ 与 $f_i \leftarrow f_i - w \cdot f_{i-1}$。这一步以第 $i-1$ 行为基准，消掉第 $i$ 行的 $b_i$，右端项做同样的线性组合。
+  \item \textbf{回代（从下到上）}：先算 $x_n = f_n / a_n$——链条最末端最简单，从这里开始把信息传回去；再对 $i = n-1, n-2, \dots, 1$ 依次算 $x_i = (f_i - c_i \cdot x_{i+1}) / a_i$。
 \end{enumerate}
 
 \begin{insightbox}
@@ -294,7 +219,7 @@ b_2 & a_2 & c_2 & & \\
 
 \begin{figure}[htbp]
 \centering
-\begin{tikzpicture}[scale=0.55]
+\begin{tikzpicture}[scale=0.52]
 
     % -------------------------------
     % 一维：三对角
@@ -393,14 +318,7 @@ b_2 & a_2 & c_2 & & \\
 
 \subsubsection*{为什么三对角求解难以并行？}
 
-Thomas 算法虽然快（$O(n)$），但它是\textbf{串行}的：
-
-\begin{itemize}
-    \item 前向消元：第 $i$ 步依赖第 $i-1$ 步的结果
-    \item 回代：第 $i$ 步依赖第 $i+1$ 步的结果
-\end{itemize}
-
-就像多米诺骨牌，必须一个接一个倒下，不能跳跃！
+Thomas 算法虽然快（$O(n)$），但它是\textbf{串行}的：前向消元的第 $i$ 步依赖第 $i-1$ 步的结果，回代的第 $i$ 步又依赖第 $i+1$ 步的结果。就像多米诺骨牌，必须一个接一个倒下，不能跳跃。
 
 \begin{figure}[htbp]
 \centering
@@ -487,14 +405,7 @@ f_1 \\ f_\Gamma \\ f_2
 \end{pmatrix}
 \]
 
-其中 $u_1, u_2$ 是两个子域的内部节点，$u_\Gamma$ 是界面节点。
-
-从第一个和第三个方程解出 $u_1, u_2$（关于 $u_\Gamma$ 的函数），代入第二个方程：
-
-\begin{equation}
-\underbrace{\left(A_{22} - A_{21}A_{11}^{-1}A_{12} - A_{23}A_{33}^{-1}A_{32}\right)}_{S: \text{Schur 补}} u_\Gamma = \tilde{f}_\Gamma
-\end{equation}
-
+其中 $u_1, u_2$ 是两个子域的内部节点，$u_\Gamma$ 是界面节点。我们的目标是把内部节点消掉，得到一个只含界面未知量 $u_\Gamma$ 的小方程组。
 
 \paragraph{推导 Schur 补}
 
@@ -521,9 +432,10 @@ A_{21} \cdot \underbrace{A_{11}^{-1}(f_1 - A_{12} u_\Gamma)}_{u_1} + A_{22} u_\G
 \end{align*}
 
 展开并整理（把 $u_\Gamma$ 的项放到左边，常数项放到右边）：
-\[
-\underbrace{\left(A_{22} - A_{21}A_{11}^{-1}A_{12} - A_{23}A_{33}^{-1}A_{32}\right)}_{S:\text{ Schur 补}} u_\Gamma = \underbrace{f_\Gamma - A_{21}A_{11}^{-1}f_1 - A_{23}A_{33}^{-1}f_2}_{\tilde{f}_\Gamma:\text{ 修正后的右端项}}
-\]
+\begin{equation}
+\underbrace{\left(A_{22} - A_{21}A_{11}^{-1}A_{12} - A_{23}A_{33}^{-1}A_{32}\right)}_{S} u_\Gamma = \underbrace{f_\Gamma - A_{21}A_{11}^{-1}f_1 - A_{23}A_{33}^{-1}f_2}_{\tilde{f}_\Gamma}
+\end{equation}
+左边的矩阵 $S$ 叫作 \textbf{Schur 补}，右边的 $\tilde{f}_\Gamma$ 是修正后的右端项。这就是我们要的界面方程 $S u_\Gamma = \tilde{f}_\Gamma$：它的规模只有界面节点那么大。
 
 
 \begin{keyformula}[title=Schur 补方法]
@@ -663,16 +575,7 @@ $\infty$ & 0.091 & 0.636 & 0 \\
 对于有限元方程，Jacobi 迭代有很好的物理解释：
 
 \begin{physicalmeaning}
-想象一个弹簧网络处于非平衡状态。
-
-Jacobi 迭代的每一步：
-\begin{enumerate}
-    \item 看每个节点受到的"不平衡力"：$r_i = F_i - \sum_j K_{ij} U_j$（残差）
-    \item 假设其他节点不动，只调整当前节点来平衡这个力
-    \item 同时对所有节点做这个调整
-\end{enumerate}
-
-就像同时轻轻推动所有不平衡的节点，让系统逐渐趋于平衡。
+想象一个弹簧网络处于非平衡状态。Jacobi 迭代的每一步，先看每个节点受到的"不平衡力"$r_i = F_i - \sum_j K_{ij} U_j$（也就是残差），然后假设其他节点都不动，只调整当前节点来平衡这个力，并且对所有节点同时做这个调整。这就像同时轻轻推动所有不平衡的节点，让系统逐渐趋于平衡。
 \end{physicalmeaning}
 
 \paragraph{Jacobi vs Gauss-Seidel}
@@ -792,13 +695,7 @@ p^\top K q = 0
 \]
 \end{definition}
 
-为什么共轭方向好？如果我们有 $n$ 个互相共轭的方向 $p_1, p_2, \ldots, p_n$，那么：
-
-\begin{itemize}
-    \item 沿 $p_1$ 走到最优 $\Rightarrow$ 这个方向上的分量"搞定了"
-    \item 再沿 $p_2$ 走到最优 $\Rightarrow$ \textbf{不会破坏} $p_1$ 方向上的最优性！
-    \item 最多 $n$ 步，所有方向都搞定，到达全局最优
-\end{itemize}
+为什么共轭方向好？假设我们有 $n$ 个互相共轭的方向 $p_1, p_2, \ldots, p_n$。先沿 $p_1$ 走到最优，这个方向上的分量就"搞定了"；再沿 $p_2$ 走到最优时，由于共轭性，\textbf{不会破坏} $p_1$ 方向上已经取得的最优性。如此下去，最多 $n$ 步就把所有方向都搞定，到达全局最优。
 
 \begin{insightbox}
 \textbf{共轭 vs 正交}：
@@ -814,67 +711,33 @@ $K$-共轭：$p^\top K q = 0$（在 $K$ 定义的内积下垂直）
 
 
 \begin{tcolorbox}[colback=gray!5, colframe=gray!60, title=共轭梯度法（CG）]
-\textbf{输入}：对称正定矩阵 $K$，右端向量 $F$，初始猜测 $U^{(0)}$
+\textbf{输入}：对称正定矩阵 $K$，右端向量 $F$，初始猜测 $U^{(0)}$。
 
-\textbf{初始化}：
-\begin{align*}
-r^{(0)} &= F - K U^{(0)} & \textcolor{gray}{\text{// 初始残差}} \\
-p^{(0)} &= r^{(0)} & \textcolor{gray}{\text{// 初始搜索方向 = 负梯度方向}}
-\end{align*}
+\textbf{初始化}：取初始残差 $r^{(0)} = F - K U^{(0)}$，初始搜索方向就取负梯度方向 $p^{(0)} = r^{(0)}$。
 
 \textbf{迭代}：对 $k = 0, 1, 2, \ldots$
-
 \begin{enumerate}
-    \item \textbf{计算步长}（沿 $p^{(k)}$ 走多远？）
+    \item \textbf{计算步长}——沿 $p^{(k)}$ 走多远？取使 $J(U^{(k)} + \alpha p^{(k)})$ 最小的 $\alpha$：
     \[
-    \alpha_k = \frac{(r^{(k)})^\top r^{(k)}}{(p^{(k)})^\top K p^{(k)}} \quad \textcolor{gray}{\text{// 使 $J(U^{(k)} + \alpha p^{(k)})$ 最小的 $\alpha$}}
+    \alpha_k = \frac{(r^{(k)})^\top r^{(k)}}{(p^{(k)})^\top K p^{(k)}}
     \]
-    
-    \item \textbf{更新解}
+    \item \textbf{更新解}，沿搜索方向前进：$U^{(k+1)} = U^{(k)} + \alpha_k p^{(k)}$。
+    \item \textbf{更新残差}：$r^{(k+1)} = r^{(k)} - \alpha_k K p^{(k)}$。这里不必重新计算 $F - KU$，省下一次矩阵乘法。
+    \item \textbf{检查收敛}：如果 $\|r^{(k+1)}\| < \epsilon$，停止。
+    \item \textbf{计算新方向}，关键是保证它与之前所有方向共轭。先算 Gram--Schmidt 正交化的系数
     \[
-    U^{(k+1)} = U^{(k)} + \alpha_k p^{(k)} \quad \textcolor{gray}{\text{// 沿搜索方向前进}}
+    \beta_k = \frac{(r^{(k+1)})^\top r^{(k+1)}}{(r^{(k)})^\top r^{(k)}} ,
     \]
-    
-    \item \textbf{更新残差}
-    \[
-    r^{(k+1)} = r^{(k)} - \alpha_k K p^{(k)} \quad \textcolor{gray}{\text{// 不用重新算 $F - KU$，省一次矩阵乘法}}
-    \]
-    
-    \item \textbf{检查收敛}：如果 $\|r^{(k+1)}\| < \epsilon$，停止
-    
-    \item \textbf{计算新方向}（关键：保证与之前所有方向共轭！）
-    \[
-    \beta_k = \frac{(r^{(k+1)})^\top r^{(k+1)}}{(r^{(k)})^\top r^{(k)}} \quad \textcolor{gray}{\text{// Gram-Schmidt 正交化的系数}}
-    \]
-    \[
-    p^{(k+1)} = r^{(k+1)} + \beta_k p^{(k)} \quad \textcolor{gray}{\text{// 新方向 = 残差 + 旧方向的修正}}
-    \]
+    新方向就是残差加上旧方向的修正：$p^{(k+1)} = r^{(k+1)} + \beta_k p^{(k)}$。
 \end{enumerate}
 \end{tcolorbox}
 
 \paragraph{为什么这个算法如此高效？}
 
-\begin{enumerate}
-    \item \textbf{每步只需一次矩阵-向量乘法}：计算 $Kp^{(k)}$，这是主要开销
-    
-    \item \textbf{短递归}：$p^{(k+1)}$ 只依赖于 $p^{(k)}$ 和 $r^{(k+1)}$，不需要存储所有历史方向
-    
-    \item \textbf{自动共轭}：通过巧妙的 $\beta_k$ 选择，新方向自动与所有旧方向共轭（这是 CG 的数学奇迹！）
-    
-    \item \textbf{理论上 $n$ 步精确收敛}：对于 $n \times n$ 的矩阵，最多 $n$ 步得到精确解
-\end{enumerate}
+首先，每步只需要一次矩阵--向量乘法 $Kp^{(k)}$，这是主要开销。其次，它是短递归：$p^{(k+1)}$ 只依赖于 $p^{(k)}$ 和 $r^{(k+1)}$，不需要存储所有历史方向。第三，通过巧妙地选择 $\beta_k$，新方向会自动与\textbf{所有}旧方向共轭，而不只是与上一个——这是 CG 的数学奇迹。最后，它理论上 $n$ 步精确收敛：对于 $n \times n$ 的矩阵，最多 $n$ 步得到精确解。
 
 \begin{physicalmeaning}
-CG 的几何直觉：
-
-想象你在一个椭球形的山谷里找最低点。
-
-\begin{itemize}
-    \item \textbf{最速下降}：每次沿最陡的方向走，但山谷是歪的，你会来回反弹
-    \item \textbf{共轭梯度}：第一步沿最陡方向，之后每步都选一个"新维度"，保证不走回头路
-\end{itemize}
-
-就像在 $n$ 维空间里，你有 $n$ 个互相垂直的方向。每走一步就"锁定"一个维度，$n$ 步后所有维度都锁定，到达最低点！
+CG 的几何直觉是这样的：想象你在一个椭球形的山谷里找最低点。最速下降每次沿最陡的方向走，但山谷是歪的，你会来回反弹；共轭梯度第一步也沿最陡方向，之后每步都选一个"新维度"，保证不走回头路。就像在 $n$ 维空间里有 $n$ 个互相垂直的方向：每走一步就"锁定"一个维度，$n$ 步后所有维度都锁定，也就到达了最低点。
 \end{physicalmeaning}
 
 \paragraph{一个简单例子}
@@ -923,52 +786,20 @@ $n = 10^6$ 时需要约 $1000$ 次迭代——太慢了！
 \begin{insightbox}
 \textbf{条件数的几何直觉：为什么扁椭圆让迭代法痛苦？}
 
-想象你在一个山谷中寻找最低点。迭代法就像蒙着眼睛下山——每一步只能沿着当前位置最陡的方向走。
+想象你在一个山谷中寻找最低点。迭代法就像蒙着眼睛下山——每一步只能沿着当前位置最陡的方向走。如果山谷是圆形的（条件数 $\kappa \approx 1$），等高线是同心圆，最陡方向始终指向谷底，一步就能到位。如果山谷狭长（条件数 $\kappa \gg 1$），等高线是扁椭圆，最陡方向指向椭圆的短轴而不是谷底，结果就是来回 zigzag，浪费大量迭代。
 
-\textbf{情况1：圆形山谷}（条件数 $\kappa \approx 1$）
-\begin{itemize}
-    \item 等高线是同心圆
-    \item 最陡方向始终指向谷底
-    \item 一步到位！
-\end{itemize}
-
-\textbf{情况2：狭长山谷}（条件数 $\kappa \gg 1$）
-\begin{itemize}
-    \item 等高线是扁椭圆
-    \item 最陡方向指向椭圆短轴，而非谷底
-    \item 结果：来回zigzag，浪费大量迭代！
-\end{itemize}
-
-\textbf{预条件子的作用}：把扁椭圆"拉圆"！
-
-数学上，如果原问题的海森矩阵是 $A$，预条件后变成 $M^{-1}A$。好的 $M$ 能让 $M^{-1}A$ 的特征值更集中，等高线更接近圆形。
+\textbf{预条件子的作用}就是把扁椭圆"拉圆"。数学上，如果原问题的海森矩阵是 $A$，预条件后变成 $M^{-1}A$；好的 $M$ 能让 $M^{-1}A$ 的特征值更集中，等高线更接近圆形。
 \end{insightbox}
 
 \subsubsection*{预条件：变换问题}
 
-\textbf{预条件}的基本思想：  
-不直接求解 $KU = F$，而是先将它“变换”成一个更容易求解的线性系统。
-
-做法是选一个矩阵 $M$（称为\textbf{预条件子}），使得新系统
+既然收敛速度由条件数决定，一个自然的想法是：不直接求解 $KU = F$，而是先把它"变换"成一个条件数更小、因而更容易求解的线性系统。做法是选一个矩阵 $M$（称为\textbf{预条件子}），转而求解
 \[
-(M^{-1}K)U = M^{-1}F
+(M^{-1}K)U = M^{-1}F .
 \]
-的\textbf{条件数比原系统小}，从而使迭代法收敛更快。
+解没有变，但如果 $M^{-1}K$ 的\textbf{条件数比原系统小}，迭代法就收敛得更快。
 
-\textbf{好的预条件子应满足：}
-
-\begin{itemize}
-    \item $M^{-1}K$ 的条件数要小（这样迭代法收敛快）
-    \item $M^{-1}v$ 要容易计算（每步迭代的代价低）
-\end{itemize}
-
-这两个要求本质上是矛盾的：
-
-- 如果让 $M$ 与 $K$ 非常接近，那么 $M^{-1}K$ 的条件数就会非常理想（甚至当 $M = K$ 时条件数为 1）
-
-- 但这时计算 $M^{-1}$ 本身就和解原问题一样困难，因此完全没有意义
-
-因此，一个实用的预条件子必须在“逼近 $K$”（改善条件数）和“计算容易”（代价低）之间取得折中。
+于是好的预条件子要同时满足两个要求：$M^{-1}K$ 的条件数要小，这样迭代次数少；$M^{-1}v$ 要容易计算，这样每步迭代的代价低。这两个要求本质上是矛盾的：让 $M$ 与 $K$ 非常接近，$M^{-1}K$ 的条件数就非常理想（$M = K$ 时甚至等于 1），但这时计算 $M^{-1}$ 本身就和解原问题一样困难，完全没有意义。因此，一个实用的预条件子必须在"逼近 $K$"（改善条件数）和"计算容易"（代价低）之间取得折中。
 
 \subsubsection*{常见的预条件子}
 
@@ -1020,13 +851,7 @@ Jacobi（$M = \text{diag}(K)$） & $O(h^{-2})$ & $O(n)$ & 简单，但改善有�
 \caption{Jacobi 迭代快速消除高频误差，但对低频误差无能为力}
 \end{figure}
 
-\textbf{观察}：
-\begin{itemize}
-    \item 高频误差（振荡剧烈的部分）：几次迭代就消失了 \checkmark{}
-    \item 低频误差（缓慢变化的部分）：迭代几百次还在！$\times$
-\end{itemize}
-
-这就是 Jacobi/Gauss-Seidel 等简单迭代法的通病：\textbf{只擅长消除高频，对低频束手无策}。
+高频误差（振荡剧烈的部分）几次迭代就消失了，低频误差（缓慢变化的部分）却迭代几百次还在。这就是 Jacobi/Gauss-Seidel 等简单迭代法的通病：\textbf{只擅长消除高频，对低频束手无策}。
 
 \paragraph{关键洞察：低频是相对的！}
 
@@ -1077,46 +902,16 @@ Jacobi（$M = \text{diag}(K)$） & $O(h^{-2})$ & $O(n)$ & 简单，但改善有�
 \end{insightbox}
 
 \begin{tcolorbox}[colback=gray!5, colframe=gray!60, title=两层网格算法（Two-Grid）]
-\textbf{目标}：在细网格上求解 $K_h u_h = f_h$
+\textbf{目标}：在细网格上求解 $K_h u_h = f_h$。
 
 \begin{enumerate}
-    \item \textbf{预光滑}（Pre-smoothing）
-    \begin{itemize}
-        \item 在细网格上做几次 Jacobi 迭代
-        \item \textcolor{gray}{// 消除高频误差，剩下光滑的低频误差}
-    \end{itemize}
-    
-    \item \textbf{计算残差}
-    \[
-    r_h = f_h - K_h u_h \quad \textcolor{gray}{\text{// 当前解的"差多少"}}
-    \]
-    
-    \item \textbf{限制到粗网格}（Restriction）
-    \[
-    r_H = R \cdot r_h \quad \textcolor{gray}{\text{// 把残差"投影"到粗网格}}
-    \]
-    这里 $R$ 是限制算子，最简单的是取相邻细网格点的平均。
-    
-    \item \textbf{在粗网格上求解误差方程}
-    \[
-    K_H e_H = r_H \quad \textcolor{gray}{\text{// 粗网格问题规模小，可以直接解或递归}}
-    \]
-    
-    \item \textbf{插值回细网格}（Prolongation）
-    \[
-    e_h = P \cdot e_H \quad \textcolor{gray}{\text{// 把粗网格的修正"插值"回细网格}}
-    \]
-    这里 $P$ 是插值算子，通常用线性插值。
-    
-    \item \textbf{修正细网格解}
-    \[
-    u_h \leftarrow u_h + e_h \quad \textcolor{gray}{\text{// 加上粗网格算出的修正量}}
-    \]
-    
-    \item \textbf{后光滑}（Post-smoothing）
-    \begin{itemize}
-        \item 再做几次 Jacobi 迭代 \textcolor{gray}{// 消除插值引入的高频误差}
-    \end{itemize}
+    \item \textbf{预光滑}（Pre-smoothing）：在细网格上做几次 Jacobi 迭代，消除高频误差，剩下光滑的低频误差。
+    \item \textbf{计算残差} $r_h = f_h - K_h u_h$，即当前解"差多少"。
+    \item \textbf{限制到粗网格}（Restriction）：$r_H = R \cdot r_h$，把残差"投影"到粗网格。这里 $R$ 是限制算子，最简单的是取相邻细网格点的平均。
+    \item \textbf{在粗网格上求解误差方程} $K_H e_H = r_H$。粗网格问题规模小，可以直接解，也可以递归地再用一层更粗的网格。
+    \item \textbf{插值回细网格}（Prolongation）：$e_h = P \cdot e_H$，把粗网格算出的修正"插值"回细网格。这里 $P$ 是插值算子，通常用线性插值。
+    \item \textbf{修正细网格解}：$u_h \leftarrow u_h + e_h$。
+    \item \textbf{后光滑}（Post-smoothing）：再做几次 Jacobi 迭代，消除插值引入的高频误差。
 \end{enumerate}
 \end{tcolorbox}
 
@@ -1124,11 +919,7 @@ Jacobi（$M = \text{diag}(K)$） & $O(h^{-2})$ & $O(n)$ & 简单，但改善有�
 
 求解一维问题 $-u'' = 1$，$u(0) = u(1) = 0$，用两层网格。
 
-\textbf{设置}：
-\begin{itemize}
-    \item 细网格：$h = 1/8$，7个内部节点
-    \item 粗网格：$H = 1/4$，3个内部节点
-\end{itemize}
+细网格取 $h = 1/8$，有 7 个内部节点；粗网格取 $H = 1/4$，有 3 个内部节点。
 
 \begin{figure}[htbp]
 \centering
@@ -1224,18 +1015,7 @@ Jacobi（$M = \text{diag}(K)$） & $O(h^{-2})$ & $O(n)$ & 简单，但改善有�
 \end{figure}
 
 \begin{keytheorem}[title=多重网格复杂度]
-一次完整的多重网格 V-cycle：
-\begin{itemize}
-    \item \textbf{时间复杂度}：$O(n)$
-    
-    \textcolor{gray}{为什么？每层的工作量是 $n, n/2, n/4, \ldots$，总和 $\approx 2n = O(n)$}
-    
-    \item \textbf{收敛因子}：$\rho < 1$（与 $h$ 无关！）
-    
-    \textcolor{gray}{为什么？每种频率的误差都被高效处理，没有"漏网之鱼"}
-\end{itemize}
-
-这意味着：\textbf{解一个 $10^6$ 节点的问题和 $10^3$ 节点的问题，迭代次数几乎一样}！
+一次完整的多重网格 V-cycle 的\textbf{时间复杂度}是 $O(n)$，\textbf{收敛因子} $\rho < 1$ 且与 $h$ 无关。前者是因为每层的工作量是 $n, n/2, n/4, \ldots$，总和约为 $2n$；后者是因为每种频率的误差都在合适的尺度上被高效处理，没有"漏网之鱼"。这意味着：\textbf{解一个 $10^6$ 节点的问题和 $10^3$ 节点的问题，迭代次数几乎一样}！
 \end{keytheorem}
 
 \paragraph{数值验证}
@@ -1256,11 +1036,7 @@ $256 \times 256$ & 650 次 & 500 次 & 78 次 & 8 次 \\
 \end{tabular}
 \end{center}
 
-\textbf{观察}：
-\begin{itemize}
-    \item 无预条件/Jacobi：迭代次数随网格加密而增长（$\sim O(\sqrt{n})$）
-    \item 多重网格：迭代次数\textbf{几乎不变}！这就是 $O(1)$ 条件数的威力
-\end{itemize}
+无预条件和 Jacobi 预条件的迭代次数都随网格加密而增长（$\sim O(\sqrt{n})$），ILU 增长得慢一些，而多重网格的迭代次数\textbf{几乎不变}——这就是 $O(1)$ 条件数的威力。
 
 % 代码演示结果
 \begin{figure}[htbp]
@@ -1285,7 +1061,7 @@ $256 \times 256$ & 650 次 & 500 次 & 78 次 & 8 次 \\
 为了让你真正"看得见"CPU 在做什么，我们会边讲概念边给出小实验。你可以在自己的电脑上立即验证这些现象，而不只是听一堆抽象的术语。
 
 %==============================================================================
-\subsection*{程序、进程、线程：你的电脑到底是怎样跑代码的？}
+\subsection*{程序、进程与线程}
 %==============================================================================
 
 我们先从最核心的三个概念讲起。这三个词你可能早就听过，但很多人分不清它们的区别。
@@ -1300,12 +1076,7 @@ $256 \times 256$ & 650 次 & 500 次 & 78 次 & 8 次 \\
 
 \textbf{进程（Process）}就是程序"开始执行"之后的样子。当你双击一个程序、或者在命令行输入 \verb|python xxx.py| 回车的那一刻，操作系统就会为这个程序创建一个进程。
 
-进程有什么特点呢？它有：
-\begin{itemize}
-    \item 自己独立的内存空间（别的进程看不到、也改不了）
-    \item 自己的变量、数据结构
-    \item 自己的一套运行状态
-\end{itemize}
+进程最重要的特点是独立：它有自己独立的内存空间，别的进程看不到、也改不了；有自己的变量和数据结构；也有自己的一套运行状态。
 
 继续用做饭来比喻：进程就是"你正在做菜"这件事本身。你占用了一整个厨房，锅、刀、案板、冰箱里的食材，都是你独占的。隔壁厨房在做什么菜，和你没关系。
 
@@ -1315,13 +1086,7 @@ $256 \times 256$ & 650 次 & 500 次 & 78 次 & 8 次 \\
 
 关键区别在于：同一个进程里的多个线程，\textbf{共享同一片内存空间}。它们可以直接读写同样的变量。
 
-用厨房的比喻来说：
-\begin{itemize}
-    \item 一个进程是一家餐厅的厨房
-    \item 线程是厨房里的多个厨师
-    \item 厨师们共享同一个冰箱、同一套锅碗瓢盆（共享内存）
-    \item 但不同餐厅的厨房是完全隔开的（进程之间隔离）
-\end{itemize}
+用厨房的比喻来说，一个进程是一家餐厅的厨房，线程是这个厨房里的多个厨师：厨师们共享同一个冰箱、同一套锅碗瓢盆（共享内存），但不同餐厅的厨房是完全隔开的（进程之间隔离）。
 
 \begin{figure}[htbp]
 \centering
@@ -1361,8 +1126,9 @@ $256 \times 256$ & 650 次 & 500 次 & 78 次 & 8 次 \\
 下面这张表总结了进程和线程的主要区别：
 
 \begin{center}
+\small
 \renewcommand{\arraystretch}{1.3}
-\begin{tabular}{l|l|l}
+\begin{tabularx}{\textwidth}{l|X|X}
 \toprule
 \textbf{特性} & \textbf{进程} & \textbf{线程} \\
 \midrule
@@ -1372,7 +1138,7 @@ $256 \times 256$ & 650 次 & 500 次 & 78 次 & 8 次 \\
 崩溃影响 & 一个进程挂了，其他不受影响 & 一个线程挂了，整个进程可能崩溃 \\
 典型应用 & 浏览器的多个标签页 & 一个程序内部的并行计算 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{center}
 
 %------------------------------------------------------------------------------
@@ -1409,12 +1175,7 @@ t2.join()
 print(f"双线程耗时: {time.time() - t0:.2f} 秒")
 \end{lstlisting}
 
-运行之后，你大概率会看到一个让人困惑的结果：
-
-\begin{itemize}
-    \item 单线程：大约 2--3 秒
-    \item 双线程：大约 2--4 秒，甚至更慢！
-\end{itemize}
+运行之后，你大概率会看到一个让人困惑的结果：单线程大约 2--3 秒，双线程却要 2--4 秒，甚至更慢。
 
 这是怎么回事？开了两个线程，不是应该快一倍吗？
 
@@ -1425,7 +1186,7 @@ print(f"双线程耗时: {time.time() - t0:.2f} 秒")
 这个实验让你亲眼看到了 GIL 的影响。后面我们会讲怎么绑过它。
 
 %==============================================================================
-\subsection*{内存层次：为什么有些代码能快 10 倍、100 倍？}
+\subsection*{内存层次与数据局部性}
 %==============================================================================
 
 当老师说"访问 L1 Cache 是 1 纳秒，访问主内存是 100 纳秒"的时候，初学者往往没有感觉。1 纳秒是什么？100 纳秒又是什么？快还是慢？
@@ -1439,14 +1200,7 @@ print(f"双线程耗时: {time.time() - t0:.2f} 秒")
 没想到，这个当年的"小补丁"后来成了所有现代处理器的标配设计。
 }
 
-想象一下你坐在办公桌前工作：
-\begin{itemize}
-    \item \textbf{寄存器}（$<1$ ns）：就像你手边的便签纸，伸手就能拿到
-    \item \textbf{L1 Cache}（$\sim 1$ ns）：就像桌上的文件夹，抬手就能翻开
-    \item \textbf{L2/L3 Cache}（几 ns--十几 ns）：就像抽屉里的资料，需要弯腰去拿
-    \item \textbf{主内存 RAM}（$\sim 100$ ns）：就像走去隔壁房间的档案柜取文件
-    \item \textbf{SSD 硬盘}（$\sim 100$ $\mu$s）：就像开车去另一栋楼的仓库取东西
-\end{itemize}
+想象一下你坐在办公桌前工作。\textbf{寄存器}（$<1$ ns）就像你手边的便签纸，伸手就能拿到；\textbf{L1 Cache}（$\sim 1$ ns）就像桌上的文件夹，抬手就能翻开；\textbf{L2/L3 Cache}（几 ns 到十几 ns）就像抽屉里的资料，需要弯腰去拿；\textbf{主内存 RAM}（$\sim 100$ ns）就像走去隔壁房间的档案柜取文件；\textbf{SSD 硬盘}（$\sim 100$ $\mu$s）则像开车去另一栋楼的仓库取东西。
 
 现在你明白了吧？如果你的程序总是要"开车去仓库"，而别人的程序只需要"翻桌上的文件夹"，速度差别当然是天壤之别。
 
@@ -1501,28 +1255,19 @@ for j in range(N):
 print(f"按列访问: {time.time() - t0:.2f} 秒")
 \end{lstlisting}
 
-运行之后，你会看到一个惊人的结果：
-
-\begin{itemize}
-    \item 按行访问：大约 5--8 秒
-    \item 按列访问：大约 15--40 秒，慢了好几倍！
-\end{itemize}
+运行之后，你会看到一个惊人的结果：按行访问大约 5--8 秒，按列访问却要 15--40 秒，慢了好几倍。
 
 这两段代码做的事情完全一样——都是把矩阵所有元素加起来。循环次数也完全一样。为什么速度差这么多？
 
-原因就在于 \textbf{NumPy 默认按行存储矩阵}（所谓 row-major order）。也就是说，\verb|A[0,0], A[0,1], A[0,2], ...| 这些元素在内存中是连续存放的。
+原因就在于 \textbf{NumPy 默认按行存储矩阵}（所谓 row-major order）。也就是说，\texttt{A[0,0]}, \texttt{A[0,1]}, \texttt{A[0,2]}, \ldots 这些元素在内存中是连续存放的。
 
-当你按行访问时，CPU 读取 \verb|A[0,0]| 的同时，会顺便把 \verb|A[0,1], A[0,2], ...| 等一串数据都搬进 Cache。接下来你访问 \verb|A[0,1]| 时，它已经在 Cache 里了，不需要再去主内存取。
+当你按行访问时，CPU 读取 \texttt{A[0,0]} 的同时，会顺便把 \texttt{A[0,1]}, \texttt{A[0,2]}, \ldots 等一串数据都搬进 Cache。接下来你访问 \verb|A[0,1]| 时，它已经在 Cache 里了，不需要再去主内存取。
 
 但当你按列访问时，你先访问 \verb|A[0,0]|，下一个却要访问 \verb|A[1,0]|——这两个数据在内存中相隔很远！CPU 刚搬进来的那一串数据全都用不上，又得重新去主内存取。这就是为什么按列访问会慢那么多。
 
 \paragraph{结论：写数值代码时应该这样做}
 
-\begin{itemize}
-    \item 尽量让数据\textbf{连续存放}，按顺序访问（比如按行遍历矩阵）
-    \item 尽量\textbf{少做随机跳跃式}的访问
-    \item 能在一次循环里完成的事情，就不要拆成好几个循环，每次都重新扫描整个大数组
-\end{itemize}
+写数值代码时，尽量让数据\textbf{连续存放}、按顺序访问（比如按行遍历矩阵），尽量\textbf{少做随机跳跃式}的访问；能在一次循环里完成的事情，就不要拆成好几个循环、每次都重新扫描整个大数组。
 
 %==============================================================================
 图~\ref{fig:chap13_python} 汇总了上面几个小实验的结果：多线程受 GIL 限制、按行访问快于按列访问、向量化远快于循环。下面逐一解释背后的原因。
@@ -1534,7 +1279,7 @@ print(f"按列访问: {time.time() - t0:.2f} 秒")
 \label{fig:chap13_python}
 \end{figure}
 
-\subsection*{Python 的 GIL：为什么多线程常常"白忙活"？}
+\subsection*{Python 的 GIL：多线程为什么白忙活}
 %==============================================================================
 
 前面的实验已经让你看到了：Python 多线程在纯计算任务上并不能加速。现在我们来仔细解释一下原因。
@@ -1549,12 +1294,7 @@ GIL（Global Interpreter Lock）是 CPython 解释器中的一个互斥锁。它
 
 为什么 Python 要设计这么一个"奇怪"的锁呢？历史原因是：Python 的内存管理（特别是引用计数）不是线程安全的。如果允许多个线程同时修改 Python 对象，可能会导致内存错误。GIL 是一个简单粗暴但有效的解决方案。
 
-GIL 的直接后果是：
-
-\begin{itemize}
-    \item 对于 \textbf{IO 密集型任务}（比如网络请求、读写文件），多线程仍然有用。因为当一个线程在等待 IO 时，它会释放 GIL，让其他线程有机会执行。
-    \item 对于 \textbf{CPU 计算密集型任务}（比如大量数学运算），多线程基本没用。因为所有线程都在抢同一把锁，轮流执行，跟单线程没什么区别。
-\end{itemize}
+GIL 的直接后果要分两种任务来看。对于 \textbf{IO 密集型任务}（比如网络请求、读写文件），多线程仍然有用，因为当一个线程在等待 IO 时，它会释放 GIL，让其他线程有机会执行。对于 \textbf{CPU 计算密集型任务}（比如大量数学运算），多线程基本没用，因为所有线程都在抢同一把锁、轮流执行，跟单线程没什么区别。
 
 %------------------------------------------------------------------------------
 \paragraph{那 Python 就没法并行计算了吗？}
@@ -1576,12 +1316,7 @@ Numba/Cython & 把 Python 代码编译成机器码 & 热点代码加速 \\
 \end{tabular}
 \end{center}
 
-对于初学者来说，最实用的建议是：
-
-\begin{enumerate}
-    \item \textbf{数值计算优先用 NumPy}，而不是自己写 Python 循环。NumPy 的底层是 C 代码，不受 GIL 限制。
-    \item 如果确实需要用多核并行，可以用 \verb|multiprocessing.Pool|：
-\end{enumerate}
+对于初学者来说，最实用的建议是：\textbf{数值计算优先用 NumPy}，而不是自己写 Python 循环，因为 NumPy 的底层是 C 代码，不受 GIL 限制；如果确实需要用多核并行，就用 \verb|multiprocessing.Pool|：
 
 \begin{lstlisting}[style=teaching, language=Python]
 from multiprocessing import Pool
@@ -1638,13 +1373,7 @@ c = a + b
 
 \paragraph{原因 3：底层库已经做好了多线程和 Cache 优化}
 
-NumPy 的矩阵运算实际上调用的是 BLAS（Basic Linear Algebra Subprograms）库。这些库是几十年来无数专家精心优化的结晶，包括：
-
-\begin{itemize}
-    \item 自动把大矩阵分块，让每一块都能装进 Cache
-    \item 自动开多线程，用满 CPU 的所有核心
-    \item 针对不同 CPU 架构做专门优化
-\end{itemize}
+NumPy 的矩阵运算实际上调用的是 BLAS（Basic Linear Algebra Subprograms）库。这些库是几十年来无数专家精心优化的结晶：它们会自动把大矩阵分块，让每一块都能装进 Cache；会自动开多线程，用满 CPU 的所有核心；还针对不同的 CPU 架构做了专门优化。
 
 %------------------------------------------------------------------------------
 \paragraph{你可以自己做的小实验 3：感受 NumPy 的速度}
@@ -1671,14 +1400,7 @@ z2 = x + y
 print(f"NumPy: {time.time() - t0:.3f} 秒")
 \end{lstlisting}
 
-运行结果大概是：
-
-\begin{itemize}
-    \item 纯 Python：0.3--0.5 秒
-    \item NumPy：0.005--0.01 秒
-\end{itemize}
-
-快了 \textbf{几十倍}！而且代码还更简洁。这就是为什么老师总让你用 NumPy。
+运行结果大概是：纯 Python 0.3--0.5 秒，NumPy 0.005--0.01 秒，快了\textbf{几十倍}，而且代码还更简洁。这就是为什么老师总让你用 NumPy。
 
 \paragraph{对你来说最实用的一句总结}
 
@@ -1699,27 +1421,11 @@ GPU 是一大群比较简单的工人，但人多力量大。
 
 \paragraph{CPU 的设计哲学}
 
-CPU 的核心数量不多（通常 4--64 个），但每个核心都非常强大：
-
-\begin{itemize}
-    \item 复杂的控制逻辑，能处理各种 if-else 分支
-    \item 乱序执行、分支预测等高级优化
-    \item 大容量的 Cache
-\end{itemize}
-
-CPU 擅长处理：流程复杂、分支很多、任务各不相同的程序。比如操作系统、编译器、数据库等。
+CPU 的核心数量不多（通常 4--64 个），但每个核心都非常强大：它有复杂的控制逻辑，能处理各种 if-else 分支；有乱序执行、分支预测等高级优化；还配有大容量的 Cache。所以 CPU 擅长处理流程复杂、分支很多、任务各不相同的程序，比如操作系统、编译器、数据库。
 
 \paragraph{GPU 的设计哲学}
 
-GPU 的核心数量非常多（上千个），但每个核心都比较简单：
-
-\begin{itemize}
-    \item 简单的算术逻辑单元，擅长做加法、乘法
-    \item 不擅长处理复杂的控制流
-    \item 极高的内存带宽
-\end{itemize}
-
-GPU 擅长处理：同一种运算要作用在大量数据上的任务。比如矩阵乘法、图像处理、物理模拟等。
+GPU 走的是另一条路：核心数量非常多（上千个），但每个核心都比较简单——只有简单的算术逻辑单元，擅长做加法、乘法，不擅长处理复杂的控制流；同时它有极高的内存带宽。所以 GPU 擅长处理"同一种运算要作用在大量数据上"的任务，比如矩阵乘法、图像处理、物理模拟。
 
 \begin{center}
 \renewcommand{\arraystretch}{1.3}
@@ -1774,14 +1480,7 @@ else:
     print("\n（没有检测到 CUDA，跳过 GPU 测试）")
 \end{lstlisting}
 
-如果你有 GPU，会看到类似这样的结果：
-
-\begin{itemize}
-    \item CPU：1--3 秒
-    \item GPU：0.01--0.05 秒
-\end{itemize}
-
-快了 \textbf{几十倍到上百倍}！这就是为什么深度学习训练几乎都在 GPU 上进行。
+如果你有 GPU，会看到类似这样的结果：CPU 需要 1--3 秒，GPU 只要 0.01--0.05 秒，快了\textbf{几十倍到上百倍}。这就是为什么深度学习训练几乎都在 GPU 上进行。
 
 %==============================================================================
 \subsection*{并行计算的层次结构}
@@ -1809,14 +1508,7 @@ else:
 \caption{并行计算的层次：越往上粒度越细，通常由硬件或编译器自动完成；越往下粒度越粗，需要程序员手动管理}
 \end{figure}
 
-对于初学者来说：
-
-\begin{itemize}
-    \item \textbf{指令级并行}：你不需要管，CPU 会自动做
-    \item \textbf{数据级并行}：用 NumPy 就能享受到，不需要自己写
-    \item \textbf{线程/进程级并行}：需要时可以用 \verb|multiprocessing|
-    \item \textbf{节点级并行}：等你以后做大规模计算再学
-\end{itemize}
+对于初学者来说，这四层里真正要操心的很少：\textbf{指令级并行}你不需要管，CPU 会自动做；\textbf{数据级并行}用 NumPy 就能享受到，不需要自己写；\textbf{线程/进程级并行}需要时可以用 \verb|multiprocessing|；\textbf{节点级并行}等你以后做大规模计算再学。
 
 %==============================================================================
 \subsection*{本节小结：给你的实践建议}
@@ -1831,12 +1523,7 @@ else:
     
     \item \textbf{Python 多线程对 CPU 密集型任务没用}，因为 GIL 的存在。需要多核并行时，用多进程。
     
-    \item \textbf{当程序变慢时}，不要第一反应怪"电脑太差"。先想想：
-    \begin{itemize}
-        \item 是不是在用 Python 循环遍历大数组？
-        \item 是不是内存访问模式很"跳跃"？
-        \item 是不是开了很多线程但被 GIL 卡住？
-    \end{itemize}
+    \item \textbf{当程序变慢时}，不要第一反应怪"电脑太差"。先想想：是不是在用 Python 循环遍历大数组？是不是内存访问模式很"跳跃"？是不是开了很多线程但被 GIL 卡住？
     
     \item \textbf{GPU 适合大规模并行计算}（比如矩阵运算），CPU 适合复杂逻辑。以后遇到"同一种计算要做几百万次"的任务，就可以考虑用 GPU。
 \end{enumerate}
@@ -1845,8 +1532,8 @@ else:
 
 
 % ====================================================================================
-\section*{流固耦合有限元——Turek-Hron FSI2基准测试}
-\addcontentsline{toc}{section}{流固耦合有限元}
+\section*{流固耦合有限元：Turek--Hron 基准}
+\addcontentsline{toc}{section}{流固耦合有限元：Turek--Hron 基准}
 % ====================================================================================
 
 \begin{tcolorbox}[colback=gray!5, colframe=gray!50, title=本节导读]
@@ -1948,12 +1635,7 @@ f_s = \text{St} \cdot \frac{U}{D}
 \end{equation}
 其中$\text{St} \approx 0.2$对于许多钝体都近似成立。对于FSI2条件：$f_s \approx 0.2 \times 1.0 / 0.1 = 2$ Hz。
 
-当这个涡脱落频率接近弹性板的固有频率时，会发生\textbf{锁定}（lock-in）现象：
-\begin{itemize}
-    \item 涡脱落频率被"锁定"到结构固有频率
-    \item 振幅急剧增大
-    \item 流固相互作用形成正反馈，系统进入\textbf{自激振荡}
-\end{itemize}
+当这个涡脱落频率接近弹性板的固有频率时，会发生\textbf{锁定}（lock-in）现象：涡脱落频率被"锁定"到结构固有频率上，振幅急剧增大，流固相互作用形成正反馈，系统进入\textbf{自激振荡}。
 
 % ------------------------------------------------------------------------------------
 \subsection*{三、振动响应}
@@ -1986,16 +1668,10 @@ f_s = \text{St} \cdot \frac{U}{D}
 \end{figure}
 
 \paragraph{文献参考值}
-Turek和Hron报告的FSI2基准结果：
-\begin{itemize}
-    \item 板端Y方向位移：$y(A) = 1.23 \pm 80.6 \times 10^{-3}$ m（均值1.23 mm，振幅80.6 mm）
-    \item 振动频率：$f \approx 2.0$ Hz
-    \item 圆柱阻力系数：$C_D = 208.83 \pm 73.75$
-    \item 圆柱升力系数：$C_L = 0.88 \pm 234.2$
-\end{itemize}
+Turek 和 Hron 报告的 FSI2 基准结果是：板端 Y 方向位移 $y(A) = (1.23 \pm 80.6) \times 10^{-3}$ m，即均值 1.23 mm、振幅 80.6 mm；振动频率 $f \approx 2.0$ Hz；圆柱阻力系数 $C_D = 208.83 \pm 73.75$，升力系数 $C_L = 0.88 \pm 234.2$。
 
 % ------------------------------------------------------------------------------------
-\subsection*{四、结构建模：Euler-Bernoulli梁有限元}
+\subsection*{四、结构建模：Euler--Bernoulli 梁}
 
 弹性板可以用\textbf{Euler-Bernoulli梁理论}建模。控制方程为：
 \begin{equation}
@@ -2006,22 +1682,22 @@ EI \frac{\partial^4 w}{\partial x^4} + \rho A \frac{\partial^2 w}{\partial t^2} 
 \subsubsection*{单元刚度矩阵与质量矩阵}
 
 对于长度为$L_e$的梁单元，每端有两个自由度（位移$w$和转角$\theta$），单元矩阵是$4 \times 4$的：
-\begin{equation}
-\mathbf{K}_e = \frac{EI}{L_e^3}
+\begin{align}
+\mathbf{K}_e &= \frac{EI}{L_e^3}
 \begin{pmatrix}
 12 & 6L_e & -12 & 6L_e \\
 6L_e & 4L_e^2 & -6L_e & 2L_e^2 \\
 -12 & -6L_e & 12 & -6L_e \\
 6L_e & 2L_e^2 & -6L_e & 4L_e^2
-\end{pmatrix}, \quad
-\mathbf{M}_e = \frac{\rho A L_e}{420}
+\end{pmatrix}, \\
+\mathbf{M}_e &= \frac{\rho A L_e}{420}
 \begin{pmatrix}
 156 & 22L_e & 54 & -13L_e \\
 22L_e & 4L_e^2 & 13L_e & -3L_e^2 \\
 54 & 13L_e & 156 & -22L_e \\
 -13L_e & -3L_e^2 & -22L_e & 4L_e^2
 \end{pmatrix}
-\end{equation}
+\end{align}
 
 \sidenoteplain{\textbf{注意}：FSI2涉及大变形，严格来说需要使用几何非线性公式（如协同旋转法或Total Lagrangian公式）。这里的线性梁模型只是演示目的。}
 
@@ -2031,41 +1707,21 @@ EI \frac{\partial^4 w}{\partial x^4} + \rho A \frac{\partial^2 w}{\partial t^2} 
 Turek-Hron FSI2之所以成为经典基准，是因为它包含了FSI问题的核心难点：
 
 \begin{insightbox}
-\textbf{FSI2的挑战}：
-\begin{enumerate}
-    \item \textbf{大变形}：板端位移约80 mm，是板长的23\%，几何非线性显著
-    \item \textbf{强耦合}：密度比$\rho_s/\rho_f = 10$适中，流固相互作用强烈
-    \item \textbf{自激振荡}：不是外加强迫振动，而是系统自发产生的不稳定性
-    \item \textbf{双向耦合}：结构变形影响流场，流场变化又反馈到结构力
-\end{enumerate}
+\textbf{FSI2 的挑战}：板端位移约 80 mm，是板长的 23\%，几何非线性显著，这是\textbf{大变形}；密度比 $\rho_s/\rho_f = 10$ 适中，流固相互作用强烈，这是\textbf{强耦合}；振荡不是外加的强迫振动，而是系统自发产生的不稳定性，这是\textbf{自激振荡}；结构变形影响流场，流场变化又反馈到结构力，这是\textbf{双向耦合}。
 \end{insightbox}
 
-完整求解FSI2需要同时求解：
-\begin{itemize}
-    \item \textbf{流体}：不可压缩Navier-Stokes方程
-    \begin{equation}
-    \rho_f \left( \frac{\partial \mathbf{v}}{\partial t} + \mathbf{v} \cdot \nabla \mathbf{v} \right) = -\nabla p + \mu_f \nabla^2 \mathbf{v}
-    \end{equation}
-    \item \textbf{固体}：非线性弹性动力学方程（Saint-Venant-Kirchhoff材料）
-    \item \textbf{耦合条件}：流固界面上速度连续、应力平衡
-\end{itemize}
-
-这需要迭代求解或整体求解，计算成本比单独的流体或结构问题高1-2个数量级。
+完整求解 FSI2 需要同时求解三部分。\textbf{流体}一侧是不可压缩 Navier--Stokes 方程
+\begin{equation}
+\rho_f \left( \frac{\partial \mathbf{v}}{\partial t} + \mathbf{v} \cdot \nabla \mathbf{v} \right) = -\nabla p + \mu_f \nabla^2 \mathbf{v} ;
+\end{equation}
+\textbf{固体}一侧是非线性弹性动力学方程（Saint-Venant--Kirchhoff 材料）；两者通过流固界面上的\textbf{耦合条件}——速度连续、应力平衡——连在一起。这需要迭代求解或整体求解，计算成本比单独的流体或结构问题高 1--2 个数量级。
 
 % ------------------------------------------------------------------------------------
 \subsection*{六、开源实现}
 
-\sidenoteplain{\textbf{开源FSI框架}：
-\begin{itemize}
-    \item \textbf{Kratos Multiphysics}：完整的多物理场框架
-    \item \textbf{preCICE}：耦合库，连接不同求解器
-    \item \textbf{Feel++}：C++ FEM库
-    \item \textbf{oomph-lib}：牛津大学开发的多物理场库
-    \item \textbf{OpenFOAM + CalculiX}：流体+结构组合
-\end{itemize}
-这些都包含Turek-Hron基准案例的实现。}
+\sidenoteplain{\textbf{开源FSI框架}：Kratos Multiphysics（完整的多物理场框架）、preCICE（连接不同求解器的耦合库）、Feel++（C++ FEM 库）、oomph-lib（牛津大学开发的多物理场库），以及 OpenFOAM + CalculiX 的流体+结构组合，都包含 Turek--Hron 基准案例的实现。}
 
-完整的Python可视化代码位于\texttt{code\_chap05/turek\_fsi2\_visualization.py}，用于生成本节的示意图。真正的FSI2求解需要使用专业的多物理场软件。
+本节的示意图由 \texttt{code\_chap13} 目录下的 Python 脚本 \texttt{turek\_fsi2\_visualization.py} 生成；真正的 FSI2 求解需要使用专业的多物理场软件。
 
 \begin{lstlisting}[language=Python, caption=弹性板变形计算示意]
 def flag_deformation(s, t, amplitude=0.080, freq=2.0):
@@ -2084,26 +1740,12 @@ def flag_deformation(s, t, amplitude=0.080, freq=2.0):
 % ------------------------------------------------------------------------------------
 \subsection*{七、工程意义}
 
-涡激振动不仅是学术问题，在工程中有重大实际意义：
-
-\begin{itemize}
-    \item \textbf{海洋工程}：深海立管（riser）在洋流中的涡激振动是设计的主要挑战
-    \item \textbf{桥梁工程}：塔科马海峡大桥（1940年坍塌）的前期振动就与涡激振动有关
-    \item \textbf{航空航天}：飞机机翼、尾翼的气动弹性颤振
-    \item \textbf{能源工程}：风力机叶片、热交换器管束的振动
-\end{itemize}
+涡激振动不仅是学术问题，在工程中有重大实际意义。海洋工程里，深海立管（riser）在洋流中的涡激振动是设计的主要挑战；桥梁工程里，塔科马海峡大桥（1940 年坍塌）的前期振动就与涡激振动有关；航空航天里有飞机机翼、尾翼的气动弹性颤振；能源工程里则有风力机叶片、热交换器管束的振动。
 
 \sidenoteplain{\textbf{塔科马海峡大桥}（1940年坍塌）长期被误解为共振导致。现代分析表明，真正原因是\textbf{气动弹性颤振}——一种更复杂的流固耦合不稳定性。但涡激振动确实是该桥在坍塌前频繁振动的重要原因。}
 
 \begin{insightbox}
-\textbf{为什么Turek-Hron基准如此重要？}
-
-\begin{enumerate}
-    \item \textbf{大变形}：板的位移幅度与板长相当，几何非线性显著
-    \item \textbf{强耦合}：固液密度比适中（$\rho_s/\rho_f = 10$），流固相互作用强烈
-    \item \textbf{自激振荡}：不是外加强迫振动，而是系统自发产生的不稳定性
-    \item \textbf{无实验噪声}：作为数值基准，可以进行严格的代码间比较
-\end{enumerate}
+\textbf{为什么 Turek--Hron 基准如此重要？}前面说的大变形、强耦合与自激振荡三个难点，足以考验一个 FSI 求解器；而作为纯数值基准，它还有一个实验无法提供的优点——\textbf{无实验噪声}，可以进行严格的代码间比较。
 \end{insightbox}
 
 如果你的FSI代码能正确重现Turek-Hron基准的结果，那它就有了一定的可信度。这就是为什么FSI2成为了验证FSI求解器的"金标准"。
@@ -2120,7 +1762,7 @@ def flag_deformation(s, t, amplitude=0.080, freq=2.0):
 \addcontentsline{toc}{section}{从旋转矩阵到三维重建}
 % ====================================================================================
 
-在本章中，我们用齐次变换矩阵 $T = \begin{bmatrix} R & p \\ 0 & 1 \end{bmatrix}$ 来描述机器人的位姿。位置向量 $p$ 很好处理——三个实数，想怎么改就怎么改。但旋转矩阵 $R$ 就没那么"自由"了：它必须满足 $R^\top R = I$ 和 $\det(R) = 1$。
+在第 6 章中，我们用齐次变换矩阵 $T = \begin{bmatrix} R & p \\ 0 & 1 \end{bmatrix}$ 来描述机器人的位姿。位置向量 $p$ 很好处理——三个实数，想怎么改就怎么改。但旋转矩阵 $R$ 就没那么"自由"了：它必须满足 $R^\top R = I$ 和 $\det(R) = 1$。
 
 这让我们想起了一个老朋友：\textbf{约束优化}。
 
@@ -2207,15 +1849,7 @@ v^* = \frac{v_0}{\|v_0\|} = \frac{(2, 1)}{\sqrt{5}} = \left( \frac{2}{\sqrt{5}},
 如果我们把约束稍微放松一点（允许 $\|v\|^2 \leq 1 + \epsilon$），目标函数会减少大约 $\lambda \cdot \epsilon$。
 
 \begin{insightbox}
-\textbf{这个简单例子告诉我们什么？}
-
-\begin{enumerate}
-    \item 约束 $\|v\| = 1$ 把优化限制在一个\textbf{圆}上
-    \item 拉格朗日乘子法可以处理这种约束
-    \item 最优解是 $v_0$ 在圆上的\textbf{投影}
-\end{enumerate}
-
-接下来，我们把同样的思路用到旋转矩阵上。
+\textbf{这个简单例子告诉我们什么？}约束 $\|v\| = 1$ 把优化限制在一个\textbf{圆}上；拉格朗日乘子法可以处理这种约束；而最优解就是 $v_0$ 在圆上的\textbf{投影}。接下来，我们把同样的思路用到旋转矩阵上。
 \end{insightbox}
 
 %------------------------------------------------------------------------------
@@ -2234,27 +1868,12 @@ R^\top R = I, \quad \det(R) = 1
 \begin{equation}
 SO(3) = \{ R \in \mathbb{R}^{3 \times 3} : R^\top R = I, \, \det(R) = 1 \}
 \end{equation}
-
-\begin{itemize}
-    \item \textbf{正交}（Orthogonal）：$R^\top R = I$，即 $R$ 的列向量相互垂直且长度为1
-    \item \textbf{特殊}（Special）：$\det(R) = 1$，排除了镜像反射（镜像反射的行列式是 $-1$）
-    \item \textbf{群}（Group）：旋转可以复合（矩阵乘法）、可以求逆（$R^{-1} = R^\top$），满足群的公理
-\end{itemize}
-
-类似地，二维旋转构成 $SO(2)$，$n$ 维旋转构成 $SO(n)$。
+名字里的每个词都有来历。"\textbf{正交}"（Orthogonal）指 $R^\top R = I$，即 $R$ 的列向量相互垂直且长度为 1；"\textbf{特殊}"（Special）指 $\det(R) = 1$，排除了镜像反射（镜像反射的行列式是 $-1$）；"\textbf{群}"（Group）指旋转可以复合（矩阵乘法）、可以求逆（$R^{-1} = R^\top$），满足群的公理。类似地，二维旋转构成 $SO(2)$，$n$ 维旋转构成 $SO(n)$。
 \end{definition}
 
 \paragraph{约束有多少个？}
 
-$R^\top R = I$ 是一个 $3 \times 3$ 的矩阵方程。但因为 $R^\top R$ 是对称矩阵，只有6个独立的方程：
-\begin{itemize}
-    \item 3个对角元 = 1：每列的长度是1
-    \item 3个非对角元 = 0：列与列相互垂直
-\end{itemize}
-
-$\det(R) = 1$ 看起来是第7个约束，但实际上，一旦 $R^\top R = I$，就有 $\det(R) = \pm 1$。我们只是在两个"分支"中选择 $+1$ 那个。
-
-所以：\textbf{9个变量，6个约束，3个自由度}。
+$R^\top R = I$ 是一个 $3 \times 3$ 的矩阵方程。但因为 $R^\top R$ 是对称矩阵，它只含 6 个独立的方程：3 个对角元等于 1，说的是每列的长度是 1；3 个非对角元等于 0，说的是列与列相互垂直。$\det(R) = 1$ 看起来是第 7 个约束，但实际上，一旦 $R^\top R = I$，就有 $\det(R) = \pm 1$，我们只是在两个"分支"中选择 $+1$ 那个。所以：\textbf{9 个变量，6 个约束，3 个自由度}。
 
 \begin{figure}[htbp]
 \centering
@@ -2359,7 +1978,7 @@ print("det(R) =", np.round(np.linalg.det(R), 3))
 \end{lstlisting}
 
 %------------------------------------------------------------------------------
-\subsection*{约束的"隐藏结构"：为什么反对称矩阵会出现？}
+\subsection*{约束的隐藏结构：反对称矩阵}
 %------------------------------------------------------------------------------
 
 现在让我们换一个角度，看看约束 $R^\top R = I$ 隐藏着什么数学结构。
@@ -2393,7 +2012,7 @@ R^\top \Delta R + \Delta R^\top R = 0
 \begin{keyformula}[title=旋转矩阵的"合法扰动"]
 如果 $R$ 是旋转矩阵，那么 $R$ 的"合法扰动方向" $\Delta R$ 必须满足：
 \begin{equation}
-R^\top \Delta R = \Omega \quad \text{其中 } \Omega^\top = -\Omega
+R^\top \Delta R = \Omega, \qquad \Omega^\top = -\Omega
 \end{equation}
 
 等价地：$\Delta R = R \Omega$，其中 $\Omega$ 是任意反对称矩阵。
@@ -2430,9 +2049,9 @@ R^\top \Delta R = \Omega \quad \text{其中 } \Omega^\top = -\Omega
 
 这个记号叫做 \textbf{hat operator}（帽子算子），因为有些文献写成 $\hat{\omega}$。
 
-它有一个非常漂亮的性质：
+它有一个非常漂亮的性质——矩阵乘法就是叉积：
 \begin{equation}
-[\omega]_\times v = \omega \times v \quad \text{（矩阵乘法 = 叉积！）}
+[\omega]_\times v = \omega \times v
 \end{equation}
 
 也就是说，反对称矩阵左乘一个向量，等价于用 $\omega$ 对这个向量做叉积。
@@ -2457,12 +2076,7 @@ R^\top \Delta R = \Omega \quad \text{其中 } \Omega^\top = -\Omega
 \subsection*{离散化：从连续旋转到旋转更新}
 %------------------------------------------------------------------------------
 
-在实际计算中，我们经常需要"更新"一个旋转矩阵。比如：
-
-\begin{itemize}
-    \item 机器人每隔 $\Delta t$ 测量一次角速度 $\omega$，需要更新姿态 $R$
-    \item 优化算法计算出一个"旋转修正量"，需要应用到当前估计上
-\end{itemize}
+在实际计算中，我们经常需要"更新"一个旋转矩阵：机器人每隔 $\Delta t$ 测量一次角速度 $\omega$，需要据此更新姿态 $R$；优化算法算出一个"旋转修正量"，需要把它应用到当前估计上。
 
 \paragraph{错误的更新方式}
 
@@ -2556,12 +2170,7 @@ print("R^T @ R =\n", np.round(R_correct.T @ R_correct, 4))
 我们刚才发现的这些结构，数学家们早就研究过了，还给它们起了名字。
 
 \begin{definition}[李群与李代数（直观版）]
-
-\begin{itemize}
-    \item \textbf{李群}：一个既是"群"又是"光滑曲面"的数学对象。"群"意味着可以做乘法和求逆；"光滑曲面"意味着可以做微积分。
-    
-    \item \textbf{李代数}：李群在单位元处的"切空间"。它是一个普通的向量空间，可以自由地做加减法。
-\end{itemize}
+\textbf{李群}是一个既是"群"又是"光滑曲面"的数学对象："群"意味着可以做乘法和求逆，"光滑曲面"意味着可以做微积分。\textbf{李代数}是李群在单位元处的"切空间"，它是一个普通的向量空间，可以自由地做加减法。
 \end{definition}
 
 对于旋转矩阵：
@@ -2613,11 +2222,7 @@ $SO(3)$ & 旋转矩阵 $R$ & $\mathfrak{so}(3)$ & 反对称矩阵 $[\omega]_\tim
 
 \paragraph{为什么这个框架有用？}
 
-\begin{enumerate}
-    \item \textbf{最小参数化}：$\omega \in \mathbb{R}^3$ 恰好有3个参数，没有冗余
-    \item \textbf{无约束优化}：在 $\mathbb{R}^3$ 中优化 $\omega$，不需要处理 $R^\top R = I$
-    \item \textbf{数值稳定}：用 $\exp$ 映射回去，自动保证结果是旋转矩阵
-\end{enumerate}
+因为它一次解决了三件事：$\omega \in \mathbb{R}^3$ 恰好有 3 个参数，没有冗余，这是\textbf{最小参数化}；在 $\mathbb{R}^3$ 中优化 $\omega$，不需要处理 $R^\top R = I$，这是\textbf{无约束优化}；用 $\exp$ 映射回去，自动保证结果是旋转矩阵，这是\textbf{数值稳定}。
 
 %------------------------------------------------------------------------------
 \subsection*{$SE(3)$：位置 + 姿态一起处理}
@@ -2632,27 +2237,14 @@ $SO(3)$ & 旋转矩阵 $R$ & $\mathfrak{so}(3)$ & 反对称矩阵 $[\omega]_\tim
 \begin{equation}
 SE(3) = \left\{ T = \begin{bmatrix} R & p \\ 0 & 1 \end{bmatrix} : R \in SO(3), \, p \in \mathbb{R}^3 \right\}
 \end{equation}
-
-\begin{itemize}
-    \item $R \in SO(3)$：旋转部分（3个自由度）
-    \item $p \in \mathbb{R}^3$：平移部分（3个自由度）
-    \item 总共 \textbf{6个自由度}
-\end{itemize}
-
-$SE(3)$ 描述了三维空间中刚体的所有可能位姿。类似地，$SE(2)$ 描述平面刚体运动（3个自由度）。
+其中 $R \in SO(3)$ 是旋转部分（3 个自由度），$p \in \mathbb{R}^3$ 是平移部分（3 个自由度），总共 \textbf{6 个自由度}。$SE(3)$ 描述了三维空间中刚体的所有可能位姿。类似地，$SE(2)$ 描述平面刚体运动（3 个自由度）。
 \end{definition}
 
-$SE(3)$ 也是一个李群！它的李代数是 $\mathfrak{se}(3)$，包含6个参数：
+$SE(3)$ 也是一个李群！它的李代数是 $\mathfrak{se}(3)$，包含 6 个参数：
 \begin{equation}
 \xi = \begin{pmatrix} v \\ \omega \end{pmatrix} \in \mathbb{R}^6
 \end{equation}
-
-\begin{itemize}
-    \item $v \in \mathbb{R}^3$：线速度
-    \item $\omega \in \mathbb{R}^3$：角速度
-\end{itemize}
-
-这个6维向量叫做\textbf{旋量}（twist），它描述了刚体的瞬时运动。
+其中 $v \in \mathbb{R}^3$ 是线速度，$\omega \in \mathbb{R}^3$ 是角速度。这个 6 维向量叫做\textbf{旋量}（twist），它描述了刚体的瞬时运动。
 
 %------------------------------------------------------------------------------
 \subsection*{应用：相机位姿估计与SLAM}
@@ -2762,7 +2354,7 @@ T_i = \bar{T}_i \cdot \exp(\xi_i^\wedge)
     
     \item \textbf{指数映射}把李代数元素变成李群元素，保证更新后仍然满足约束。
     
-    \item \textbf{实际应用}：视觉SLAM用李代数参数化相机位姿
+    \item \textbf{实际应用}：视觉 SLAM 用李代数参数化相机位姿，把带约束的位姿估计变成普通的非线性最小二乘问题。
 \end{enumerate}
 
 \begin{remark}
@@ -2777,7 +2369,7 @@ T_i = \bar{T}_i \cdot \exp(\xi_i^\wedge)
 
 %--------------------------------------------------------------------------
 
-\section*{Python 如何理解 \texttt{x * x + x * 2 + 1}？}
+\section*{Python 如何理解一个表达式？}
 \addcontentsline{toc}{section}{Python表达式求值}
 
 \sidenoteplain{这一节解释 Python 解释器的工作原理。理解这个，你就明白了为什么我们只需要重载运算符，就能``免费''获得计算图构建的能力。}
@@ -2839,6 +2431,7 @@ Python 编译器把 AST 翻译成一串\textbf{字节码指令}（bytecode）。
 解释器维护一个\textbf{栈}（像一摞盘子），严格按字节码顺序执行：
 
 \begin{center}
+\small
 \renewcommand{\arraystretch}{1.4}
 \begin{tabular}{c|l|l}
 \toprule
@@ -2894,11 +2487,12 @@ dis.dis(f)
              18 RETURN_VALUE
 \end{lstlisting}
 
-这正是我们前面 Step 1--4 图的``官方版本''！
+这正是第 8 章里逐步搭出计算图的 Step 1--4 图的``官方版本''。
 
 \subsection*{小结}
 
 \begin{center}
+\resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[
     box/.style={draw, rounded corners, minimum width=3cm, minimum height=1cm, font=\small, align=center},
     arrow/.style={->, thick, >=stealth}
@@ -2911,24 +2505,17 @@ dis.dis(f)
     \draw[arrow] (src) -- node[above, font=\scriptsize] {解析} (ast);
     \draw[arrow] (ast) -- node[above, font=\scriptsize] {编译} (bc);
     \draw[arrow] (bc) -- node[above, font=\scriptsize] {执行} (exec);
-\end{tikzpicture}
+\end{tikzpicture}}
 \end{center}
 
-\begin{itemize}
-    \item \textbf{``先乘后加''}是在\textbf{解析阶段}决定的（构建 AST）
-    \item \textbf{``从左到右''}是在\textbf{执行阶段}实现的（按字节码顺序）
-    \item \textbf{我们没有写任何解析器}，Python 帮我们做完了所有这些工作
-    \item 我们只需要\textbf{重载运算符}，就能在执行阶段``搭便车''构建计算图
-\end{itemize}
-
-这就是自动微分框架的设计哲学：\textbf{利用宿主语言的表达式求值机制，免费获得计算图构建能力}。PyTorch、JAX、TensorFlow Eager 都是这个思路。
+回顾这三步：\textbf{``先乘后加''}是在\textbf{解析阶段}决定的（构建 AST），\textbf{``从左到右''}是在\textbf{执行阶段}实现的（按字节码顺序）。\textbf{我们没有写任何解析器}，Python 帮我们做完了所有这些工作；我们只需要\textbf{重载运算符}，就能在执行阶段``搭便车''构建计算图。这就是自动微分框架的设计哲学：\textbf{利用宿主语言的表达式求值机制，免费获得计算图构建能力}。PyTorch、JAX、TensorFlow Eager 都是这个思路。
 
 
 \section*{用 SB3 训练经典控制任务}
 \addcontentsline{toc}{section}{用 SB3 训练经典控制任务}
 % ------------------------------------------------------------------------------------
 
-以下代码展示如何用 SB3 在经典控制任务上训练和对比三种算法：
+第 9 章推导了 DQN、PPO 和 SAC 的更新公式，但真要在一个环境上把它们跑起来，还有经验池、目标网络、裁剪范围这些工程细节要处理。Stable Baselines3（SB3）把这些都封装好了，你只需要选算法、给环境、设超参数。下面的代码展示如何用 SB3 在经典控制任务上训练和对比这三种算法：
 
 \begin{lstlisting}[language=Python, caption={用 SB3 对比三种算法}]
 import gymnasium as gym
@@ -2980,15 +2567,7 @@ sac_model.learn(total_timesteps=20000)
 \end{lstlisting}
 
 \begin{remark}
-SB3 的强大之处在于：\textbf{把这里的 \texttt{CartPole} 换成你的自定义环境，代码几乎不用改}。
-
-只要你的问题能封装成 Gymnasium 接口：
-\begin{itemize}
-    \item \texttt{reset()} 返回初始状态
-    \item \texttt{step(action)} 返回 (下一状态, 奖励, 是否结束, 信息)
-\end{itemize}
-
-那么 SB3 就能直接训练。把 CartPole 的物理方程换成飞行器动力学，就是飞行控制；换成流体方程，就是流体控制。
+SB3 的强大之处在于：\textbf{把这里的 \texttt{CartPole} 换成你的自定义环境，代码几乎不用改}。只要你的问题能封装成 Gymnasium 接口——\texttt{reset()} 返回初始状态，\texttt{step(action)} 返回（下一状态，奖励，是否结束，信息）——SB3 就能直接训练。把 CartPole 的物理方程换成飞行器动力学，就是飞行控制；换成流体方程，就是流体控制。
 \end{remark}
 
 

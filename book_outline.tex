@@ -62,10 +62,11 @@
 \AddToHook{env/algorithm/end}{\global\advance\insideboxdepth\m@ne}
 \AddToHook{env/longtable/begin}{\global\advance\insideboxdepth\@ne}
 \AddToHook{env/longtable/end}{\global\advance\insideboxdepth\m@ne}
+% 页边栏正文显式置黑：断页处的盒子会把"白色"留在颜色栈顶，使下一页页首的页边栏正文变白（不可见）
 \newcommand{\smartmargin}[1]{%
-  \ifnum\insideboxdepth>\z@ \marginnote{#1}%
-  \else\ifinner \marginnote{#1}%
-  \else \marginpar{#1}%
+  \ifnum\insideboxdepth>\z@ \marginnote{\color{black}#1}%
+  \else\ifinner \marginnote{\color{black}#1}%
+  \else \marginpar{\color{black}#1}%
   \fi\fi}
 \makeatother
 \usepackage{mparhack}
@@ -517,7 +518,7 @@ PINN & 数据拟合 + PDE约束 & 物理信息损失 \\
 
 \begin{center}
 \small
-\begin{tabular}{@{}p{2.4cm}p{4.6cm}p{3.6cm}p{1.8cm}@{}}
+\begin{tabular}{@{}p{2.1cm}p{4.2cm}p{3.3cm}p{1.3cm}@{}}
 \toprule
 \textbf{部分} & \textbf{回答的问题} & \textbf{$\lambda$ 在这里叫什么} & \textbf{章} \\
 \midrule
