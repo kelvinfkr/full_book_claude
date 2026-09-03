@@ -92,13 +92,63 @@
 5. **附录**：重写 `chapters/appendix_index.tex`（新增"各章的目标 / 约束 / $\lambda$"总表，修正跨章对照表、快速定义、概念图谱、章节速查），`book_outline.tex` 改为 `\input` 该文件，修正章节注释。
 6. **LaTeX 用法**：`\begin{keyidea}{X}` / `[title=X]` 统一为 `[X]`（该环境把参数直接作标题）；`\begin{exercise}[中文标题]`、`\begin{advantage}[…]` 改为合法写法；`\begin{marginnote}…\end{marginnote}`（无此环境）改为 `\marginnote{…}`；数学模式中的 `°` 改为 `^\circ`；第 13 章图注引用改为 `\eqref`。
 
-## 四、待作者决定
+## 四、第二轮修订：原"待作者决定"各项的处理结果
 
-1. **第 16 章两张 CBF 图需要重新生成**：`figs_chap16/cbf_controller.png`、`multi_obstacle.png` 由符号写反的旧代码生成，图中 CBF 从未激活。代码已修正，运行 `code_chap16/chap16_world_model.py` 即可重绘（本环境无 numpy，未能代跑）。障碍物正好在起点–终点连线上时，纯径向修正只能减速；若希望图中出现"绕行"，需把障碍物稍微偏离连线或加切向分量。
-2. **第 15 章 MFG 图**只是示意（代码手绘高斯与二次型）；若希望名副其实，需要真正交替求解 HJB–FP。
-3. **第 8 章符号约定**：本次让连续部分（$\lambda = +\partial J^*/\partial x$，最优控制惯例）与离散部分（$\lambda_N = -\partial\phi/\partial x_N$，与第 1、9 章一致）各自内部自洽并加了提醒；若希望全书一个符号，需要把第 8 章离散部分和第 9 章一起翻号。
-4. **第 13 章**沿用 PINN 文献习惯把损失权重记作 $\lambda$（已加澄清）；若要与第 1 章完全一致，需把该章正文、代码中的 `lambda_bc` 一并改为 $\rho$。
-5. **第 12 章扩展阅读**（服务器 / 环境配置，1500 行）与主线无关，建议移为附录"实验环境速成"。
-6. **第 10 章扩展阅读**三篇近 2000 行，是主体篇幅的一倍，可考虑合并前两篇。
-7. **图片文件名**：`figs_chap11/chap12_fig*.png`（第 11 章的图却叫 chap12）建议重命名。
-8. 引号（直引号 / ``…'' / 全角）、`\hline` 与 booktabs、`[h]` 与 `[htbp]` 在各章仍不统一，属排版层面，未逐处改动。
+作者回复"都改了吧，图不合适的重新生成一批，像教科书一点，每张图都有思路"，于是第一轮列出的 8 项全部处理：
+
+1. **第 8 章离散部分与第 9 章翻号，全书动态章节统一符号**。动力学约束一律写成 $f - \dot x$（离散版 $f(x_k,u_k) - x_{k+1}$，第 9 章 $f_i(z_{i-1}) - z_i$），于是所有动态章节都有 $\lambda = +\partial(\text{代价})/\partial(\text{状态})$：第 8 章连续/离散、第 9 章 $\lambda_i = \partial L/\partial z_i = \delta_i$（正好是深度学习的误差信号，不再"差一个负号"）、第 10 章 $\lambda_t = \gamma^{t+1}\nabla V$、第 11 章 BPTT。第 8 章离散推导改用离散哈密顿量 $H_k = L_k + \lambda_{k+1}^\top f$，伴随方程 $\lambda_k = \partial H_k/\partial x_k$、$\lambda_N = \partial\phi/\partial x_N$，与连续部分逐项对应；手算例题（$N=2$ 积分器）重算，最优控制 $u_0=u_1=-10/21$ 不变。第 1 章的 $\lambda = -df^*/d\epsilon$ 规则在各章的"符号约定"页边栏里重新解释（放松 $f - x = \epsilon$ 等于把状态往回拨 $\epsilon$，两个负号抵消）。第 9 章的对照表、反向传播伪代码、两层网络手算例、扩展阅读中的拉格朗日函数同步翻号。
+2. **第 13 章损失权重改记 $\rho$**：正文（开篇反问、罚参数讨论、梯度竞争公式、实验表格、对比表、逆问题损失）与代码清单里的固定权重全部由 $\lambda$ 改为 $\rho$，`lambda_bc` → `rho_bc`（`code_chap13/`、`code_organized/` 中 5 个固定权重脚本与 README 同步）；对偶上升里真正的乘子仍记 $\lambda$（`self.lambda_bc`）。图 `figs_chap13/lambda_effect.pdf` 用统一风格重跑（$\rho \in \{0.1,1,10,100,1000\}$，10000 轮），文件名保留以免改引用，正文表格按新结果更新。
+3. **第 12 章 1500 行"服务器与环境配置"移为附录 B**（`chapters/appendix_env.tex`，标题"实验环境速成——服务器与环境配置"），原位置留一段"关于实验环境"指引；原附录改称"附录 A：核心概念索引"；`book_outline.tex` 增加 `\input`。
+4. **第 10 章扩展阅读**：五篇之前加"扩展阅读导读"盒子（每篇一句话说明内容、前置知识、适合谁读），四篇各自补"本节导读"（第四篇原有）。未合并正文，避免破坏各篇的自洽。
+5. **图片改名**：`figs_chap11/chap12_fig*.png` → `chap11_fig*.png`，标签 `fig:chap12_*` → `fig:chap11_*`，并重新生成（见第五节）。
+6. **`[h]` → `[htbp]`**：全书 `\begin{figure}[h]` / `\begin{table}[h]` 统一改为 `[htbp]`。
+7. 第 16 章正文中"请重新运行脚本再生成"的 TODO 注释删除（图已重绘）。
+8. 引号与 `\hline`/booktabs 仍未逐处统一（排版层面，与本轮目标无关）。
+
+## 五、图片重绘与统一风格
+
+### 5.1 审图结论
+
+逐张看过全书 70 张被引用的图（PDF 用 PyMuPDF 渲染后查看）。保留不动的：第 1、3 章全部；第 4 章 `chap04_fig1`；第 5 章 `chap05_fig1/3` 与 Turek–Hron 四张（来自真实 Kratos 仿真）；第 8 章两张；第 13 章除 `lambda_effect` 外全部；第 14 章；第 15 章除 `mfg_solution` 外全部；第 16 章 `phase_space`、`free_energy`、`paradigm_comparison`。需要重绘的问题分四类：
+
+- **内容错误或"假数据"**：第 4 章 `chap04_fig2` 的周期误差面板算错（用首次过零时刻×2，实际测的是半周期，得出 −50%）；第 5 章 `chap05_fig2` 的"节点误差"是 $10^{-15}$（线性元节点超收敛），$O(h^2)$ 参考线没有意义；第 10 章 `cartpole_demo` 右图的训练曲线是随机数画的（标题写着 Simulated）；第 15 章 `mfg_solution` 是解析高斯与抛物线手绘的"示意解"；第 16 章 `cbf_controller`、`multi_obstacle` 由符号写反的旧代码生成（CBF 从未激活）；第 11 章注意力图的权重几乎均匀（没有信息量）。
+- **与正文不符**：第 10 章正文五处写 GridWorld 是 $5\times5$，图全是 $4\times4$；第 7 章 IK 图的起点与正文算例 $q^{(0)}=(0^\circ,90^\circ)$ 不一致；第 4 章 `chap04_fig1` 图注"约 6 秒"与图中 11.4 s 不符。
+- **不是图**：第 9 章 `chap09_fig1` 第 4 面板是一段文字表格；第 11 章两张图里有大段文字框。
+- **风格**：第 2 章 4 张、第 9 章 5 张、第 10 章扩展阅读 4 张全是英文标签；各章字号、配色、标题风格各异；第 4 章 `long_time_comparison` 的 Verlet 振荡填满整幅、RK4 漂移看不见；第 10 章 `chap10_shortest_path` 文字重叠；`chap04_fig2` 有方框字。
+
+### 5.2 统一风格：`code/textbook_style.py`
+
+新增全书共用的绘图风格模块（所有重绘脚本都 `from textbook_style import setup_style, save_figure, panel_label, fig_size, COLORS`）：
+
+1. 图内不放大标题，用 **(a)(b)(c)** 面板编号，结论写在 caption 里；
+2. 坐标轴、图例、注记全部中文，公式用 mathtext；字体优先 **Noto Sans CJK SC**（同时含中文、西文和数学负号 U+2212，解决了文泉驿字体下对数坐标刻度的负号变方框的问题），缺失时回退到 DejaVu Sans + 文泉驿；
+3. 固定 8 色语义色板：精确解/参考黑色，数值解/学习结果蓝色，误差/警示/最优路径红色，约束/可行域/安全集绿色；
+4. 单栏宽 6.3 in、按面板数自动给高度，线宽 1.6、字号 9–10 pt，去上/右轴线，浅灰网格；
+5. `save_figure` 同时输出 PDF（矢量，供 LaTeX）与 300 dpi PNG，正文引用的文件名不变。
+
+### 5.3 重绘清单（按章）
+
+每张图在 `figure_docs/chapNN_figures.md` 里都有"背景 / 意图 / 生成方法 / 数据来源 / **思路** / **读图指南**"六段，这里只列一句话思路。
+
+| 章 | 图 | 脚本 | 一句话思路 |
+|---|---|---|---|
+| 2 | `lp_performance`、`qp_performance`、`portfolio_weights`、`nonconvex_comparison` | `code_chap02/optimization_tools_demo.py` | 求解逻辑保留、全部中文化：LP 是最便宜的问题（1000 变量 0.3 s）；通用 QP 求解器代价 $\propto n^{3.2}$；最优组合只集中在 4 种资产上（收益约束不起作用，是预算与非负约束在塑造解）；Rosenbrock 上有梯度方法最省。LP 代码清单原来的"输出"是假的（$c\ge0$ 求最小，解应为 0），改为最大化利润并换成真实输出 $x=(2.2,1.8,1.6)$、利润 18.2。 |
+| 4 | `chap04_fig2` | `code/chap04_mechanics.py` | 线性化不是对错而是"误差多大"：过零事件实测周期偏差（30°→+1.7%，90°→+18.0%，与椭圆积分公式一致）；`chap04_fig1` 图注改为"约 11 秒"。 |
+| 4 | `long_time_comparison`、`harmonic_comparison`、`convergence_order` | `code_chap04/ode_numerical_methods.py` | RK4 能量误差每周期最大值在双对数下是斜率 0.96 的直线（无界），Verlet 是水平线（有界振荡，无漂移）；收敛阶图例直接给出拟合斜率。 |
+| 5 | `chap05_fig2` | `code/chap05_performance.py fem` | 有限元的误差要说清是哪种范数：节点精确（超收敛）、$L^2$ 与单元内最大误差 $O(h^2)$、$H^1$ 半范数 $O(h)$，并补上 caption 提到的三对角刚度矩阵面板。 |
+| 7 | `chap07_fig1` | `code/chap07_robotics.py` | 正文手算例（$L_1=L_2=1$、$x_d=(1.2,0.9)$、$q^{(0)}=(0^\circ,90^\circ)$）真正迭代：误差 $0.22\to0.021\to2\times10^{-4}\to2\times10^{-8}$ 的二次收敛，$|\det J|$ 热图解释为什么目标点远离奇异位形；图移到算例之后。 |
+| 9 | `activation_functions`、`gradient_flow`、`computation_graph`、`gradient_check`、`modern_activations` | `code_chap09/activation_functions.py` | 全部中文化；`gradient_flow` 的"梯度消失"与"死亡 ReLU"改为真实实验（20 层网络各层梯度范数比；3 层 MLP 训练中恒为 0 的单元比例，ReLU 大学习率 10%→57%，Leaky ReLU 可恢复）。 |
+| 9 | `chap09_fig1` | `code/chap09_autograd.py` | 第 4 面板改为真图：$N$ 层残差网络反向传播得到的 $\lambda_i=\delta_i$ 落在连续协态 $p(t)$ 上，偏差随 $h=T/N$ 一阶下降——反向传播就是伴随方程的离散形式。 |
+| 10 | `chap10_shortest_path`、`chap10_value_iteration`、`chap10_value_heatmap`、`chap10_policy`、`chap10_qlearning_sarsa`、`chap10_qtable` | `code_chap10/chap10_rl.py` | 环境改为正文的 $5\times5$（每步 $-1$、$\gamma=1$）：离终点 $d$ 步的状态恰在第 $d$ 轮到位；$V$ = 负曼哈顿距离；并列最优动作画双箭头；Q-Learning/SARSA 10 个种子真实训练；Q 表与值迭代逐格相同。 |
+| 10 | `arm_kinematics`、`rl_control_comparison`、`pd_control_trajectory`、`cartpole_demo` | `code_chap10/robotic_arm_control.py` | 中文化；CartPole 自行实现（Barto 方程，不依赖 gym），用交叉熵法 + 线性策略（600 回合达到 195）和表格 Q-Learning 得到真实学习曲线，替换原来的随机数曲线。 |
+| 11 | `chap11_fig1`、`chap11_fig2`（原 `chap12_fig*`） | `code_chap11/chap11_figures.py` | 在含噪正弦上训练单头自注意力，注意力矩阵出现间距 16 的斜条纹（"关注同相位时刻"）；正弦位置编码矩阵、各维波长、位置间点积的 Toeplitz 结构。 |
+| 13 | `lambda_effect` | `code_chap13/lambda_effect.py` | $\rho\in\{0.1,\dots,1000\}\times3$ 个种子各 10000 轮：$\rho$ 太小前期慢（第 1000 轮误差高 3–4 个量级、解整体漂一个齐次解），$\rho=10\sim100$ 前期最快，$\rho$ 太大后期震荡、最终反而最差——"罚得越狠边界学得越差"，为自适应权重铺垫。正文表格与结论按真实结果重写（原表格数字不可复现）。 |
+| 15 | `mfg_solution` | `code_chap15/chap15_mfg_solver.py` | 真正的一维 MFG 有限差分求解：HJB 倒向（隐式扩散 + 迎风 Hamilton 项）、FP 正向（守恒迎风格式）、阻尼不动点迭代 112 轮残差降到 $10^{-8}$；展示"个体按 HJB 最优响应、群体按 FP 演化、均衡是不动点"，拥挤项 $\kappa m$ 就是"别人对我的价格"。 |
+| 16 | `cbf_controller`、`multi_obstacle`、`differentiable_physics`、`latent_dynamics`、`unified_view` | `code_chap16/chap16_figures_v2.py` | CBF 用正确符号 $u^*=u_{\rm ref}+\lambda^*\nabla h$ 重做，障碍物移出起点–目标连线，画出 $h(t)\ge0$ 与只在贴边时非零的 $\lambda^*(t)$（安全约束的影子价格）；多障碍版显示两条约束同时活跃；可微物理用 autograd 穿过 200 步 RK4 真正辨识出 $(m,k,c)$；隐空间动力学用 $24\times24$ 带噪单摆图像训练编码器 + 转移模型，潜态是嵌套闭合环、30 步"做梦"误差贴近噪声；统一视角图改为全中文、内容取自附录 A 主线总表。 |
+
+### 5.4 遗留
+
+- 仍是旧风格但内容无误、未重绘的图：第 13 章其余 12 张（中文、清晰）、第 15 章其余 6 张、第 16 章 3 张、第 5 章 Turek–Hron 四张、第 4 章 `chap04_fig1`、第 14 章 `chap14_fig1`、第 1–3 章。
+- 旧的重复脚本未删（`code/chap10_rl.py`、`code/chap12_transformer.py`、`code_chap07/chap07_robotics.py`、`code_chap12/chap12_transformer.py`、`code_chap16/chap16_world_model.py`），它们生成的是旧图或写到旧路径，建议清理；新图一律由 `figure_docs` 中标明的脚本生成。
+- 本环境没有 TeX，无法编译；对所有改动过的章节做了 `\begin/\end` 与花括号配对检查。
+- 计时类图（第 2 章）的绝对秒数依赖机器，caption 用了"约"。

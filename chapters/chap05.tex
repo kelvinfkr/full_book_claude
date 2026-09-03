@@ -12,7 +12,7 @@
 
 这个想法就是\textbf{有限元方法}（Finite Element Method，FEM）的雏形。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.9]
     % 定义机翼形状的上下边界函数
@@ -133,7 +133,7 @@
 
 想象一根长度为 1 米的金属棒，两端固定在 0°C 的冰水中，中间有一个均匀的热源（比如电流通过产生的焦耳热）。问：稳态时棒上的温度分布是什么？
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.0]
     % 金属棒
@@ -465,7 +465,7 @@ u_h(x) \approx U_1 \phi_1(x) + U_2 \phi_2(x) + \cdots + U_n \phi_n(x) = \sum_{j=
 
 最常用的形函数是\textbf{分片线性函数}，也叫\textbf{帐篷函数}或\textbf{帽子函数}：
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.5]
     % 坐标轴
@@ -572,7 +572,7 @@ $K_{ij}$ 的物理意义：给节点 $j$ 一个单位位移，节点 $i$ 受到�
 
 这导致刚度矩阵是\textbf{稀疏的三对角矩阵}！
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.6]
     % 画一个 5x5 的矩阵
@@ -607,7 +607,7 @@ $K_{ij}$ 的物理意义：给节点 $j$ 一个单位位移，节点 $i$ 受到�
 
 $\phi_i$ 在 $[x_{i-1}, x_i]$ 上斜率为 $+\frac{1}{h}$，在 $[x_i, x_{i+1}]$ 上斜率为 $-\frac{1}{h}$。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.2]
     \draw[->] (0,0) -- (4,0) node[right] {$x$};
@@ -642,7 +642,7 @@ K_{ii} &= \int_{x_{i-1}}^{x_{i+1}} (\phi_i')^2 \, dx \\
 
 $\phi_i$ 和 $\phi_{i+1}$ 只在 $[x_i, x_{i+1}]$ 上同时非零。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.8]
     % 坐标轴
@@ -757,7 +757,7 @@ K = \frac{1}{h}
 \]
 
 使用 4 个单元（5 个节点），步长 $h = 0.25$。
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.2]
     % ===== 上半部分：各个加权形函数 =====
@@ -943,7 +943,7 @@ u(0.75) = \frac{0.75 \times 0.25}{2} = 0.09375
 
 \textbf{有限元解在节点处恰好等于精确解！}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[x=6cm, y=15cm]
     % 坐标轴
@@ -1006,7 +1006,7 @@ print(x*(1-x)/2)            # 精确解在节点处的值——完全一致
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.95\textwidth]{figs_chap05/chap05_fig2.png}
-\caption{一维有限元求解热传导问题。左图展示有限元解与解析解$u(x) = x(1-x)/2$的对比，二者几乎完全重合；中图显示刚度矩阵$K$的三对角稀疏结构——这源于帐篷函数的局部支撑性；右图展示网格细化时的收敛行为，验证了线性元的$O(h^2)$收敛阶。}
+\caption{一维有限元求解热传导问题$-u''=1$，$u(0)=u(1)=0$。(a) 有限元解（$N=4,8$）与解析解$u(x)=x(1-x)/2$的对比：节点值与解析解重合，误差只出现在单元内部。(b) 施加边界条件后的刚度矩阵$K$（$N=8$）的三对角结构——这源于帐篷函数的局部支撑性。(c) 网格细化时的收敛：$L^2$误差和单元内最大误差按$O(h^2)$下降（拟合斜率2.00），$H^1$半范数误差按$O(h)$下降（斜率1.00）；节点处的误差在$10^{-14}$以下（舍入水平），这是一维线性元的超收敛现象。}
 \label{fig:chap05_fem}
 \end{figure}
 
@@ -1066,7 +1066,7 @@ K^e_{RR} = \int_{x_L}^{x_R} (N_R')^2 dx = \frac{1}{h^2} \cdot h = \frac{1}{h}
 
 组装的规则很简单：把每个单元刚度矩阵"放入"整体矩阵的对应位置，重叠处累加。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.6]
     % 单元1矩阵（用数学矩阵表示，不用tikz框）
@@ -1283,7 +1283,7 @@ $\lambda$ 的物理意义是边界处的\textbf{法向通量}：
 
 \textbf{离散化}：把区域 $\Omega$ 剖分成三角形或四边形单元。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.8]
     % 区域
@@ -1354,7 +1354,7 @@ K^e_{ij} = \int_{\text{三角形}} \nabla N_i \cdot \nabla N_j \, dA
 
 但稀疏结构更复杂：不再是三对角，而是\textbf{带状稀疏}矩阵。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.08]
     % 画一个稀疏矩阵的样子
@@ -1395,7 +1395,7 @@ K^e_{ij} = \int_{\text{三角形}} \nabla N_i \cdot \nabla N_j \, dA
 
 考虑一维问题 $-u'' = f$，用 $N$ 个等距节点离散化。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.2]
     % 左边：FDM
@@ -1478,7 +1478,7 @@ K_{ij} = \int \phi_i' \phi_j' dx
 
 \textbf{任务}：在圆形区域 $\Omega$ 上求解 $-\Delta u = f$。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.8]
     % 左边：FDM
@@ -1570,7 +1570,7 @@ K_{ij} = \int \phi_i' \phi_j' dx
 
 在前面的推导中，我们默默假设了 $u_h(x)$ 是连续的。但为什么？
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.2]
     % 上半部分：连续函数
@@ -1618,7 +1618,7 @@ K_{ij} = \int \phi_i' \phi_j' dx
 
 一个关键问题：我们只要求\textbf{节点值}相等，怎么能保证整条公共边上都连续？
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.5]
     % 两个三角形共享边
@@ -1676,7 +1676,7 @@ K_{ij} = \int \phi_i' \phi_j' dx
 
 解决方案：在边的中点增加一个节点，三点定抛物线。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.2]
     % 线性单元
@@ -1711,7 +1711,7 @@ K_{ij} = \int \phi_i' \phi_j' dx
 
 为了理解高阶单元，让我们先看最简单的情况：一维二次单元。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.5]
     % 坐标轴
@@ -1880,7 +1880,7 @@ $x$ & 数值解 $U$ & 精确解 $u = \frac{x(1-x)}{2}$ & 误差 \\
 
 与其说是"把单元拼起来"，不如说是"把全局基函数叠加起来"。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.7, x={(1cm,0cm)}, y={(0.5cm,0.4cm)}, z={(0cm,1cm)}]
     % 中心点
@@ -1946,7 +1946,7 @@ K_{ij} = \int_\Omega \nabla\Phi_i \cdot \nabla\Phi_j \, dx
 
 关键观察：$\Phi_i$ 和 $\Phi_j$ 只在它们的支撑区域重叠时，积分才非零！
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.5]
     % 中心点 i
@@ -2098,7 +2098,7 @@ $J(U) = \frac{1}{2}U^\top KU - F^\top U$ 的物理意义：
 
 \textbf{新思路}：让每个单元拥有\textbf{独立的节点}，然后用\textbf{约束}把它们"缝合"起来！
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.5]
     % 左边：传统FEM
@@ -2247,7 +2247,7 @@ J_\rho(U) = \frac{1}{2}U^\top K_{block} U - F^\top U + \frac{\rho}{2}\|CU\|^2
 
 其中 $\rho$ 是罚参数（很大的正数）——记号与第1章"视角三：罚函数"一致。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.9]
     % 弱罚
@@ -2504,7 +2504,7 @@ J_\rho(U) = \frac{1}{2}U^\top K_{block} U - F^\top U + \frac{\rho}{2}\|CU\|^2
     \item $\kappa = \infty$：矩阵奇异，方程无唯一解
 \end{itemize}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.5]
     % 左边：良态矩阵
@@ -2705,7 +2705,7 @@ b_2 & a_2 & c_2 & & \\
 
 二维和三维问题的刚度矩阵虽然不是三对角，但仍有规律的稀疏结构：
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.55]
 
@@ -2815,7 +2815,7 @@ Thomas 算法虽然快（$O(n)$），但它是\textbf{串行}的：
 
 就像多米诺骨牌，必须一个接一个倒下，不能跳跃！
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.8]
     % 串行
@@ -2837,7 +2837,7 @@ Thomas 算法虽然快（$O(n)$），但它是\textbf{串行}的：
 
 一个聪明的想法：把计算域\textbf{分成几块}，每块独立求解，然后把边界"缝合"起来。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.2]
     % 原始问题
@@ -3046,7 +3046,7 @@ $\infty$ & 0.091 & 0.636 & 0 \\
 \end{tabular}
 \end{center}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=4]
     % 坐标轴
@@ -3152,7 +3152,7 @@ Jacobi 迭代不总是收敛！收敛的条件与矩阵的性质有关。
 \]
 其中 $r = F - KU$ 叫做\textbf{残差}（residual），它衡量当前解离真实解有多远。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.0]
     % 最速下降
@@ -3409,7 +3409,7 @@ Jacobi（$M = \text{diag}(K)$） & $O(h^{-2})$ & $O(n)$ & 简单，但改善有�
 
 用 Jacobi 迭代求解有限元方程 $KU = F$，观察误差的变化：
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.9]
     % 初始误差
@@ -3445,7 +3445,7 @@ Jacobi（$M = \text{diag}(K)$） & $O(h^{-2})$ & $O(n)$ & 简单，但改善有�
 
 现在是多重网格的灵魂时刻：
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.85]
     % 细网格上的低频
@@ -3543,7 +3543,7 @@ Jacobi（$M = \text{diag}(K)$） & $O(h^{-2})$ & $O(n)$ & 简单，但改善有�
     \item 粗网格：$H = 1/4$，3个内部节点
 \end{itemize}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.2]
     % 细网格
@@ -3613,7 +3613,7 @@ Jacobi（$M = \text{diag}(K)$） & $O(h^{-2})$ & $O(n)$ & 简单，但改善有�
 
 两层网格可以推广到多层——这就是 V-Cycle：
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.8]
     % V-cycle 示意图
@@ -3736,7 +3736,7 @@ $256 \times 256$ & 650 次 & 500 次 & 78 次 & 8 次 \\
     \item 但不同餐厅的厨房是完全隔开的（进程之间隔离）
 \end{itemize}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.85]
     % 进程1
@@ -4202,7 +4202,7 @@ else:
 
 到这里，我们可以把并行计算的各种层次整理一下：
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
     box/.style={draw, rounded corners, minimum width=4.5cm, minimum height=0.9cm, font=\small, align=center},
@@ -4275,7 +4275,7 @@ else:
 
 Turek和Hron在2006年提出了一系列FSI基准测试问题，其中\textbf{FSI2}是最具挑战性也最常被引用的一个。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=3.5]
     % 通道

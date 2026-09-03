@@ -84,13 +84,13 @@ def compute_pde_residual(model, x):
     residual = -u_xx - f
     return residual
 
-def compute_loss_soft(model, x_interior, x_boundary, lambda_bc=100.0):
+def compute_loss_soft(model, x_interior, x_boundary, rho_bc=100.0):
     """软约束损失函数"""
     residual = compute_pde_residual(model, x_interior)
     loss_pde = torch.mean(residual ** 2)
     u_boundary = model(x_boundary)
     loss_bc = torch.mean(u_boundary ** 2)
-    total_loss = loss_pde + lambda_bc * loss_bc
+    total_loss = loss_pde + rho_bc * loss_bc
     return total_loss, loss_pde, loss_bc
 
 def compute_loss_hard(model, x_interior):

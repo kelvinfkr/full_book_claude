@@ -82,7 +82,7 @@ RNN选择了最简单的状态转移函数——线性变换加非线性激活�
 其中 $\sigma$ 是激活函数（如tanh），$W_h, W_x, b$ 是可学习参数。
 \end{keyformula}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.9]
     % 展开的RNN
@@ -172,7 +172,7 @@ RNN选择了最简单的状态转移函数——线性变换加非线性激活�
 
 让我们明确每个量的维度。假设隐状态 $h_t \in \mathbb{R}^n$（$n$ 是隐藏层大小），则：
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \renewcommand{\arraystretch}{1.3}
 \begin{tabular}{lll}
@@ -225,7 +225,7 @@ RNN的状态转移是：
 其中 $\text{diag}(\sigma'(z_t))$ 是对角线上放置 $\sigma'(z_{t,1}), \sigma'(z_{t,2}), \ldots, \sigma'(z_{t,n})$ 的对角矩阵。
 \end{keyformula}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.7]
     % 对角矩阵
@@ -277,7 +277,7 @@ RNN的状态转移是：
     \frac{\partial J}{\partial h_0} = \frac{\partial J}{\partial h_T} \cdot \prod_{t=0}^{T-1} W_h^\top \cdot \text{diag}(\sigma'(z_t))
 \end{equation}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.8]
     % 梯度向量
@@ -379,7 +379,7 @@ RNN的状态更新具有马尔可夫性：
 \end{equation}
 （固定"过去" $X_{<t}$，让隐状态往后走：每走一步，隐状态里关于过去的信息只会减少。）
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.9]
     % 信息流
@@ -447,7 +447,7 @@ LSTM引入了一个新的状态——\textbf{细胞状态}（Cell State）$c_t$�
 其中 $\odot$ 表示逐元素乘法，$\sigma$ 是sigmoid函数（输出在0到1之间）。
 \end{keyformula}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.85, font=\small]
 
@@ -601,7 +601,7 @@ LSTM把"结构性的梯度消失问题"转化为了"可学习的优化问题"—
 
 ResNet和LSTM看起来都有残差结构，为什么表现天差地别？
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \renewcommand{\arraystretch}{1.4}
 \begin{tabular}{p{3cm}|p{5cm}|p{5cm}}
@@ -636,7 +636,7 @@ Transformer的核心洞察是：\textbf{放弃因果性的串行约束，让所�
 \subsection{从时间深度到空间深度}
 % ------------------------------------------------------------------------------------
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.9, auto]
     % 通用样式
@@ -741,7 +741,7 @@ Transformer用 $O(T^2)$ 的计算复杂度换取了优化的稳定性。这在�
     \item \textbf{RoPE}：旋转位置编码，通过复数旋转引入位置信息。
 \end{itemize}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \renewcommand{\arraystretch}{1.4}
 \begin{tabular}{p{3cm}|p{5cm}|p{5cm}}
@@ -791,7 +791,7 @@ Transformer用 $O(T^2)$ 的计算复杂度换取了优化的稳定性。这在�
 \end{equation}
 （马尔可夫链 $X_{<t} \to h_t \to h_{t+1} \to \cdots$：越往后的隐状态，关于过去的信息越少。）
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.85]
     % 信息量的衰减
@@ -946,7 +946,7 @@ Attention不是凭空设计的，它是在希尔伯特空间中进行\textbf{最
     \item 答案是\textbf{复合整体}："The book that I bought yesterday"
 \end{itemize}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.8]
     % 单层
@@ -994,7 +994,7 @@ Attention不是凭空设计的，它是在希尔伯特空间中进行\textbf{最
 
 研究表明，Transformer的不同层学习不同类型的表示：
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \renewcommand{\arraystretch}{1.4}
 \begin{tabular}{l|l|l}
@@ -1077,7 +1077,7 @@ $O(T^2)$ 的复杂度限制了处理超长序列的能力：
     \item 这催生了各种改进：稀疏Attention、线性Attention、状态空间模型等
 \end{itemize}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \renewcommand{\arraystretch}{1.4}
 \begin{tabular}{l|c|c|l}
@@ -1183,7 +1183,7 @@ $O(T^2)$ 的复杂度限制了处理超长序列的能力：
 其中 $E \in \mathbb{R}^{V \times d}$ 是词嵌入矩阵，$V$ 是词表大小，$d$ 是嵌入维度。
 \end{keyidea}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.9]
     % Token IDs
@@ -1270,7 +1270,7 @@ LLaMA-7B & 32,000 & 4,096 \\
 
 其中 $pos$ 是位置，$i$ 是维度索引。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.7]
     % 热力图示意
@@ -1311,7 +1311,7 @@ LLaMA-7B & 32,000 & 4,096 \\
 % ------------------------------------------------------------------------------------
 \subsection{完整的输入处理流程}
 % ------------------------------------------------------------------------------------
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.8,
     block/.style={draw, rounded corners, minimum width=2.0cm, minimum height=0.8cm, align=center}]
@@ -1377,7 +1377,7 @@ LLaMA-7B & 32,000 & 4,096 \\
 
 当你读到"it"时，你的大脑会自动回溯，确定"it"指的是"animal"而不是"street"。这就是\textbf{注意力}——根据当前需求，有选择地关注历史信息的不同部分。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.9]
     % 句子
@@ -1439,7 +1439,7 @@ LLaMA-7B & 32,000 & 4,096 \\
 其中 $X \in \mathbb{R}^{T \times d}$ 是输入序列，$W_Q, W_K, W_V \in \mathbb{R}^{d \times d_k}$ 是\textbf{可学习的}投影矩阵。
 \end{keyformula}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.85,
     block/.style={draw, rounded corners, minimum width=1.5cm, minimum height=0.7cm}]
@@ -1511,7 +1511,7 @@ $Q$ 的每一行是一个token的Query向量，$K$ 的每一行是一个token的
 
 这是token $i$ 的Query和token $j$ 的Key的\textbf{点积}，衡量它们有多"匹配"。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.8]
     % Q矩阵
@@ -1647,7 +1647,7 @@ $\alpha_{ij}$ 就是\textbf{注意力权重}：token $i$ 对 token $j$ 的"关�
 其中 $h$ 是头的数量，$W_Q^i, W_K^i, W_V^i \in \mathbb{R}^{d \times d_k}$，$W_O \in \mathbb{R}^{hd_v \times d}$。
 \end{keyformula}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.75,
     block/.style={draw, rounded corners, minimum width=1.8cm, minimum height=0.6cm, font=\small}]
@@ -1721,7 +1721,7 @@ $\alpha_{ij}$ 就是\textbf{注意力权重}：token $i$ 对 token $j$ 的"关�
 
 原始Transformer用于机器翻译，采用\textbf{Encoder-Decoder}结构：
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.8,
     % 定义通用方块样式
@@ -1826,7 +1826,7 @@ $\alpha_{ij}$ 就是\textbf{注意力权重}：token $i$ 对 token $j$ 的"关�
 
 GPT系列模型简化了结构，\textbf{只用Decoder}：
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.8,
     block/.style={draw, rounded corners, minimum width=3cm, minimum height=0.7cm, font=\small}]
@@ -1876,7 +1876,7 @@ GPT是\textbf{自回归}模型：生成第 $t$ 个词时，只能看到前 $t-1$
     \end{cases}
 \end{equation}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.6]
     % 掩码矩阵
@@ -2020,7 +2020,7 @@ $P_{t,v}$ 表示在位置 $t$ 生成词 $v$ 的概率。
 
 生成文本时，模型一次只生成一个token，然后把新token加入输入，继续生成：
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.8]
     % 步骤1
@@ -2090,7 +2090,7 @@ K_i = W_K h_i, \quad V_i = W_V h_i
 
 \paragraph{图示理解}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.8, font=\scriptsize]
 
@@ -2264,16 +2264,16 @@ Transformer有一个重要限制：\textbf{最大上下文长度}。
 % 代码演示结果
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.98\textwidth]{figs_chap11/chap12_fig1.png}
-\caption{自注意力机制完整计算过程。左上：输入嵌入矩阵$X$（3个词$\times$4维）；中上：Q、K、V矩阵（通过线性变换$W_Q$、$W_K$、$W_V$得到）；右上：注意力权重热图$\text{softmax}(QK^T/\sqrt{d_k})$；左下：计算流程的五个步骤；中下：单词"love"的注意力分布（它对三个词的关注程度）；右下：多头注意力的并行结构示意。}
-\label{fig:chap12_attention}
+\includegraphics[width=0.98\textwidth]{figs_chap11/chap11_fig1.png}
+\caption{一个真实训练出来的单头自注意力（\texttt{code\_chap11/chap11\_figures.py}）：输入是含噪的正弦序列 $x_t=\sin(2\pi t/16+\phi)+\varepsilon_t$（$T=48$，三个周期），$Q,K,V$ 由最近 4 个采样值线性映射得到，训练目标是还原无噪声的信号。（a）含噪输入（灰点）、真实信号（黑线）与注意力输出（蓝线）：输出的均方误差约为输入噪声的一半。（b）注意力矩阵 $\alpha_{ij}=\mathrm{softmax}_j(q_i\cdot k_j/\sqrt{d_k})$：平行于对角线、间距为 16 的条纹说明模型学会了``关注相位相同的时刻''。（c）查询位置 $t=24$ 的注意力分布：权重集中在 $j\approx 8,24,40$ 三簇（合计约 0.95），其余位置几乎为零——注意力就是按相似度加权的平均，即正文所说的 softmax 核回归。}
+\label{fig:chap11_attention}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap11/chap12_fig2.png}
-\caption{位置编码可视化。左上：正弦位置编码热图——低频维度变化慢，高频维度变化快；右上：不同维度的正弦波形——体现位置编码的频率分解；左下：位置相似度——相邻位置的点积相似度更高，体现局部性先验；右下：RoPE（旋转位置编码）示意——在复平面上，不同位置对应不同的旋转角度。}
-\label{fig:chap12_positional_encoding}
+\includegraphics[width=0.95\textwidth]{figs_chap11/chap11_fig2.png}
+\caption{正弦位置编码（$d_{\text{model}}=16$，位置 $0\sim 63$）。（a）编码矩阵 $PE_{(pos,d)}$：低维度变化快（高频），高维度变化慢（低频），最右几列在 64 个位置内几乎不变。（b）维度 $0,2,4,6$ 的正弦分量，波长分别为 $6.3,20,63,199$：一个位置的编码就是一组不同频率的``时钟指针''。（c）位置之间的归一化点积 $PE_{pos}\cdot PE_{pos'}/(d/2)$：矩阵沿对角线平移不变，只依赖相对位置 $pos-pos'$，相邻位置最相似——这正是``$PE_{pos+k}$ 是 $PE_{pos}$ 的线性变换''的体现。}
+\label{fig:chap11_positional_encoding}
 \end{figure}
 
 % ====================================================================================
@@ -2314,7 +2314,7 @@ $\lambda_t$ 是第 $t$ 步隐状态的\textbf{影子价格}：把递推约束 $h
 \end{unification}
 
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \renewcommand{\arraystretch}{1.4}
 \begin{tabular}{p{2.5cm}|p{3.5cm}|p{3.5cm}|p{3.5cm}}

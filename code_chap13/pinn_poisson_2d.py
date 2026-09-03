@@ -113,7 +113,7 @@ def compute_pde_residual_2d(model, xy):
 # ========================
 # 损失函数
 # ========================
-def compute_loss_2d(model, xy_interior, xy_boundary, lambda_bc=100.0):
+def compute_loss_2d(model, xy_interior, xy_boundary, rho_bc=100.0):
     # PDE残差损失
     residual = compute_pde_residual_2d(model, xy_interior)
     loss_pde = torch.mean(residual ** 2)
@@ -122,7 +122,7 @@ def compute_loss_2d(model, xy_interior, xy_boundary, lambda_bc=100.0):
     u_boundary = model(xy_boundary)
     loss_bc = torch.mean(u_boundary ** 2)
 
-    total_loss = loss_pde + lambda_bc * loss_bc
+    total_loss = loss_pde + rho_bc * loss_bc
     return total_loss, loss_pde, loss_bc
 
 def compute_loss_2d_hard(model, xy_interior):

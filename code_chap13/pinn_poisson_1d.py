@@ -85,7 +85,7 @@ def compute_pde_residual(model, x):
 # ========================
 # 第三步：定义损失函数
 # ========================
-def compute_loss(model, x_interior, x_boundary, lambda_bc=100.0):
+def compute_loss(model, x_interior, x_boundary, rho_bc=100.0):
     """
     计算PINN总损失
 
@@ -93,7 +93,7 @@ def compute_loss(model, x_interior, x_boundary, lambda_bc=100.0):
         model: 神经网络模型
         x_interior: 内部配点 (N_r, 1)
         x_boundary: 边界点 (N_b, 1)
-        lambda_bc: 边界条件的惩罚权重
+        rho_bc: 边界条件的惩罚权重
     """
     # PDE残差损失
     residual = compute_pde_residual(model, x_interior)
@@ -104,7 +104,7 @@ def compute_loss(model, x_interior, x_boundary, lambda_bc=100.0):
     loss_bc = torch.mean(u_boundary ** 2)
 
     # 总损失
-    total_loss = loss_pde + lambda_bc * loss_bc
+    total_loss = loss_pde + rho_bc * loss_bc
 
     return total_loss, loss_pde, loss_bc
 

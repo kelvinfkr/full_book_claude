@@ -40,7 +40,7 @@
 
 反过来，如果我们知道每个关节的角度，要算出末端在哪里，这叫做\textbf{正运动学}。正运动学相对简单——就是一连串的几何变换。逆运动学则困难得多——它可能有多个解，也可能无解。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.0]
     % 左边：关节空间
@@ -146,7 +146,7 @@ T_{end}(q) = T_1(q_1) \cdot T_2(q_2) \cdots T_n(q_n)
 \begin{example}[平面双连杆机械臂的正运动学]
 考虑最简单的情况：两个连杆在平面内运动，长度分别为 $L_1$ 和 $L_2$。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.5]
     % 坐标系
@@ -289,7 +289,7 @@ J = \begin{bmatrix}
 
 当雅可比矩阵不满秩时（$\det(J) = 0$ 对于方阵，或 $\text{rank}(J) < \min(m,n)$），机械臂处于\textbf{奇异位形}。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.0]
     % 正常位形
@@ -479,7 +479,7 @@ q \approx q_0 + J(q_0)^{-1}(x_d - f(q_0))
     \item 如果 $\|e\|$ 足够小，停止；否则回到第2步
 \end{enumerate}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.2]
     % 工作空间
@@ -551,6 +551,14 @@ q^{(1)} = q^{(0)} + \Delta q = (-5.7^\circ, 84.3^\circ)
 \tryit{换一个初值 $q^{(0)} = (30^\circ, 30^\circ)$ 再算一遍，你会发现第一步 $\Delta q \approx (-55.8^\circ, 98.9^\circ)$——跨度很大，末端反而离目标更远。牛顿法只在解附近才是"二次收敛"的，初值很重要。}
 \end{example}
 
+% 代码演示结果（code/chap07_robotics.py）
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\textwidth]{figs_chap07/chap07_fig1.png}
+\caption{牛顿迭代法求解逆运动学：与上面手算示例相同的设定（$L_1 = L_2 = 1$，目标 $x_d = (1.2,\,0.9)$，初值 $q^{(0)} = (0^\circ, 90^\circ)$），由 \texttt{code/chap07\_robotics.py} 实际迭代得到。（a）迭代过程中的机械臂姿态：一步之后末端到目标的距离已从 $0.22$ 缩到 $0.02$，两步之后与收敛解 $q^\ast = (-4.5^\circ,\,82.8^\circ)$ 肉眼已不可分（插图放大了目标附近）。（b）末端误差 $\|e_k\| = \|x_d - f(q^{(k)})\|$ 随迭代次数的变化（对数轴）：$2\times10^{-1} \to 2\times10^{-2} \to 2\times10^{-4} \to 2\times10^{-8}$，误差的指数每步大约翻一倍——这就是牛顿法的二次收敛，四步即达双精度机器精度。（c）工作空间上的可操作度 $|\det J| = L_1 L_2 |\sin q_2|$：外圈 $r = 2$（手臂伸直）与圆心是奇异位形，$r = \sqrt{2}$（$q_2 = 90^\circ$）处最灵活；目标点在 $r = 1.5$，离奇异位形很远，$J$ 良态，所以牛顿法收敛得又快又稳。}
+\label{fig:chap07_robotics}
+\end{figure}
+
 \paragraph{当雅可比不可逆时怎么办？}
 
 如果 $n > m$（冗余机械臂，$J$ 不是方阵），$J$ 没有逆。这时用\textbf{伪逆}（要求 $J$ 行满秩）：
@@ -571,7 +579,7 @@ q^{(1)} = q^{(0)} + \Delta q = (-5.7^\circ, 84.3^\circ)
 
 设末端到原点的距离为 $r = \sqrt{1^2 + 1^2} = \sqrt{2}$。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.5]
     % 坐标系
@@ -692,7 +700,7 @@ y = \sin 0° + \sin 90° = 0 + 1 = 1 \quad \checkmark
 
 换句话说，零空间运动是"内部运动"——关节在动，但末端静止。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.0]
     % 左图：三连杆机械臂，两种构型
@@ -794,7 +802,7 @@ $z$ 可以怎么选？常见的选择：
 \begin{example}[冗余的实际应用]
 想象一个7自由度机械臂在一个有障碍物的环境中工作：
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.9]
     % 障碍物
@@ -871,7 +879,7 @@ $z$ 可以怎么选？常见的选择：
 
 考虑一根绕端点转动的杆（单摆），质量 $m$，长度 $L$，假设质量集中在末端：
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.2]
     % 固定点
@@ -935,7 +943,7 @@ $M(q)$ 的物理意义：
 \begin{example}[伸直 vs 弯曲的惯量]
 想象一根双连杆机械臂：
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.0]
     % 伸直
@@ -1256,7 +1264,7 @@ $J_c^\top$ 把接触点的力"传递"到关节空间，就像 $J^\top$ 把末端
     \item 如果 $\lambda_n > 0$（有力），则 $\phi = 0$（必须接触）
 \end{itemize}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.4]
     % 地面
@@ -1337,7 +1345,7 @@ $J_c^\top$ 把接触点的力"传递"到关节空间，就像 $J^\top$ 把末端
 
 这个不等式定义了一个\textbf{锥形区域}：接触力必须在锥内。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.2]
     % 三维摩擦锥
@@ -1409,7 +1417,7 @@ $J_c^\top$ 把接触点的力"传递"到关节空间，就像 $J^\top$ 把末端
 
 这是一个带锥约束的力平衡问题，可以用凸优化求解最优抓取力。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.0]
     % 物体
@@ -1468,7 +1476,7 @@ M(q)\ddot{q} + C\dot{q} + G &= \tau + J_c^\top \lambda_c \quad \text{（动力�
 
 \subsection{问题描述}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.5]
     % 坐标系
@@ -1661,15 +1669,6 @@ J = \begin{bmatrix}
 \end{enumerate}
 
 % ------------------------------------------------------------------------------------
-% 代码演示结果
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.98\textwidth]{figs_chap07/chap07_fig1.png}
-\caption{机器人运动学与动力学演示。（1）SVD投影到SO(3)：将任意矩阵投影为有效旋转矩阵；（2）指数映射演示：在SO(3)流形上的正确旋转更新轨迹；（3）双连杆机械臂正运动学与工作空间；（4）牛顿法求解逆运动学的迭代收敛过程；（5）雅可比行列式热图，黑线标示奇异位形（$q_2 = 0, \pm\pi$）；（6）奇异性分析：手臂完全伸直时的奇异位形对比正常位形。代码验证：力传递结果$\tau = (-20, -10)$ Nm与书中一致。}
-\label{fig:chap07_robotics}
-\end{figure}
-
-% ------------------------------------------------------------------------------------
 \section{本章小结}
 
 \begin{enumerate}
@@ -1819,7 +1818,7 @@ J = \begin{bmatrix}
 
 假设你有一个二维向量 $v_0 = (2, 1)$，你想找一个\textbf{单位向量} $v$（满足 $\|v\| = 1$），使得 $v$ 尽可能接近 $v_0$。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.2]
     % 坐标轴
@@ -1937,7 +1936,7 @@ $\det(R) = 1$ 看起来是第7个约束，但实际上，一旦 $R^\top R = I$�
 
 所以：\textbf{9个变量，6个约束，3个自由度}。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.85]
     % 9维空间
@@ -2263,7 +2262,7 @@ $SO(3)$ & 旋转矩阵 $R$ & $\mathfrak{so}(3)$ & 反对称矩阵 $[\omega]_\tim
 \exp: \mathfrak{so}(3) \to SO(3), \quad \log: SO(3) \to \mathfrak{so}(3)
 \end{equation}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.0]
     % 李群
@@ -2345,7 +2344,7 @@ $SE(3)$ 也是一个李群！它的李代数是 $\mathfrak{se}(3)$，包含6个�
 
 假设你用手机拍了几张照片，想知道每张照片是在哪里、朝哪个方向拍的。这就是\textbf{相机位姿估计}问题。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.9]
     % 相机轨迹

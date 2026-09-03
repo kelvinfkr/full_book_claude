@@ -1,557 +1,545 @@
+#!/usr/bin/env python3
 """
-第10章扩展：机械臂控制示例
-演示连续控制任务的强化学习
+第10章扩展阅读：连续控制 —— 二连杆机械臂、PD 控制与 CartPole
+=================================================================
 
-内容：
-1. 2-link平面机械臂正/逆运动学
-2. 简单的PD控制器基线
-3. CartPole的SB3训练演示
+从仓库根目录运行::
+
+    python3 code_chap10/robotic_arm_control.py
+
+输出（每张同时有 pdf 与 png；正文引用 pdf）：
+
+    figs_chap10/arm_kinematics          二连杆机械臂：正运动学工作空间 / 逆运动学 / 可操作度椭圆
+    figs_chap10/rl_control_comparison   传统控制流程 vs 强化学习流程（概念示意图）
+    figs_chap10/pd_control_trajectory   PD 控制器跟踪圆轨迹（RK4 仿真真实数据）
+    figs_chap10/cartpole_demo           CartPole 环境示意 + 真实训练得到的学习曲线
+
+CartPole 动力学按 Barto, Sutton & Anderson (1983) 的标准方程自行实现（不依赖 gym）。
+学习曲线来自两个真的在跑的算法：
+    * 交叉熵方法（CEM）+ 线性策略：直接在 5 个参数上做"进化式"搜索；
+    * 表格 Q-Learning：把 4 维连续状态离散成格子，再用第10章的更新公式。
+两者都用 5 个随机种子，画均值 ± 标准差。
 """
+import sys
+import time
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.patches import Circle, FancyArrowPatch
-from matplotlib.animation import FuncAnimation
-import warnings
-warnings.filterwarnings('ignore')
+from matplotlib.patches import Arc, Circle, FancyArrowPatch, FancyBboxPatch, Rectangle
+from matplotlib.ticker import NullFormatter, ScalarFormatter
 
-# 设置字体
-plt.rcParams['font.sans-serif'] = ['DejaVu Sans']
-plt.rcParams['axes.unicode_minus'] = False
+sys.path.insert(0, 'code')
+from textbook_style import setup_style, save_figure, panel_label, fig_size, COLORS  # noqa: E402
+
+setup_style()
+
 
 # =============================================================================
-# 第1部分：2-link平面机械臂
+# 第 1 部分：二连杆平面机械臂
 # =============================================================================
-
 class TwoLinkArm:
-    """二连杆平面机械臂"""
+    """二连杆平面机械臂（无重力的水平面运动）。"""
+
     def __init__(self, L1=1.0, L2=0.8, m1=1.0, m2=0.8):
-        self.L1 = L1  # 第一杆长度
-        self.L2 = L2  # 第二杆长度
-        self.m1 = m1  # 第一杆质量
-        self.m2 = m2  # 第二杆质量
-        self.g = 9.81  # 重力加速度
+        self.L1, self.L2, self.m1, self.m2 = L1, L2, m1, m2
+        self.state = np.zeros(4)  # [θ1, θ2, θ1', θ2']
 
-        # 状态：[θ1, θ2, θ1_dot, θ2_dot]
-        self.state = np.array([0.0, 0.0, 0.0, 0.0])
-
-    def forward_kinematics(self, theta1, theta2):
-        """正运动学：关节角度 -> 末端位置"""
-        x1 = self.L1 * np.cos(theta1)
-        y1 = self.L1 * np.sin(theta1)
-        x2 = x1 + self.L2 * np.cos(theta1 + theta2)
-        y2 = y1 + self.L2 * np.sin(theta1 + theta2)
+    def forward_kinematics(self, th1, th2):
+        x1, y1 = self.L1 * np.cos(th1), self.L1 * np.sin(th1)
+        x2 = x1 + self.L2 * np.cos(th1 + th2)
+        y2 = y1 + self.L2 * np.sin(th1 + th2)
         return (x1, y1), (x2, y2)
 
-    def inverse_kinematics(self, x_target, y_target):
-        """逆运动学：末端位置 -> 关节角度"""
-        r = np.sqrt(x_target**2 + y_target**2)
-
-        # 检查可达性
+    def inverse_kinematics(self, x, y):
+        """余弦定理解析解，取"肘部朝上"（θ2 ≥ 0）的那一支。"""
+        r = np.hypot(x, y)
         if r > self.L1 + self.L2 or r < abs(self.L1 - self.L2):
             return None, None
+        c2 = np.clip((r**2 - self.L1**2 - self.L2**2) / (2 * self.L1 * self.L2), -1, 1)
+        th2 = np.arccos(c2)
+        th1 = np.arctan2(y, x) - np.arctan2(self.L2 * np.sin(th2), self.L1 + self.L2 * np.cos(th2))
+        return th1, th2
 
-        # 余弦定理求θ2
-        cos_theta2 = (r**2 - self.L1**2 - self.L2**2) / (2 * self.L1 * self.L2)
-        cos_theta2 = np.clip(cos_theta2, -1, 1)
-        theta2 = np.arccos(cos_theta2)  # 取肘部朝上的解
-
-        # 求θ1
-        beta = np.arctan2(y_target, x_target)
-        psi = np.arctan2(self.L2 * np.sin(theta2),
-                        self.L1 + self.L2 * np.cos(theta2))
-        theta1 = beta - psi
-
-        return theta1, theta2
-
-    def jacobian(self, theta1, theta2):
-        """雅可比矩阵：dX/dθ"""
-        J = np.array([
-            [-self.L1*np.sin(theta1) - self.L2*np.sin(theta1+theta2),
-             -self.L2*np.sin(theta1+theta2)],
-            [self.L1*np.cos(theta1) + self.L2*np.cos(theta1+theta2),
-             self.L2*np.cos(theta1+theta2)]
-        ])
-        return J
+    def jacobian(self, th1, th2):
+        s1, c1 = np.sin(th1), np.cos(th1)
+        s12, c12 = np.sin(th1 + th2), np.cos(th1 + th2)
+        return np.array([[-self.L1 * s1 - self.L2 * s12, -self.L2 * s12],
+                         [self.L1 * c1 + self.L2 * c12, self.L2 * c12]])
 
     def dynamics(self, state, tau):
-        """动力学方程（简化版，忽略重力）"""
-        theta1, theta2, dtheta1, dtheta2 = state
-
-        # 质量矩阵 M(θ)
-        M11 = (self.m1 + self.m2) * self.L1**2 + self.m2 * self.L2**2 + \
-              2 * self.m2 * self.L1 * self.L2 * np.cos(theta2)
-        M12 = self.m2 * self.L2**2 + self.m2 * self.L1 * self.L2 * np.cos(theta2)
-        M22 = self.m2 * self.L2**2
+        """M(θ) θ'' + C(θ, θ') θ' = τ。"""
+        th1, th2, d1, d2 = state
+        L1, L2, m1, m2 = self.L1, self.L2, self.m1, self.m2
+        M11 = (m1 + m2) * L1**2 + m2 * L2**2 + 2 * m2 * L1 * L2 * np.cos(th2)
+        M12 = m2 * L2**2 + m2 * L1 * L2 * np.cos(th2)
+        M22 = m2 * L2**2
         M = np.array([[M11, M12], [M12, M22]])
-
-        # 科里奥利和离心力 C(θ, θ_dot)
-        h = self.m2 * self.L1 * self.L2 * np.sin(theta2)
-        C = np.array([[-h * dtheta2, -h * (dtheta1 + dtheta2)],
-                      [h * dtheta1, 0]])
-
-        # 求解加速度：M * ddθ + C * dθ = τ
-        dtheta = np.array([dtheta1, dtheta2])
-        ddtheta = np.linalg.solve(M, tau - C @ dtheta)
-
-        return np.array([dtheta1, dtheta2, ddtheta[0], ddtheta[1]])
+        h = m2 * L1 * L2 * np.sin(th2)
+        C = np.array([[-h * d2, -h * (d1 + d2)], [h * d1, 0.0]])
+        dd = np.linalg.solve(M, tau - C @ np.array([d1, d2]))
+        return np.array([d1, d2, dd[0], dd[1]])
 
     def step(self, tau, dt=0.01):
-        """前向仿真一步"""
-        # RK4积分
-        k1 = self.dynamics(self.state, tau)
-        k2 = self.dynamics(self.state + 0.5*dt*k1, tau)
-        k3 = self.dynamics(self.state + 0.5*dt*k2, tau)
-        k4 = self.dynamics(self.state + dt*k3, tau)
-        self.state = self.state + dt/6 * (k1 + 2*k2 + 2*k3 + k4)
+        """RK4 积分一步。"""
+        f = self.dynamics
+        s = self.state
+        k1 = f(s, tau)
+        k2 = f(s + 0.5 * dt * k1, tau)
+        k3 = f(s + 0.5 * dt * k2, tau)
+        k4 = f(s + dt * k3, tau)
+        self.state = s + dt / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
         return self.state.copy()
 
-# =============================================================================
-# 第2部分：PD控制器
-# =============================================================================
 
 class PDController:
-    """关节空间PD控制器"""
-    def __init__(self, Kp=50.0, Kd=10.0):
-        self.Kp = Kp
-        self.Kd = Kd
+    """关节空间 PD 控制：τ = Kp (θ_target − θ) − Kd θ'。"""
 
-    def compute(self, theta_current, theta_target, dtheta_current):
-        """计算控制力矩"""
-        error = theta_target - theta_current
-        tau = self.Kp * error - self.Kd * dtheta_current
-        return tau
+    def __init__(self, Kp=100.0, Kd=20.0):
+        self.Kp, self.Kd = Kp, Kd
+
+    def compute(self, theta, theta_target, dtheta):
+        return self.Kp * (theta_target - theta) - self.Kd * dtheta
+
+
+def plot_arm_kinematics():
+    arm = TwoLinkArm()
+    fig, axes = plt.subplots(1, 3, figsize=fig_size(3, aspect=1.05))
+
+    # (a) 正运动学：扫描关节角，得到工作空间
+    ax = axes[0]
+    th1_list = np.radians([-90, -45, 0, 45, 90])
+    th2_list = np.radians(np.linspace(-90, 90, 7))
+    shades = plt.cm.Blues(np.linspace(0.4, 0.95, len(th1_list)))
+    for th1, col in zip(th1_list, shades):
+        for th2 in th2_list:
+            (x1, y1), (x2, y2) = arm.forward_kinematics(th1, th2)
+            ax.plot([0, x1, x2], [0, y1, y2], '-', color=col, lw=1.0, alpha=0.75)
+            ax.plot(x2, y2, 'o', color=col, markersize=2.2)
+    for th1, col in zip(th1_list, shades):
+        ax.plot([], [], '-', color=col, lw=1.5, label=rf'$\theta_1={np.degrees(th1):.0f}^\circ$')
+    tt = np.linspace(0, 2 * np.pi, 200)
+    for rr in (arm.L1 + arm.L2, abs(arm.L1 - arm.L2)):
+        ax.plot(rr * np.cos(tt), rr * np.sin(tt), '--', color=COLORS['red'], lw=1.0)
+    ax.plot([], [], '--', color=COLORS['red'], lw=1.0, label='工作空间边界')
+    ax.plot(0, 0, 's', color=COLORS['black'], markersize=5)
+    ax.set_xlim(-2.0, 2.0)
+    ax.set_ylim(-2.0, 2.0)
+    ax.set_aspect('equal')
+    ax.set_xlabel('$x$ (m)')
+    ax.set_ylabel('$y$ (m)')
+    ax.legend(fontsize=6.5, loc='upper center', bbox_to_anchor=(0.5, -0.3), ncol=3,
+              handlelength=1.2, columnspacing=0.8, borderaxespad=0.0)
+    panel_label(ax, '(a)')
+
+    # (b) 逆运动学：到达 4 个目标点
+    ax = axes[1]
+    targets = [(1.2, 0.5), (0.8, 1.0), (1.5, 0.2), (0.5, 0.8)]
+    cols = [COLORS['blue'], COLORS['orange'], COLORS['purple'], COLORS['teal']]
+    for (xt, yt), col in zip(targets, cols):
+        th1, th2 = arm.inverse_kinematics(xt, yt)
+        (x1, y1), (x2, y2) = arm.forward_kinematics(th1, th2)
+        ax.plot([0, x1, x2], [0, y1, y2], '-o', color=col, lw=1.8, markersize=3.5,
+                label=rf'目标 $({xt},\,{yt})$：$\theta=({np.degrees(th1):.0f}^\circ,{np.degrees(th2):.0f}^\circ)$')
+        ax.plot(xt, yt, 's', color=col, markersize=6, markerfacecolor='none', markeredgewidth=1.3)
+    ax.plot(0, 0, 's', color=COLORS['black'], markersize=5)
+    ax.set_xlim(-0.4, 1.9)
+    ax.set_ylim(-0.6, 2.0)
+    ax.set_aspect('equal')
+    ax.set_xlabel('$x$ (m)')
+    ax.set_ylabel('$y$ (m)')
+    ax.legend(fontsize=6.3, loc='upper center', bbox_to_anchor=(0.5, -0.26), ncol=1,
+              handlelength=1.2, borderaxespad=0.0)
+    panel_label(ax, '(b)')
+
+    # (c) 雅可比矩阵的可操作度椭圆：单位关节速度圆 → 末端速度椭圆
+    ax = axes[2]
+    th1, th2 = np.pi / 4, np.pi / 6
+    (x1, y1), (x2, y2) = arm.forward_kinematics(th1, th2)
+    J = arm.jacobian(th1, th2)
+    U, sv, _ = np.linalg.svd(J)
+    scale = 0.35
+    circ = np.array([np.cos(tt), np.sin(tt)])
+    ell = J @ circ * scale
+    ax.plot([0, x1, x2], [0, y1, y2], '-o', color=COLORS['black'], lw=2.2, markersize=4)
+    ax.plot(0, 0, 's', color=COLORS['black'], markersize=5)
+    ax.fill(x2 + ell[0], y2 + ell[1], color=COLORS['blue'], alpha=0.18, lw=0)
+    ax.plot(x2 + ell[0], y2 + ell[1], color=COLORS['blue'], lw=1.5, label=r'$\{J\dot\theta:\ \|\dot\theta\|=1\}$')
+    for k in range(2):
+        d = U[:, k] * sv[k] * scale
+        ax.add_patch(FancyArrowPatch((x2, y2), (x2 + d[0], y2 + d[1]), arrowstyle='-|>',
+                                     mutation_scale=9, color=COLORS['red'], lw=1.5, zorder=5))
+        ax.annotate(rf'$\sigma_{k + 1}={sv[k]:.2f}$', xy=(x2 + d[0], y2 + d[1]),
+                    xytext=(4, 3) if k == 0 else (6, -4), textcoords='offset points',
+                    fontsize=7.5, color=COLORS['red'])
+    ax.text(0.5 * x1 + 0.02, 0.5 * y1 - 0.12, rf'$\theta_1={np.degrees(th1):.0f}^\circ$', fontsize=7.5)
+    ax.text(x1 + 0.05, y1 - 0.02, rf'$\theta_2={np.degrees(th2):.0f}^\circ$', fontsize=7.5, va='top')
+    ax.set_xlim(-0.4, 1.9)
+    ax.set_ylim(-0.6, 2.0)
+    ax.set_aspect('equal')
+    ax.set_xlabel('$x$ (m)')
+    ax.set_ylabel('$y$ (m)')
+    ax.legend(fontsize=7, loc='upper center', bbox_to_anchor=(0.5, -0.26), handlelength=1.4,
+              borderaxespad=0.0)
+    panel_label(ax, '(c)')
+
+    fig.subplots_adjust(wspace=0.38)
+    save_figure(fig, 'figs_chap10/arm_kinematics')
+    print(f"  可操作度椭圆：σ1 = {sv[0]:.3f}, σ2 = {sv[1]:.3f}, |det J| = {abs(np.linalg.det(J)):.3f}")
+
 
 # =============================================================================
-# 第3部分：可视化
+# 第 2 部分：PD 控制跟踪圆轨迹
 # =============================================================================
+PD_KP, PD_KD = 400.0, 40.0
 
-def plot_arm_kinematics(save_path):
-    """绘制机械臂运动学示意图"""
+
+def simulate_pd_tracking(Kp=PD_KP, Kd=PD_KD, t_total=5.0, dt=0.01, tau_max=50.0):
     arm = TwoLinkArm()
-
-    fig, axes = plt.subplots(1, 3, figsize=(14, 4.5))
-
-    # 1. 正运动学
-    ax1 = axes[0]
-    theta1_range = np.linspace(-np.pi/2, np.pi/2, 5)
-    theta2_range = np.linspace(-np.pi/2, np.pi/2, 5)
-
-    colors = plt.cm.viridis(np.linspace(0, 1, len(theta1_range)))
-
-    for i, theta1 in enumerate(theta1_range):
-        for theta2 in theta2_range:
-            (x1, y1), (x2, y2) = arm.forward_kinematics(theta1, theta2)
-            ax1.plot([0, x1, x2], [0, y1, y2], 'o-', color=colors[i],
-                    alpha=0.5, linewidth=1.5, markersize=3)
-
-    ax1.set_xlim(-2, 2)
-    ax1.set_ylim(-2, 2)
-    ax1.set_aspect('equal')
-    ax1.set_xlabel('x (m)', fontsize=11)
-    ax1.set_ylabel('y (m)', fontsize=11)
-    ax1.set_title('Forward Kinematics: Workspace', fontsize=12)
-    ax1.axhline(y=0, color='gray', linewidth=0.5)
-    ax1.axvline(x=0, color='gray', linewidth=0.5)
-    ax1.grid(True, alpha=0.3)
-
-    # 绘制工作空间边界
-    theta = np.linspace(0, 2*np.pi, 100)
-    r_outer = arm.L1 + arm.L2
-    r_inner = abs(arm.L1 - arm.L2)
-    ax1.plot(r_outer * np.cos(theta), r_outer * np.sin(theta), 'r--',
-            linewidth=1, label='Workspace boundary')
-    ax1.plot(r_inner * np.cos(theta), r_inner * np.sin(theta), 'r--', linewidth=1)
-    ax1.legend(fontsize=9, loc='upper right')
-
-    # 2. 逆运动学
-    ax2 = axes[1]
-    target_points = [(1.2, 0.5), (0.8, 1.0), (1.5, 0.2), (0.5, 0.8)]
-
-    for i, (x_t, y_t) in enumerate(target_points):
-        theta1, theta2 = arm.inverse_kinematics(x_t, y_t)
-        if theta1 is not None:
-            (x1, y1), (x2, y2) = arm.forward_kinematics(theta1, theta2)
-            color = plt.cm.Set1(i/len(target_points))
-            ax2.plot([0, x1, x2], [0, y1, y2], 'o-', color=color,
-                    linewidth=2, markersize=6, label=f'Target ({x_t}, {y_t})')
-            ax2.plot(x_t, y_t, 's', color=color, markersize=10)
-
-    ax2.set_xlim(-0.5, 2)
-    ax2.set_ylim(-0.5, 1.5)
-    ax2.set_aspect('equal')
-    ax2.set_xlabel('x (m)', fontsize=11)
-    ax2.set_ylabel('y (m)', fontsize=11)
-    ax2.set_title('Inverse Kinematics: Reaching Targets', fontsize=12)
-    ax2.axhline(y=0, color='gray', linewidth=0.5)
-    ax2.axvline(x=0, color='gray', linewidth=0.5)
-    ax2.grid(True, alpha=0.3)
-    ax2.legend(fontsize=8, loc='upper left')
-
-    # 3. 雅可比矩阵可视化
-    ax3 = axes[2]
-
-    # 固定一个位姿，绘制雅可比对应的速度椭圆
-    theta1, theta2 = np.pi/4, np.pi/6
-    (x1, y1), (x2, y2) = arm.forward_kinematics(theta1, theta2)
-    J = arm.jacobian(theta1, theta2)
-
-    # 绘制机械臂
-    ax3.plot([0, x1, x2], [0, y1, y2], 'ko-', linewidth=3, markersize=8)
-    ax3.plot(0, 0, 'ko', markersize=12)  # 基座
-
-    # 绘制速度椭圆（通过SVD）
-    U, s, Vt = np.linalg.svd(J)
-    angle = np.arctan2(U[1, 0], U[0, 0])
-
-    ellipse_theta = np.linspace(0, 2*np.pi, 100)
-    scale = 0.3
-    ellipse_x = scale * s[0] * np.cos(ellipse_theta)
-    ellipse_y = scale * s[1] * np.sin(ellipse_theta)
-
-    # 旋转椭圆
-    R = np.array([[np.cos(angle), -np.sin(angle)],
-                  [np.sin(angle), np.cos(angle)]])
-    ellipse_pts = R @ np.array([ellipse_x, ellipse_y])
-
-    ax3.plot(x2 + ellipse_pts[0], y2 + ellipse_pts[1], 'b-', linewidth=2,
-            label='Manipulability ellipse')
-    ax3.fill(x2 + ellipse_pts[0], y2 + ellipse_pts[1], alpha=0.2, color='blue')
-
-    # 绘制主方向
-    for i in range(2):
-        direction = U[:, i] * s[i] * scale
-        ax3.arrow(x2, y2, direction[0], direction[1],
-                 head_width=0.05, head_length=0.03, fc='red', ec='red')
-
-    ax3.set_xlim(-0.5, 2)
-    ax3.set_ylim(-0.5, 1.5)
-    ax3.set_aspect('equal')
-    ax3.set_xlabel('x (m)', fontsize=11)
-    ax3.set_ylabel('y (m)', fontsize=11)
-    ax3.set_title('Jacobian: Manipulability Ellipse', fontsize=12)
-    ax3.grid(True, alpha=0.3)
-    ax3.legend(fontsize=9, loc='upper left')
-
-    plt.tight_layout()
-    plt.savefig(save_path, dpi=150, bbox_inches='tight')
-    plt.close()
-    print(f"Saved: {save_path}")
-
-def plot_pd_control_trajectory(save_path):
-    """绘制PD控制轨迹跟踪"""
-    arm = TwoLinkArm()
-    controller = PDController(Kp=100.0, Kd=20.0)
-
-    # 初始状态
-    arm.state = np.array([0.0, 0.0, 0.0, 0.0])
-
-    # 目标轨迹：画圆
-    t_total = 5.0
-    dt = 0.01
+    ctrl = PDController(Kp, Kd)
+    arm.state = np.zeros(4)  # 从伸直姿态 θ = (0, 0) 静止出发
+    cx, cy, radius = 1.0, 0.5, 0.3
     t = np.arange(0, t_total, dt)
-
-    # 目标圆心和半径
-    cx, cy = 1.0, 0.5
-    radius = 0.3
-
-    # 记录数据
-    history = {'t': [], 'x': [], 'y': [], 'x_target': [], 'y_target': [],
-               'theta1': [], 'theta2': [], 'tau1': [], 'tau2': []}
-
+    log = {k: [] for k in ('t', 'x', 'y', 'xt', 'yt', 'th1', 'th2', 'tau1', 'tau2')}
     for ti in t:
-        # 目标位置（圆形轨迹）
-        x_target = cx + radius * np.cos(2 * np.pi * ti / t_total)
-        y_target = cy + radius * np.sin(2 * np.pi * ti / t_total)
-
-        # 逆运动学得到目标角度
-        theta1_target, theta2_target = arm.inverse_kinematics(x_target, y_target)
-        if theta1_target is None:
-            continue
-
-        # PD控制
-        theta_current = arm.state[:2]
-        dtheta_current = arm.state[2:]
-        theta_target = np.array([theta1_target, theta2_target])
-
-        tau = controller.compute(theta_current, theta_target, dtheta_current)
-        tau = np.clip(tau, -50, 50)  # 限幅
-
-        # 仿真一步
+        xt = cx + radius * np.cos(2 * np.pi * ti / t_total)
+        yt = cy + radius * np.sin(2 * np.pi * ti / t_total)
+        th_t = np.array(arm.inverse_kinematics(xt, yt))
+        tau = np.clip(ctrl.compute(arm.state[:2], th_t, arm.state[2:]), -tau_max, tau_max)
         arm.step(tau, dt)
+        _, (x, y) = arm.forward_kinematics(arm.state[0], arm.state[1])
+        for k, v in zip(log, (ti, x, y, xt, yt, arm.state[0], arm.state[1], tau[0], tau[1])):
+            log[k].append(v)
+    return {k: np.array(v) for k, v in log.items()}
 
-        # 记录
-        (x1, y1), (x2, y2) = arm.forward_kinematics(arm.state[0], arm.state[1])
-        history['t'].append(ti)
-        history['x'].append(x2)
-        history['y'].append(y2)
-        history['x_target'].append(x_target)
-        history['y_target'].append(y_target)
-        history['theta1'].append(arm.state[0])
-        history['theta2'].append(arm.state[1])
-        history['tau1'].append(tau[0])
-        history['tau2'].append(tau[1])
 
-    # 绘图
-    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+def plot_pd_control_trajectory():
+    d = simulate_pd_tracking()
+    err = np.hypot(d['x'] - d['xt'], d['y'] - d['yt'])
+    print(f"  PD 跟踪（Kp={PD_KP:.0f}, Kd={PD_KD:.0f}）：初始误差 {err[0] * 1e3:.0f} mm，"
+          f"1 s 后最大误差 {err[d['t'] > 1].max() * 1e3:.1f} mm，稳态平均误差 {err[d['t'] > 2].mean() * 1e3:.1f} mm，"
+          f"力矩饱和的时间比例 {np.mean((np.abs(d['tau1']) >= 50) | (np.abs(d['tau2']) >= 50)):.1%}")
 
-    # 1. 末端轨迹
-    ax1 = axes[0, 0]
-    ax1.plot(history['x_target'], history['y_target'], 'r--', linewidth=2,
-            label='Target trajectory')
-    ax1.plot(history['x'], history['y'], 'b-', linewidth=1.5,
-            label='Actual trajectory')
-    ax1.plot(history['x'][0], history['y'][0], 'go', markersize=10, label='Start')
-    ax1.set_xlabel('x (m)', fontsize=11)
-    ax1.set_ylabel('y (m)', fontsize=11)
-    ax1.set_title('End-effector Trajectory', fontsize=12)
-    ax1.legend(fontsize=10)
-    ax1.grid(True, alpha=0.3)
-    ax1.set_aspect('equal')
+    fig, axes = plt.subplots(2, 2, figsize=fig_size(2, 2, aspect=0.66))
+    ax = axes[0, 0]
+    ax.plot(d['xt'], d['yt'], '--', color=COLORS['black'], lw=1.3, label='目标轨迹（圆）')
+    ax.plot(d['x'], d['y'], '-', color=COLORS['blue'], lw=1.4, label='实际末端轨迹')
+    ax.plot(d['x'][0], d['y'][0], 'o', color=COLORS['green'], markersize=6, label='起始位置', zorder=5)
+    ax.set_aspect('equal')
+    ax.set_xlabel('$x$ (m)')
+    ax.set_ylabel('$y$ (m)')
+    ax.set_xlim(0.45, 1.95)
+    ax.set_ylim(-0.3, 0.95)
+    ax.legend(fontsize=7.2, loc='lower left', handlelength=1.6, borderaxespad=0.2)
+    panel_label(ax, '(a)')
 
-    # 2. 位置误差
-    ax2 = axes[0, 1]
-    error_x = np.array(history['x']) - np.array(history['x_target'])
-    error_y = np.array(history['y']) - np.array(history['y_target'])
-    error = np.sqrt(error_x**2 + error_y**2)
-    ax2.plot(history['t'], error * 1000, 'b-', linewidth=1.5)
-    ax2.set_xlabel('Time (s)', fontsize=11)
-    ax2.set_ylabel('Position error (mm)', fontsize=11)
-    ax2.set_title('Tracking Error', fontsize=12)
-    ax2.grid(True, alpha=0.3)
+    ax = axes[0, 1]
+    ax.semilogy(d['t'], err * 1e3, color=COLORS['red'], lw=1.4)
+    ax.set_yticks([10, 30, 100, 300, 1000])
+    ax.yaxis.set_major_formatter(ScalarFormatter())
+    ax.yaxis.set_minor_formatter(NullFormatter())
+    ax.set_ylim(8, 1200)
+    ax.axhline(err[d['t'] > 2].mean() * 1e3, color=COLORS['gray'], ls=':', lw=0.9)
+    ax.text(4.95, err[d['t'] > 2].mean() * 1e3 * 1.12, f'稳态约 {err[d["t"] > 2].mean() * 1e3:.0f} mm（跟踪滞后）',
+            fontsize=7, color=COLORS['gray'], ha='right', va='bottom')
+    ax.set_xlabel('时间 (s)')
+    ax.set_ylabel('位置误差 (mm)，对数轴')
+    panel_label(ax, '(b)')
 
-    # 3. 关节角度
-    ax3 = axes[1, 0]
-    ax3.plot(history['t'], np.rad2deg(history['theta1']), 'b-',
-            linewidth=1.5, label=r'$\theta_1$')
-    ax3.plot(history['t'], np.rad2deg(history['theta2']), 'r-',
-            linewidth=1.5, label=r'$\theta_2$')
-    ax3.set_xlabel('Time (s)', fontsize=11)
-    ax3.set_ylabel('Joint angle (deg)', fontsize=11)
-    ax3.set_title('Joint Angles', fontsize=12)
-    ax3.legend(fontsize=10)
-    ax3.grid(True, alpha=0.3)
+    ax = axes[1, 0]
+    ax.plot(d['t'], np.degrees(d['th1']), color=COLORS['blue'], lw=1.4, label=r'$\theta_1$')
+    ax.plot(d['t'], np.degrees(d['th2']), color=COLORS['orange'], lw=1.4, label=r'$\theta_2$')
+    ax.set_xlabel('时间 (s)')
+    ax.set_ylabel('关节角 (°)')
+    ax.legend(fontsize=8, loc='lower right')
+    panel_label(ax, '(c)')
 
-    # 4. 控制力矩
-    ax4 = axes[1, 1]
-    ax4.plot(history['t'], history['tau1'], 'b-', linewidth=1.5, label=r'$\tau_1$')
-    ax4.plot(history['t'], history['tau2'], 'r-', linewidth=1.5, label=r'$\tau_2$')
-    ax4.set_xlabel('Time (s)', fontsize=11)
-    ax4.set_ylabel('Torque (N·m)', fontsize=11)
-    ax4.set_title('Control Torques', fontsize=12)
-    ax4.legend(fontsize=10)
-    ax4.grid(True, alpha=0.3)
+    ax = axes[1, 1]
+    ax.plot(d['t'], d['tau1'], color=COLORS['blue'], lw=1.2, label=r'$\tau_1$')
+    ax.plot(d['t'], d['tau2'], color=COLORS['orange'], lw=1.2, label=r'$\tau_2$')
+    ax.axhline(50, color=COLORS['gray'], ls=':', lw=0.9)
+    ax.axhline(-50, color=COLORS['gray'], ls=':', lw=0.9)
+    ax.text(4.95, 52, '力矩限幅 ±50', fontsize=7, color=COLORS['gray'], ha='right', va='bottom')
+    ax.set_xlabel('时间 (s)')
+    ax.set_ylabel('控制力矩 (N·m)')
+    ax.legend(fontsize=8, loc='lower right')
+    panel_label(ax, '(d)')
 
-    plt.tight_layout()
-    plt.savefig(save_path, dpi=150, bbox_inches='tight')
-    plt.close()
-    print(f"Saved: {save_path}")
+    fig.subplots_adjust(wspace=0.32, hspace=0.45)
+    save_figure(fig, 'figs_chap10/pd_control_trajectory')
 
-def plot_cartpole_demo(save_path):
-    """绘制CartPole环境示意图和训练曲线"""
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-
-    # 1. CartPole环境示意图
-    ax1 = axes[0]
-    ax1.set_xlim(-3, 3)
-    ax1.set_ylim(-0.5, 2.5)
-    ax1.set_aspect('equal')
-
-    # 轨道
-    ax1.plot([-2.5, 2.5], [0, 0], 'k-', linewidth=3)
-
-    # 小车
-    cart_x, cart_y = 0, 0.15
-    cart_width, cart_height = 0.6, 0.3
-    cart = plt.Rectangle((cart_x - cart_width/2, cart_y - cart_height/2),
-                         cart_width, cart_height, facecolor='blue', edgecolor='black')
-    ax1.add_patch(cart)
-
-    # 轮子
-    wheel1 = Circle((cart_x - 0.2, 0), 0.08, facecolor='gray', edgecolor='black')
-    wheel2 = Circle((cart_x + 0.2, 0), 0.08, facecolor='gray', edgecolor='black')
-    ax1.add_patch(wheel1)
-    ax1.add_patch(wheel2)
-
-    # 杆（倾斜）
-    pole_angle = 15 * np.pi / 180  # 15度倾斜
-    pole_length = 1.5
-    pole_end_x = cart_x + pole_length * np.sin(pole_angle)
-    pole_end_y = cart_y + cart_height/2 + pole_length * np.cos(pole_angle)
-    ax1.plot([cart_x, pole_end_x], [cart_y + cart_height/2, pole_end_y],
-            'orange', linewidth=8, solid_capstyle='round')
-    ax1.plot(pole_end_x, pole_end_y, 'ro', markersize=12)
-
-    # 标注
-    ax1.annotate('', xy=(1.5, 0.15), xytext=(0.5, 0.15),
-                arrowprops=dict(arrowstyle='->', color='green', lw=2))
-    ax1.text(1.0, 0.4, 'Action: Push left/right', fontsize=10, color='green')
-
-    ax1.annotate('', xy=(pole_end_x + 0.3, pole_end_y - 0.2),
-                xytext=(pole_end_x, pole_end_y),
-                arrowprops=dict(arrowstyle='->', color='red', lw=2))
-    ax1.text(pole_end_x + 0.4, pole_end_y - 0.1, r'$\theta$', fontsize=14, color='red')
-
-    # 状态标注
-    ax1.text(-2.5, 2.2, 'State: [x, dx/dt, θ, dθ/dt]', fontsize=11,
-            bbox=dict(boxstyle='round', facecolor='lightyellow'))
-    ax1.text(-2.5, 1.8, 'Reward: +1 for each step alive', fontsize=11,
-            bbox=dict(boxstyle='round', facecolor='lightgreen'))
-
-    ax1.set_title('CartPole Environment', fontsize=13)
-    ax1.axis('off')
-
-    # 2. 模拟训练曲线
-    ax2 = axes[1]
-
-    # 模拟不同算法的学习曲线
-    np.random.seed(42)
-    episodes = np.arange(0, 501, 10)
-
-    # DQN曲线
-    dqn_base = 195 * (1 - np.exp(-episodes / 150))
-    dqn_noise = np.random.randn(len(episodes)) * 20
-    dqn_reward = np.clip(dqn_base + dqn_noise, 10, 200)
-
-    # PPO曲线（更快收敛）
-    ppo_base = 200 * (1 - np.exp(-episodes / 80))
-    ppo_noise = np.random.randn(len(episodes)) * 15
-    ppo_reward = np.clip(ppo_base + ppo_noise, 10, 200)
-
-    # Random曲线
-    random_reward = 20 + np.random.randn(len(episodes)) * 5
-
-    ax2.plot(episodes, dqn_reward, 'b-', linewidth=2, label='DQN', alpha=0.8)
-    ax2.plot(episodes, ppo_reward, 'g-', linewidth=2, label='PPO', alpha=0.8)
-    ax2.plot(episodes, random_reward, 'r--', linewidth=1.5, label='Random', alpha=0.6)
-    ax2.axhline(y=195, color='gray', linestyle=':', linewidth=1, label='Solved (195)')
-
-    ax2.fill_between(episodes, dqn_reward - 10, dqn_reward + 10, alpha=0.1, color='blue')
-    ax2.fill_between(episodes, ppo_reward - 10, ppo_reward + 10, alpha=0.1, color='green')
-
-    ax2.set_xlabel('Episode', fontsize=11)
-    ax2.set_ylabel('Total Reward', fontsize=11)
-    ax2.set_title('CartPole Training Curves (Simulated)', fontsize=12)
-    ax2.legend(fontsize=10, loc='lower right')
-    ax2.grid(True, alpha=0.3)
-    ax2.set_xlim(0, 500)
-    ax2.set_ylim(0, 220)
-
-    plt.tight_layout()
-    plt.savefig(save_path, dpi=150, bbox_inches='tight')
-    plt.close()
-    print(f"Saved: {save_path}")
-
-def plot_rl_control_comparison(save_path):
-    """对比传统控制与强化学习"""
-    fig, axes = plt.subplots(1, 2, figsize=(13, 5))
-
-    # 1. 传统控制流程
-    ax1 = axes[0]
-    ax1.set_xlim(0, 10)
-    ax1.set_ylim(0, 8)
-    ax1.axis('off')
-    ax1.set_title('Traditional Control Pipeline', fontsize=13, fontweight='bold')
-
-    # 流程框
-    boxes = [
-        (1, 6, 'System\nModeling'),
-        (4, 6, 'Controller\nDesign'),
-        (7, 6, 'Stability\nAnalysis'),
-        (1, 3, 'Parameter\nTuning'),
-        (4, 3, 'Implementation'),
-        (7, 3, 'Testing'),
-    ]
-
-    for x, y, text in boxes:
-        rect = plt.Rectangle((x-0.8, y-0.6), 1.6, 1.2,
-                             facecolor='lightblue', edgecolor='black', linewidth=1.5)
-        ax1.add_patch(rect)
-        ax1.text(x, y, text, ha='center', va='center', fontsize=9, fontweight='bold')
-
-    # 箭头
-    arrows = [((2.2, 6), (3.2, 6)), ((5.6, 6), (6.2, 6)),
-              ((1, 5.4), (1, 3.6)), ((4, 5.4), (4, 3.6)), ((7, 5.4), (7, 3.6)),
-              ((2.2, 3), (3.2, 3)), ((5.6, 3), (6.2, 3))]
-    for (x1, y1), (x2, y2) in arrows:
-        ax1.annotate('', xy=(x2, y2), xytext=(x1, y1),
-                    arrowprops=dict(arrowstyle='->', color='gray', lw=1.5))
-
-    ax1.text(5, 1, 'Requires: Expert knowledge, accurate model',
-            fontsize=10, ha='center', style='italic')
-
-    # 2. 强化学习流程
-    ax2 = axes[1]
-    ax2.set_xlim(0, 10)
-    ax2.set_ylim(0, 8)
-    ax2.axis('off')
-    ax2.set_title('Reinforcement Learning Pipeline', fontsize=13, fontweight='bold')
-
-    # 简化流程
-    rl_boxes = [
-        (2, 6, 'Define\nReward'),
-        (5, 6, 'Agent\n(Neural Net)'),
-        (8, 6, 'Environment'),
-        (5, 3, 'Training Loop'),
-    ]
-
-    colors = ['lightgreen', 'lightyellow', 'lightcoral', 'lightgray']
-    for (x, y, text), color in zip(rl_boxes, colors):
-        rect = plt.Rectangle((x-0.9, y-0.6), 1.8, 1.2,
-                             facecolor=color, edgecolor='black', linewidth=1.5)
-        ax2.add_patch(rect)
-        ax2.text(x, y, text, ha='center', va='center', fontsize=9, fontweight='bold')
-
-    # 循环箭头
-    ax2.annotate('', xy=(6.1, 6), xytext=(5.9, 6),
-                arrowprops=dict(arrowstyle='->', color='blue', lw=2,
-                               connectionstyle='arc3,rad=0.5'))
-    ax2.annotate('Action', xy=(6.5, 6.8), fontsize=9, color='blue')
-
-    ax2.annotate('', xy=(5.1, 6), xytext=(6.9, 6),
-                arrowprops=dict(arrowstyle='->', color='red', lw=2,
-                               connectionstyle='arc3,rad=-0.5'))
-    ax2.annotate('State, Reward', xy=(5.5, 5.2), fontsize=9, color='red')
-
-    # 到训练循环的箭头
-    ax2.annotate('', xy=(5, 4.2), xytext=(5, 5.4),
-                arrowprops=dict(arrowstyle='->', color='gray', lw=1.5))
-
-    ax2.text(5, 1, 'Requires: Reward design, compute, environment',
-            fontsize=10, ha='center', style='italic')
-
-    plt.tight_layout()
-    plt.savefig(save_path, dpi=150, bbox_inches='tight')
-    plt.close()
-    print(f"Saved: {save_path}")
 
 # =============================================================================
-# 主程序
+# 第 3 部分：CartPole —— 自行实现的环境 + 两个真实训练的算法
 # =============================================================================
+class CartPole:
+    """Barto, Sutton & Anderson (1983) 的倒立摆小车；与 gym CartPole 相同的参数与欧拉积分。"""
+    gravity, masscart, masspole, half_length = 9.8, 1.0, 0.1, 0.5
+    force_mag, tau = 10.0, 0.02
+    theta_limit, x_limit = 12 * 2 * np.pi / 360, 2.4
 
-if __name__ == "__main__":
-    output_dir = "/home/user/full_book_claude/figs_chap10"
+    def __init__(self, max_steps=200):
+        self.max_steps = max_steps
+        self.total_mass = self.masscart + self.masspole
+        self.polemass_length = self.masspole * self.half_length
 
+    def reset(self, rng):
+        self.state = rng.uniform(-0.05, 0.05, size=4)
+        self.t = 0
+        return self.state.copy()
+
+    def step(self, action):
+        x, x_dot, th, th_dot = self.state
+        force = self.force_mag if action == 1 else -self.force_mag
+        cos_t, sin_t = np.cos(th), np.sin(th)
+        temp = (force + self.polemass_length * th_dot**2 * sin_t) / self.total_mass
+        th_acc = (self.gravity * sin_t - cos_t * temp) / (
+            self.half_length * (4.0 / 3.0 - self.masspole * cos_t**2 / self.total_mass))
+        x_acc = temp - self.polemass_length * th_acc * cos_t / self.total_mass
+        x += self.tau * x_dot
+        x_dot += self.tau * x_acc
+        th += self.tau * th_dot
+        th_dot += self.tau * th_acc
+        self.state = np.array([x, x_dot, th, th_dot])
+        self.t += 1
+        failed = abs(x) > self.x_limit or abs(th) > self.theta_limit
+        done = failed or self.t >= self.max_steps
+        return self.state.copy(), 1.0, done
+
+
+def run_episode(env, policy, rng):
+    s = env.reset(rng)
+    total = 0.0
+    while True:
+        s, r, done = env.step(policy(s))
+        total += r
+        if done:
+            return total
+
+
+def random_policy_baseline(n_seeds=5, n_episodes=200):
+    env = CartPole()
+    means = []
+    for seed in range(n_seeds):
+        rng = np.random.default_rng(100 + seed)
+        means.append(np.mean([run_episode(env, lambda s: int(rng.integers(2)), rng)
+                              for _ in range(n_episodes)]))
+    return float(np.mean(means)), float(np.std(means))
+
+
+def cem_train(seed, n_iter=15, pop=40, elite_frac=0.2):
+    """交叉熵方法：线性策略 a = 1[w·s + b > 0]，在 (w, b) 的高斯分布上迭代收紧。"""
+    env = CartPole()
+    rng = np.random.default_rng(seed)
+    mean, std = np.zeros(5), np.ones(5)
+    n_elite = max(2, int(pop * elite_frac))
+    curve = []  # (累计回合数, 本代种群平均回报, 本代最好回报)
+    for it in range(n_iter):
+        thetas = mean + std * rng.standard_normal((pop, 5))
+        rets = np.array([run_episode(env, lambda s, th=th: int(th[:4] @ s + th[4] > 0), rng)
+                         for th in thetas])
+        elite = thetas[np.argsort(rets)[-n_elite:]]
+        mean, std = elite.mean(0), elite.std(0) + 0.02
+        curve.append(((it + 1) * pop, rets.mean(), rets.max()))
+    return np.array(curve)
+
+
+def make_discretizer(n_bins=(3, 3, 6, 12)):
+    """把 4 维连续状态切成格子；x, ẋ 粗切，θ, θ̇ 细切。"""
+    lows = np.array([-2.4, -2.0, -CartPole.theta_limit, -2.0])
+    highs = -lows
+    edges = [np.linspace(lo, hi, n + 1)[1:-1] for lo, hi, n in zip(lows, highs, n_bins)]
+
+    def discretize(s):
+        return tuple(int(np.digitize(v, e)) for v, e in zip(s, edges))
+    return discretize, n_bins
+
+
+def q_learning_cartpole(seed, episodes=2000, gamma=0.99):
+    """表格 Q-Learning：ε 与 α 随回合数按对数衰减（经典设置）。"""
+    env = CartPole()
+    rng = np.random.default_rng(seed)
+    discretize, n_bins = make_discretizer()
+    Q = np.zeros(tuple(n_bins) + (2,))
+    returns = np.zeros(episodes)
+    for ep in range(episodes):
+        eps = max(0.02, min(1.0, 1.0 - np.log10((ep + 1) / 25)))
+        alpha = max(0.1, min(0.5, 1.0 - np.log10((ep + 1) / 25)))
+        s = discretize(env.reset(rng))
+        total = 0.0
+        while True:
+            a = int(rng.integers(2)) if rng.random() < eps else int(np.argmax(Q[s]))
+            s2_cont, r, done = env.step(a)
+            s2 = discretize(s2_cont)
+            failed = done and env.t < env.max_steps
+            target = r if failed else r + gamma * Q[s2].max()
+            Q[s + (a,)] += alpha * (target - Q[s + (a,)])
+            total += r
+            s = s2
+            if done:
+                break
+        returns[ep] = total
+    return returns
+
+
+def plot_cartpole_demo():
+    t0 = time.time()
+    rand_mean, rand_std = random_policy_baseline()
+    print(f"  随机策略：平均回报 {rand_mean:.1f} ± {rand_std:.1f}")
+
+    n_seeds = 5
+    cem_curves = np.array([cem_train(seed) for seed in range(n_seeds)])  # (seeds, iters, 3)
+    cem_ep = cem_curves[0, :, 0]
+    cem_mean, cem_sd = cem_curves[:, :, 1].mean(0), cem_curves[:, :, 1].std(0)
+    print("  CEM（线性策略，每代 40 回合）：各代种群平均回报 =",
+          np.array2string(cem_mean, precision=0, max_line_width=200))
+    for th in np.flatnonzero(cem_mean >= 195)[:1]:
+        print(f"  CEM 在第 {th + 1} 代（累计 {int(cem_ep[th])} 回合）平均回报首次 ≥ 195")
+
+    EP, W = 2000, 50
+    ql_runs = np.array([q_learning_cartpole(seed, EP) for seed in range(n_seeds)])
+    ql_ma = np.array([np.convolve(r, np.ones(W) / W, mode='valid') for r in ql_runs])
+    ql_mean, ql_sd = ql_ma.mean(0), ql_ma.std(0)
+    x_ma = np.arange(W, EP + 1)
+    print(f"  表格 Q-Learning：最后 100 回合平均回报 {ql_runs[:, -100:].mean():.1f}"
+          f"（各种子：{np.array2string(ql_runs[:, -100:].mean(1), precision=0)}），"
+          f"滑动平均峰值 {ql_mean.max():.0f}")
+    hit = np.flatnonzero(ql_mean >= 195)
+    print("  Q-Learning 滑动平均首次 ≥ 195 的回合：", int(x_ma[hit[0]]) if len(hit) else "未达到")
+    print(f"  训练耗时 {time.time() - t0:.0f} s")
+
+    fig, axes = plt.subplots(1, 2, figsize=fig_size(2, aspect=0.74), gridspec_kw={'width_ratios': [1, 1.15]})
+
+    # (a) 环境示意
+    ax = axes[0]
+    ax.plot([-2.6, 2.6], [0, 0], color=COLORS['black'], lw=2)
+    cart_w, cart_h, cart_y = 0.8, 0.4, 0.28
+    ax.add_patch(Rectangle((-cart_w / 2, cart_y - cart_h / 2), cart_w, cart_h,
+                           fc='#dbe7f3', ec=COLORS['black'], lw=1.2))
+    for wx in (-0.25, 0.25):
+        ax.add_patch(Circle((wx, 0.08), 0.08, fc=COLORS['gray'], ec=COLORS['black'], lw=0.8))
+    th = np.radians(15)
+    pole_len, pivot = 1.6, (0.0, cart_y + cart_h / 2)
+    tip = (pivot[0] + pole_len * np.sin(th), pivot[1] + pole_len * np.cos(th))
+    ax.plot([pivot[0], tip[0]], [pivot[1], tip[1]], color=COLORS['orange'], lw=5, solid_capstyle='round')
+    ax.plot(*tip, 'o', color=COLORS['red'], markersize=7)
+    ax.plot([pivot[0], pivot[0]], [pivot[1], pivot[1] + 1.2], ls=':', color=COLORS['gray'], lw=1)
+    ax.add_patch(Arc(pivot, 1.6, 1.6, angle=0, theta1=90 - np.degrees(th), theta2=90,
+                     color=COLORS['red'], lw=1.2))
+    ax.text(0.16, pivot[1] + 0.95, r'$\theta$', color=COLORS['red'], fontsize=10)
+    ax.add_patch(FancyArrowPatch((cart_w / 2 + 0.05, cart_y), (cart_w / 2 + 0.85, cart_y),
+                                 arrowstyle='-|>', mutation_scale=11, color=COLORS['green'], lw=1.8))
+    ax.add_patch(FancyArrowPatch((-cart_w / 2 - 0.05, cart_y), (-cart_w / 2 - 0.85, cart_y),
+                                 arrowstyle='-|>', mutation_scale=11, color=COLORS['green'], lw=1.8))
+    ax.text(cart_w / 2 + 0.45, cart_y + 0.15, '向右推', color=COLORS['green'], fontsize=8, ha='center')
+    ax.text(-cart_w / 2 - 0.45, cart_y + 0.15, '向左推', color=COLORS['green'], fontsize=8, ha='center')
+    ax.add_patch(FancyArrowPatch((-2.4, -0.32), (0, -0.32), arrowstyle='<->', mutation_scale=8,
+                                 color=COLORS['gray'], lw=0.9))
+    ax.text(-1.2, -0.42, r'位置 $x$', color=COLORS['gray'], fontsize=8, ha='center', va='top')
+    ax.text(0, 3.45, r'$s=(x,\ \dot x,\ \theta,\ \dot\theta)$，$a\in\{$左, 右$\}$', fontsize=8,
+            ha='center', va='bottom')
+    ax.text(0, 3.02, r'每步 $+1$；$|\theta|>12^\circ$ 或 $|x|>2.4$ 即结束', fontsize=8,
+            ha='center', va='bottom')
+    ax.set_xlim(-2.7, 2.7)
+    ax.set_ylim(-0.9, 3.95)
+    ax.set_aspect('equal')
+    ax.axis('off')
+    panel_label(ax, '(a)', x=0.0, y=0.98)
+
+    # (b) 真实学习曲线
+    ax = axes[1]
+    ax.plot(x_ma, ql_mean, color=COLORS['blue'], lw=1.5, label='表格 Q-Learning（状态离散化）')
+    ax.fill_between(x_ma, ql_mean - ql_sd, ql_mean + ql_sd, color=COLORS['blue'], alpha=0.2, lw=0)
+    ax.plot(cem_ep, cem_mean, '-o', color=COLORS['orange'], lw=1.5, markersize=3.5,
+            label='交叉熵方法 + 线性策略')
+    ax.fill_between(cem_ep, cem_mean - cem_sd, cem_mean + cem_sd, color=COLORS['orange'], alpha=0.2, lw=0)
+    ax.axhline(rand_mean, color=COLORS['gray'], ls='--', lw=1.1, label=f'随机策略（{rand_mean:.0f}）')
+    ax.axhline(195, color=COLORS['black'], ls=':', lw=1.1, label='"解决"阈值 195')
+    ax.set_xlim(0, EP)
+    ax.set_ylim(0, 215)
+    ax.set_xlabel('训练回合数')
+    ax.set_ylabel('回合总奖励（坚持步数）')
+    ax.legend(fontsize=7, loc='lower right', handlelength=1.8)
+    panel_label(ax, '(b)', x=-0.14)
+
+    fig.subplots_adjust(wspace=0.22)
+    save_figure(fig, 'figs_chap10/cartpole_demo')
+
+
+# =============================================================================
+# 第 4 部分：传统控制流程 vs 强化学习流程（概念示意图）
+# =============================================================================
+def _box(ax, xy, w, h, text, fc='#f4f4f4', ec=None, fontsize=8):
+    x, y = xy
+    ax.add_patch(FancyBboxPatch((x - w / 2, y - h / 2), w, h, boxstyle='round,pad=0.02,rounding_size=0.12',
+                                fc=fc, ec=ec or COLORS['black'], lw=1.0))
+    ax.text(x, y, text, ha='center', va='center', fontsize=fontsize, linespacing=1.25)
+
+
+def _arrow(ax, p, q, color=None, ls='-', rad=0.0, lw=1.2):
+    ax.add_patch(FancyArrowPatch(p, q, arrowstyle='-|>', mutation_scale=10, color=color or COLORS['gray'],
+                                 lw=lw, linestyle=ls, connectionstyle=f'arc3,rad={rad}', zorder=3))
+
+
+def plot_rl_control_comparison():
+    fig, axes = plt.subplots(1, 2, figsize=fig_size(2, aspect=0.8))
+
+    # (a) 传统控制：一条串行流水线，出问题就回头
+    ax = axes[0]
+    ax.set_xlim(0, 10)
+    ax.set_ylim(0, 8)
+    ax.axis('off')
+    top = [(1.7, 6.0, '系统建模\n（运动方程）'), (5.0, 6.0, '控制器设计\n（如 PD）'),
+           (8.3, 6.0, '稳定性分析')]
+    bot = [(8.3, 3.2, '参数整定\n$K_p,\\ K_d$'), (5.0, 3.2, '实现与测试'), (1.7, 3.2, '部署')]
+    for x, y, t in top + bot:
+        _box(ax, (x, y), 2.6, 1.5, t)
+    _arrow(ax, (3.0, 6.0), (3.7, 6.0))
+    _arrow(ax, (6.3, 6.0), (7.0, 6.0))
+    _arrow(ax, (8.3, 5.25), (8.3, 3.95))
+    _arrow(ax, (7.0, 3.2), (6.3, 3.2))
+    _arrow(ax, (3.7, 3.2), (3.0, 3.2))
+    _arrow(ax, (5.0, 2.45), (1.7, 5.25), color=COLORS['red'], ls='--', rad=0.35)
+    ax.text(5.0, 1.75, '不满足指标：回头改模型或增益', fontsize=7, color=COLORS['red'], ha='center', va='top')
+    ax.text(5.0, 0.3, '需要：专家知识、足够精确的模型', fontsize=8, ha='center', va='bottom',
+            style='italic', color=COLORS['gray'])
+    panel_label(ax, '(a)', x=0.0, y=0.98)
+
+    # (b) 强化学习：智能体—环境闭环，靠奖励驱动
+    ax = axes[1]
+    ax.set_xlim(0, 10)
+    ax.set_ylim(0, 8)
+    ax.axis('off')
+    _box(ax, (1.7, 6.0), 2.6, 1.5, '定义奖励\n$r(s,a)$', fc='#f7ecc9')
+    _box(ax, (5.0, 6.0), 2.6, 1.5, '智能体\n策略 $\\pi_\\theta(a\\mid s)$', fc='#dbe7f3')
+    _box(ax, (8.3, 6.0), 2.6, 1.5, '环境\n（真实或仿真）', fc='#d7ecd9')
+    _box(ax, (5.0, 2.6), 4.4, 1.5, '训练循环\n采样轨迹 → 估计回报 → 更新 $\\theta$', fc='#f4f4f4')
+    _arrow(ax, (3.0, 6.0), (3.7, 6.0))
+    _arrow(ax, (6.3, 6.45), (7.0, 6.45), color=COLORS['blue'], rad=-0.5)
+    _arrow(ax, (7.0, 5.55), (6.3, 5.55), color=COLORS['red'], rad=-0.5)
+    ax.text(6.65, 7.35, '动作 $a_t$', fontsize=7.5, color=COLORS['blue'], ha='center')
+    ax.text(8.3, 4.95, '状态 $s_{t+1}$、奖励 $r_t$', fontsize=7.5, color=COLORS['red'], ha='center', va='top')
+    _arrow(ax, (5.6, 5.25), (5.6, 3.35))
+    ax.text(5.8, 4.05, '交互数据\n$(s_t,a_t,r_t)$', fontsize=7, color=COLORS['gray'], ha='left', va='center')
+    _arrow(ax, (4.4, 3.35), (4.4, 5.25), color=COLORS['blue'], ls='--')
+    ax.text(4.2, 4.3, '更新后\n的 $\\theta$', fontsize=7, color=COLORS['blue'], ha='right', va='center')
+    ax.text(5.0, 0.3, '需要：奖励设计、大量样本与算力', fontsize=8, ha='center', va='bottom',
+            style='italic', color=COLORS['gray'])
+    panel_label(ax, '(b)', x=0.0, y=0.98)
+
+    fig.subplots_adjust(wspace=0.08)
+    save_figure(fig, 'figs_chap10/rl_control_comparison')
+
+
+if __name__ == '__main__':
     print("=" * 60)
-    print("Robotic Arm Control Demo")
+    print("第10章扩展阅读：连续控制")
     print("=" * 60)
-
-    # 1. 机械臂运动学
-    print("\n[1] Plotting arm kinematics...")
-    plot_arm_kinematics(f"{output_dir}/arm_kinematics.pdf")
-
-    # 2. PD控制轨迹
-    print("\n[2] Plotting PD control trajectory...")
-    plot_pd_control_trajectory(f"{output_dir}/pd_control_trajectory.pdf")
-
-    # 3. CartPole演示
-    print("\n[3] Plotting CartPole demo...")
-    plot_cartpole_demo(f"{output_dir}/cartpole_demo.pdf")
-
-    # 4. 控制方法对比
-    print("\n[4] Plotting control comparison...")
-    plot_rl_control_comparison(f"{output_dir}/rl_control_comparison.pdf")
-
-    print("\n" + "=" * 60)
-    print("All figures generated!")
-    print("=" * 60)
+    print("\n[1] 机械臂运动学")
+    plot_arm_kinematics()
+    print("\n[2] PD 控制跟踪圆轨迹")
+    plot_pd_control_trajectory()
+    print("\n[3] 传统控制 vs 强化学习（示意图）")
+    plot_rl_control_comparison()
+    print("\n[4] CartPole：环境 + 真实训练曲线")
+    plot_cartpole_demo()
+    print("\n全部图已生成。")

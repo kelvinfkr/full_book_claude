@@ -19,7 +19,7 @@
 这个想法听起来很简单，但实现起来却充满挑战。本章我们将用熟悉的\textbf{拉格朗日乘子法}来理解PINN的数学本质，揭示它为什么有时很好用，有时却训练不出来，以及现代研究如何解决这些问题。
 
 \vspace{0.3cm}
-\noindent\textit{为什么一个连网格都没有的神经网络能"解"微分方程？为什么损失函数里那个不起眼的权重 $\lambda$ 能决定训练成败？为什么同样的网络，换一种写法（能量而不是残差）就只需要一阶导数？}
+\noindent\textit{为什么一个连网格都没有的神经网络能"解"微分方程？为什么损失函数里那个不起眼的权重 $\rho$ 能决定训练成败？为什么同样的网络，换一种写法（能量而不是残差）就只需要一阶导数？}
 
 \begin{quote}
 \textbf{本章目标}：让你看清 PINN 不是"神经网络的新玩法"，而是第1章的老朋友：物理定律是约束，神经网络只是一个可微的猜测函数，损失函数里那些让人头疼的权重，就是第1章视角三里的罚系数 $\rho$。看懂了这一点，PINN 为什么会训练失败、自适应权重为什么有效、Deep Ritz 为什么只要一阶导数，都会变成同一个问题的不同侧面。
@@ -196,10 +196,10 @@ PINN的损失函数由两部分组成：
 \begin{itemize}
     \item $\{x_i^r\}_{i=1}^{N_r}$是在区域$\Omega$内部随机采样的\textbf{配点}（collocation points）
     \item $\{x_j^b\}_{j=1}^{N_b}$是在边界$\partial\Omega$上采样的配点
-    \item $\lambda > 0$是\textbf{罚参数}（penalty parameter），平衡两个损失项的重要性
+    \item $\rho > 0$是\textbf{罚参数}（penalty parameter），平衡两个损失项的重要性
 \end{itemize}
 \end{definition}
-\clarify{别把损失权重和拉格朗日乘子混为一谈。第1章的对照：罚系数 $\rho$ 是你定的"罚款单价"，乘子 $\lambda$ 是问题自己算出来的"影子价格"。本章沿用 PINN 文献的习惯把这个权重记作 $\lambda$——请记住它扮演的是 $\rho$ 的角色；只有后面"拉格朗日对偶视角"一节的对偶上升，才真正把乘子请出来。}
+\clarify{别把损失权重和拉格朗日乘子混为一谈。第1章的对照：罚系数 $\rho$ 是你定的"罚款单价"，乘子 $\lambda$ 是问题自己算出来的"影子价格"。PINN 文献习惯把这个权重也记作 $\lambda$，本书为了不和乘子混淆，一律记作 $\rho$（代码里写 \texttt{rho\_bc}）；只有后面"拉格朗日对偶视角"一节的对偶上升，才真正把乘子 $\lambda$ 请出来。}
 
 \begin{remark}[罚函数法的本质]
 回顾第1章视角三的罚函数法：将约束优化问题
@@ -216,48 +216,51 @@ PINN正是这个思路：$L_{\text{PDE}}$惩罚方程不被满足的程度，$L_
 \end{remark}
 
 \begin{tcolorbox}[colback=yellow!10, colframe=orange!50, title=关键洞察]
-罚参数$\lambda$的选择至关重要：
+罚参数$\rho$的选择至关重要：
 \begin{itemize}
-    \item $\lambda$太小：边界条件得不到满足，解在边界上偏差很大
-    \item $\lambda$太大：梯度被边界项主导，PDE残差下降缓慢
+    \item $\rho$太小：边界条件得不到满足，解在边界上偏差很大
+    \item $\rho$太大：梯度被边界项主导，PDE残差下降缓慢
 \end{itemize}
 这个两难困境是PINN训练困难的核心原因之一，我们将在第\ref{sec:gradient_pathology}节详细讨论。
 \end{tcolorbox}
-\review{第5章}{有限元处理 Dirichlet 边界的"大数法"也是罚函数：把对角元改成 $10^{20}$ 强迫 $U_0 \approx g_0$，代价是刚度矩阵条件数变差。PINN 里 $\lambda$ 太大导致训练变慢，是同一种病——见第5章扩展阅读"条件数"。}
+\review{第5章}{有限元处理 Dirichlet 边界的"大数法"也是罚函数：把对角元改成 $10^{20}$ 强迫 $U_0 \approx g_0$，代价是刚度矩阵条件数变差。PINN 里 $\rho$ 太大导致训练变慢，是同一种病——见第5章扩展阅读"条件数"。}
 
-\subsubsection{罚参数$\lambda$的影响：实验验证}
+\subsubsection{罚参数$\rho$的影响：实验验证}
 
-为了直观理解$\lambda$的影响，我们用不同的罚参数值训练PINN，并对比结果。
+为了直观理解$\rho$的影响，我们用同一个网络（两层 32 个 tanh 神经元）、同一个优化器（Adam，学习率 $10^{-3}$）、同样的 50 个内部配点，只改罚系数 $\rho \in \{0.1, 1, 10, 100, 1000\}$，每个 $\rho$ 用 3 个随机种子各训练 10000 轮（脚本 \texttt{code\_chap13/lambda\_effect.py}）。
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.95\textwidth]{figs_chap13/lambda_effect.pdf}
-    \caption{罚参数$\lambda$的影响。左图：不同$\lambda$值下PINN的预测解与精确解（黑色）对比；右图：不同$\lambda$值对应的边界误差和整体MSE柱状对比。}
+    \includegraphics[width=0.98\textwidth]{figs_chap13/lambda_effect.pdf}
+    \caption{罚系数$\rho$的影响（一维泊松方程，精确解 $\sin\pi x$）。(a) 训练到第 1000 轮时的逐点误差 $|u_\theta - u|$：$\rho = 0.1$ 的误差比其他曲线高 3--4 个数量级，而且形状是一条平缓的曲线——边界条件还没被"当回事"，整条解在漂移；(b) 整体 MSE 随训练轮数的变化（3 个种子的中位数）：$\rho = 10 \sim 100$ 前期下降最快，$\rho = 100, 1000$ 在后期剧烈震荡，精度反而上不去；(c) 第 10000 轮的边界误差与整体 MSE 随 $\rho$ 的变化（中位数，阴影为 3 个种子的最小/最大值）。}
     \label{fig:lambda_effect}
 \end{figure}
 
-从图\ref{fig:lambda_effect}中我们可以清楚地看到$\lambda$选择的"甜蜜点"：
+图\ref{fig:lambda_effect}把 $\rho$ 的作用拆成了两件事——\textbf{前期学多快}和\textbf{后期能多准}：
 
 \begin{center}
-\begin{tabular}{c|cccc}
+\begin{tabular}{l|ccccc}
 \hline
-$\lambda$ & 1.0 & 10.0 & 100.0 & 1000.0 \\
+$\rho$ & 0.1 & 1 & 10 & 100 & 1000 \\
 \hline
-最终MSE & $1.56 \times 10^{-6}$ & $6.48 \times 10^{-8}$ & $\mathbf{4.60 \times 10^{-8}}$ & $6.70 \times 10^{-7}$ \\
+第 1000 轮 MSE & $6.6 \times 10^{-4}$ & $3.9 \times 10^{-6}$ & $1.4 \times 10^{-7}$ & $\mathbf{8.5 \times 10^{-8}}$ & $9.5 \times 10^{-7}$ \\
+第 10000 轮 MSE & $\mathbf{8.2 \times 10^{-10}}$ & $7.7 \times 10^{-7}$ & $8.0 \times 10^{-7}$ & $8.7 \times 10^{-5}$ & $1.7 \times 10^{-4}$ \\
+第 10000 轮边界误差 & $2.6 \times 10^{-5}$ & $9.5 \times 10^{-4}$ & $8.7 \times 10^{-4}$ & $8.7 \times 10^{-3}$ & $1.2 \times 10^{-2}$ \\
 \hline
 \end{tabular}
 \end{center}
+（三个种子的中位数；单个种子之间可以差一个数量级，见图 (c) 的阴影。）
 
 \textbf{实验结论}：
 \begin{enumerate}
-    \item \textbf{$\lambda=1$太小}：边界损失下降缓慢，最终MSE较大。从解的曲线可以看到，$\lambda=1$的解在边界附近与精确解有明显偏差。
+    \item \textbf{$\rho$太小，前期慢}：$\rho = 0.1$ 时边界条件在损失里"不值钱"，第 1000 轮的误差仍是其他情形的上千倍，图 (a) 中它的误差曲线是一条整体抬高的弧线——解满足了 PDE，却整体漂了一个 $a + bx$（正是 $-u'' = f$ 的齐次解）。不过只要训练得够久，PDE 残差最终会把它拉回来：第 10000 轮它反而最准。
 
-    \item \textbf{$\lambda=10 \sim 100$最优}：在这个范围内，边界条件和PDE都得到了较好的满足，MSE最小。
+    \item \textbf{$\rho = 10 \sim 100$ 前期最快}：边界条件和 PDE 残差的梯度量级相当，1000 轮内 MSE 就降到 $10^{-7}$。如果算力预算有限，这是最划算的区间。
 
-    \item \textbf{$\lambda=1000$太大}：虽然边界损失很小，但PDE损失收敛缓慢，最终反而损害了整体精度。这是因为梯度被边界项"淹没"，网络无法有效学习内部的PDE行为。
+    \item \textbf{$\rho$太大，后期震荡}：$\rho = 100, 1000$ 时损失被边界项主导，等价于把问题的条件数放大了 $\rho$ 倍（第1章视角三、第5章"大数法"的同一种病）；Adam 的固定学习率在这样的损失面上反复过冲，图 (b) 后半段的锯齿就是证据，最终 MSE 和边界误差都比 $\rho = 1$ 差 2--3 个数量级——\textbf{罚得越狠，边界反而学得越差}。
 \end{enumerate}
 
-这个实验验证了前面"关键洞察"中的分析：$\lambda$的选择是一个微妙的平衡问题，需要在边界条件和PDE残差之间找到合适的权衡。
+这个实验验证了前面"关键洞察"中的分析：$\rho$ 不是越大越好，它同时决定"约束多快被满足"和"优化问题有多病态"。想要既快又稳，就得让权重自己动起来——这正是后面自适应权重（对偶上升）要解决的问题。
 
 % ====================================================================================
 \section{手把手实现：一维泊松方程求解器}
@@ -390,7 +393,7 @@ def compute_pde_residual(model, x):
 # ========================
 # 第三步：定义损失函数
 # ========================
-def compute_loss(model, x_interior, x_boundary, lambda_bc=100.0):
+def compute_loss(model, x_interior, x_boundary, rho_bc=100.0):
     """
     计算PINN总损失
     
@@ -398,7 +401,7 @@ def compute_loss(model, x_interior, x_boundary, lambda_bc=100.0):
         model: 神经网络模型
         x_interior: 内部配点 (N_r, 1)
         x_boundary: 边界点 (N_b, 1)
-        lambda_bc: 边界条件的惩罚权重
+        rho_bc: 边界条件的惩罚权重（罚系数 rho）
     """
     # PDE残差损失
     residual = compute_pde_residual(model, x_interior)
@@ -409,7 +412,7 @@ def compute_loss(model, x_interior, x_boundary, lambda_bc=100.0):
     loss_bc = torch.mean(u_boundary ** 2)
     
     # 总损失
-    total_loss = loss_pde + lambda_bc * loss_bc
+    total_loss = loss_pde + rho_bc * loss_bc
     
     return total_loss, loss_pde, loss_bc
 
@@ -634,7 +637,7 @@ $x$ & 解析解 $u_{\text{exact}}(x)$ & PINN预测 $u_\theta(x)$ & 绝对误差 
 \textbf{优点} & \textbf{缺点} \\
 \hline
 实现简单，只需修改损失函数 & 边界条件永远只是近似满足 \\
-通用性强，适用于各种边界条件 & 需要调节罚参数$\lambda$ \\
+通用性强，适用于各种边界条件 & 需要调节罚参数$\rho$ \\
 容易处理复杂几何 & 梯度竞争问题（见下节） \\
 \hline
 \end{tabular}
@@ -1098,12 +1101,12 @@ class FourierPINN(nn.Module):
 
 回到PINN的损失函数：
 \begin{equation}
-    \mathcal{L} = L_{\text{PDE}} + \lambda L_{\text{BC}}
+    \mathcal{L} = L_{\text{PDE}} + \rho L_{\text{BC}}
 \end{equation}
 
 在优化过程中，参数更新方向为：
 \begin{equation}
-    \Delta \theta \propto -\nabla_\theta \mathcal{L} = -\nabla_\theta L_{\text{PDE}} - \lambda \nabla_\theta L_{\text{BC}}
+    \Delta \theta \propto -\nabla_\theta \mathcal{L} = -\nabla_\theta L_{\text{PDE}} - \rho \nabla_\theta L_{\text{BC}}
 \end{equation}
 
 \begin{definition}[梯度竞争]
@@ -1193,7 +1196,7 @@ for epoch in range(num_epochs):
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.95\textwidth]{figs_chap13/gradient_diagnosis.pdf}
-    \caption{梯度冲突诊断结果。左图：PDE损失梯度与边界条件损失梯度的余弦相似度，负值表示梯度方向冲突；右图：两个损失项的梯度范数对比，PDE 梯度范数比边界条件梯度大 1–3 个数量级（即使边界项权重取 $\lambda = 100$）。}
+    \caption{梯度冲突诊断结果。左图：PDE损失梯度与边界条件损失梯度的余弦相似度，负值表示梯度方向冲突；右图：两个损失项的梯度范数对比，PDE 梯度范数比边界条件梯度大 1–3 个数量级（即使边界项权重取 $\rho = 100$）。}
     \label{fig:gradient_diagnosis}
 \end{figure}
 
@@ -1201,7 +1204,7 @@ for epoch in range(num_epochs):
 
 \textbf{1. 梯度冲突频繁发生}。在100个采样点中，有42次（42\%）出现了负的梯度夹角余弦值，即$\nabla L_{\text{PDE}} \cdot \nabla L_{\text{BC}} < 0$。这意味着\textbf{将近一半的训练步骤中，优化一个目标会损害另一个目标}。
 
-\textbf{2. 梯度范数不平衡}。PDE梯度的范数通常比BC梯度大1-2个数量级。这说明在使用固定权重$\lambda=100$时，两个任务的梯度贡献是不均衡的。
+\textbf{2. 梯度范数不平衡}。PDE梯度的范数通常比BC梯度大1-2个数量级。这说明在使用固定权重$\rho=100$时，两个任务的梯度贡献是不均衡的。
 
 \textbf{3. 训练不稳定性}。损失曲线中的锯齿状波动正是梯度竞争的直接反映——当PDE损失下降时，BC损失可能上升，反之亦然。
 
@@ -1224,7 +1227,7 @@ for epoch in range(num_epochs):
 
 \subsection{从罚函数到拉格朗日乘子}
 
-回顾罚函数法的局限：权重$\lambda$是固定的，无法自适应地平衡不同约束。
+回顾罚函数法的局限：权重$\rho$是固定的，无法自适应地平衡不同约束。
 
 让我们回归更一般的\textbf{拉格朗日对偶}框架。将PINN问题写成：
 \begin{equation}
@@ -1321,7 +1324,7 @@ history = trainer.train(num_epochs=10000)
 
 \subsubsection{自适应权重的实验结果}
 
-我们对比了固定权重（$\lambda=100$）和拉格朗日对偶自适应权重两种方法。
+我们对比了固定权重（$\rho=100$）和拉格朗日对偶自适应权重两种方法。
 
 \begin{figure}[htbp]
     \centering
@@ -1334,7 +1337,7 @@ history = trainer.train(num_epochs=10000)
 
 \textbf{1. $\lambda$的动态调整}。在训练初期，$\lambda$从1.0快速上升到约1.04，然后基本稳定。这说明对偶上升机制在自动调整权重，使边界条件得到适当的关注。
 
-\textbf{2. 与固定权重的对比}。有趣的是，在这个简单问题上，自适应权重的最终$\lambda \approx 1.04$远小于我们人工设定的$\lambda = 100$。这说明：
+\textbf{2. 与固定权重的对比}。有趣的是，在这个简单问题上，自适应权重的最终乘子$\lambda \approx 1.04$远小于我们人工设定的罚系数$\rho = 100$。这说明：
 \begin{itemize}
     \item 过大的固定权重可能并非最优选择
     \item 自适应方法能自动找到合适的平衡点
@@ -1393,7 +1396,7 @@ GradNorm需要在每步计算多个任务的梯度范数，计算开销较大。
 \hline
 \textbf{方法} & \textbf{实现复杂度} & \textbf{超参数} & \textbf{适用场景} \\
 \hline
-固定权重 & 低 & 需要调$\lambda$ & 简单问题 \\
+固定权重 & 低 & 需要调$\rho$ & 简单问题 \\
 学习率退火 & 低 & 退火策略 & 时间演化问题 \\
 拉格朗日对偶 & 中 & $\rho, \eta_\lambda$ & 有明确约束的问题 \\
 GradNorm & 高 & $\alpha$ & 多任务学习 \\
@@ -1444,7 +1447,7 @@ u_xx = grad(grad(u, x), x)
 residual = u_t - alpha * u_xx
 
 # 同时训练所有时刻
-loss = torch.mean(residual ** 2) + lambda_ic * loss_ic + lambda_bc * loss_bc
+loss = torch.mean(residual ** 2) + rho_ic * loss_ic + rho_bc * loss_bc
 \end{lstlisting}
 
 \textbf{问题}：网络在同时学习所有时刻，但它没有"先把$t=0$学好，再学$t=\Delta t$"的机制。初始时刻的误差会传播到后续时刻，而网络对此毫无感知。
@@ -1567,7 +1570,7 @@ $u$是泊松方程的解，当且仅当$u$是能量泛函$J[u]$的极小点。
 \end{equation}
 
 \begin{lstlisting}[language=Python, caption={Deep Ritz Method的实现}]
-def compute_ritz_loss(model, x_interior, x_boundary, f_func, lambda_bc=100.0):
+def compute_ritz_loss(model, x_interior, x_boundary, f_func, rho_bc=100.0):
     """
     Deep Ritz Method的损失函数
     """
@@ -1592,7 +1595,7 @@ def compute_ritz_loss(model, x_interior, x_boundary, f_func, lambda_bc=100.0):
     u_boundary = model(x_boundary)
     loss_bc = torch.mean(u_boundary ** 2)
     
-    total_loss = loss_energy + lambda_bc * loss_bc
+    total_loss = loss_energy + rho_bc * loss_bc
     
     return total_loss, loss_energy, loss_bc
 \end{lstlisting}
@@ -1679,7 +1682,7 @@ Deep Ritz（能量最小化） & $4.84 \times 10^{-7}$ & 只需一阶导数 \\
 PINN天然适合逆问题！只需将$D$也作为可学习参数：
 
 \begin{equation}
-    \mathcal{L}(\theta, D) = \underbrace{\sum_i |u_\theta(x_i, t_i) - u_i^{\text{obs}}|^2}_{L_{\text{data}}：\text{拟合观测数据}} + \underbrace{\lambda \sum_j |r_D(x_j, t_j)|^2}_{L_{\text{PDE}}：\text{PDE残差}}
+    \mathcal{L}(\theta, D) = \underbrace{\sum_i |u_\theta(x_i, t_i) - u_i^{\text{obs}}|^2}_{L_{\text{data}}：\text{拟合观测数据}} + \underbrace{\rho \sum_j |r_D(x_j, t_j)|^2}_{L_{\text{PDE}}：\text{PDE残差}}
 \end{equation}
 
 其中残差$r_D = \partial_t u_\theta - D \partial_{xx} u_\theta$依赖于待定参数$D$。

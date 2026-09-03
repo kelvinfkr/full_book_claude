@@ -211,7 +211,7 @@ F(x, y) = -x^2 + xy, \quad x \in \R, \; y \in [-2, 2]
 \end{center}
 
 % 画函数图
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.9]
     % 左图：顺序A
@@ -683,7 +683,7 @@ $\Rightarrow$ 在最优解下，它一定被用光了：$b_i - (Ax^*)_i = 0$
 
 互补松弛也可以从几何角度理解。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.8]
     % 可行域
@@ -820,7 +820,7 @@ $y_i^*$ 告诉我们第 $i$ 个约束的"价值"。如果 $y_i^* = 0$，放松�
 
 \subsection{矩阵"身材"图解}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.7]
     % 矮胖矩阵
@@ -863,7 +863,7 @@ $y_i^*$ 告诉我们第 $i$ 个约束的"价值"。如果 $y_i^* = 0$，放松�
 
 为了验证理论分析，我们做一组实验：固定约束数 $m = 5$，让变量数 $n$ 从 200 增长到 20000，比较原始和对偶方法的求解时间。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}
 \begin{axis}[
@@ -1103,7 +1103,7 @@ $\lambda$在对偶理论中的意义：它是\textbf{资源的影子价格}。
 \forall x, y \in C, \forall \theta \in [0, 1]: \quad \theta x + (1-\theta) y \in C
 \]
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.8]
     % 凸集
@@ -1167,7 +1167,7 @@ f(\theta x + (1-\theta) y) \leq \theta f(x) + (1-\theta) f(y), \quad \forall \th
 
 \subsection*{三、凸优化问题的分类}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \renewcommand{\arraystretch}{1.3}
 \begin{tabular}{l|l|l}
@@ -1216,7 +1216,7 @@ f(\theta x + (1-\theta) y) \leq \theta f(x) + (1-\theta) f(y), \quad \forall \th
 
 \subsection*{主流优化工具概览}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \renewcommand{\arraystretch}{1.3}
 \begin{tabular}{l|l|l|l}
@@ -1242,25 +1242,27 @@ Gurobi/CPLEX & LP/QP/MIP & 多种 & 工业标准 \\
 import numpy as np
 from scipy.optimize import linprog
 
-# 问题：min c'x, s.t. Ax <= b, x >= 0
-c = np.array([3, 2, 5])  # 目标函数系数
+# 问题：max c'x（三种产品的单位利润 c），s.t. Ax <= b（三种资源的用量上限），x >= 0
+# linprog 只做最小化，所以传入 -c
+c = np.array([3, 2, 5])  # 单位利润
 A_ub = np.array([[1, 1, 0],
                  [2, 0, 1],
-                 [0, 1, 2]])  # 不等式约束矩阵
-b_ub = np.array([4, 6, 5])   # 约束右端项
+                 [0, 1, 2]])  # 每单位产品消耗的资源
+b_ub = np.array([4, 6, 5])   # 资源上限
 
-result = linprog(c, A_ub=A_ub, b_ub=b_ub, method='highs')
+result = linprog(-c, A_ub=A_ub, b_ub=b_ub, method='highs')
 print(f"最优解: x = {result.x}")
-print(f"最优值: {result.fun:.4f}")
-print(f"求解时间: {result.nit} 次迭代")
+print(f"最大利润: {-result.fun:.4f}")
+print(f"单纯形迭代: {result.nit} 次")
 \end{lstlisting}
 
 \textbf{输出}：
 \begin{verbatim}
-最优解: x = [0.   2.5  1.25]
-最优值: 11.2500
-求解时间: 2 次迭代
+最优解: x = [2.2 1.8 1.6]
+最大利润: 18.2000
+单纯形迭代: 3 次
 \end{verbatim}
+三条资源约束全部取等号（都是"紧"的），它们的影子价格就是第1章讲的对偶变量——第2章正文里对偶问题的解。
 
 \subsection*{示例2：二次规划——投资组合优化}
 
@@ -1300,26 +1302,26 @@ print(f"最优权重: {weights}")
 print(f"组合风险: {risk:.4f}")
 \end{lstlisting}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.7\textwidth]{figs_chap02/portfolio_weights.pdf}
-\caption{10种资产的最优投资组合权重分配。可以看到优化器倾向于集中投资少数几种资产，而非均匀分配（虚线），这是均值-方差优化的典型特征。}
+\caption{10种资产的最优投资组合权重分配（SLSQP 求解）。可以看到优化器倾向于集中投资少数几种资产（只有 4 种资产权重非零），而非均匀分配（虚线），这是均值-方差优化的典型特征；这组数据里收益约束 $\mu^\top w\geq 0.08$ 并不起作用（最优组合收益 $0.105$），起作用的只有预算约束 $\mathbf{1}^\top w=1$ 和 $w\geq 0$。}
 \end{figure}
 
 \subsection*{性能对比：问题规模 vs 求解时间}
 
 我们测试了不同规模问题的求解时间：
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.95\textwidth]{figs_chap02/qp_performance.pdf}
-\caption{二次规划性能测试。\textbf{左图}：求解时间随资产数量的变化，呈现超线性增长（SLSQP在500资产时需要约10秒）。\textbf{右图}：最优风险随资产数量增加而增加，这是因为随机生成的协方差矩阵的特征值随维度增长。}
+\caption{二次规划性能测试。\textbf{(a)}：求解时间随资产数量的变化，呈现超线性增长（$n\geq 50$ 后约按 $n^{3.2}$ 增长，SLSQP 在 500 资产时需要约 9 秒）——SLSQP 每步都要解一个稠密的最小二乘子问题，不适合大规模 QP。\textbf{(b)}：最小风险随资产数量增加而增加，这是因为随机生成的协方差矩阵 $\Sigma=AA^\top+0.1I$ 的最大特征值随维度增长；灰色虚线是均匀分配 $w_i=1/n$ 的风险，优化大约把风险压低 $10\%$--$20\%$。}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.7\textwidth]{figs_chap02/lp_performance.pdf}
-\caption{线性规划性能测试。使用HiGHS求解器，1000个变量的LP仅需0.22秒。现代LP求解器已经非常成熟，对于大多数实际问题都能快速求解。}
+\caption{线性规划性能测试（随机生成的资源分配问题 $\max c^\top x$, s.t. $Ax\leq b$, $x\geq 0$）。使用HiGHS求解器，1000个变量、500个约束的LP仅需约0.3秒（74 次单纯形迭代，点旁标注为迭代次数）；$n\geq 100$ 后时间大致按 $n^{2}$ 左右增长（图例中的指数由当次计时拟合，不同机器会略有差别）。现代LP求解器已经非常成熟，对于大多数实际问题都能快速求解。}
 \end{figure}
 
 \subsection*{示例3：非凸优化——方法比较}
@@ -1344,10 +1346,10 @@ for method in methods:
           f"nfev={result.nfev}, success={result.success}")
 \end{lstlisting}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.95\textwidth]{figs_chap02/nonconvex_comparison.pdf}
-\caption{非凸优化方法比较。\textbf{左图}：求解时间随维度增长，L-BFGS-B在高维问题上最快。\textbf{右图}：函数评估次数，Powell方法需要的评估次数最多。\textbf{结论}：对于大规模非凸问题，L-BFGS-B是首选。}
+\caption{非凸优化方法比较（Rosenbrock 函数，从 $x_0=0$ 出发）。\textbf{(a)}：求解时间随维度增长，L-BFGS-B 与 BFGS 这两种用梯度的方法在高维问题上最快。\textbf{(b)}：函数评估次数，Powell 方法需要的评估次数最多；Nelder--Mead 在 $n=20$ 时用完评估预算仍未收敛（空心标记）——无梯度方法的代价随维度增长得最快。\textbf{结论}：对于大规模非凸问题，L-BFGS-B是首选。}
 \end{figure}
 
 \subsection*{MATLAB与Gurobi}

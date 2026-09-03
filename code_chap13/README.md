@@ -13,7 +13,7 @@
 | `hard_constraint.py` | 硬约束vs软约束对比实验 | 3节 |
 | `adaptive_weight.py` | 自适应权重PINN实现 | 5节 |
 | `gradient_diagnosis.py` | 梯度竞争诊断 | 4.2节 |
-| `lambda_effect.py` | 罚参数λ的影响实验 | 2.4节 |
+| `lambda_effect.py` | 罚系数ρ（损失权重）的影响实验 | 2.4节 |
 
 ## 运行环境
 
@@ -60,6 +60,6 @@ python spectral_bias.py
 - 约42%的训练步骤存在梯度冲突
 - 梯度范数不平衡
 
-### 7. 罚参数影响 (`lambda_effect.py`)
+### 7. 罚系数（损失权重）ρ 的影响 (`lambda_effect.py`)
 - λ=10~100为最优范围
 - λ过大或过小都会损害精度

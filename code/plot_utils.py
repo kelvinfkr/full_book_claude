@@ -1,5 +1,8 @@
 """
-绘图工具模块 - 统一的中文字体配置
+绘图工具模块 - 统一的中文字体配置（旧脚本兼容层）
+
+新的重绘脚本请改用 code/textbook_style.py（统一色板、面板编号、PDF+PNG 双输出，
+并优先使用 Noto Sans CJK 以保证对数坐标的负号可显示）。
 
 在所有绘图脚本开头添加:
 from plot_utils import setup_chinese_font

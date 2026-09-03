@@ -7,7 +7,7 @@
 2015年12月21日，SpaceX的猎鹰9号火箭在发射后成功返回着陆——这是人类历史上第一次轨道级火箭的垂直回收。火箭在返回过程中需要精确控制发动机推力和姿态，才能稳稳降落在只有足球场大小的着陆平台上。
 \storynote{Lev Pontryagin}{庞特里亚金（1908--1988），苏联数学家，14岁因煤油炉爆炸双目失明，靠母亲为他朗读论文完成研究。1955年他带领几位学生转向工程问题，为苏联空军研究"最短时间拦截"，1956年提出最大值原理——本章的伴随方程正是它的核心。}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.8]
     % 火箭轨迹
@@ -83,7 +83,7 @@ $\lambda$ 的意义 & 影子价格 & 未来代价对当前状态的敏感度 \\
 
 考虑一个质量为 $m$ 的物体在一维直线上运动。初始时刻 $t=0$ 在原点静止，我们要在时刻 $t=T$ 把它移动到位置 $x=1$，速度为零。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.2]
     % 轨道
@@ -303,7 +303,7 @@ $\lambda_i(t) = \frac{\partial J^*}{\partial x_i(t)}$ 告诉我们：如果在�
 
 这就像股票的"影子价格"——当前持有的价值取决于未来的收益。
 \end{physicalmeaning}
-\clarify{符号约定提醒：若像第1章那样把约束项写成 $\lambda^\top(\dot{x} - f)$，推出的 $\lambda$ 与这里差一个负号，此时 $\lambda = -\partial J^*/\partial x$。本章离散部分（$\lambda_N = -\partial \phi/\partial x_N$）和第9章（$\lambda_i = -\partial L/\partial z_i$）用的正是这一约定。判断口径只看一条："$\lambda$ 是不是代价对状态的梯度"，差的只是正负号。}
+\clarify{符号约定提醒：本书动态各章统一把动力学约束写成"$f - \dot{x}$"（离散版 $f(x_k,u_k) - x_{k+1}$）的形式，于是 $\lambda$ 总是"最优代价对状态的梯度"：本章连续与离散部分、第9章的反向传播、第10章的值函数梯度、第11章的时间反传都是如此。第1章的规则 $\lambda = -df^*/d\epsilon$ 依然成立——把约束放松成 $f - \dot{x} = \epsilon$ 相当于把状态"往回拨"$\epsilon$，对状态的梯度前面因此多出一个负号，两者正好抵消。若像某些教材那样把约束写成 $\dot{x} - f$，推出的 $\lambda$ 只差一个整体负号，判断口径只看一条："$\lambda$ 是不是代价对状态的梯度"。}
 
 % ------------------------------------------------------------------------------------
 \section{完整求解：最省力移动问题}
@@ -417,7 +417,7 @@ x_1^*(t) = \frac{c_1 t^3}{6} - \frac{c_2 t^2}{2} = -\frac{2t^3}{T^3} + \frac{3t^
 
 取 $T = 1$，画出最优解：
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.85]
     % 位置图
@@ -618,19 +618,19 @@ x_{k+1} = f(x_k, u_k), \quad k = 0, 1, \ldots, N-1
 
 \textbf{构造拉格朗日函数}：
 
-对每个动力学约束 $x_{k+1} - f(x_k, u_k) = 0$，引入乘子 $\lambda_{k+1}$：
+对每个动力学约束 $f(x_k, u_k) - x_{k+1} = 0$（与连续部分的 $f - \dot{x}$ 同一写法），引入乘子 $\lambda_{k+1}$：
 
 \begin{equation}
-\mathcal{L} = \underbrace{\sum_{k=0}^{N-1} L_k(x_k, u_k) + \phi(x_N)}_{\text{原目标函数}} + \underbrace{\sum_{k=0}^{N-1} \lambda_{k+1}^\top \left[ x_{k+1} - f(x_k, u_k) \right]}_{\text{约束项（应该=0）}}
+\mathcal{L} = \underbrace{\sum_{k=0}^{N-1} L_k(x_k, u_k) + \phi(x_N)}_{\text{原目标函数}} + \underbrace{\sum_{k=0}^{N-1} \lambda_{k+1}^\top \left[ f(x_k, u_k) - x_{k+1} \right]}_{\text{约束项（应该=0）}}
 \end{equation}
 
 展开写得更清楚：
 \begin{align}
-\mathcal{L} &= L_0(x_0, u_0) + \lambda_1^\top [x_1 - f(x_0, u_0)] \\
-&+ L_1(x_1, u_1) + \lambda_2^\top [x_2 - f(x_1, u_1)] \\
-&+ L_2(x_2, u_2) + \lambda_3^\top [x_3 - f(x_2, u_2)] \\
+\mathcal{L} &= L_0(x_0, u_0) + \lambda_1^\top [f(x_0, u_0) - x_1] \\
+&+ L_1(x_1, u_1) + \lambda_2^\top [f(x_1, u_1) - x_2] \\
+&+ L_2(x_2, u_2) + \lambda_3^\top [f(x_2, u_2) - x_3] \\
 &+ \cdots \\
-&+ L_{N-1}(x_{N-1}, u_{N-1}) + \lambda_N^\top [x_N - f(x_{N-1}, u_{N-1})] \\
+&+ L_{N-1}(x_{N-1}, u_{N-1}) + \lambda_N^\top [f(x_{N-1}, u_{N-1}) - x_N] \\
 &+ \phi(x_N)
 \end{align}
 
@@ -641,7 +641,7 @@ x_{k+1} = f(x_k, u_k), \quad k = 0, 1, \ldots, N-1
 \paragraph{对 $\lambda_{k+1}$ 求导}（恢复动力学约束）
 
 \[
-\frac{\partial \mathcal{L}}{\partial \lambda_{k+1}} = x_{k+1} - f(x_k, u_k) = 0
+\frac{\partial \mathcal{L}}{\partial \lambda_{k+1}} = f(x_k, u_k) - x_{k+1} = 0
 \]
 
 这就是原来的动力学方程！没有新信息。
@@ -651,15 +651,15 @@ x_{k+1} = f(x_k, u_k), \quad k = 0, 1, \ldots, N-1
 $u_k$ 只出现在 $L_k(x_k, u_k)$ 和 $f(x_k, u_k)$ 中：
 
 \[
-\frac{\partial \mathcal{L}}{\partial u_k} = \frac{\partial L_k}{\partial u_k} - \lambda_{k+1}^\top \frac{\partial f}{\partial u_k} = 0
+\frac{\partial \mathcal{L}}{\partial u_k} = \frac{\partial L_k}{\partial u_k} + \lambda_{k+1}^\top \frac{\partial f}{\partial u_k} = 0
 \]
 
-整理：
+像连续部分那样定义离散哈密顿量 $H_k = L_k(x_k, u_k) + \lambda_{k+1}^\top f(x_k, u_k)$，这个条件就是：
 \begin{equation}
-\boxed{\frac{\partial L_k}{\partial u_k} = \lambda_{k+1}^\top \frac{\partial f}{\partial u_k}}
+\boxed{\frac{\partial H_k}{\partial u_k} = \frac{\partial L_k}{\partial u_k} + \lambda_{k+1}^\top \frac{\partial f}{\partial u_k} = 0}
 \end{equation}
 
-这告诉我们：最优控制时，代价对 $u_k$ 的敏感度 = 乘子 × 动力学对 $u_k$ 的敏感度。
+这告诉我们：最优控制时，代价对 $u_k$ 的"直接"敏感度，与"经由下一步状态传回来"的敏感度（乘子 × 动力学对 $u_k$ 的敏感度）恰好抵消。
 
 \paragraph{对 $x_k$（$k = 1, \ldots, N-1$）求导}（伴随方程）
 
@@ -667,32 +667,32 @@ $u_k$ 只出现在 $L_k(x_k, u_k)$ 和 $f(x_k, u_k)$ 中：
 
 \begin{itemize}
     \item $L_k(x_k, u_k)$ 中：贡献 $\frac{\partial L_k}{\partial x_k}$
-    \item $\lambda_{k+1}^\top [x_{k+1} - f(x_k, u_k)]$ 中的 $-f(x_k, u_k)$：贡献 $-\lambda_{k+1}^\top \frac{\partial f}{\partial x_k}$
-    \item $\lambda_k^\top [x_k - f(x_{k-1}, u_{k-1})]$ 中的 $x_k$：贡献 $\lambda_k^\top$
+    \item $\lambda_{k+1}^\top [f(x_k, u_k) - x_{k+1}]$ 中的 $f(x_k, u_k)$：贡献 $\lambda_{k+1}^\top \frac{\partial f}{\partial x_k}$
+    \item $\lambda_k^\top [f(x_{k-1}, u_{k-1}) - x_k]$ 中的 $-x_k$：贡献 $-\lambda_k^\top$
 \end{itemize}
 
 令偏导为零：
 \[
-\frac{\partial \mathcal{L}}{\partial x_k} = \frac{\partial L_k}{\partial x_k} + \lambda_k - \lambda_{k+1}^\top \frac{\partial f}{\partial x_k} = 0
+\frac{\partial \mathcal{L}}{\partial x_k} = \frac{\partial L_k}{\partial x_k} - \lambda_k^\top + \lambda_{k+1}^\top \frac{\partial f}{\partial x_k} = 0
 \]
 
 整理得到\textbf{伴随方程}：
 \begin{equation}
-\boxed{\lambda_k = \left(\frac{\partial f}{\partial x_k}\right)^\top \lambda_{k+1} - \frac{\partial L_k}{\partial x_k}^\top}
+\boxed{\lambda_k = \left(\frac{\partial f}{\partial x_k}\right)^\top \lambda_{k+1} + \frac{\partial L_k}{\partial x_k}^\top = \frac{\partial H_k}{\partial x_k}^\top}
 \end{equation}
 
 \paragraph{对 $x_N$ 求导}（终端条件）
 
-$x_N$ 出现在 $\phi(x_N)$ 和 $\lambda_N^\top x_N$ 中：
+$x_N$ 出现在 $\phi(x_N)$ 和 $-\lambda_N^\top x_N$ 中：
 \[
-\frac{\partial \mathcal{L}}{\partial x_N} = \frac{\partial \phi}{\partial x_N} + \lambda_N = 0
+\frac{\partial \mathcal{L}}{\partial x_N} = \frac{\partial \phi}{\partial x_N} - \lambda_N^\top = 0
 \]
 
 得到\textbf{终端条件}：
 \begin{equation}
-\boxed{\lambda_N = -\frac{\partial \phi}{\partial x_N}^\top}
+\boxed{\lambda_N = \frac{\partial \phi}{\partial x_N}^\top}
 \end{equation}
-\think{把 $\lambda_N = -\partial \phi/\partial x_N$ 与第1章的影子价格 $\lambda = -df^*/d\epsilon$ 对照：终端代价对终点状态的敏感度，正是"把终点放松一点，总代价变多少"。为什么两处都带负号？（提示：这一节把约束写成了 $x_{k+1} - f$，和第1章一样。）}
+\think{$\lambda_N = \partial \phi/\partial x_N$ 说的是"终点状态挪一点，终端代价变多少"——正是影子价格。它和第1章的 $\lambda = -df^*/d\epsilon$ 差一个负号，矛盾吗？（提示：把最后一条约束放松成 $f(x_{N-1}, u_{N-1}) - x_N = \epsilon$，意味着 $x_N$ 减少 $\epsilon$，于是 $dJ^*/d\epsilon = -\partial\phi/\partial x_N = -\lambda_N$，第1章的规则原封不动。）}
 
 \subsection{具体例子：手算伴随方程}
 
@@ -735,26 +735,26 @@ x_2 &= x_1 + u_1 = 1 + u_0 + u_1
 
 终端条件：
 \[
-\lambda_2 = -\frac{\partial \phi}{\partial x_2} = -20 x_2 = -20(1 + u_0 + u_1)
+\lambda_2 = \frac{\partial \phi}{\partial x_2} = 20 x_2 = 20(1 + u_0 + u_1)
 \]
 
 伴随方程（$k = 1$）：
 \[
-\lambda_1 = \frac{\partial f}{\partial x}^\top \lambda_2 - \frac{\partial L_1}{\partial x}^\top = 1 \cdot \lambda_2 - 0 = \lambda_2 = -20(1 + u_0 + u_1)
+\lambda_1 = \frac{\partial f}{\partial x}^\top \lambda_2 + \frac{\partial L_1}{\partial x}^\top = 1 \cdot \lambda_2 + 0 = \lambda_2 = 20(1 + u_0 + u_1)
 \]
 
 \textbf{第四步：最优性条件}
 
 对 $u_1$：
 \[
-\frac{\partial L_1}{\partial u_1} = \lambda_2 \cdot \frac{\partial f}{\partial u} \quad \Rightarrow \quad 2u_1 = \lambda_2 \cdot 1 = -20(1 + u_0 + u_1)
+\frac{\partial L_1}{\partial u_1} + \lambda_2 \cdot \frac{\partial f}{\partial u} = 0 \quad \Rightarrow \quad 2u_1 = -\lambda_2 \cdot 1 = -20(1 + u_0 + u_1)
 \]
 
 整理：$2u_1 + 20u_1 = -20 - 20u_0$，即 $22u_1 = -20 - 20u_0$
 
 对 $u_0$：
 \[
-\frac{\partial L_0}{\partial u_0} = \lambda_1 \cdot \frac{\partial f}{\partial u} \quad \Rightarrow \quad 2u_0 = \lambda_1 \cdot 1 = -20(1 + u_0 + u_1)
+\frac{\partial L_0}{\partial u_0} + \lambda_1 \cdot \frac{\partial f}{\partial u} = 0 \quad \Rightarrow \quad 2u_0 = -\lambda_1 \cdot 1 = -20(1 + u_0 + u_1)
 \]
 
 整理：$2u_0 + 20u_0 = -20 - 20u_1$，即 $22u_0 = -20 - 20u_1$
@@ -812,7 +812,7 @@ x_2 &= x_1 + u_1 = 0.524 - 0.476 = 0.048
 
 但现实世界不是这样的！
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.9]
     % 理想情况
@@ -870,7 +870,7 @@ x_2 &= x_1 + u_1 = 0.524 - 0.476 = 0.048
 \end{enumerate}
 \end{keyformula}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.0]
 
@@ -955,7 +955,7 @@ x_2 &= x_1 + u_1 = 0.524 - 0.476 = 0.048
 
 \textbf{原因1：近处看得准，远处看不准}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.8]
     \draw[->] (0, 0) -- (8, 0) node[right] {时间};
@@ -1308,7 +1308,7 @@ x_1 = \begin{pmatrix} 5 \\ 2 + (-6.45) \end{pmatrix} = \begin{pmatrix} 5 \\ -4.4
 
 假设你要把车停进一个平行车位。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.85]
     % 停车位
@@ -1368,7 +1368,7 @@ x_1 = \begin{pmatrix} 5 \\ 2 + (-6.45) \end{pmatrix} = \begin{pmatrix} 5 \\ -4.4
 
 约束 $g(x) = 0$ 把我们限制在一个曲面上。在这个曲面上，我们不能朝任意方向走——只能沿着曲面的\textbf{切方向}走。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.0]
     % 曲面（简化为曲线）
@@ -1463,7 +1463,7 @@ $g_1$ 和 $g_2$ 只张成一个\textbf{二维}子空间！
 
 缺失的是：$(\sin\theta, -\cos\theta, 0)$——\textbf{垂直于车身的方向}（横向移动）！
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.1]
     % 三维坐标系
@@ -1527,7 +1527,7 @@ $g_1$ 和 $g_2$ 只张成一个\textbf{二维}子空间！
 
 但实际上呢？
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.8]
     % 起点
@@ -1704,7 +1704,7 @@ $[g_1, g_2] = (\sin\theta, -\cos\theta, 0)$
 
 这正是\textbf{垂直于车身}的方向！
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.3]
     % 车（朝向 theta = 30度）
@@ -1854,7 +1854,7 @@ $\text{rank}(A) = n$ $\Rightarrow$ 任意 $b$ 有解 & 李代数秩 $= n$ $\Righ
 
 但速度约束不一样！虽然每个瞬间都必须满足约束，但通过巧妙的路径，可以到达"看起来不可达"的位置。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.9]
     % 左边：位置约束
@@ -1918,7 +1918,7 @@ $[g_1, g_1] = 0$（任何向量和自己的李括号都是零，因为"绕圈"�
 
 火车不能控！只能沿 $x$ 轴移动，永远到不了 $y \neq 0$ 的位置。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.9]
     % 火车

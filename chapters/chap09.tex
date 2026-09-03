@@ -98,7 +98,7 @@ f_i(z; W_i, b_i) = \sigma(W_i z + b_i)
 \end{itemize}
 \end{definition}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[node distance=2cm, >=stealth]
     % 输入层
@@ -248,9 +248,9 @@ L &= \ell(z_3)
 变量 & $x$ & 状态 $x_k$、控制 $u_k$ & 层输出 $z_i$、参数 $\theta_i$ \\
 目标 & $f(x)$ & $\sum_k L_k + \phi(x_N)$ & 损失 $\ell(z_n)$ \\
 约束 & $g(x) = 0$ & $x_{k+1} = f(x_k, u_k)$ & $z_i = f_i(z_{i-1}; \theta_i)$ \\
-乘子 & $\lambda$ & $\lambda_k$（协态） & $\lambda_i$（误差信号 $\delta_i = -\lambda_i$） \\
-一阶条件 & $\nabla f + \lambda^\top \nabla g = 0$ & $\lambda_k = (\partial f/\partial x_k)^\top \lambda_{k+1} - (\partial L_k/\partial x_k)^\top$ & $\lambda_i = (\partial f_{i+1}/\partial z_i)^\top \lambda_{i+1}$ \\
-影子价格 & $-df^*/d\epsilon$ & $-\partial J/\partial x_k$ & $-\partial L/\partial z_i$ \\
+乘子 & $\lambda$ & $\lambda_k$（协态） & $\lambda_i$（误差信号 $\delta_i = \lambda_i$） \\
+一阶条件 & $\nabla f + \lambda^\top \nabla g = 0$ & $\lambda_k = (\partial f/\partial x_k)^\top \lambda_{k+1} + (\partial L_k/\partial x_k)^\top$ & $\lambda_i = (\partial f_{i+1}/\partial z_i)^\top \lambda_{i+1}$ \\
+影子价格 & $-df^*/d\epsilon$ & $\partial J^*/\partial x_k$ & $\partial L/\partial z_i$ \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -261,7 +261,7 @@ L &= \ell(z_3)
 这就是一个\textbf{带等式约束的优化问题}——和第1章学的完全一样，只是约束变成了一系列级联的等式。
 \think{对比第3章的变分法：那里约束是$y_{k+1} - y_k = v_k \Delta x$，这里约束是$z_{i+1} = f_{i+1}(z_i)$。结构完全一样！神经网络是变分法的离散版本。}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[node distance=2.2cm, >=stealth]
     \node[circle, draw, thick] (x) {$x$};
@@ -292,10 +292,10 @@ L &= \ell(z_3)
 
 \begin{keyformula}[title=神经网络的拉格朗日函数]
 \begin{equation}
-\mathcal{L}(\theta, z, \lambda) = \ell(z_n) + \sum_{i=1}^n \lambda_i^\top \big(z_i - f_i(z_{i-1}; \theta_i)\big)
+\mathcal{L}(\theta, z, \lambda) = \ell(z_n) + \sum_{i=1}^n \lambda_i^\top \big(f_i(z_{i-1}; \theta_i) - z_i\big)
 \end{equation}
 
-其中 $\lambda_i \in \mathbb{R}^{d_i}$ 是约束 $z_i = f_i(z_{i-1}; \theta_i)$ 对应的拉格朗日乘子。
+其中 $\lambda_i \in \mathbb{R}^{d_i}$ 是约束 $z_i = f_i(z_{i-1}; \theta_i)$ 对应的拉格朗日乘子。约束写成 $f_i(z_{i-1};\theta_i) - z_i = 0$，与第8章把动力学写成 $f - \dot{x}$（离散版 $f - x_{k+1}$）是同一约定。
 \end{keyformula}
 
 \marginnote{注意：这里我们约定 $z_0 = x$（输入）。每个 $\lambda_i$ 的维度与 $z_i$ 相同。}
@@ -306,16 +306,16 @@ L &= \ell(z_3)
 
 \textbf{对 $z_i$ 求导}（$i < n$）：
 
-$z_i$ 出现在两个地方：第 $i$ 个约束项 $\lambda_i^\top z_i$ 和第 $i+1$ 个约束项 $-\lambda_{i+1}^\top f_{i+1}(z_i; \theta_{i+1})$。因此：
+$z_i$ 出现在两个地方：第 $i$ 个约束项 $-\lambda_i^\top z_i$ 和第 $i+1$ 个约束项 $\lambda_{i+1}^\top f_{i+1}(z_i; \theta_{i+1})$。因此：
 \begin{equation}
-\frac{\partial \mathcal{L}}{\partial z_i} = \lambda_i - \left(\frac{\partial f_{i+1}}{\partial z_i}\right)^\top \lambda_{i+1} = 0
+\frac{\partial \mathcal{L}}{\partial z_i} = -\lambda_i + \left(\frac{\partial f_{i+1}}{\partial z_i}\right)^\top \lambda_{i+1} = 0
 \end{equation}
 
 \textbf{对 $z_n$ 求导}（最后一层）：
 
-$z_n$ 出现在损失项 $\ell(z_n)$ 和约束项 $\lambda_n^\top z_n$ 中：
+$z_n$ 出现在损失项 $\ell(z_n)$ 和约束项 $-\lambda_n^\top z_n$ 中：
 \begin{equation}
-\frac{\partial \mathcal{L}}{\partial z_n} = \nabla \ell(z_n) + \lambda_n = 0 \quad \Rightarrow \quad \lambda_n = -\nabla \ell(z_n)
+\frac{\partial \mathcal{L}}{\partial z_n} = \nabla \ell(z_n) - \lambda_n = 0 \quad \Rightarrow \quad \lambda_n = \nabla \ell(z_n)
 \end{equation}
 
 整理这些条件，我们得到：
@@ -324,7 +324,7 @@ $z_n$ 出现在损失项 $\ell(z_n)$ 和约束项 $\lambda_n^\top z_n$ 中：
 \begin{equation}
 \boxed{
 \begin{aligned}
-\lambda_n &= -\nabla \ell(z_n) \quad \text{（终端条件）} \\[5pt]
+\lambda_n &= \nabla \ell(z_n) \quad \text{（终端条件）} \\[5pt]
 \lambda_i &= \left(\frac{\partial f_{i+1}}{\partial z_i}\right)^\top \lambda_{i+1}, \quad i = n-1, \ldots, 1 \quad \text{（递推公式）}
 \end{aligned}
 }
@@ -338,13 +338,13 @@ $\lambda_i$ 的意义是什么？
 
 回忆第1章：拉格朗日乘子 $\lambda$ 表示``如果约束放松一点，目标函数会变化多少''——即约束的\textbf{影子价格}。
 
-在神经网络中，$\lambda_i = -\frac{\partial L}{\partial z_i}$ 表示：如果第 $i$ 层的输出 $z_i$ 变化一点，最终损失 $L$ 会变化多少。
+在神经网络中，$\lambda_i = \frac{\partial L}{\partial z_i}$ 表示：如果第 $i$ 层的输出 $z_i$ 变化一点，最终损失 $L$ 会变化多少。
 
-这就是为什么深度学习文献中常把 $\delta_i = -\lambda_i$ 称为``误差信号''——它告诉我们每一层对最终误差的``贡献''。
+深度学习文献里的``误差信号'' $\delta_i = \partial L/\partial z_i$ 正是这里的 $\lambda_i$——它告诉我们每一层对最终误差的``贡献''。
 
-一句话总结：本章的约束是"每一层的输出必须等于上一层输出经过这一层的结果"；乘子 $\lambda_i$ 是第 $i$ 层输出的影子价格——偷偷把 $z_i$ 改一点，最终损失会变多少（差一个负号）。反向传播就是从最后一层往回算所有影子价格。
+一句话总结：本章的约束是"每一层的输出必须等于上一层输出经过这一层的结果"；乘子 $\lambda_i$ 是第 $i$ 层输出的影子价格——偷偷把 $z_i$ 改一点，最终损失会变多少。反向传播就是从最后一层往回算所有影子价格。
 \end{physicalmeaning}
-\clarify{符号约定：本书从第1章起写 $\Lag = f + \lambda^\top g$，因此 $\lambda$ 等于"目标对约束松弛量导数"的相反数（第1章 $\lambda = -df^*/d\epsilon$）。本章的 $\lambda_i = -\partial L/\partial z_i$ 与第8章离散伴随方程的 $\lambda_N = -\partial\phi/\partial x_N$ 都遵守这一约定；深度学习文献中的 $\delta_i = \partial L/\partial z_i$ 只差一个负号。}
+\clarify{符号约定：本章把约束写成 $f_i(z_{i-1}) - z_i = 0$，与第8章的动力学约束 $f - \dot{x}$、$f - x_{k+1}$ 是同一写法，于是 $\lambda_i = +\partial L/\partial z_i$，恰好就是深度学习文献里的误差信号 $\delta_i$。第1章的规则 $\lambda = -df^*/d\epsilon$ 依然成立：把约束放松成 $f_i(z_{i-1}) - z_i = \epsilon$ 等于把 $z_i$ 减小 $\epsilon$，所以 $dL^*/d\epsilon = -\partial L/\partial z_i = -\lambda_i$。}
 
 \subsection{参数梯度}
 
@@ -352,12 +352,12 @@ $\lambda_i$ 的意义是什么？
 
 对 $\theta_i$ 求导：
 \begin{equation}
-\frac{\partial \mathcal{L}}{\partial \theta_i} = -\lambda_i^\top \frac{\partial f_i}{\partial \theta_i}
+\frac{\partial \mathcal{L}}{\partial \theta_i} = \lambda_i^\top \frac{\partial f_i}{\partial \theta_i}
 \end{equation}
 
-由于 $\lambda_i = -\frac{\partial L}{\partial z_i}$，我们有：
+由于 $\lambda_i = \frac{\partial L}{\partial z_i}$，我们有：
 \begin{equation}
-\boxed{\frac{\partial L}{\partial \theta_i} = \frac{\partial L}{\partial z_i}^\top \frac{\partial f_i}{\partial \theta_i} = -\lambda_i^\top \frac{\partial f_i}{\partial \theta_i}}
+\boxed{\frac{\partial L}{\partial \theta_i} = \frac{\partial L}{\partial z_i}^\top \frac{\partial f_i}{\partial \theta_i} = \lambda_i^\top \frac{\partial f_i}{\partial \theta_i}}
 \end{equation}
 
 \textbf{这就是参数梯度的计算公式！}一旦通过反向传播得到了所有 $\lambda_i$，就能直接算出每层参数的梯度。
@@ -450,10 +450,10 @@ L &\leftarrow \ell(z_n, y) \notag
 
 \textbf{// 反向传播：计算各层梯度}
 \begin{align}
-\lambda_n &\leftarrow -\nabla_{z_n} \ell(z_n, y) \quad \text{（终端条件）} \notag \\
+\lambda_n &\leftarrow \nabla_{z_n} \ell(z_n, y) \quad \text{（终端条件）} \notag \\
 \textbf{for } i &= n \text{ down to } 1: \notag \\
-\quad \nabla_{W_i} L &\leftarrow -\lambda_i \odot \sigma'(W_i z_{i-1} + b_i) \cdot z_{i-1}^\top \quad \text{（参数梯度）} \notag \\
-\quad \nabla_{b_i} L &\leftarrow -\lambda_i \odot \sigma'(W_i z_{i-1} + b_i) \notag \\
+\quad \nabla_{W_i} L &\leftarrow \lambda_i \odot \sigma'(W_i z_{i-1} + b_i) \cdot z_{i-1}^\top \quad \text{（参数梯度）} \notag \\
+\quad \nabla_{b_i} L &\leftarrow \lambda_i \odot \sigma'(W_i z_{i-1} + b_i) \notag \\
 \quad \textbf{if } i &> 1: \notag \\
 \quad\quad \lambda_{i-1} &\leftarrow W_i^\top (\lambda_i \odot \sigma'(W_i z_{i-1} + b_i)) \quad \text{（伴随方程）} \notag
 \end{align}
@@ -486,9 +486,9 @@ L &\leftarrow \ell(z_n, y) \notag
 
 它的伴随方程是：
 \begin{equation}
-\dot{p} = -\frac{\partial H}{\partial x}, \quad p(T) = -\nabla \phi(x(T))
+\dot{p} = -\frac{\partial H}{\partial x}, \quad p(T) = \nabla \phi(x(T))
 \end{equation}
-\clarify{这里沿用第8章\textbf{离散}部分的符号约定（约束写成 $x_{k+1} - f$），所以 $p(T) = -\nabla\phi$；第8章连续部分把约束写成 $f - \dot{x}$，得到 $\lambda(T) = +\nabla\phi$。两者只差一个符号。}
+\clarify{第8章把约束写成 $f - \dot{x}$（离散版 $f - x_{k+1}$），得到 $p(T) = +\nabla\phi$；本章把约束写成 $f_i(z_{i-1}) - z_i$，同样得到 $\lambda_n = +\nabla\ell$。两边符号约定完全一致，可以逐项对照。}
 
 现在对比神经网络：
 
@@ -501,7 +501,7 @@ L &\leftarrow \ell(z_n, y) \notag
 损失：$L = \ell(z_n)$ & 终端代价：$\phi(x(T))$ \\
 伴随变量：$\lambda_i$ & 协态变量：$p(t)$ \\
 $\lambda_i = \left(\frac{\partial f_{i+1}}{\partial z_i}\right)^\top \lambda_{i+1}$ & $\dot{p} = -\frac{\partial H}{\partial x}$ \\
-$\lambda_n = -\nabla \ell$ & $p(T) = -\nabla \phi$ \\
+$\lambda_n = \nabla \ell$ & $p(T) = \nabla \phi$ \\
 参数梯度：$\frac{\partial L}{\partial \theta_i}$ & 控制梯度：$\frac{\partial H}{\partial u}$ \\
 \bottomrule
 \end{tabular}
@@ -537,33 +537,33 @@ L &= \frac{1}{2}\|z_2 - y\|^2 \quad \text{（均方误差损失）}
 
 \textbf{Step 1: 写出拉格朗日函数}
 \begin{equation}
-\mathcal{L} = \frac{1}{2}\|z_2 - y\|^2 + \lambda_1^\top(z_1 - \sigma(W_1 x + b_1)) + \lambda_2^\top(z_2 - W_2 z_1 - b_2)
+\mathcal{L} = \frac{1}{2}\|z_2 - y\|^2 + \lambda_1^\top(\sigma(W_1 x + b_1) - z_1) + \lambda_2^\top(W_2 z_1 + b_2 - z_2)
 \end{equation}
 
 \textbf{Step 2: 计算伴随变量}
 
 对 $z_2$ 求导（终端条件）：
 \begin{equation}
-\frac{\partial \mathcal{L}}{\partial z_2} = (z_2 - y) + \lambda_2 = 0 \quad \Rightarrow \quad \lambda_2 = -(z_2 - y)
+\frac{\partial \mathcal{L}}{\partial z_2} = (z_2 - y) - \lambda_2 = 0 \quad \Rightarrow \quad \lambda_2 = z_2 - y
 \end{equation}
 
 对 $z_1$ 求导（递推）：
 \begin{equation}
-\frac{\partial \mathcal{L}}{\partial z_1} = \lambda_1 - W_2^\top \lambda_2 = 0 \quad \Rightarrow \quad \lambda_1 = W_2^\top \lambda_2
+\frac{\partial \mathcal{L}}{\partial z_1} = -\lambda_1 + W_2^\top \lambda_2 = 0 \quad \Rightarrow \quad \lambda_1 = W_2^\top \lambda_2
 \end{equation}
 
 \textbf{Step 3: 计算参数梯度}
 
 对 $W_2, b_2$：
 \begin{align}
-\nabla_{W_2} L &= -\lambda_2 z_1^\top = (z_2 - y) z_1^\top \\
-\nabla_{b_2} L &= -\lambda_2 = z_2 - y
+\nabla_{W_2} L &= \lambda_2 z_1^\top = (z_2 - y) z_1^\top \\
+\nabla_{b_2} L &= \lambda_2 = z_2 - y
 \end{align}
 
 对 $W_1, b_1$：令 $a_1 = W_1 x + b_1$（激活前的值），则
 \begin{align}
-\nabla_{W_1} L &= -(\lambda_1 \odot \sigma'(a_1)) x^\top \\
-\nabla_{b_1} L &= -\lambda_1 \odot \sigma'(a_1)
+\nabla_{W_1} L &= (\lambda_1 \odot \sigma'(a_1)) x^\top \\
+\nabla_{b_1} L &= \lambda_1 \odot \sigma'(a_1)
 \end{align}
 \end{example}
 
@@ -669,7 +669,7 @@ Python 就会自动调用你写的函数。\\
 
 整棵图多了一个``加法节点''，它知道：自己是谁（\texttt{data}）、自己从哪来（\texttt{\_prev}）、将来反向时怎么把梯度分给父节点（\texttt{\_backward}）。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
     node distance=2cm,
@@ -863,7 +863,7 @@ print(f"dy/dx = {x.grad}")   # 8.0（理论值：2x + 2 = 8）
 
 此时内存中的计算图：
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
     node distance=1.5cm,
@@ -994,7 +994,7 @@ x.\text{grad} = 8 = 2x + 2 \big|_{x=3} = \frac{dy}{dx}
 
 其中 $\eta > 0$ 是\textbf{学习率}（learning rate），控制每一步走多远。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.2]
     % 等高线
@@ -1147,7 +1147,7 @@ def train(model, data_loader, optimizer, num_epochs):
         print(f"Epoch {epoch}: loss = {loss.item()}")
 \end{lstlisting}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
     box/.style={draw, rounded corners, minimum width=2.8cm, minimum height=1cm, font=\small, align=center},
@@ -1177,7 +1177,7 @@ def train(model, data_loader, optimizer, num_epochs):
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.95\textwidth]{figs_chap09/chap09_fig1.png}
-\caption{自动微分与反向传播演示。（1）自动微分验证：本章例子 $y = x^2 + 2x + 1$，自动微分给出 $x = 3$ 处的切线斜率 $dy/dx = 8$，与手算一致；（2）用自动微分引擎训练线性回归 $y = 2x$ 的损失曲线；（3）拟合结果；（4）统一视角：神经网络的伴随变量 $\lambda_i$ 与最优控制的协态变量 $p(t)$ 逐项对应——都是约束优化的 KKT 条件。}
+\caption{自动微分与反向传播演示。（1）自动微分验证：本章例子 $y = x^2 + 2x + 1$，自动微分给出 $x = 3$ 处的切线斜率 $dy/dx = 8$，与手算一致；（2）用自动微分引擎训练线性回归 $y = 2x$ 的损失曲线；（3）拟合结果；（4）把 $N$ 层残差网络 $z_{i+1}=z_i+h\,f(z_i;\theta_i)$ 看成离散最优控制问题：用同一个自动微分引擎反向传播得到的伴随变量 $\lambda_i=\delta_i=\partial\ell/\partial z_i$（方块：$N=10$，圆点：$N=40$）落在连续协态 $p(t)$（黑线，由伴随方程 $\dot p=-(\partial f/\partial x)^{\top}p$ 积分得到）上，插图显示偏差 $\max_i|\lambda_i-p(t_i)|$ 随 $h=T/N$ 一阶下降——反向传播就是伴随方程的离散形式。}
 \label{fig:chap09_autograd}
 \end{figure}
 
@@ -1215,7 +1215,7 @@ def train(model, data_loader, optimizer, num_epochs):
 \end{unification}
 
 \begin{physicalmeaning}
-\textbf{$\lambda$ 在本章的意义}：$\lambda_i$ 是第 $i$ 层等式约束的影子价格——把第 $i$ 层的输出 $z_i$ 悄悄改动 $\epsilon$，最终损失变化 $-\lambda_i^\top \epsilon$。深度学习管 $\delta_i = -\lambda_i$ 叫"误差信号"，控制论管它叫"协态"，第1章管它叫"影子价格"——三个名字，一个东西。
+\textbf{$\lambda$ 在本章的意义}：$\lambda_i$ 是第 $i$ 层等式约束的影子价格——把第 $i$ 层的输出 $z_i$ 悄悄改动 $\epsilon$，最终损失变化 $\lambda_i^\top \epsilon$。深度学习管它叫"误差信号"$\delta_i$，控制论管它叫"协态"，第1章管它叫"影子价格"——三个名字，一个东西。
 \begin{itemize}
     \item 第8章：把"层 $i$"换成"时刻 $k$"、把参数 $\theta_i$ 换成控制 $u_k$，本章的伴随方程逐字变回第8章的离散伴随方程。
     \item 第10章：把损失换成"未来累计奖励"（符号因此翻转，$\lambda = +\partial J/\partial s$），把网络深度推到无穷，$\lambda$ 变成值函数的梯度，伴随方程变成贝尔曼方程。
@@ -1601,7 +1601,7 @@ J = \frac{\partial y}{\partial x} = \begin{pmatrix}
 
 当我们写：
 \begin{equation}
-\mathcal{L} = L(z_n) + \sum_i \lambda_i^\top (z_i - f_i(z_{i-1}; W_i))
+\mathcal{L} = L(z_n) + \sum_i \lambda_i^\top (f_i(z_{i-1}; W_i) - z_i)
 \end{equation}
 
 每一项都是标量（$\lambda_i^\top (\cdots)$ 是向量内积，结果是标量）。对标量求导：
@@ -1780,7 +1780,7 @@ H_{ij} = \frac{\partial^2 L}{\partial \theta_i \partial \theta_j}
 它描述了损失曲面的``曲率''——在不同方向上曲面弯曲的程度。
 \end{definition}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.75]
     % 良态：接近圆形
@@ -1863,7 +1863,7 @@ Jacobi 预条件 & Adagrad / RMSprop & $M = \text{diag}(\sqrt{v})$ \\
 
 有限元刚度矩阵是\textbf{稀疏}的（每个节点只与邻居耦合），现代神经网络也追求稀疏性。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.8]
     % 左边：全连接
@@ -1932,7 +1932,7 @@ Jacobi 预条件 & Adagrad / RMSprop & $M = \text{diag}(\sqrt{v})$ \\
 
 数值方法中的\textbf{多重网格}（multigrid）技术在深度学习中有惊人的对应物：\textbf{U-Net}！
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.65]
     % U-Net 结构
@@ -1991,7 +1991,7 @@ U-Net 在医学图像分割等任务中非常成功——它继承了多重网�
 
 深度学习的爆发离不开 \textbf{GPU}，而 GPU 擅长的恰恰是\textbf{大规模并行计算}。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.8]
     % CPU
@@ -2132,7 +2132,7 @@ warp 调度、内存对齐、缓存优化、并行线程块调度……
 
 深度学习的计算栈是这样的：
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
     box/.style={draw, rounded corners, minimum width=4cm, minimum height=0.9cm, font=\small, align=center},
@@ -2171,7 +2171,7 @@ warp 调度、内存对齐、缓存优化、并行线程块调度……
     \item \textbf{Grid}：所有 Block 的集合，完成一个计算任务
 \end{itemize}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.8]
     % Grid
@@ -2264,7 +2264,7 @@ print(A.stride())   # 步长：(3, 1)
 
 \textbf{Stride}（步长）告诉我们：沿每个维度移动一步，需要在底层数组中跳过多少元素。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.9]
     % 底层一维数组
@@ -2408,7 +2408,7 @@ def fused_linear_relu(x, W, b, y, ...):
     y = max(z2, 0)        # 直接写最终结果
 \end{lstlisting}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.8]
     % 朴素版本
@@ -2454,7 +2454,7 @@ FlashAttention 就是通过融合 QKV 计算、Softmax、输出投影，避免�
 
 \subsection*{深度学习软件生态}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
     box/.style={draw, rounded corners, minimum height=0.8cm, font=\small, align=center},
@@ -2538,7 +2538,7 @@ CUDA & GPU 编程平台和运行时 \\
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.95\textwidth]{figs_chap09/activation_functions.pdf}
-\caption{常用激活函数（实线）及其导数（虚线）。Sigmoid和Tanh在输入绝对值较大时趋于饱和，导数接近0。ReLU在负半轴完全为0，正半轴导数恒为1。Leaky ReLU、ELU、Swish、GELU都是对ReLU的改进。}
+\caption{常用激活函数（蓝色实线）及其导数（橙色虚线）。Sigmoid和Tanh在输入绝对值较大时趋于饱和，导数接近0。ReLU在负半轴完全为0，正半轴导数恒为1。Leaky ReLU、ELU、Swish、GELU都是对ReLU的改进。}
 \label{fig:activation_functions}
 \end{figure}
 
@@ -2578,12 +2578,12 @@ Sigmoid的导数有一个优雅的形式：
 
 \subsection*{三、梯度消失问题}
 
-为什么Sigmoid在深度网络中表现不佳？看图\ref{fig:gradient_flow}的中图：
+为什么Sigmoid在深度网络中表现不佳？看图\ref{fig:gradient_flow}(b)：
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.95\textwidth]{figs_chap09/gradient_flow.pdf}
-\caption{梯度流动分析。左图：不同激活函数的梯度分布。中图：梯度经过多层的衰减（对数尺度）。右图：ReLU的"死亡神经元"问题。}
+\caption{梯度流动分析。(a) 三种激活函数的导数：Sigmoid 最大只有 0.25。(b) 随机初始化的 20 层全连接网络中，距输出 $k$ 层处的梯度范数与输出层之比（对数坐标，5 个种子平均）：Sigmoid 沿 $0.25^k$ 衰减到 $10^{-13}$，Tanh 与 He 初始化的 ReLU 基本不衰减，Xavier 初始化的 ReLU 每层约乘 $1/\sqrt2$。(c) 真实训练实验（3 隐藏层 MLP，Adam，4 个随机种子，阴影为最小--最大范围）：学习率偏大（0.03）时 ReLU 在头几轮就有一半以上隐藏单元的预激活对所有样本恒 $\le 0$（输出恒为 0、梯度为 0，``死亡''且不再恢复）；Leaky ReLU 下同样的单元仍有梯度、比例更低且会波动恢复；学习率 0.001 时几乎不发生。}
 \label{fig:gradient_flow}
 \end{figure}
 
@@ -2600,7 +2600,7 @@ ReLU的优势在于：正半轴的梯度恒为1，不会衰减。这使得梯度
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.95\textwidth]{figs_chap09/computation_graph.pdf}
-\caption{单层神经元的计算图。左图：前向传播，从输入$x$计算输出$a$。右图：反向传播，从损失对输出的梯度$\partial L/\partial a$逐步计算对参数$W, b$的梯度。注意$\sigma'(z)$是"阀门"，控制梯度能否有效流回。}
+\caption{单层神经元的计算图。(a) 前向传播，从输入$x$计算输出$a$。(b) 反向传播，从损失对输出的梯度$\partial L/\partial a$逐步计算对参数$W, b$的梯度。注意$\sigma'(z)$是``阀门''，控制梯度能否有效流回。}
 \label{fig:computation_graph}
 \end{figure}
 
@@ -2625,7 +2625,7 @@ ReLU的优势在于：正半轴的梯度恒为1，不会衰减。这使得梯度
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.95\textwidth]{figs_chap09/gradient_check.pdf}
-\caption{梯度检验：解析梯度（蓝色实线）与数值梯度（红色虚线）几乎完全重合。绿色区域显示误差，最大约为$10^{-10}$量级，验证了实现的正确性。}
+\caption{梯度检验：解析梯度（蓝色实线）与数值梯度（红色虚线）几乎完全重合。下排绿色区域是绝对误差（对数坐标），最大约为 $3\times10^{-11}$——这正是中心差分截断误差 $O(\epsilon^2)$ 与舍入误差 $O(10^{-16}/\epsilon)$ 在 $\epsilon=10^{-5}$ 时的水平，验证了实现的正确性。}
 \label{fig:gradient_check}
 \end{figure}
 
@@ -2647,7 +2647,7 @@ GPT和BERT等大模型为什么选择GELU（Gaussian Error Linear Unit）？
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.9\textwidth]{figs_chap09/modern_activations.pdf}
-\caption{现代激活函数对比。GELU、Swish、Mish都是ReLU的光滑近似，在$x=0$附近没有导数的跳跃。右图显示它们的导数曲线，比ReLU更加平滑。}
+\caption{现代激活函数对比。GELU、Swish、Mish都是ReLU的光滑近似，在$x=0$附近没有导数的跳跃。(b) 显示由自动微分求得的导数曲线：ReLU 在 $x=0$ 跳变，其余三者连续过渡（且在 $x\approx1.5$ 处略大于 1）。}
 \label{fig:modern_activations}
 \end{figure}
 

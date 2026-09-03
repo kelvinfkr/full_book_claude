@@ -5,6 +5,7 @@
 所有图表使用中文标注
 """
 
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
@@ -81,8 +82,8 @@ def plot_prisoners_dilemma():
     ax.grid(axis='y', alpha=0.3)
 
     plt.tight_layout()
-    plt.savefig('/home/user/Lecture_15/figs_chap15/prisoners_dilemma.pdf', bbox_inches='tight')
-    plt.savefig('/home/user/Lecture_15/figs_chap15/prisoners_dilemma.png', bbox_inches='tight')
+    plt.savefig('figs_chap15/prisoners_dilemma.pdf', bbox_inches='tight')
+    plt.savefig('figs_chap15/prisoners_dilemma.png', bbox_inches='tight')
     plt.close()
     print("Generated: prisoners_dilemma.pdf/png")
 
@@ -230,8 +231,8 @@ def plot_braess_paradox():
                bbox=dict(boxstyle='round', facecolor='yellow', alpha=0.5))
 
     plt.tight_layout()
-    plt.savefig('/home/user/Lecture_15/figs_chap15/braess_paradox.pdf', bbox_inches='tight')
-    plt.savefig('/home/user/Lecture_15/figs_chap15/braess_paradox.png', bbox_inches='tight')
+    plt.savefig('figs_chap15/braess_paradox.pdf', bbox_inches='tight')
+    plt.savefig('figs_chap15/braess_paradox.png', bbox_inches='tight')
     plt.close()
     print("Generated: braess_paradox.pdf/png")
 
@@ -337,8 +338,8 @@ def plot_network_game():
                bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 
     plt.tight_layout()
-    plt.savefig('/home/user/Lecture_15/figs_chap15/network_game.pdf', bbox_inches='tight')
-    plt.savefig('/home/user/Lecture_15/figs_chap15/network_game.png', bbox_inches='tight')
+    plt.savefig('figs_chap15/network_game.pdf', bbox_inches='tight')
+    plt.savefig('figs_chap15/network_game.png', bbox_inches='tight')
     plt.close()
     print("Generated: network_game.pdf/png")
 
@@ -347,83 +348,18 @@ def plot_network_game():
 # 图4: 平均场博弈 (MFG) 数值解
 # ==============================================================================
 def plot_mfg_solution():
-    """可视化平均场博弈的数值解"""
-    # 简化的MFG: 线性二次情形的解析解
-    nx, nt = 100, 50
-    x = np.linspace(-3, 3, nx)
-    t = np.linspace(0, 1, nt)
-    X, T = np.meshgrid(x, t)
+    """平均场博弈的数值解。
 
-    # 近似解 (高斯分布演化)
-    sigma_0 = 0.5
-    sigma = lambda s: np.sqrt(sigma_0**2 + 0.1 * s)
-    m = np.zeros((nt, nx))
-    for i, ti in enumerate(t):
-        s = sigma(ti)
-        m[i] = np.exp(-x**2 / (2 * s**2)) / (s * np.sqrt(2*np.pi))
-
-    # 价值函数: 二次近似
-    u = np.zeros((nt, nx))
-    for i, ti in enumerate(t):
-        remaining = 1 - ti
-        u[i] = 0.5 * x**2 * np.exp(-remaining) + 0.3 * remaining
-
-    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-
-    # 左上: 密度演化 m(x, t)
-    ax = axes[0, 0]
-    c = ax.contourf(X, T, m, levels=20, cmap='viridis')
-    plt.colorbar(c, ax=ax, label='密度 $m(x,t)$')
-    ax.set_xlabel('位置 $x$', fontsize=12)
-    ax.set_ylabel('时间 $t$', fontsize=12)
-    ax.set_title('群体密度演化 $m(x,t)$\n（Fokker-Planck方程）', fontsize=11)
-
-    # 右上: 价值函数 u(x, t)
-    ax = axes[0, 1]
-    c = ax.contourf(X, T, u, levels=20, cmap='coolwarm')
-    plt.colorbar(c, ax=ax, label='价值 $u(x,t)$')
-    ax.set_xlabel('位置 $x$', fontsize=12)
-    ax.set_ylabel('时间 $t$', fontsize=12)
-    ax.set_title('价值函数 $u(x,t)$\n（Hamilton-Jacobi-Bellman方程）', fontsize=11)
-
-    # 左下: 不同时刻的密度剖面
-    ax = axes[1, 0]
-    times_to_plot = [0, 0.25, 0.5, 0.75, 1.0]
-    colors = plt.cm.plasma(np.linspace(0, 1, len(times_to_plot)))
-
-    for ti, c in zip(times_to_plot, colors):
-        idx = int(ti * (nt-1))
-        ax.plot(x, m[idx], color=c, linewidth=2, label=f't={ti:.2f}')
-
-    ax.set_xlabel('位置 $x$', fontsize=12)
-    ax.set_ylabel('密度 $m(x,t)$', fontsize=12)
-    ax.set_title('不同时刻的密度剖面\n（群体逐渐扩散）', fontsize=11)
-    ax.legend()
-    ax.grid(alpha=0.3)
-
-    # 右下: 最优控制 (速度场)
-    ax = axes[1, 1]
-    # 最优控制 alpha = -u_x
-    u_x = np.gradient(u, x[1]-x[0], axis=1)
-    velocity = -u_x
-
-    # 绘制向量场
-    skip = 5
-    ax.quiver(X[::skip, ::skip], T[::skip, ::skip],
-             velocity[::skip, ::skip], np.zeros_like(velocity[::skip, ::skip]),
-             scale=20, alpha=0.7)
-
-    # 叠加密度轮廓
-    ax.contour(X, T, m, levels=5, colors='red', alpha=0.5)
-
-    ax.set_xlabel('位置 $x$', fontsize=12)
-    ax.set_ylabel('时间 $t$', fontsize=12)
-    ax.set_title('最优速度场 $\\alpha^* = -\\nabla u$\n（箭头表示最优移动方向）', fontsize=11)
-
-    plt.tight_layout()
-    plt.savefig('/home/user/Lecture_15/figs_chap15/mfg_solution.pdf', bbox_inches='tight')
-    plt.savefig('/home/user/Lecture_15/figs_chap15/mfg_solution.png', bbox_inches='tight')
-    plt.close()
+    旧版本在这里用解析高斯 + 抛物线"手画"了密度和价值函数，并不是方程的解。
+    现在改为调用 chap15_mfg_solver.py（有限差分求解 HJB–FP 方程组 + 阻尼不动点
+    迭代），所有面板都来自真实计算。详见该文件的说明。
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        'chap15_mfg_solver', os.path.join(os.path.dirname(__file__), 'chap15_mfg_solver.py'))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    mod.main()
     print("Generated: mfg_solution.pdf/png")
 
 
@@ -502,8 +438,8 @@ def plot_qmix_architecture():
     ax.set_title('QMIX架构: 多智能体RL的价值分解方法', fontsize=14)
 
     plt.tight_layout()
-    plt.savefig('/home/user/Lecture_15/figs_chap15/qmix_architecture.pdf', bbox_inches='tight')
-    plt.savefig('/home/user/Lecture_15/figs_chap15/qmix_architecture.png', bbox_inches='tight')
+    plt.savefig('figs_chap15/qmix_architecture.pdf', bbox_inches='tight')
+    plt.savefig('figs_chap15/qmix_architecture.png', bbox_inches='tight')
     plt.close()
     print("Generated: qmix_architecture.pdf/png")
 
@@ -591,8 +527,8 @@ def plot_potential_game():
     ax.grid(alpha=0.3)
 
     plt.tight_layout()
-    plt.savefig('/home/user/Lecture_15/figs_chap15/potential_game.pdf', bbox_inches='tight')
-    plt.savefig('/home/user/Lecture_15/figs_chap15/potential_game.png', bbox_inches='tight')
+    plt.savefig('figs_chap15/potential_game.pdf', bbox_inches='tight')
+    plt.savefig('figs_chap15/potential_game.png', bbox_inches='tight')
     plt.close()
     print("Generated: potential_game.pdf/png")
 
@@ -694,8 +630,8 @@ def plot_ctde_comparison():
     ax.set_title('完全集中式\n（单一控制器）', fontsize=11)
 
     plt.tight_layout()
-    plt.savefig('/home/user/Lecture_15/figs_chap15/ctde_comparison.pdf', bbox_inches='tight')
-    plt.savefig('/home/user/Lecture_15/figs_chap15/ctde_comparison.png', bbox_inches='tight')
+    plt.savefig('figs_chap15/ctde_comparison.pdf', bbox_inches='tight')
+    plt.savefig('figs_chap15/ctde_comparison.png', bbox_inches='tight')
     plt.close()
     print("Generated: ctde_comparison.pdf/png")
 
@@ -719,4 +655,4 @@ if __name__ == "__main__":
 
     print("=" * 50)
     print("所有图表生成完成!")
-    print("位置: /home/user/Lecture_15/figs_chap15/")
+    print("位置: figs_chap15/（请从仓库根目录运行本脚本）")

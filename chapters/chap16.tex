@@ -247,7 +247,7 @@ JEPA的哲学就是：\textbf{学习本质，忽略细节}。
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.95\textwidth]{figs_chap16/latent_dynamics.png}
-\caption{潜空间动力学模型示意图。(a)高维观测数据难以直接处理；(b)编码器将其压缩到2维潜空间，清晰显示状态演化；(c)在潜空间中可以"做梦"——想象多条可能的未来轨迹；(d)评估每条轨迹的累积奖励，选择最优动作。}
+\caption{在潜空间里学单摆的动力学（真实实验）。(a) 智能体只能看到 $24\times24$ 的带噪图像（两帧堆叠，1152 维）；(b) 真实相空间 $(\theta,\omega)$ 中三条不同能量的轨迹，模型看不到；(c) 编码器学到的二维潜态 $z_t=(q_t,\,q_t-q_{t-1})$（实线）同样是嵌套的闭合环，从 $z_0$ 出发纯靠转移模型在潜空间展开的``梦境''轨迹（虚线）与之重合——潜空间就是学出来的广义坐标；(d) 在潜空间展开 $k$ 步后解码的像素误差停在观测噪声附近，而``保持当前帧''的基线误差高 5 倍。}
 \label{fig:latent_dynamics}
 \end{figure}
 
@@ -470,16 +470,15 @@ Dreamer算法的工作流程就像人类做白日梦：
 \begin{itemize}
     \item 起点：$(0, 0)$
     \item 目标：$(10, 10)$
-    \item 障碍物：位于$(5, 5)$，安全距离$d = 1.5$
-    \item 标称控制器：直接朝目标方向走
+    \item 障碍物：位于$(5, 4)$，安全距离$d = 1.5$（故意不放在起点--目标连线上：若三点共线，$u_{\rm ref}$ 与 $\nabla h$ 反向，滤波只会减速而不会绕行）
+    \item 标称控制器：直接朝目标方向走，速度 $1$；$\alpha = 1$
     \item 动力学：最简单的单积分器 $\dot{x} = u$（即 $f = 0$，$g = I$）
 \end{itemize}
-% TODO：原图由符号写反的旧代码生成（修正沿 $-\nabla h$ 推向障碍物，CBF 从未激活）。code\_chap16 中的代码已改为 $u_{\rm safe} = u_{\rm ref} + \lambda \nabla h$，请重新运行脚本再生成下面两张图。
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.95\textwidth]{figs_chap16/cbf_controller.png}
-\caption{CBF安全控制器实验结果。(a)无CBF时，智能体直线冲向目标，穿过障碍物！(b)有CBF时，智能体绕开障碍物安全到达目标。(c)障碍函数$h(x)$随时间变化：无CBF时$h$变负（进入危险区），有CBF时$h$始终非负。(d)控制输入对比：CBF只在必要时（接近障碍物时）修正控制。}
+\caption{CBF 安全滤波器实验。(a) 无滤波时（红色虚线）直线穿过禁区 $h<0$；CBF 滤波后（蓝色）贴着安全边界 $h=0$ 绕行，橙色加粗段是 $\lambda^*>0$ 的区段，箭头画出该处的分解 $u^*=u_{\rm ref}+\lambda^*\nabla h$。(b) 障碍函数 $h(x(t))$：无滤波时降到 $-1.75$，滤波后最小值 $0.11>0$。(c) 乘子 $\lambda^*(t)$ 只在 $t\in[3.7,7.6]$ s 贴近边界时非零——$\lambda^*$ 是安全约束的影子价格，远离障碍时为零。}
 \label{fig:cbf_controller}
 \end{figure}
 
@@ -493,11 +492,11 @@ Dreamer算法的工作流程就像人类做白日梦：
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.75\textwidth]{figs_chap16/multi_obstacle.png}
-\caption{多障碍物环境下的CBF避障。智能体从起点出发，自动规划路径绕过所有障碍物到达目标。颜色深浅表示时间推进。}
+\caption{多约束 CBF-QP。(a) 三个障碍各一条约束 $h_i\ge 0$，轨迹上按障碍颜色标出 $\lambda_i>0$ 的区段；(b) 三条乘子 $\lambda_i(t)$：穿过障碍 1、2 之间的缝隙时两条约束同时活跃（灰色阴影），绕障碍 3 时 $\lambda_3$ 的峰最高——峰值大小反映``这条约束有多碍事''。}
 \label{fig:multi_obstacle}
 \end{figure}
 
-CBF方法可以自然地扩展到\textbf{多障碍物}场景：对每个障碍物定义一个障碍函数$h_i(x)$，然后在控制器中同时满足所有约束。
+CBF方法可以自然地扩展到\textbf{多障碍物}场景：对每个障碍物定义一个障碍函数$h_i(x)$，然后在控制器中同时满足所有约束。 此时 KKT 条件为 $u^*=u_{\rm ref}+\sum_i\lambda_i\nabla h_i$，$\lambda_i\ge 0$，且每条约束各自互补松弛；图~\ref{fig:multi_obstacle}(b) 就是这组条件的时间轴版本。
 
 \begin{algorithm}[H]
 \caption{CBF安全控制器伪代码}
@@ -571,7 +570,7 @@ CBF方法可以自然地扩展到\textbf{多障碍物}场景：对每个障碍�
 \textbf{局限}也要说清楚：接触、碰撞这类不连续事件会让梯度失真甚至爆炸；长时域仿真的梯度会像第11章的 RNN 一样消失或爆炸（这正是伴随链太长的代价）；仿真与现实的差距（sim-to-real gap）不会因为"可微"而消失。
 
 \subsection{实验：弹簧-质点系统的可微仿真}
-\clarify{本实验为了少写代码，用有限差分估计梯度；真正的可微仿真器（如 Brax、Warp、DiffTaichi）用自动微分——数学上就是第9章的伴随方程。}
+\clarify{本实验用 PyTorch 自动微分沿 200 步 RK4 积分器反向传播梯度——数学上就是第9章的伴随方程；Brax、Warp、DiffTaichi 等可微仿真器做的是同一件事，只是规模更大。}
 
 让我们用一个简单的例子来说明可微物理的威力：\textbf{弹簧-质点系统}。
 
@@ -590,7 +589,7 @@ CBF方法可以自然地扩展到\textbf{多障碍物}场景：对每个障碍�
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.95\textwidth]{figs_chap16/differentiable_physics.png}
-\caption{可微物理系统辨识实验。(a)弹簧-质点系统的真实轨迹（$m=1, k=10, c=0.5$）；(b)损失函数随迭代下降；(c)三个物理参数逐渐收敛到真值；(d)学习到的模型能准确预测轨迹。}
+\caption{可微物理系统辨识实验。(a) 带噪观测（灰点）、真实轨迹（黑）、初始猜测 $(m,k,c)=(2,5,1)$ 的仿真（橙色虚线）与辨识后的仿真（蓝）；(b) 均方误差从 $3.8\times10^{-1}$ 降到 $8.2\times10^{-4}$，贴近观测噪声方差 $\sigma^2=9\times10^{-4}$（点线）；(c) 三个参数（对数轴）收敛到各自的真值虚线。}
 \label{fig:differentiable_physics}
 \end{figure}
 
@@ -598,14 +597,15 @@ CBF方法可以自然地扩展到\textbf{多障碍物}场景：对每个障碍�
 \begin{itemize}
     \item 真实参数：$m=1, k=10, c=0.5$
     \item 初始猜测：$m=2, k=5, c=1$（故意猜错）
+    \item 外力：已知的 $u(t)=3\sin 2t+2\sin 5.5t$；只观测位置 $x$，噪声 $\sigma=0.03$
     \item 目标：从带噪声的观测数据中恢复真实参数
 \end{itemize}
 
 \textbf{实验结果分析}：
 \begin{enumerate}
-    \item \textbf{损失下降}：均方误差从初始值迅速下降两个数量级
-    \item \textbf{参数收敛}：经过100次迭代，三个参数都接近真值
-    \item \textbf{模型准确}：学到的模型（红色虚线）与真实轨迹（蓝色实线）高度吻合
+    \item \textbf{损失下降}：均方误差下降近三个数量级，停在观测噪声方差附近——这是能达到的下限
+    \item \textbf{参数收敛}：100 次迭代后 $m=0.98, k=9.86, c=0.50$，300 次后 $m=0.99, k=9.92, c=0.50$
+    \item \textbf{模型准确}：辨识后的仿真轨迹（蓝色实线）与真实轨迹（黑色）重合，而初始猜测（橙色虚线）频率、幅度都不对
 \end{enumerate}
 
 这个实验展示了可微物理的核心能力：\textbf{从数据中学习物理参数}。在更复杂的场景中（如机器人、流体），同样的方法可以用来校准仿真器，使其更接近真实世界。
@@ -727,7 +727,7 @@ Karl Friston提出的\textbf{自由能原理}（Free Energy Principle）给出�
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.85\textwidth]{figs_chap16/unified_view.png}
-\caption{全书的统一视角：拉格朗日力学（几何约束）、最优控制（动力学约束）、PINN（PDE 约束）、神经算子（算子约束）、多智能体博弈（均衡约束）、世界模型（物理与安全约束），都是同一个约束优化问题 $\min f(x)$ s.t. $g(x) = 0$，$h(x) \ge 0$ 的不同化身。}
+\caption{全书的统一视角（示意图）。中心是 $\mathcal L=f+\lambda^\top g$ 与 KKT 条件；左列（物理与控制：第1、3、7--8、16章）与右列（学习与博弈：第9、10、13、15章）各写出该章的目标 $f$、约束 $g$、$\lambda$ 的身份和一阶条件。$\lambda$ 从影子价格、广义动量、协态变量、误差信号、值函数、损失权重、均衡价格到安全约束的价格，名字一直在变，结构从未改变。}
 \label{fig:unified_view}
 \end{figure}
 
