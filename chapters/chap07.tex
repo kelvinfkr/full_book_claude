@@ -49,7 +49,7 @@
 \begin{center}
 \renewcommand{\arraystretch}{1.3}
 \small
-\begin{tabular}{lll}
+\begin{tabularx}{\linewidth}{lXX}
 \toprule
  & \textbf{第1章} & \textbf{本章} \\
 \midrule
@@ -61,7 +61,7 @@
 一阶条件 & $\nabla f + \lambda^\top \nabla g = 0$，$g = 0$ & $\partial H/\partial u = 0$，$\dot{\lambda} = -\partial H/\partial x$，$\dot{x} = f$ \\
 $\lambda$ 的意义 & 影子价格 & 未来代价对当前状态的敏感度 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{center}
 离散化之后（$x_{k+1} = f(x_k, u_k)$），这张表的右栏就变成第8章神经网络那张表的左栏。
 \end{tcolorbox}
@@ -154,13 +154,7 @@ x_1 = x \quad \text{（位置）}, \quad x_2 = \dot{x} \quad \text{（速度）}
 & x(0) = x_0, \quad x(T) = x_T \quad \text{（边界条件）}
 \end{align}
 
-在我们的例子中：
-\begin{itemize}
-    \item $x = (x_1, x_2)^\top$：状态向量
-    \item $u$：控制输入
-    \item $L(x, u) = \frac{1}{2}u^2$：瞬时代价
-    \item $f(x, u) = (x_2, u)^\top$：动力学
-\end{itemize}
+在我们的例子中，状态向量是 $x = (x_1, x_2)^\top$，控制输入是 $u$，瞬时代价是 $L(x, u) = \frac{1}{2}u^2$，动力学是 $f(x, u) = (x_2, u)^\top$。
 \end{keyformula}
 
 % ------------------------------------------------------------------------------------
@@ -250,12 +244,7 @@ J_{aug} = -\lambda(T)^\top x(T) + \lambda(0)^\top x(0) + \int_0^T \left[ \underb
 
 想象你在规划一次旅行。你的决定（控制$u$）会影响后续所有行程（状态$x$）。那么，\textbf{某一天的选择有多重要}，取决于它对\textbf{后面所有日子}的影响。
 
-伴随变量 $\lambda(t)$ 正是量化这种"未来影响"的工具：
-\begin{itemize}
-    \item $\lambda(t)$ = "时刻$t$的状态变化对\textbf{未来总代价}的影响"
-    \item 必须从终点往回算（因为要先知道终点代价，才能算中间点的影响）
-    \item 这和第8章神经网络的\textbf{反向传播}是同一个思想！
-\end{itemize}
+伴随变量 $\lambda(t)$ 正是量化这种"未来影响"的工具：它表示时刻 $t$ 的状态变化对\textbf{未来总代价}的影响。既然要先知道终点代价，才能算出中间点的影响，它就必须从终点往回算——这和第8章神经网络的\textbf{反向传播}是同一个思想。
 
 \textbf{一句话总结}：伴随方程告诉我们"当前选择对未来的影响有多大"，所以必须从未来往回算。
 \end{insightbox}
@@ -303,7 +292,6 @@ $\lambda_i(t) = \frac{\partial J^*}{\partial x_i(t)}$ 告诉我们：如果在�
 
 这就像股票的"影子价格"——当前持有的价值取决于未来的收益。
 \end{physicalmeaning}
-\clarify{符号约定提醒：本书动态各章统一把动力学约束写成"$f - \dot{x}$"（离散版 $f(x_k,u_k) - x_{k+1}$）的形式，于是 $\lambda$ 总是"最优代价对状态的梯度"：本章连续与离散部分、第8章的反向传播、第9章的值函数梯度、第11章的时间反传都是如此。第1章的规则 $\lambda = -df^*/d\epsilon$ 依然成立——把约束放松成 $f - \dot{x} = \epsilon$ 相当于把状态"往回拨"$\epsilon$，对状态的梯度前面因此多出一个负号，两者正好抵消。若像某些教材那样把约束写成 $\dot{x} - f$，推出的 $\lambda$ 只差一个整体负号，判断口径只看一条："$\lambda$ 是不是代价对状态的梯度"。}
 
 % ------------------------------------------------------------------------------------
 \section{完整求解：最省力移动问题}
@@ -323,6 +311,7 @@ $\lambda_i(t) = \frac{\partial J^*}{\partial x_i(t)}$ 告诉我们：如果在�
 \dot{\lambda}_1 &= 0 \\
 \dot{\lambda}_2 &= -\lambda_1
 \end{align}
+\clarify{符号约定提醒：本书动态各章统一把动力学约束写成"$f - \dot{x}$"（离散版 $f(x_k,u_k) - x_{k+1}$）的形式，于是 $\lambda$ 总是"最优代价对状态的梯度"：本章连续与离散部分、第8章的反向传播、第9章的值函数梯度、第11章的时间反传都是如此。第1章的规则 $\lambda = -df^*/d\epsilon$ 依然成立——把约束放松成 $f - \dot{x} = \epsilon$ 相当于把状态"往回拨"$\epsilon$，对状态的梯度前面因此多出一个负号，两者正好抵消。若像某些教材那样把约束写成 $\dot{x} - f$，推出的 $\lambda$ 只差一个整体负号，判断口径只看一条："$\lambda$ 是不是代价对状态的梯度"。}
 
 \textbf{最优性条件}：
 \[
@@ -419,7 +408,7 @@ x_1^*(t) = \frac{c_1 t^3}{6} - \frac{c_2 t^2}{2} = -\frac{2t^3}{T^3} + \frac{3t^
 
 \begin{figure}[htbp]
 \centering
-\begin{tikzpicture}[scale=0.85]
+\begin{tikzpicture}[scale=0.76]
     % 位置图
     \begin{scope}
         \draw[->] (0, 0) -- (4.2, 0) node[right] {$t$};
@@ -472,16 +461,7 @@ x_1^*(t) = \frac{c_1 t^3}{6} - \frac{c_2 t^2}{2} = -\frac{2t^3}{T^3} + \frac{3t^
 \caption{最优解的三个分量：位置平滑过渡，速度先增后减，控制力从正变负}
 \end{figure}
 
-\textbf{物理解释}：
-
-\begin{itemize}
-    \item \textbf{前半段}（$t < T/2$）：$u > 0$，向右推，加速
-    \item \textbf{后半段}（$t > T/2$）：$u < 0$，向左推，减速
-    \item \textbf{中点}（$t = T/2$）：速度最大，控制力过零
-    \item \textbf{终点}（$t = T$）：恰好停在目标位置
-\end{itemize}
-
-这就是"最优"的直觉含义：不多不少，刚刚好！
+\textbf{物理解释}：前半段（$t < T/2$）$u > 0$，向右推，物体加速；到中点（$t = T/2$）控制力恰好过零，此时速度最大；后半段（$t > T/2$）$u < 0$，向左推，物体减速；到终点（$t = T$）恰好停在目标位置。这就是"最优"的直觉含义：不多不少，刚刚好！
 
 \begin{insightbox}
 \textbf{为什么最优控制是线性的？}
@@ -513,11 +493,7 @@ x_1^*(t) = \frac{c_1 t^3}{6} - \frac{c_2 t^2}{2} = -\frac{2t^3}{T^3} + \frac{3t^
 
 时刻：$t_k = k \cdot \Delta t$，$k = 0, 1, \ldots, N$
 
-\textbf{离散状态和控制}：
-\begin{itemize}
-    \item $x_k \approx x(t_k)$：第 $k$ 时刻的状态
-    \item $u_k \approx u(t_k)$：第 $k$ 时刻的控制
-\end{itemize}
+\textbf{离散状态和控制}：用 $x_k \approx x(t_k)$ 和 $u_k \approx u(t_k)$ 分别记第 $k$ 时刻的状态和控制。
 
 \textbf{离散动力学}（欧拉法）：
 \[
@@ -663,15 +639,7 @@ $u_k$ 只出现在 $L_k(x_k, u_k)$ 和 $f(x_k, u_k)$ 中：
 
 \paragraph{对 $x_k$（$k = 1, \ldots, N-1$）求导}（伴随方程）
 
-这是最关键的一步！让我们仔细看 $x_k$ 出现在哪里：
-
-\begin{itemize}
-    \item $L_k(x_k, u_k)$ 中：贡献 $\frac{\partial L_k}{\partial x_k}$
-    \item $\lambda_{k+1}^\top [f(x_k, u_k) - x_{k+1}]$ 中的 $f(x_k, u_k)$：贡献 $\lambda_{k+1}^\top \frac{\partial f}{\partial x_k}$
-    \item $\lambda_k^\top [f(x_{k-1}, u_{k-1}) - x_k]$ 中的 $-x_k$：贡献 $-\lambda_k^\top$
-\end{itemize}
-
-令偏导为零：
+这是最关键的一步！$x_k$ 在 $\mathcal{L}$ 里出现了三次：一次在 $L_k(x_k, u_k)$ 中，贡献 $\frac{\partial L_k}{\partial x_k}$；一次在 $\lambda_{k+1}^\top [f(x_k, u_k) - x_{k+1}]$ 的 $f(x_k, u_k)$ 中，贡献 $\lambda_{k+1}^\top \frac{\partial f}{\partial x_k}$；还有一次在上一条约束 $\lambda_k^\top [f(x_{k-1}, u_{k-1}) - x_k]$ 的 $-x_k$ 中，贡献 $-\lambda_k^\top$。三项相加，令偏导为零：
 \[
 \frac{\partial \mathcal{L}}{\partial x_k} = \frac{\partial L_k}{\partial x_k} - \lambda_k^\top + \lambda_{k+1}^\top \frac{\partial f}{\partial x_k} = 0
 \]
@@ -698,13 +666,7 @@ $x_N$ 出现在 $\phi(x_N)$ 和 $-\lambda_N^\top x_N$ 中：
 
 让我们用一个超级简单的例子来验证这些公式。
 
-\textbf{问题}：一维系统，$N = 2$ 步
-
-\begin{itemize}
-    \item 动力学：$x_{k+1} = x_k + u_k$（离散积分器）
-    \item 代价：$J = u_0^2 + u_1^2 + 10 x_2^2$（最小化控制能量，同时让终点尽量接近零）
-    \item 初始条件：$x_0 = 1$
-\end{itemize}
+\textbf{问题}：一维系统，$N = 2$ 步。动力学是离散积分器 $x_{k+1} = x_k + u_k$，代价是 $J = u_0^2 + u_1^2 + 10 x_2^2$（最小化控制能量，同时让终点尽量接近零），初始条件 $x_0 = 1$。
 
 
 \textbf{第一步：前向传播}
@@ -786,15 +748,7 @@ x_2 &= x_1 + u_1 = 0.524 - 0.476 = 0.048
 代价：$J = u_0^2 + u_1^2 + 10x_2^2 = 0.227 + 0.227 + 0.023 = 0.477$
 
 \begin{insightbox}
-\textbf{我们刚才做了什么？}
-
-\begin{enumerate}
-    \item 把优化问题写成拉格朗日函数
-    \item 对各变量求导，得到\textbf{伴随方程}
-    \item \textbf{前向}计算状态，\textbf{后向}计算伴随变量
-    \item 用最优性条件求解最优控制
-\end{enumerate}
-
+\textbf{我们刚才做了什么？}把优化问题写成拉格朗日函数，对各变量求导得到\textbf{伴随方程}；然后\textbf{前向}计算状态、\textbf{后向}计算伴随变量，最后用最优性条件解出最优控制。第8章训练神经网络时，走的正是同样的四步。
 \end{insightbox}
 
 
@@ -803,14 +757,7 @@ x_2 &= x_1 + u_1 = 0.524 - 0.476 = 0.048
 
 \subsection{为什么需要 MPC？}
 
-到目前为止，我们假设：
-\begin{itemize}
-    \item 模型完全准确（动力学 $f$ 精确已知）
-    \item 没有外部干扰（没有风、没有摩擦变化）
-    \item 可以一次性规划整个轨迹（从头到尾）
-\end{itemize}
-
-但现实世界不是这样的！
+到目前为止，我们默认了三件事：模型完全准确（动力学 $f$ 精确已知），没有外部干扰（没有风、没有摩擦变化），因此可以一次性规划整个轨迹并从头执行到尾。但现实世界不是这样的！
 
 \begin{figure}[htbp]
 \centering
@@ -845,17 +792,9 @@ x_2 &= x_1 + u_1 = 0.524 - 0.476 = 0.048
 \caption{理想 vs 现实：干扰会打乱预先规划好的轨迹}
 \end{figure}
 
-\textbf{具体例子}：
+偏差可能来自模型误差（你以为摩擦系数是 0.5，实际是 0.3，因为路面结冰了），来自外部干扰（无人机在飞行中突然遇到侧风），也可能来自环境变化（自动驾驶车前方突然出现行人）。如果我们在起点规划好整条轨迹然后"闭着眼执行"，一点小扰动就会让系统偏离目标！
 
-\begin{itemize}
-    \item \textbf{模型误差}：你以为摩擦系数是 0.5，实际是 0.3（路面结冰了）
-    \item \textbf{外部干扰}：无人机在飞行中突然遇到侧风
-    \item \textbf{环境变化}：自动驾驶车前方突然出现行人
-\end{itemize}
-
-如果我们在起点规划好整条轨迹然后"闭着眼执行"，一点小扰动就会让系统偏离目标！
-
-\textbf{MPC 的哲学}：\textbf{计划赶不上变化，所以我们边走边规划}！
+\textbf{MPC 的哲学}：\textbf{计划赶不上变化，所以我们边走边规划}！这个想法最早在 1970 年代的炼油与化工过程中投入使用，Shell 公司的 Cutler 与 Ramaker 1979 年发表的 DMC 就是代表——化工过程慢、模型相对可靠，正好来得及在线反复求解优化问题。
 \think{MPC 每一步都重新解优化问题，那上一步算出的乘子 $\lambda$ 还有用吗？提示：$\lambda$ 是"未来代价对当前状态的敏感度"，而当前状态刚刚被测量更新了。第9章的值函数会给出更系统的答案：它就是"把 $\lambda$ 对所有可能的当前状态预先算好"。}
 
 \subsection{MPC 的核心思想}
@@ -872,10 +811,10 @@ x_2 &= x_1 + u_1 = 0.524 - 0.476 = 0.048
 
 \begin{figure}[htbp]
 \centering
-\begin{tikzpicture}[scale=1.0]
+\begin{tikzpicture}[scale=0.72]
 
     % 时间轴
-    \draw[->] (0,0) -- (17,0) node[right] {时间};
+    \draw[->] (0,0) -- (16.5,0) node[right] {时间};
 
     % --------------------------
     % t=0 时刻
@@ -989,21 +928,7 @@ x_2 &= x_1 + u_1 = 0.524 - 0.476 = 0.048
 即使第一步执行得不完美，下一次规划会基于\textbf{实际到达的位置}，自动修正偏差。
 
 \begin{physicalmeaning}
-MPC 的生活比喻：
-
-\textbf{开车导航}：
-\begin{itemize}
-    \item 开环控制：在出发前规划好路线，然后闭着眼开
-    \item MPC：每隔几秒重新看一眼导航，根据当前位置调整路线
-\end{itemize}
-
-\textbf{下棋}：
-\begin{itemize}
-    \item 开环控制：一开始就想好后面50步怎么走
-    \item MPC：每走一步，看对手怎么应对，再决定下一步
-\end{itemize}
-
-MPC 用\textbf{计算量}换取\textbf{鲁棒性}——每一步都重新算，但能应对意外。
+MPC 的生活比喻。开车导航时，开环控制相当于在出发前规划好路线，然后闭着眼开；MPC 则是每隔几秒重新看一眼导航，根据当前位置调整路线。下棋时，开环控制相当于一开始就想好后面50步怎么走；MPC 则是每走一步，看对手怎么应对，再决定下一步。两个比喻说的是同一件事：MPC 用\textbf{计算量}换取\textbf{鲁棒性}——每一步都重新算，但能应对意外。
 \end{physicalmeaning}
 
 \subsection{MPC 的数学形式}
@@ -1021,12 +946,7 @@ x_t &= x_{measured} \quad \text{（\textbf{关键}：用测量值作为初始条
 u_{min} &\leq u_{t+k} \leq u_{max} \quad \text{（控制约束，如电机功率有限）}
 \end{align}
 
-\textbf{符号说明}：
-\begin{itemize}
-    \item $N$：预测时域（往前看多少步）
-    \item $\phi(x_{t+N})$：终端代价（鼓励最终状态接近目标）
-    \item $x_{measured}$：传感器测量的当前状态——\textbf{这就是 MPC 反馈的来源}！
-\end{itemize}
+这里 $N$ 是预测时域（往前看多少步），$\phi(x_{t+N})$ 是终端代价（鼓励最终状态接近目标），$x_{measured}$ 是传感器测量的当前状态——\textbf{这就是 MPC 反馈的来源}！
 
 % ------------------------------------------------------------------------------------
 \section{完整例题：小车刹车问题}
@@ -1083,7 +1003,8 @@ p_2 &= 7 + u_0, \quad v_2 = 2 + u_0 + u_1
 
 \begin{align}
 J &= (p_0^2 + v_0^2 + 0.1 u_0^2) + (p_1^2 + v_1^2 + 0.1 u_1^2) + 10(p_2^2 + v_2^2) \\
-&= (9 + 4 + 0.1 u_0^2) + (25 + (2+u_0)^2 + 0.1 u_1^2) + 10((7+u_0)^2 + (2+u_0+u_1)^2)
+&= (9 + 4 + 0.1 u_0^2) + (25 + (2+u_0)^2 + 0.1 u_1^2) \nonumber \\
+&\quad + 10((7+u_0)^2 + (2+u_0+u_1)^2)
 \end{align}
 
 展开（只保留与 $u_0, u_1$ 有关的项，因为常数不影响最优化）：
@@ -1162,15 +1083,7 @@ x_1 = \begin{pmatrix} 5 \\ 2 + (-6.45) \end{pmatrix} = \begin{pmatrix} 5 \\ -4.4
 \begin{insightbox}
 \textbf{MPC 的精髓}：
 
-我们规划了 $u_0^* \approx -6.45, u_1^* \approx 4.40$，但\textbf{只执行 $u_0^*$}。
-
-为什么不执行 $u_1^*$？因为：
-\begin{itemize}
-    \item 执行 $u_0$ 后，真实状态可能不是预测的 $x_1$（有误差）
-    \item 用\textbf{真实测量的状态}重新规划，比用\textbf{预测的状态}盲目执行更可靠
-\end{itemize}
-
-这就是 MPC 的反馈特性：\textbf{每一步都用最新信息做最优决策}。
+我们规划了 $u_0^* \approx -6.45, u_1^* \approx 4.40$，但\textbf{只执行 $u_0^*$}。为什么不执行 $u_1^*$？因为执行 $u_0$ 之后，真实状态可能并不是预测的 $x_1$（有误差），而用\textbf{真实测量的状态}重新规划，比用\textbf{预测的状态}盲目执行更可靠。这就是 MPC 的反馈特性：\textbf{每一步都用最新信息做最优决策}。
 \end{insightbox}
 
 \subsection{MPC 的反馈修正能力}
@@ -1225,12 +1138,7 @@ x_1 = \begin{pmatrix} 5 \\ 2 + (-6.45) \end{pmatrix} = \begin{pmatrix} 5 \\ -4.4
 \end{unification}
 
 \begin{physicalmeaning}
-\textbf{$\lambda$ 在本章的意义}：$\lambda(t)$ 是动力学约束在时刻 $t$ 的影子价格——"如果此刻有人把状态 $x(t)$ 推开 $\epsilon$，从现在到终点的最小代价会变化 $\lambda(t)^\top \epsilon$"。它有三张面孔：
-\begin{itemize}
-    \item 往前看第3、4章：把 $L$ 换成拉格朗日量，$\lambda = \partial L/\partial \dot{q}$ 就是广义动量 $p$，伴随方程 $\dot{\lambda} = -\partial H/\partial x$ 就是哈密顿方程 $\dot{p} = -\partial H/\partial q$。
-    \item 往后看第8章：把时间步 $k$ 换成网络层 $i$，$\lambda_k$ 就是"误差信号"，伴随方程就是反向传播。
-    \item 再往后看第9章：把终点推到无穷远、把代价换成奖励，$\lambda$ 就是值函数的梯度 $\nabla_s V(s)$，伴随方程就变成贝尔曼方程。
-\end{itemize}
+\textbf{$\lambda$ 在本章的意义}：$\lambda(t)$ 是动力学约束在时刻 $t$ 的影子价格——"如果此刻有人把状态 $x(t)$ 推开 $\epsilon$，从现在到终点的最小代价会变化 $\lambda(t)^\top \epsilon$"。它有三张面孔。往前看第3、5章：把 $L$ 换成拉格朗日量，$\lambda = \partial L/\partial \dot{q}$ 就是广义动量 $p$，伴随方程 $\dot{\lambda} = -\partial H/\partial x$ 就是哈密顿方程 $\dot{p} = -\partial H/\partial q$。往后看第8章：把时间步 $k$ 换成网络层 $i$，$\lambda_k$ 就是"误差信号"，伴随方程就是反向传播。再往后看第9章：把终点推到无穷远、把代价换成奖励，$\lambda$ 就是值函数的梯度 $\nabla_s V(s)$，伴随方程就变成贝尔曼方程。
 \end{physicalmeaning}
 
 % ------------------------------------------------------------------------------------
@@ -1339,11 +1247,7 @@ x_1 = \begin{pmatrix} 5 \\ 2 + (-6.45) \end{pmatrix} = \begin{pmatrix} 5 \\ -4.4
 \caption{平行泊车：怎么把车停进去？}
 \end{figure}
 
-你有两个控制：
-\begin{itemize}
-    \item 油门/刹车：控制前进或后退
-    \item 方向盘：控制转向
-\end{itemize}
+你有两个控制：油门和刹车控制前进或后退，方向盘控制转向。
 
 \textbf{关键观察}：车不能横着走！
 
@@ -1454,14 +1358,7 @@ $g_1$ 和 $g_2$ 只张成一个\textbf{二维}子空间！
 
 但状态空间是三维的 $(x, y, \theta)$。
 
-\textbf{缺失的方向是什么？}
-
-\begin{itemize}
-    \item $g_1 = (\cos\theta, \sin\theta, 0)$：沿车身方向（前进/后退）
-    \item $g_2 = (0, 0, 1)$：原地转向
-\end{itemize}
-
-缺失的是：$(\sin\theta, -\cos\theta, 0)$——\textbf{垂直于车身的方向}（横向移动）！
+\textbf{缺失的方向是什么？}$g_1 = (\cos\theta, \sin\theta, 0)$ 是沿车身方向（前进/后退），$g_2 = (0, 0, 1)$ 是原地转向。两者都张不出 $(\sin\theta, -\cos\theta, 0)$——\textbf{垂直于车身的方向}（横向移动），这就是缺失的那一维！
 
 \begin{figure}[htbp]
 \centering
@@ -1621,12 +1518,7 @@ y_4 &= y_3 \approx -\epsilon^2 \\
 \boxed{(x_4, y_4, \theta_4) \approx \left(\frac{\epsilon^3}{2}, -\epsilon^2, 0\right)}
 \end{equation}
 
-\textbf{分析}：
-\begin{itemize}
-    \item $\theta$ 回到了 0（朝向恢复）
-    \item $x$ 方向有 $O(\epsilon^3)$ 的小位移（可忽略）
-    \item $y$ 方向有 $\boxed{-\epsilon^2}$ 的位移——这就是\textbf{横向净位移}！
-\end{itemize}
+\textbf{分析}：$\theta$ 回到了 0，朝向恢复；$x$ 方向只有 $O(\epsilon^3)$ 的小位移，可以忽略；而 $y$ 方向有 $\boxed{-\epsilon^2}$ 的位移——这就是\textbf{横向净位移}！
 
 虽然每一步都只能沿 $g_1$ 或 $g_2$ 方向走，但四步组合下来，产生了一个沿"缺失方向"（$-y$ 方向，即 $[g_1, g_2]$ 方向）的净位移，大小正比于 $\epsilon^2$。
 
@@ -1742,12 +1634,7 @@ $[g_1, g_2] = (\sin\theta, -\cos\theta, 0)$
 
 \paragraph{可达方向的集合}
 
-汽车有三个"可达方向"：
-\begin{itemize}
-    \item $g_1$：直接可达（前进/后退）
-    \item $g_2$：直接可达（转向）
-    \item $[g_1, g_2]$：间接可达（通过"绕圈"实现横移）
-\end{itemize}
+汽车有三个"可达方向"：$g_1$（前进/后退）和 $g_2$（转向）是直接可达的，$[g_1, g_2]$ 则是间接可达的——通过"绕圈"实现横移。
 
 \paragraph{检验线性无关性}
 
@@ -1788,14 +1675,7 @@ $g_1$、$g_2$、$[g_1, g_2]$ 张成整个三维空间。
 
 \paragraph{控制系统的类比}
 
-对于控制系统 $\dot{x} = u_1 g_1 + u_2 g_2$：
-
-\begin{itemize}
-    \item 瞬时可达方向 = $\text{span}\{g_1, g_2\}$（类比列空间）
-    \item 如果 $\text{span}\{g_1, g_2\}$ 不是全空间，有些方向瞬时到不了
-\end{itemize}
-
-但控制系统比线性方程组多一个"武器"：\textbf{李括号}！
+对于控制系统 $\dot{x} = u_1 g_1 + u_2 g_2$ 来说，瞬时可达方向是 $\text{span}\{g_1, g_2\}$，它扮演的正是列空间的角色；如果它不是全空间，就有些方向瞬时到不了。但控制系统比线性方程组多一个"武器"：\textbf{李括号}！
 
 \begin{center}
 \renewcommand{\arraystretch}{1.3}
@@ -1949,7 +1829,7 @@ $[g_1, g_1] = 0$（任何向量和自己的李括号都是零，因为"绕圈"�
 \subsection*{回到线性系统：Kalman 秩条件}
 %------------------------------------------------------------------------------
 
-你可能学过线性系统的能控性判据。让我们看看它和李括号的关系。
+你可能学过线性系统的能控性判据。这个判据以卡尔曼的名字命名；他 1960 年发表的滤波论文，很快就被用于阿波罗计划的导航。让我们看看它和李括号的关系。
 
 \paragraph{线性系统}
 
@@ -2016,15 +1896,5 @@ $A^2 b_i$ & $[f_0, [f_0, g_i]]$ \\
 \end{enumerate}
 
 \begin{remark}
-\textbf{约束优化的统一视角}：
-
-\begin{itemize}
-    \item 静态优化：约束 $g(x) = 0$ 限制了可行的\textbf{位置}
-    \item 轨迹优化：动力学 $\dot{x} = f(x, u)$ 限制了可行的\textbf{速度}
-    \item 能控性：问的是约束是否"太强"——强到无法到达某些状态
-\end{itemize}
-
-李括号告诉我们：速度约束有时候比看起来"弱"——通过组合运动可以突破瞬时的限制。
-
-这就像人生：每一步都受限，但正确的组合可以带你到意想不到的地方。
+\textbf{约束优化的统一视角}：静态优化里，约束 $g(x) = 0$ 限制了可行的\textbf{位置}；轨迹优化里，动力学 $\dot{x} = f(x, u)$ 限制了可行的\textbf{速度}；而能控性问的是这些约束是否"太强"——强到无法到达某些状态。李括号告诉我们：速度约束有时候比看起来"弱"——通过组合运动可以突破瞬时的限制。这就像人生：每一步都受限，但正确的组合可以带你到意想不到的地方。
 \end{remark}

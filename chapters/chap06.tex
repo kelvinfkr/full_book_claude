@@ -34,9 +34,9 @@
 
 \subsection{为什么机器人需要"算"？}
 
-人类拿起一杯咖啡，大脑只需要想"拿杯子"，手臂就自动完成了。我们从不需要计算"肩关节转23度，肘关节转45度，腕关节转-12度"。
+人类拿起一杯咖啡，大脑只需要想"拿杯子"，手臂就自动完成了。我们从不需要计算"肩关节转23度，肘关节转45度，腕关节转-12度"。这件事在人看来毫不费力，对机器却出奇地难：1980 年代 Hans Moravec 就指出，让计算机下棋容易，让它像一岁小孩那样感知和运动却极难——这就是后来所说的莫拉维克悖论。
 
-但机器人不同。机器人的"大脑"（控制器）收到的命令是"把末端移动到坐标(0.5, 0.3, 0.2)"，它必须计算出每个电机应该转多少度。这个过程叫做\textbf{逆运动学}。
+机器人的"大脑"（控制器）收到的命令是"把末端移动到坐标(0.5, 0.3, 0.2)"，它必须计算出每个电机应该转多少度。这个过程叫做\textbf{逆运动学}。1961 年，第一台工业机器人 Unimate 已经在通用汽车的生产线上搬运压铸件——从那时起，"把任务翻译成关节角"就是每一台机械臂绕不开的问题。
 
 反过来，如果我们知道每个关节的角度，要算出末端在哪里，这叫做\textbf{正运动学}。正运动学相对简单——就是一连串的几何变换。逆运动学则困难得多——它可能有多个解，也可能无解。
 
@@ -81,13 +81,7 @@
 \textbf{自由度}（Degrees of Freedom, DoF）是描述系统需要多少个独立参数才能完全确定其位置。
 
 \begin{example}[日常生活中的自由度]
-\begin{itemize}
-    \item \textbf{门}：1个自由度（只能绕铰链转动）
-    \item \textbf{抽屉}：1个自由度（只能前后滑动）
-    \item \textbf{办公椅}：5-6个自由度（上下、前后、旋转、靠背倾斜...）
-    \item \textbf{人的手臂}：7个自由度（肩3个 + 肘1个 + 腕3个）
-    \item \textbf{人的手指}：每根手指约4个自由度
-\end{itemize}
+一扇门只能绕铰链转动，一个抽屉只能前后滑动，它们都只有 1 个自由度；一把办公椅可以上下、前后、旋转、靠背倾斜，自由度有 5--6 个；人的手臂有 7 个自由度（肩 3 个、肘 1 个、腕 3 个），而每根手指也有大约 4 个。
 \end{example}
 
 \sidenoteplain{为什么人的手臂是7个自由度而不是6个？因为我们需要在固定手掌位置的同时，还能调整手肘位置（比如绕开障碍物）。这个"多出来"的自由度叫做\textbf{冗余自由度}。}
@@ -96,7 +90,8 @@
 
 \begin{center}
 \renewcommand{\arraystretch}{1.3}
-\begin{tabular}{l|c|c|l}
+\small
+\begin{tabularx}{\linewidth}{l|c|c|X}
 \toprule
 \textbf{机械臂类型} & \textbf{关节数 $n$} & \textbf{与任务空间比较} & \textbf{特点} \\
 \midrule
@@ -105,7 +100,7 @@ SCARA（平面装配） & 4 & $n < 6$ & 姿态受限：末端只能绕竖直轴�
 人形机械臂 & 7 & $n > 6$ & 冗余，更灵活 \\
 双臂机器人 & 14 & $n \gg 6$ & 高度冗余 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{center}
 
 % ------------------------------------------------------------------------------------
@@ -114,8 +109,6 @@ SCARA（平面装配） & 4 & $n < 6$ & 姿态受限：末端只能绕竖直轴�
 \subsection{齐次变换：旋转与平移的统一表示}
 
 描述物体在三维空间中的位置和姿态，需要同时处理旋转和平移。\textbf{齐次变换矩阵}把这两者统一成一个 $4 \times 4$ 矩阵：
-
-\sidenoteplain{\textbf{D-H参数}：机器人运动学的标准表示法由Jacques Denavit和Richard Hartenberg于1955年提出。这套参数用4个数描述每个关节，使得任何串联机械臂都能用统一的框架分析。几乎所有工业机器人的技术手册都使用D-H参数。}
 
 \begin{definition}[齐次变换]
 \begin{equation}
@@ -145,6 +138,7 @@ T_{end}(q) = T_1(q_1) \cdot T_2(q_2) \cdots T_n(q_n)
 
 \begin{example}[平面双连杆机械臂的正运动学]
 考虑最简单的情况：两个连杆在平面内运动，长度分别为 $L_1$ 和 $L_2$。
+\sidenoteplain{\textbf{D-H参数}：机器人运动学的标准表示法由Jacques Denavit和Richard Hartenberg于1955年提出。这套参数用4个数描述每个关节，使得任何串联机械臂都能用统一的框架分析。几乎所有工业机器人的技术手册都使用D-H参数。}
 
 \begin{figure}[htbp]
 \centering
@@ -185,11 +179,7 @@ x &= L_1 \cos q_1 + L_2 \cos(q_1 + q_2) \\
 y &= L_1 \sin q_1 + L_2 \sin(q_1 + q_2)
 \end{align}
 
-这个公式很直观：
-\begin{itemize}
-    \item 第一项 $(L_1 \cos q_1, L_1 \sin q_1)$ 是肘关节的位置
-    \item 第二项是从肘关节到末端的位移（方向是 $q_1 + q_2$）
-\end{itemize}
+这个公式很直观：第一项 $(L_1 \cos q_1, L_1 \sin q_1)$ 是肘关节的位置，第二项是从肘关节到末端的位移，它的方向是 $q_1 + q_2$——第二根连杆的绝对转角是两个关节角之和。
 \end{example}
 
 \begin{example}[手算练习]
@@ -332,11 +322,7 @@ J = \begin{bmatrix}
 \caption{奇异位形：手臂完全伸直时，末端无法沿手臂方向移动}
 \end{figure}
 
-奇异性带来两个问题：
-\begin{enumerate}
-    \item \textbf{速度不可达}：某些方向的末端速度无法通过任何关节速度实现
-    \item \textbf{力的"死角"}：在奇异方向上，无论关节力矩多大，都无法在末端产生这个方向的力；反过来说，手臂伸直时靠结构就能承受这个方向的载荷，不需要力矩
-\end{enumerate}
+奇异性带来两个问题，它们是同一件事的两面。从速度看，$J$ 的列张不满整个任务空间，于是某些方向的末端速度无法通过任何关节速度实现；从力看，由 $\tau = J^\top F$，沿奇异方向的末端力被 $J^\top$ 映射成零，于是无论关节力矩多大，都无法在末端产生这个方向的力。反过来说，手臂伸直时靠结构就能承受这个方向的载荷，不需要力矩。
 
 \begin{example}[伸直位形的奇异性]
 当 $q_2 = 0$（手臂伸直）时：
@@ -365,20 +351,20 @@ J = \begin{bmatrix}
 \begin{center}
 \renewcommand{\arraystretch}{1.4}
 \small
-\begin{tabular}{lll}
+\begin{tabularx}{\linewidth}{l>{\hsize=.62\hsize}X>{\hsize=1.38\hsize}X}
 \toprule
  & \textbf{第1章（约束优化）} & \textbf{本章（机器人）} \\
 \midrule
 变量 & $x \in \R^n$ & 关节角 $q \in \R^n$（动力学中还有 $\ddot{q}$） \\
-目标 & $\min f(x)$ & 逆运动学：$\min \tfrac{1}{2}\|q - q_0\|^2$；动力学：作用量 $\int (T - V)\,dt$ \\
-等式约束 & $g(x) = 0$ & 末端到达 $f(q) - x_d = 0$；接触保持 $J_c \ddot{q} + \dot{J}_c \dot{q} = 0$ \\
-不等式约束 & $h(x) \le 0$ & 不穿透 $-\phi(q) \le 0$；摩擦锥 $\|f_t\| - \mu \lambda_n \le 0$ \\
+目标 & $\min f(x)$ & 逆运动学：$\min \tfrac{1}{2}\|q - q_0\|^2$\newline 动力学：作用量 $\int (T - V)\,dt$ \\
+等式约束 & $g(x) = 0$ & 末端到达 $f(q) - x_d = 0$\newline 接触保持 $J_c \ddot{q} + \dot{J}_c \dot{q} = 0$ \\
+不等式约束 & $h(x) \le 0$ & 不穿透 $-\phi(q) \le 0$\newline 摩擦锥 $\|f_t\| - \mu \lambda_n \le 0$ \\
 乘子 & $\lambda$，$\mu \ge 0$ & 末端约束力 $\lambda$；接触力 $\lambda_c$，法向 $\lambda_n \ge 0$ \\
-一阶条件 & $\nabla f + \lambda \nabla g = 0$ & $(q - q_0) + J^\top \lambda = 0$；$M\ddot{q} + C\dot{q} + G = \tau + J_c^\top \lambda_c$ \\
+一阶条件 & $\nabla f + \lambda \nabla g = 0$ & $(q - q_0) + J^\top \lambda = 0$\newline $M\ddot{q} + C\dot{q} + G = \tau + J_c^\top \lambda_c$ \\
 互补松弛 & $\mu\, h(x) = 0$ & $\lambda_n\, \phi(q) = 0$（悬空无力，接触才有力） \\
 影子价格 & $\lambda = -df^*/d\epsilon$ & 目标点移动 $\delta x$，代价变化 $-\lambda^\top \delta x$ \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{center}
 
 % ------------------------------------------------------------------------------------
@@ -404,12 +390,7 @@ f(q) = x_d
 \end{keyformula}
 
 \begin{physicalmeaning}
-为什么要用优化形式？
-\begin{enumerate}
-    \item 当 $n > m$（冗余机械臂）时，有无穷多解，需要选择标准
-    \item 当 $n = m$ 时，可能有多个解（如手肘朝上或朝下），需要选择最自然的
-    \item 可以方便地加入其他约束（关节限位、避障等）
-\end{enumerate}
+为什么要用优化形式？因为方程 $f(q) = x_d$ 本身往往定不下唯一的解：当 $n > m$（冗余机械臂）时它有无穷多解，需要一个选择标准；即使 $n = m$，也可能有多个解（如手肘朝上或朝下），需要选出最自然的那个。写成优化问题之后，这个"选择标准"就是目标函数，而关节限位、避障之类的额外要求也可以作为约束方便地加进来。
 \end{physicalmeaning}
 
 \subsection{拉格朗日方法求解}
@@ -545,7 +526,7 @@ J = \begin{bmatrix}
 q^{(1)} = q^{(0)} + \Delta q = (-5.7^\circ, 84.3^\circ)
 \]
 
-\textbf{检验}：$q^{(1)}$ 对应的末端位置是 $(\cos(-5.7^\circ) + \cos(78.6^\circ),\ \sin(-5.7^\circ) + \sin(78.6^\circ)) \approx (1.193, 0.881)$，误差已从 $0.22$ 缩小到约 $0.02$。再迭代一两次，就收敛到精确解 $(-4.5^\circ, 82.8^\circ)$（用余弦定理可以验证：$\cos q_2 = (1.2^2 + 0.9^2 - 2)/2 = 0.125$）。
+\textbf{检验}：$q^{(1)}$ 对应的末端位置是 $x = \cos(-5.7^\circ) + \cos(78.6^\circ) \approx 1.193$，$y = \sin(-5.7^\circ) + \sin(78.6^\circ) \approx 0.881$，误差已从 $0.22$ 缩小到约 $0.02$。再迭代一两次，就收敛到精确解 $(-4.5^\circ, 82.8^\circ)$（用余弦定理可以验证：$\cos q_2 = (1.2^2 + 0.9^2 - 2)/2 = 0.125$）。
 
 \textbf{关键观察}：每次迭代都在解一个\textbf{线性}方程组 $J \Delta q = e$。非线性问题被分解成了一系列线性问题！
 \tryit{换一个初值 $q^{(0)} = (30^\circ, 30^\circ)$ 再算一遍，你会发现第一步 $\Delta q \approx (-55.8^\circ, 98.9^\circ)$——跨度很大，末端反而离目标更远。牛顿法只在解附近才是"二次收敛"的，初值很重要。}
@@ -620,11 +601,7 @@ r^2 = L_1^2 + L_2^2 - 2L_1 L_2 \cos(\pi - q_2)
 2 = 1 + 1 + 2 \cdot 1 \cdot 1 \cdot \cos q_2 \quad \Rightarrow \quad \cos q_2 = 0 \quad \Rightarrow \quad q_2 = \pm 90°
 \]
 
-两个解：
-\begin{itemize}
-    \item $q_2 = +90°$：手肘朝上（图中实线）
-    \item $q_2 = -90°$：手肘朝下（图中虚线）
-\end{itemize}
+于是有两个解：$q_2 = +90°$ 对应手肘朝上（图中实线），$q_2 = -90°$ 对应手肘朝下（图中虚线）。
 
 取 $q_2 = 90°$，代入正运动学方程求 $q_1$：
 \begin{align}
@@ -671,20 +648,7 @@ y = \sin 0° + \sin 90° = 0 + 1 = 1 \quad \checkmark
 冗余意味着逆运动学有\textbf{无穷多解}。直觉上：完成同一个任务，有很多种姿势可以选择。
 
 \begin{example}[人手臂的冗余]
-做一个实验：
-\begin{enumerate}
-    \item 把你的手掌放在桌面上，固定不动
-    \item 保持手掌位置和朝向不变，移动你的手肘
-\end{enumerate}
-
-你会发现，手肘可以在一个弧线上移动，而手掌完全不动！这就是冗余带来的自由度。
-
-这个"额外"的自由度让我们能够：
-\begin{itemize}
-    \item 绕开障碍物（比如在狭窄空间中工作）
-    \item 避免撞到自己的身体
-    \item 找到更舒适的姿势
-\end{itemize}
+做一个实验：把你的手掌放在桌面上固定不动，然后在保持手掌位置和朝向不变的前提下移动你的手肘。你会发现，手肘可以在一个弧线上移动，而手掌完全不动——这就是冗余带来的自由度。正是这个"额外"的自由度，让我们能在狭窄空间里绕开障碍物、避免撞到自己的身体，或者干脆换一个更舒服的姿势。
 \end{example}
 
 \paragraph{零空间的数学描述}
@@ -757,47 +721,20 @@ y = \sin 0° + \sin 90° = 0 + 1 = 1 \quad \checkmark
 \begin{equation}
 \dot{q} = \underbrace{J^\dagger \dot{x}_d}_{\text{完成主任务}} + \underbrace{(I - J^\dagger J) z}_{\text{零空间运动}}
 \end{equation}
-其中：
-\begin{itemize}
-    \item $J^\dagger = J^\top(JJ^\top)^{-1}$ 是\textbf{伪逆}
-    \item $\dot{x}_d$ 是期望的末端速度
-    \item $z \in \mathbb{R}^n$ 是\textbf{任意向量}
-    \item $(I - J^\dagger J)$ 是\textbf{零空间投影矩阵}
-\end{itemize}
+其中 $J^\dagger = J^\top(JJ^\top)^{-1}$ 是\textbf{伪逆}，$\dot{x}_d$ 是期望的末端速度，$(I - J^\dagger J)$ 是\textbf{零空间投影矩阵}，而 $z \in \mathbb{R}^n$ 是\textbf{任意向量}。
 \end{keyformula}
 
 \begin{physicalmeaning}
-这个公式说的是：
-\begin{enumerate}
-    \item 第一项 $J^\dagger \dot{x}_d$ 保证末端以期望速度 $\dot{x}_d$ 运动
-    \item 第二项 $(I - J^\dagger J) z$ 不影响末端（因为它在零空间中）
-    \item $z$ 可以自由选择，用来实现\textbf{次级目标}
-\end{enumerate}
+这个公式把关节速度拆成了两部分。第一项 $J^\dagger \dot{x}_d$ 保证末端以期望速度 $\dot{x}_d$ 运动；第二项 $(I - J^\dagger J) z$ 落在零空间中，所以无论 $z$ 取什么，它都不影响末端。于是 $z$ 可以自由选择，用来实现\textbf{次级目标}。
 \end{physicalmeaning}
 
 \paragraph{次级目标的例子}
 
-$z$ 可以怎么选？常见的选择：
-
-\begin{enumerate}
-    \item \textbf{远离关节限位}：
-    \[
-    z = -k \nabla_q W(q), \quad W(q) = \sum_i \frac{1}{(q_i - q_i^{min})(q_i^{max} - q_i)}
-    \]
-    $W$ 在关节接近限位时变大，负梯度方向指向"远离限位"。
-    
-    \item \textbf{避开障碍物}：
-    \[
-    z = k \nabla_q d(q)
-    \]
-    其中 $d(q)$ 是机械臂与障碍物的最近距离。
-    
-    \item \textbf{最小化能量}：
-    \[
-    z = -k \nabla_q \|\tau\|^2
-    \]
-    让关节力矩尽可能小。
-\end{enumerate}
+$z$ 可以怎么选？常见的做法是取某个标量函数的梯度，让零空间运动顺着它上升或下降。若想\textbf{远离关节限位}，可取
+\[
+z = -k \nabla_q W(q), \quad W(q) = \sum_i \frac{1}{(q_i - q_i^{min})(q_i^{max} - q_i)}
+\]
+$W$ 在关节接近限位时变大，负梯度方向指向"远离限位"。若想\textbf{避开障碍物}，可取 $z = k \nabla_q d(q)$，其中 $d(q)$ 是机械臂与障碍物的最近距离，沿梯度方向走就是把距离拉大。若想\textbf{最小化能量}，则取 $z = -k \nabla_q \|\tau\|^2$，让关节力矩尽可能小。
 
 \begin{example}[冗余的实际应用]
 想象一个7自由度机械臂在一个有障碍物的环境中工作：
@@ -845,15 +782,7 @@ $z$ 可以怎么选？常见的选择：
 这就是\textbf{动力学}要回答的问题。
 
 \begin{example}[直觉理解]
-想象你在举哑铃：
-\begin{itemize}
-    \item 如果哑铃很重，你需要很大的力才能举起来（质量大）
-    \item 如果你想举得很快，需要更大的力（加速度大）
-    \item 即使哑铃静止不动，你也需要用力来抵抗重力
-    \item 如果哑铃在转动，你会感到一些"奇怪"的力（科氏力、离心力）
-\end{itemize}
-
-机器人动力学就是要把这些直觉变成精确的数学公式。
+想象你在举哑铃。哑铃越重，举起它需要的力越大，这是质量的作用；想举得越快，需要的力也越大，这是加速度的作用；即使哑铃静止不动，你也得持续用力来抵抗重力；而如果哑铃在转动，你还会感到一些"奇怪"的力——科氏力和离心力。机器人动力学就是要把这些直觉变成精确的数学公式。
 \end{example}
 
 \subsection{复习：拉格朗日方程}
@@ -863,12 +792,7 @@ $z$ 可以怎么选？常见的选择：
 \frac{d}{dt}\frac{\partial L}{\partial \dot{q}_i} - \frac{\partial L}{\partial q_i} = Q_i
 \end{equation}
 
-其中：
-\begin{itemize}
-    \item $L = T - V$ 是拉格朗日量（动能减势能）
-    \item $q_i$ 是广义坐标（对机器人来说就是关节角度）
-    \item $Q_i$ 是广义力（对机器人来说就是关节力矩 $\tau_i$）
-\end{itemize}
+其中 $L = T - V$ 是拉格朗日量（动能减势能），$q_i$ 是广义坐标，对机器人来说就是关节角度，$Q_i$ 是广义力，对机器人来说就是关节力矩 $\tau_i$。
 
 这个方程的美妙之处在于：只要写出动能和势能的表达式，力学方程就自动出来了！
 \clarify{第5章的拉格朗日方程右边是 0，广义力 $F_i = \partial L/\partial q_i$ 指的是保守力（势能的负梯度）。这里右边的 $Q_i$ 是电机、摩擦这类不能写进势能的外力——它们必须单独加在右边。}
@@ -932,12 +856,7 @@ T = \frac{1}{2} \dot{q}^\top M(q) \dot{q}
 其中 $M(q)$ 是 $n \times n$ 的\textbf{质量矩阵}（也叫惯性矩阵）。
 
 \begin{physicalmeaning}
-$M(q)$ 的物理意义：
-\begin{itemize}
-    \item $M_{ii}$：第 $i$ 个关节单独转动时的"有效惯量"
-    \item $M_{ij}$（$i \neq j$）：关节 $i$ 和 $j$ 之间的"惯性耦合"
-    \item $M$ 依赖于位形 $q$：机械臂伸直时和弯曲时，惯量不同！
-\end{itemize}
+$M(q)$ 的每个元素都有物理意义：对角元 $M_{ii}$ 是第 $i$ 个关节单独转动时的"有效惯量"，非对角元 $M_{ij}$（$i \neq j$）是关节 $i$ 和 $j$ 之间的"惯性耦合"。整个矩阵依赖于位形 $q$——机械臂伸直时和弯曲时，惯量不同！
 \end{physicalmeaning}
 
 \begin{example}[伸直 vs 弯曲的惯量]
@@ -1078,19 +997,9 @@ mL^2\ddot{q} - (-mgL\sin q) = \tau
 \boxed{mL^2\ddot{q} + mgL\sin q = \tau}
 \]
 
-\textbf{对比标准形式}：
-\begin{itemize}
-    \item $M = mL^2$（常数，因为单摆只有一个关节）
-    \item $C = 0$（单关节没有科氏力）
-    \item $G = mgL\sin q$（重力产生的力矩）
-\end{itemize}
+\textbf{对比标准形式}：$M = mL^2$ 是常数，因为单摆只有一个关节；$C = 0$，单关节没有科氏力；$G = mgL\sin q$ 是重力产生的力矩。
 
-\textbf{物理检验}：
-\begin{itemize}
-    \item 当 $q = 0$（竖直向下）：$G = 0$，不需要力矩来维持
-    \item 当 $q = 90°$（水平）：$G = mgL$，需要最大力矩
-    \item 当 $q = 180°$（竖直向上）：$G = 0$，但这是不稳定平衡
-\end{itemize}
+\textbf{物理检验}：当 $q = 0$（竖直向下）时 $G = 0$，不需要力矩来维持；当 $q = 90°$（水平）时 $G = mgL$，需要的力矩最大；当 $q = 180°$（竖直向上）时 $G$ 又回到 0，但这是不稳定平衡。
 \end{example}
 
 \begin{example}[双连杆机械臂的动力学（概念性）]
@@ -1103,12 +1012,7 @@ M_{12}(q_2) & M_{22}
 \end{bmatrix}
 \]
 
-注意：
-\begin{itemize}
-    \item $M_{11}$ 依赖于 $q_2$（肘关节角度）：手臂弯曲时，肩关节的有效惯量变小
-    \item $M_{22}$ 是常数：肘关节的惯量不受其他关节影响
-    \item $M_{12} = M_{21}$：对称性来自动能的二次型性质
-\end{itemize}
+这里 $M_{11}$ 依赖于肘关节角度 $q_2$：手臂弯曲时，肩关节的有效惯量变小；$M_{22}$ 是常数，肘关节的惯量不受其他关节影响；而 $M_{12} = M_{21}$，这个对称性来自动能的二次型性质。
 
 科氏力矩阵 $C$ 包含 $\dot{q}_1^2$ 和 $\dot{q}_1\dot{q}_2$ 等项——这些是快速运动时产生的"假想力"。
 
@@ -1172,15 +1076,7 @@ M(q)\ddot{q} + C(q,\dot{q})\dot{q} + G(q) = Y(q, \dot{q}, \ddot{q}) \theta
 
 \subsection{为什么接触很重要？}
 
-机器人与世界交互几乎总是通过接触：
-\begin{itemize}
-    \item 机械臂抓取物体
-    \item 腿式机器人行走
-    \item 工业机器人装配零件
-    \item 手术机器人操作组织
-\end{itemize}
-
-没有接触力的分析，我们无法理解机器人如何真正"做事"。
+机器人与世界交互几乎总是通过接触：机械臂抓取物体、腿式机器人行走、工业机器人装配零件、手术机器人操作组织，无一例外。没有接触力的分析，我们无法理解机器人如何真正"做事"。
 
 \begin{example}[行走的秘密]
 当你走路时，脚蹬地，地面给你一个向前的摩擦力，推动你前进。
@@ -1201,12 +1097,7 @@ M(q)\ddot{q} + C(q,\dot{q})\dot{q} + G(q) = Y(q, \dot{q}, \ddot{q}) \theta
 M(q)\ddot{q} + C(q,\dot{q})\dot{q} + G(q) = \tau + J_c(q)^\top \lambda_c
 \end{equation}
 
-其中：
-\begin{itemize}
-    \item $J_c(q)$ 是接触点的雅可比矩阵
-    \item $\lambda_c$ 是接触力（在接触点处）
-    \item $J_c^\top \lambda_c$ 是接触力产生的\textbf{广义力}（在关节空间）
-\end{itemize}
+其中 $J_c(q)$ 是接触点的雅可比矩阵，$\lambda_c$ 是作用在接触点处的接触力，$J_c^\top \lambda_c$ 则是接触力在关节空间产生的\textbf{广义力}。
 \end{keyformula}
 
 \begin{keyformula}[title=接触动力学的 KKT 形式]
@@ -1233,14 +1124,7 @@ $J_c^\top$ 把接触点的力"传递"到关节空间，就像 $J^\top$ 把末端
 
 \paragraph{约束1：不能穿透}
 
-设 $\phi(q)$ 是接触间隙（机器人与环境之间的最近距离）：
-\begin{itemize}
-    \item $\phi > 0$：没有接触
-    \item $\phi = 0$：正在接触
-    \item $\phi < 0$：穿透（物理上不允许！）
-\end{itemize}
-
-约束：$\phi(q) \geq 0$
+设 $\phi(q)$ 是接触间隙，即机器人与环境之间的最近距离：$\phi > 0$ 表示没有接触，$\phi = 0$ 表示正在接触，而 $\phi < 0$ 意味着穿透，物理上不允许。于是约束是 $\phi(q) \geq 0$。
 
 \paragraph{约束2：法向力是推力}
 
@@ -1258,11 +1142,7 @@ $J_c^\top$ 把接触点的力"传递"到关节空间，就像 $J^\top$ 把末端
 \lambda_n \cdot \phi(q) = 0
 \]
 
-\textbf{含义}：
-\begin{itemize}
-    \item 如果 $\phi > 0$（不接触），则 $\lambda_n = 0$（没有力）
-    \item 如果 $\lambda_n > 0$（有力），则 $\phi = 0$（必须接触）
-\end{itemize}
+它的含义是两者至少有一个为零：如果 $\phi > 0$（不接触），则 $\lambda_n = 0$（没有力）；反过来，如果 $\lambda_n > 0$（有力），则必有 $\phi = 0$（正在接触）。
 
 \begin{figure}[htbp]
 \centering
@@ -1328,13 +1208,7 @@ $J_c^\top$ 把接触点的力"传递"到关节空间，就像 $J^\top$ 把末端
 
 \paragraph{库仑摩擦模型}
 
-最常用的摩擦模型是库仑模型：
-\begin{itemize}
-    \item 静摩擦：当物体静止时，摩擦力可以是任意方向，但大小受限
-    \item 动摩擦：当物体滑动时，摩擦力与速度方向相反，大小正比于法向力
-\end{itemize}
-
-数学表达：
+最常用的摩擦模型是库仑模型。它区分两种情形：物体静止时是静摩擦，摩擦力可以指向任意方向，但大小受限；物体滑动时是动摩擦，摩擦力与速度方向相反，大小正比于法向力。两种情形合起来写成一个不等式：
 \[
 \|f_t\| \leq \mu \lambda_n
 \]
@@ -1408,14 +1282,7 @@ $J_c^\top$ 把接触点的力"传递"到关节空间，就像 $J^\top$ 把末端
 带摩擦的接触问题可以写成\textbf{二阶锥规划}（SOCP），这是凸优化的一种，可以高效求解。
 
 \begin{example}[机器人抓取]
-当机械臂抓取一个物体时，手指与物体之间的接触力必须满足：
-\begin{enumerate}
-    \item 法向力为正（推而不拉）
-    \item 摩擦力在锥内（不滑动）
-    \item 合力平衡物体重力
-\end{enumerate}
-
-这是一个带锥约束的力平衡问题，可以用凸优化求解最优抓取力。
+当机械臂抓取一个物体时，手指与物体之间的接触力必须同时满足三件事：法向力为正（推而不拉），摩擦力在锥内（不滑动），并且各接触力的合力平衡物体重力。这是一个带锥约束的力平衡问题，可以用凸优化求解最优抓取力。
 
 \begin{figure}[htbp]
 \centering
@@ -1464,9 +1331,7 @@ M(q)\ddot{q} + C\dot{q} + G &= \tau + J_c^\top \lambda_c \quad \text{（动力�
 \end{align}
 \end{keyformula}
 
-这个问题是\textbf{非光滑}的（因为互补条件在接触/分离瞬间不可微），数值求解需要特殊的算法。
-
-现代机器人仿真器（如 MuJoCo、Drake、PyBullet）都实现了高效的接触求解器。
+这个问题是\textbf{非光滑}的（因为互补条件在接触/分离瞬间不可微），数值求解需要特殊的算法。现代机器人仿真器（如 MuJoCo、Drake、PyBullet）都实现了高效的接触求解器，其中 Emo Todorov 2012 年发布的 MuJoCo 走的正是本章的路子：把接触问题写成优化问题来求解。
 \tryit{在 PyBullet 或 MuJoCo 里把一个球放到地面上方，逐步打印球心高度 $\phi$ 和法向接触力 $\lambda_n$：悬空时 $\lambda_n = 0$，落地后 $\lambda_n \approx mg$，任何时刻 $\lambda_n \cdot \phi \approx 0$。}
 
 % ------------------------------------------------------------------------------------
@@ -1518,12 +1383,7 @@ M(q)\ddot{q} + C\dot{q} + G &= \tau + J_c^\top \lambda_c \quad \text{（动力�
 \caption{双连杆机械臂示意图}
 \end{figure}
 
-\textbf{参数}：
-\begin{itemize}
-    \item 连杆长度：$L_1 = L_2 = 1$ m
-    \item 连杆质量：$m_1 = 2$ kg，$m_2 = 1$ kg（均匀分布在连杆上，质心在连杆中点）
-    \item 重力加速度：$g = 9.8$ m/s²
-\end{itemize}
+\textbf{参数}：连杆长度 $L_1 = L_2 = 1$ m；连杆质量 $m_1 = 2$ kg，$m_2 = 1$ kg，均匀分布在连杆上，质心在连杆中点；重力加速度 $g = 9.8$ m/s²。
 
 \subsection{运动学分析}
 
@@ -1624,11 +1484,7 @@ G_1 &= 2 \times 9.8 \times 0.5 \times \cos 1.1° + 1 \times 9.8 \times (1 \times
 G_2 &= 1 \times 9.8 \times 0.5 \times \cos 101.5° = -1.0 \text{ Nm}
 \end{align}
 
-\textbf{解读}：
-\begin{itemize}
-    \item 肩关节需要 $\tau_1 = 18.6$ Nm 的正力矩（逆时针）来抵抗重力
-    \item 肘关节需要 $\tau_2 = -1.0$ Nm 的负力矩（顺时针）
-\end{itemize}
+\textbf{解读}：肩关节需要 $\tau_1 = 18.6$ Nm 的正力矩（逆时针）来抵抗重力，肘关节则需要 $\tau_2 = -1.0$ Nm 的负力矩（顺时针）——$q_1 + q_2 = 101.5°$ 已越过竖直方向，小臂上的重力矩换了符号。
 
 \subsection{末端力分析}
 
@@ -1658,15 +1514,7 @@ J = \begin{bmatrix}
 
 \subsection{总结}
 
-这个案例展示了本章主要概念的应用：
-\begin{enumerate}
-    \item 正运动学：$q \to x$
-    \item 雅可比矩阵：速度和力的传递
-    \item 逆运动学：$x \to q$（可能有多解）
-    \item 奇异性：某些位形下运动受限
-    \item 静力学：重力平衡
-    \item 力传递：$\tau = J^\top F$
-\end{enumerate}
+这个案例把本章的主要概念串成了一条线：先用正运动学从 $q$ 算到 $x$，再由雅可比矩阵得到速度和力的传递关系并找出奇异位形；然后反过来做逆运动学，从 $x$ 回到 $q$，并看到它可能有多解；最后在选定的位形上做静力学，先算抵抗重力需要的力矩，再用 $\tau = J^\top F$ 算抵抗外力需要的力矩。
 
 % ------------------------------------------------------------------------------------
 \section{本章小结}
@@ -1688,7 +1536,8 @@ J = \begin{bmatrix}
 \begin{unification}[title=$\lambda$ 在机器人学中的多重身份]
 \begin{center}
 \renewcommand{\arraystretch}{1.4}
-\begin{tabular}{l|l|l}
+\small
+\begin{tabularx}{\linewidth}{X|l|X}
 \toprule
 \textbf{场景} & \textbf{$\lambda$ 的含义} & \textbf{与优化的联系} \\
 \midrule
@@ -1698,7 +1547,7 @@ J = \begin{bmatrix}
 摩擦锥 & 切向摩擦力 & 二阶锥约束的乘子 \\
 接触保持 $J_c\ddot{q} + \dot{J}_c\dot{q} = 0$ & 接触力 & KKT 分块矩阵中的乘子 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{center}
 \end{unification}
 
