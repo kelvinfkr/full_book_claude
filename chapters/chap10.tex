@@ -11,12 +11,7 @@
 
 \storynote{John von Neumann}{1903--1957，20世纪最伟大的数学家之一，博弈论奠基人。他还发明了冯·诺伊曼计算机架构、参与曼哈顿计划、创立量子力学数学基础。据说他能用心算积分，智商估计超过180。}
 
-在前面的章节中，我们一直在解决"一个智能体对抗环境"的问题：
-\begin{itemize}
-    \item 最优控制：一个控制器操控一个动力系统
-    \item 强化学习：一个智能体在环境中最大化累积奖励
-    \item 反向传播与序列建模：一个网络拟合一份数据
-\end{itemize}
+在前面的章节中，我们一直在解决"一个智能体对抗环境"的问题：最优控制里是一个控制器操控一个动力系统，强化学习里是一个智能体在环境中最大化累积奖励，反向传播与序列建模里则是一个网络拟合一份数据。问题的形式各不相同，但决策者始终只有一个，目标函数也只依赖于这一个决策者自己的选择，所以"最优"这个词从来没有歧义。
 
 但真实世界远比这复杂。想象以下场景：
 
@@ -60,7 +55,7 @@
 \subsection{从单人优化到多人博弈}
 
 \review{第1章}{KKT 条件：驻点、可行、乘子非负、互补松弛。本章要做的只是把它写 $N$ 遍——每个玩家一遍——再要求它们同时成立。}
-回顾单人优化问题：
+我们先问一个最基本的问题：当决策者从一个变成两个，"最优"这个词到底哪里不够用了？回顾单人优化问题：
 \begin{equation}
     \min_{x} f(x) \quad \text{s.t.} \quad g(x) \leq 0
 \end{equation}
@@ -70,22 +65,11 @@
 现在考虑\textbf{两人博弈}：
 
 \begin{definition}[二人博弈]
-一个二人博弈由以下元素组成：
-\begin{itemize}
-    \item \textbf{玩家1的策略空间}$\mathcal{A}_1$：玩家1可以选择的所有策略的集合
-    \item \textbf{玩家2的策略空间}$\mathcal{A}_2$：玩家2可以选择的所有策略的集合
-    \item \textbf{玩家1的代价函数}$J_1(a_1, a_2)$：玩家1要最小化的目标，\textbf{同时依赖于双方的策略}
-    \item \textbf{玩家2的代价函数}$J_2(a_1, a_2)$：玩家2要最小化的目标，同样依赖于双方的策略
-\end{itemize}
+一个二人博弈由两个策略空间和两个代价函数组成。玩家1从自己的策略空间$\mathcal{A}_1$中选一个策略$a_1$，玩家2从$\mathcal{A}_2$中选一个$a_2$；玩家1要最小化代价$J_1(a_1, a_2)$，玩家2要最小化代价$J_2(a_1, a_2)$。关键在于，两个代价函数都\textbf{同时依赖于双方的策略}。
 \end{definition}
 
 \begin{remark}[与优化问题的关键区别]
-在单人优化中，目标函数$f(x)$只依赖于决策者自己的选择$x$。但在博弈中，$J_1(a_1, a_2)$不仅依赖于玩家1的选择$a_1$，还依赖于玩家2的选择$a_2$。这意味着：
-\begin{itemize}
-    \item 玩家1想最小化$J_1$，但他控制不了$a_2$
-    \item 玩家2想最小化$J_2$，但他控制不了$a_1$
-    \item 双方的决策相互影响，形成一个"耦合"的系统
-\end{itemize}
+在单人优化中，目标函数$f(x)$只依赖于决策者自己的选择$x$。但在博弈中，$J_1(a_1, a_2)$不仅依赖于玩家1的选择$a_1$，还依赖于玩家2的选择$a_2$。于是玩家1想最小化$J_1$，却控制不了$a_2$；玩家2想最小化$J_2$，却控制不了$a_1$。双方的决策相互影响，形成一个"耦合"的系统——谁也无法撇开对方，单独把自己的问题解掉。
 \end{remark}
 
 每个玩家都想最小化自己的代价，但代价取决于对方的选择。这就产生了一个根本性的问题：
@@ -97,6 +81,8 @@
 \subsection{纳什均衡：没有人想单方面改变}
 \review{第2章}{你其实已经见过纳什均衡：第2章把拉格朗日函数看成 $x$ 与 $\lambda$ 的零和博弈，强对偶成立时的鞍点 $(x^*, \lambda^*)$ 就是一个纳什均衡。}
 
+既然没有一个函数可以让双方共同最小化，"好"就不能再定义为"最小"。纳什 1950 年的博士论文只有 27 页，给出的正是下面这个替代定义：
+
 \begin{definition}[纳什均衡]
 策略组合$(a_1^*, a_2^*)$是一个\textbf{纳什均衡}（Nash Equilibrium），如果：
 \begin{align}
@@ -107,31 +93,14 @@
 \end{definition}
 
 \begin{remark}[纳什均衡的直观理解]
-让我们用更通俗的语言解释纳什均衡：
-
-想象你和朋友在玩一个游戏。如果你们达到了纳什均衡状态，那意味着：
-\begin{itemize}
-    \item 你看了朋友的策略后，觉得"我现在的选择已经是最好的了，换别的只会更差"
-    \item 你的朋友看了你的策略后，也觉得"我现在的选择已经是最好的了"
-    \item 双方都没有动力去改变，系统达到一种"稳定"状态
-\end{itemize}
+让我们用更通俗的语言解释纳什均衡。想象你和朋友在玩一个游戏。如果你们达到了纳什均衡状态，那意味着你看了朋友的策略后，觉得"我现在的选择已经是最好的了，换别的只会更差"；你的朋友看了你的策略后，也得出同样的结论。于是双方都没有动力去改变，系统达到一种"稳定"状态。
 
 \textbf{关键词}：单方面。纳什均衡不是说大家都开心，而是说没人想\textbf{单独}改变。
 \end{remark}
 
 \begin{example}[囚徒困境——博弈论最经典的例子]
 \label{ex:prisoners}
-两个囚犯分别被审讯，每人可以选择"合作"（保持沉默）或"背叛"（揭发对方）。
-
-\textbf{变量含义}：
-\begin{itemize}
-    \item $a_1 \in \{\text{合作}, \text{背叛}\}$：玩家1的策略
-    \item $a_2 \in \{\text{合作}, \text{背叛}\}$：玩家2的策略
-    \item $J_1(a_1, a_2)$：玩家1的刑期（年），希望越小越好
-    \item $J_2(a_1, a_2)$：玩家2的刑期（年），希望越小越好
-\end{itemize}
-
-代价矩阵（刑期）如下：
+两个囚犯分别被审讯，每人可以选择"合作"（保持沉默）或"背叛"（揭发对方）。用本章的记号，$a_1, a_2 \in \{\text{合作}, \text{背叛}\}$分别是玩家1和玩家2的策略，$J_1(a_1, a_2)$与$J_2(a_1, a_2)$分别是两人的刑期（年），当然都希望越小越好。代价矩阵（刑期）如下：
 
 \begin{center}
 \begin{tabular}{c|cc}
@@ -142,26 +111,9 @@
 \end{tabular}
 \end{center}
 
-\textbf{如何解读这个表格}：
-\begin{itemize}
-    \item 如果双方都合作（保持沉默），证据不足，各判1年
-    \item 如果你背叛而对方合作，你当污点证人获释（0年），对方被重判（3年）
-    \item 如果双方都背叛，各判2年
-\end{itemize}
+这个表格的读法是：如果双方都合作（保持沉默），证据不足，各判1年；如果你背叛而对方合作，你当污点证人获释（0年），对方被重判（3年）；如果双方都背叛，各判2年。
 
-\textbf{分析纳什均衡}——我们来做"最优响应分析"：
-
-\textit{假设玩家2选择合作}：
-\begin{itemize}
-    \item 玩家1选合作：刑期1年
-    \item 玩家1选背叛：刑期0年 $\leftarrow$ \textbf{更好！}
-\end{itemize}
-
-\textit{假设玩家2选择背叛}：
-\begin{itemize}
-    \item 玩家1选合作：刑期3年
-    \item 玩家1选背叛：刑期2年 $\leftarrow$ \textbf{更好！}
-\end{itemize}
+要找纳什均衡，我们做"最优响应分析"——先固定对方的选择，再看自己怎么选最好。假设玩家2选择合作，玩家1选合作要坐1年牢，选背叛则获释，背叛更好；假设玩家2选择背叛，玩家1选合作要坐3年，选背叛只坐2年，背叛仍然更好。
 
 结论：\textbf{无论玩家2怎么选，玩家1选背叛总是更好}。这叫做"背叛是玩家1的\textbf{占优策略}"。
 
@@ -186,7 +138,7 @@
 
 \subsection{连续策略博弈与最优响应}
 
-当策略空间是连续的（如$\mathcal{A}_i = \R$），我们可以用微积分来分析。
+囚徒困境只有两个选项，靠穷举就能找到均衡。当策略空间是连续的（如$\mathcal{A}_i = \R$），穷举不再可行，我们需要用微积分来分析。上面"先固定对方、再优化自己"的思路，在连续情形下有一个现成的名字。
 
 \begin{definition}[最优响应]
 给定对手的策略$a_{-i}$，玩家$i$的\textbf{最优响应}（Best Response）是：
@@ -206,14 +158,7 @@ $(a_1^*, a_2^*)$是纳什均衡，当且仅当：
 \end{proposition}
 
 \begin{remark}[不动点的直观含义]
-这个条件说的是：在纳什均衡点，形成了一个"自洽"的循环：
-\begin{itemize}
-    \item 玩家1选$a_1^*$是因为对手选了$a_2^*$
-    \item 玩家2选$a_2^*$是因为对手选了$a_1^*$
-    \item 谁也不想先改变，因为改变只会让自己更差
-\end{itemize}
-
-这正是数学中"不动点"的概念：$x^* = f(x^*)$，即函数作用在某个点上还是它自己。
+这个条件说的是，在纳什均衡点形成了一个"自洽"的循环：玩家1选$a_1^*$是因为对手选了$a_2^*$，玩家2选$a_2^*$又是因为对手选了$a_1^*$，谁也不想先改变，因为改变只会让自己更差。这正是数学中"不动点"的概念：$x^* = f(x^*)$，即函数作用在某个点上还是它自己。
 \end{remark}
 
 这给出了一个寻找纳什均衡的算法思路：\textbf{迭代最优响应}（Iterated Best Response）。
@@ -232,19 +177,15 @@ $(a_1^*, a_2^*)$是纳什均衡，当且仅当：
 \end{algorithm}
 
 \begin{warning}[title=迭代最优响应不一定收敛]
-迭代最优响应可能：
-\begin{itemize}
-    \item \textbf{收敛到纳什均衡}（如果博弈是"好"的）
-    \item \textbf{陷入循环}（如石头剪刀布）
-    \item \textbf{发散}
-\end{itemize}
-收敛性取决于博弈的结构，我们稍后会看到一类保证收敛的"势博弈"。
+迭代最优响应可能收敛到纳什均衡（如果博弈是"好"的），也可能像石头剪刀布那样陷入循环，甚至发散。收敛性取决于博弈的结构，我们稍后会看到一类保证收敛的"势博弈"。
 \end{warning}
 \preview{下一节的 Beckmann 势函数就是这样的例子：每个司机各自为政，宏观上却在最小化同一个凸函数 $\Phi$——博弈又变回了第1章的优化。}
 
 % ====================================================================================
 \section{物理约束下的静态博弈}
 % ====================================================================================
+
+到目前为止，玩家可以在策略空间里随意选择。可是真实的玩家总是受限的：无人机有能量上限，发电厂有装机容量，司机只能走路网里有的路。带约束的单人优化我们在第1章已经解决过，本节要回答的是：当$N$个带约束的优化问题彼此耦合时，均衡长什么样？答案比想象的更简单。
 
 \begin{tcolorbox}[colback=yellow!10, colframe=orange!80, title=本章的核心观点]
 \textbf{本章的问题就是第1章的拉格朗日乘子法，只是要同时写 $N$ 份——每个玩家一份，各自只对自己的变量求导，却共享同一组变量。}
@@ -254,7 +195,7 @@ $(a_1^*, a_2^*)$是纳什均衡，当且仅当：
 \begin{center}
 \renewcommand{\arraystretch}{1.3}
 \small
-\begin{tabular}{lll}
+\begin{tabularx}{\linewidth}{lXX}
 \toprule
 \textbf{概念} & \textbf{第1章（单人优化）} & \textbf{本章（博弈）} \\
 \midrule
@@ -265,18 +206,13 @@ $(a_1^*, a_2^*)$是纳什均衡，当且仅当：
 一阶条件 & 一组 KKT & $N$ 组 KKT 同时成立 $=$ 广义纳什均衡 \\
 特例 & --- & 势博弈：$N$ 组 KKT 恰好是同一个 $\Phi$ 的一组 KKT \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{center}
 \end{tcolorbox}
 
 \subsection{广义纳什均衡与KKT条件}
 
-在实际问题中，每个玩家的策略通常受到\textbf{物理约束}：
-\begin{itemize}
-    \item 能量上限：$\|a_i\|^2 \leq E_{\max}$
-    \item 位置限制：$a_i \in [0, L]$
-    \item 资源预算：$c^T a_i \leq B$
-\end{itemize}
+在实际问题中，每个玩家的策略通常受到\textbf{物理约束}，比如能量上限$\|a_i\|^2 \leq E_{\max}$、位置限制$a_i \in [0, L]$，或者资源预算$c^T a_i \leq B$。把这些约束加进博弈的定义，就得到：
 
 \begin{definition}[广义纳什均衡问题]
 $N$个玩家的\textbf{广义纳什均衡问题}（Generalized Nash Equilibrium Problem, GNEP）：
@@ -286,13 +222,7 @@ $N$个玩家的\textbf{广义纳什均衡问题}（Generalized Nash Equilibrium 
     \min_{a_i} J_i(a_i, a_{-i}) \quad \text{s.t.} \quad g_i(a_i, a_{-i}) \leq 0
 \end{equation}
 
-\textbf{变量说明}：
-\begin{itemize}
-    \item $a_i$：玩家$i$的策略（决策变量）
-    \item $a_{-i}$：除玩家$i$外所有其他玩家的策略
-    \item $J_i$：玩家$i$的代价函数
-    \item $g_i$：玩家$i$面临的约束（可能依赖于其他玩家的策略）
-\end{itemize}
+这里$a_i$是玩家$i$的策略（决策变量），$a_{-i}$是除玩家$i$外所有其他玩家的策略，$J_i$是玩家$i$的代价函数，$g_i$是玩家$i$面临的约束——它可能依赖于其他玩家的策略。
 \end{definition}
 
 \begin{keyinsight}
@@ -311,27 +241,19 @@ $N$个玩家的\textbf{广义纳什均衡问题}（Generalized Nash Equilibrium 
 \clarify{单人优化是"一个目标、一组 KKT"；博弈是"$N$ 个目标、$N$ 组 KKT"，它们共享变量，却各自只对自己的 $a_i$ 求导。所以均衡一般不是任何一个函数的极小点——除非它是势博弈。}
 
 \begin{remark}[KKT条件的物理意义]
-回忆一下KKT条件的含义：
-\begin{itemize}
-    \item \textbf{驻点条件}：在最优点，目标函数的梯度被约束的梯度"抵消"了
-    \item \textbf{互补松弛}：约束要么不起作用（$g < 0$），要么起作用但乘子为正（$\lambda > 0$）
-\end{itemize}
-
-在博弈中，每个玩家都在自己的约束下做优化，所以每个人的KKT条件都要满足。纳什均衡就是这$N$组条件的公共解。
+回忆一下KKT条件的含义：驻点条件说的是，在最优点，目标函数的梯度被约束的梯度"抵消"了；互补松弛说的是，约束要么不起作用（$g < 0$），要么起作用但乘子为正（$\lambda > 0$）。在博弈中，每个玩家都在自己的约束下做优化，所以每个人的KKT条件都要满足。纳什均衡就是这$N$组条件的公共解。
 \end{remark}
 
 \subsection{案例一：图博弈——邻居之间的互动}
 
+$N$组KKT条件一般是一个庞大的非线性方程组。什么时候它可以被显式解出来？一个常见的简化是：每个人只和少数邻居打交道。
+
 \begin{definition}[图博弈]
-在\textbf{图博弈}（Network Game）中：
-\begin{itemize}
-    \item 玩家位于图$G = (V, E)$的节点上
-    \item 玩家$i$的代价只依赖于自己和\textbf{邻居}的策略：
-    \begin{equation}
-        J_i(a_i, a_{N(i)}) = f_i(a_i) + \sum_{j \in N(i)} \phi_{ij}(a_i, a_j)
-    \end{equation}
-    其中$N(i)$是$i$的邻居集合
-\end{itemize}
+在\textbf{图博弈}（Network Game）中，玩家位于图$G = (V, E)$的节点上，玩家$i$的代价只依赖于自己和\textbf{邻居}的策略：
+\begin{equation}
+    J_i(a_i, a_{N(i)}) = f_i(a_i) + \sum_{j \in N(i)} \phi_{ij}(a_i, a_j)
+\end{equation}
+其中$N(i)$是$i$的邻居集合。
 \end{definition}
 
 \begin{example}[线性二次图博弈——一个完整的求解过程]
@@ -341,23 +263,9 @@ $N$个玩家的\textbf{广义纳什均衡问题}（Generalized Nash Equilibrium 
     J_i = \frac{1}{2}(a_i - a_{i,0})^2 + \delta \cdot a_i \sum_{j \in N(i)} a_j
 \end{equation}
 
-\textbf{变量含义详解}：
-\begin{itemize}
-    \item $a_i \in \R$：玩家$i$的策略/行动（比如生产量、投入的努力等）
-    \item $a_{i,0}$：玩家$i$的"理想状态"或"目标值"（如果没有邻居影响，他想选择的值）
-    \item $\delta$：交互强度参数，决定邻居对你的影响有多大
-    \item $N(i)$：玩家$i$的邻居集合（图中与$i$相连的节点）
-\end{itemize}
+这里$a_i \in \R$是玩家$i$的策略或行动（比如生产量、投入的努力等），$a_{i,0}$是玩家$i$的"理想状态"——如果没有邻居影响，他想选择的值——$\delta$是交互强度参数，决定邻居对你的影响有多大，$N(i)$是玩家$i$在图中相连的邻居集合。
 
-\textbf{代价函数的物理解释}：
-\begin{itemize}
-    \item \textbf{第一项} $(a_i - a_{i,0})^2/2$：偏离理想状态的代价。你想待在$a_{i,0}$附近，离得越远代价越大
-    \item \textbf{第二项} $\delta \cdot a_i \sum_{j \in N(i)} a_j$：与邻居的交互代价
-    \begin{itemize}
-        \item 如果$\delta > 0$（\textbf{策略替代}）：邻居做得多，你做得多会增加代价。类似于竞争关系——市场上对手生产越多，你再多生产就越亏
-        \item 如果$\delta < 0$（\textbf{策略互补}）：邻居做得多，你做得多反而减少代价。类似于协作关系——朋友都在学习，你学习效果也更好
-    \end{itemize}
-\end{itemize}
+代价函数的两项各有物理含义。第一项$(a_i - a_{i,0})^2/2$是偏离理想状态的代价：你想待在$a_{i,0}$附近，离得越远代价越大。第二项$\delta \cdot a_i \sum_{j \in N(i)} a_j$是与邻居的交互代价，它的符号决定了交互的性质。如果$\delta > 0$（\textbf{策略替代}），邻居做得多，你做得多会增加代价，类似于竞争关系——市场上对手生产越多，你再多生产就越亏；如果$\delta < 0$（\textbf{策略互补}），邻居做得多，你做得多反而减少代价，类似于协作关系——朋友都在学习，你学习效果也更好。
 
 \textbf{求解纳什均衡}：
 
@@ -404,26 +312,17 @@ $N$个玩家的\textbf{广义纳什均衡问题}（Generalized Nash Equilibrium 
 \label{fig:network_game}
 \end{figure}
 
-图\ref{fig:network_game}展示了图博弈的实际计算结果。可以观察到：
-\begin{itemize}
-    \item 迭代最优响应算法确实收敛到了纳什均衡
-    \item 收敛速度是\textbf{线性}的（在对数坐标下误差直线下降）
-    \item 不同位置的玩家（中心节点vs边缘节点）有不同的均衡策略
-\end{itemize}
+图\ref{fig:network_game}展示了图博弈的实际计算结果。迭代最优响应算法确实收敛到了纳什均衡，而且收敛速度是\textbf{线性}的——在对数坐标下误差沿直线下降；同时可以看到，处在不同位置的玩家（中心节点与边缘节点）得到的均衡策略并不相同，图的结构直接写进了均衡里。
 
 \subsection{案例二：交通均衡与Braess悖论}
 
+图博弈里玩家的数量是有限的。当玩家多到像早高峰的车流一样数不清时，我们不再追踪每一个人，而是追踪"有多少流量走了哪条路"。这就是交通均衡的思路。
+
 \begin{example}[Wardrop交通均衡]
 \label{ex:wardrop}
-考虑一个交通网络：
-\begin{itemize}
-    \item $W$个OD对（Origin-Destination，起点-终点对）
-    \item 每个OD对$w$有需求$d_w$（单位时间内要从起点到终点的车辆数）
-    \item 每个OD对有多条可选路径$P_w$
-    \item 每条边$a$有时间函数$t_a(x_a)$，其中$x_a$是边$a$的流量
-\end{itemize}
+考虑一个交通网络，其中有$W$个OD对（Origin-Destination，起点-终点对）；每个OD对$w$有需求$d_w$，即单位时间内要从起点到终点的车辆数，以及多条可选路径$P_w$；每条边$a$有一个时间函数$t_a(x_a)$，其中$x_a$是边$a$上的流量。
 
-\textbf{Wardrop第一原理}（用户均衡）：在均衡状态下，每个OD对所有被使用的路径具有\textbf{相同且最小}的旅行时间。
+1952年，Wardrop为这样的网络提出了交通均衡的两条原则，本章用到的是第一条。\textbf{Wardrop第一原理}（用户均衡）：在均衡状态下，每个OD对所有被使用的路径具有\textbf{相同且最小}的旅行时间。
 
 \textbf{直观理解}：如果有一条更快的路，司机会切换过去。切换的人多了，那条路就变慢了。最终达到平衡：所有在用的路一样快，没人想换。
 \end{example}
@@ -431,50 +330,19 @@ $N$个玩家的\textbf{广义纳什均衡问题}（Generalized Nash Equilibrium 
 \begin{example}[Braess悖论——增加道路反而更堵！]
 \label{ex:braess}
 \storynote{Dietrich Braess}{德国数学家（1938--）。1968 年他研究交通网络的数值方法时发现：给路网加一条边，可能让所有人的均衡旅行时间变长。这篇德语论文沉寂多年，直到规划者在纽约、首尔的真实道路上看到同样现象才广为人知。}
-这是交通领域最著名的悖论之一。考虑从起点S到终点E的交通网络：
-
-\textbf{网络结构}：
-\begin{itemize}
-    \item 节点：S（起点）、A、B、E（终点）
-    \item 边SA：时间函数$t_{SA}(x) = x/100$（流量越大越慢）
-    \item 边AE：固定时间$t_{AE} = 45$分钟
-    \item 边SB：固定时间$t_{SB} = 45$分钟
-    \item 边BE：时间函数$t_{BE}(x) = x/100$
-    \item 边AB（Braess边）：时间$t_{AB} = 0$（\textbf{免费捷径！}）
-\end{itemize}
+这是交通领域最著名的悖论之一。考虑从起点S到终点E的交通网络，它有四个节点：S（起点）、A、B、E（终点）。边SA和边BE是"越挤越慢"的路，时间函数分别为$t_{SA}(x) = x/100$和$t_{BE}(x) = x/100$，流量越大越慢；边AE和边SB是固定时间的路，$t_{AE} = 45$分钟，$t_{SB} = 45$分钟。此外还可能有一条边AB（Braess边），时间$t_{AB} = 0$——一条\textbf{免费捷径}！
 
 总需求：4000辆车从S到E。
 
-\textbf{情况1：没有AB边}
-
-可选路径：
-\begin{itemize}
-    \item 路径1：S $\to$ A $\to$ E，时间 = $x_{SA}/100 + 45$
-    \item 路径2：S $\to$ B $\to$ E，时间 = $45 + x_{BE}/100$
-\end{itemize}
-
-由对称性，均衡时各2000辆车：
-\begin{itemize}
-    \item 路径1时间：$2000/100 + 45 = 20 + 45 = 65$分钟
-    \item 路径2时间：$45 + 2000/100 = 45 + 20 = 65$分钟 $\checkmark$
-\end{itemize}
+\textbf{情况1：没有AB边。}
+可选路径只有两条：路径1是S $\to$ A $\to$ E，时间为$x_{SA}/100 + 45$；路径2是S $\to$ B $\to$ E，时间为$45 + x_{BE}/100$。由对称性，均衡时各2000辆车，于是路径1的时间是$2000/100 + 45 = 20 + 45 = 65$分钟，路径2的时间是$45 + 2000/100 = 45 + 20 = 65$分钟，两条路一样快，符合Wardrop条件。
 
 \textbf{所有人旅行时间：65分钟}
 
-\textbf{情况2：有AB边（免费捷径）}
+\textbf{情况2：有AB边（免费捷径）。}
+新增路径3：S $\to$ A $\to$ B $\to$ E，时间 = $x_{SA}/100 + 0 + x_{BE}/100$。
 
-新增路径3：S $\to$ A $\to$ B $\to$ E，时间 = $x_{SA}/100 + 0 + x_{BE}/100$
-
-\textbf{关键分析}：假设所有4000辆车都走路径3（S$\to$A$\to$B$\to$E）：
-\begin{itemize}
-    \item 路径3时间：$4000/100 + 0 + 4000/100 = 40 + 0 + 40 = 80$分钟
-\end{itemize}
-
-验证这是纳什均衡——有人想换路吗？
-\begin{itemize}
-    \item 换到路径1（S$\to$A$\to$E）：$40 + 45 = 85$分钟 > 80分钟，更差！
-    \item 换到路径2（S$\to$B$\to$E）：$45 + 40 = 85$分钟 > 80分钟，更差！
-\end{itemize}
+\textbf{关键分析}：假设所有4000辆车都走路径3（S$\to$A$\to$B$\to$E），路径3的时间是$4000/100 + 0 + 4000/100 = 40 + 0 + 40 = 80$分钟。这是纳什均衡吗？我们看看有没有人想换路：换到路径1（S$\to$A$\to$E）要$40 + 45 = 85$分钟，换到路径2（S$\to$B$\to$E）要$45 + 40 = 85$分钟，都比80分钟更差。
 
 没人想换，所以\textbf{所有人走S$\to$A$\to$B$\to$E确实是纳什均衡}。
 
@@ -482,13 +350,7 @@ $N$个玩家的\textbf{广义纳什均衡问题}（Generalized Nash Equilibrium 
 
 \textbf{悖论}：增加了一条\textbf{免费}道路，所有人的旅行时间反而从65分钟增加到80分钟！增加了约23\%！
 
-\textbf{为什么会这样？}
-\begin{itemize}
-    \item 免费捷径看起来很诱人
-    \item 每个人都"理性"地选择它
-    \item 但大家都这么想，导致SA和BE两条边都拥挤了
-    \item 如果政府\textbf{禁止}这条免费道路，反而能让所有人更快到达！
-\end{itemize}
+为什么会这样？免费捷径看起来很诱人，于是每个人都"理性"地选择它；但大家都这么想，SA和BE两条边就都拥挤了。如果政府\textbf{禁止}这条免费道路，反而能让所有人更快到达！
 
 这再次说明：\textbf{个体理性 $\neq$ 集体理性}。
 \end{example}
@@ -504,6 +366,8 @@ $N$个玩家的\textbf{广义纳什均衡问题}（Generalized Nash Equilibrium 
 
 \subsection{势博弈：自私博弈的隐藏秩序}
 
+Braess悖论里我们是靠"猜一个分配、再验证没人想换"找到均衡的。对真实路网，这种猜法行不通。有没有办法把"找均衡"变成一个可以直接求解的问题？下面的定理说：对交通网络，可以。
+
 \begin{theorem}[Beckmann势函数]
 如果边时间函数$t_a(x_a)$是连续且非递减的，则Wardrop用户均衡是以下\textbf{凸优化问题}的解：
 \begin{equation}
@@ -513,13 +377,7 @@ $N$个玩家的\textbf{广义纳什均衡问题}（Generalized Nash Equilibrium 
     \text{s.t.} \quad \sum_{p \in P_w} f_p = d_w, \quad f_p \geq 0, \quad x_a = \sum_{p \ni a} f_p
 \end{equation}
 
-\textbf{变量说明}：
-\begin{itemize}
-    \item $f_p$：路径$p$上的流量
-    \item $x_a$：边$a$上的总流量（所有经过边$a$的路径流量之和）
-    \item $d_w$：OD对$w$的总需求
-    \item $\Phi$：Beckmann势函数
-\end{itemize}
+这里$f_p$是路径$p$上的流量，$x_a$是边$a$上的总流量（所有经过边$a$的路径流量之和），$d_w$是OD对$w$的总需求，$\Phi$称为Beckmann势函数。
 \end{theorem}
 
 \begin{proof}[用KKT条件证明Wardrop均衡]
@@ -531,12 +389,7 @@ $N$个玩家的\textbf{广义纳什均衡问题}（Generalized Nash Equilibrium 
 \begin{equation}
     \mathcal{L} = \sum_{a} \int_0^{x_a} t_a(s) \, ds - \sum_w \lambda_w \left( \sum_{p \in P_w} f_p - d_w \right) - \sum_p \mu_p f_p
 \end{equation}
-其中：
-\begin{itemize}
-    \item $\lambda_w$：OD对$w$的需求约束的乘子
-    \item $\mu_p \geq 0$：路径流量非负约束$f_p \geq 0$的乘子
-\end{itemize}
-（这里把 $f_p \ge 0$ 写成 $-f_p \le 0$，并用减号引入乘子；与第1章的 $\Lag = f + \lambda g + \mu h$ 只差记号约定。）
+其中$\lambda_w$是OD对$w$的需求约束的乘子，$\mu_p \geq 0$是路径流量非负约束$f_p \geq 0$的乘子。（这里把 $f_p \ge 0$ 写成 $-f_p \le 0$，并用减号引入乘子；与第1章的 $\Lag = f + \lambda g + \mu h$ 只差记号约定。）
 
 \textbf{Step 2：对$f_p$求偏导}
 
@@ -548,11 +401,7 @@ $N$个玩家的\textbf{广义纳什均衡问题}（Generalized Nash Equilibrium 
 
 \textbf{Step 3：互补松弛条件}
 
-KKT的互补松弛条件要求：$\mu_p \cdot f_p = 0$
-\begin{itemize}
-    \item 若$f_p > 0$（路径被使用），则$\mu_p = 0$，故路径时间 $= \lambda_w$
-    \item 若$f_p = 0$（路径未被使用），则$\mu_p \geq 0$，故路径时间 $\geq \lambda_w$
-\end{itemize}
+KKT的互补松弛条件要求$\mu_p \cdot f_p = 0$。于是若$f_p > 0$（路径被使用），则$\mu_p = 0$，故路径时间 $= \lambda_w$；若$f_p = 0$（路径未被使用），则$\mu_p \geq 0$，故路径时间 $\geq \lambda_w$。
 
 \textbf{Step 4：这正是Wardrop条件！}
 
@@ -575,12 +424,7 @@ KKT的互补松弛条件要求：$\mu_p \cdot f_p = 0$
 
 这类博弈被称为\textbf{势博弈}（Potential Game）：存在一个势函数$\Phi$，每个玩家改变策略导致的代价变化等于势函数的变化。
 
-势博弈有很好的性质：
-\begin{itemize}
-    \item 纳什均衡一定存在（$\Phi$的最小值点）
-    \item 最优响应动态一定收敛（因为$\Phi$单调下降）
-    \item 可以用优化算法求解均衡
-\end{itemize}
+势博弈有很好的性质。纳什均衡一定存在，因为$\Phi$的最小值点就是一个；最优响应动态一定收敛，因为每一步都让$\Phi$单调下降；于是均衡可以直接用优化算法求解。
 \end{keyinsight}
 
 \begin{figure}[htbp]
@@ -598,19 +442,12 @@ KKT的互补松弛条件要求：$\mu_p \cdot f_p = 0$
 
 前面我们讨论的都是\textbf{静态博弈}——玩家同时做出决策，博弈只进行一轮。
 
-现在我们加入\textbf{时间}维度：智能体需要在多个时间步做出决策，当前决策会影响未来状态。这就是\textbf{动态博弈}，或更具体地说，\textbf{马尔可夫博弈}（Markov Game）。
+现在我们加入\textbf{时间}维度：智能体需要在多个时间步做出决策，当前决策会影响未来状态。这就是\textbf{动态博弈}，或更具体地说，\textbf{马尔可夫博弈}（Markov Game）。第9章的强化学习工具能不能直接搬过来用？本节先说明为什么不能，再看现代算法是怎么绕过去的。
 
 \subsection{从静态到动态：马尔可夫博弈}
 
 \begin{definition}[马尔可夫博弈]
-一个$N$人\textbf{马尔可夫博弈}（又称随机博弈）由以下元素组成：
-\begin{itemize}
-    \item \textbf{状态空间}$\mathcal{S}$：系统可能处于的所有状态
-    \item \textbf{动作空间}$\mathcal{A}_i$：每个智能体$i$可选择的动作
-    \item \textbf{状态转移}$P(s' | s, a_1, \ldots, a_N)$：给定当前状态和所有人的动作，下一个状态的概率分布
-    \item \textbf{奖励函数}$r_i(s, a_1, \ldots, a_N)$：每个智能体在每一步获得的即时奖励
-    \item \textbf{折扣因子}$\gamma \in [0,1)$：未来奖励的折扣率
-\end{itemize}
+一个$N$人\textbf{马尔可夫博弈}（又称随机博弈）由状态空间$\mathcal{S}$、每个智能体$i$的动作空间$\mathcal{A}_i$、状态转移概率$P(s' | s, a_1, \ldots, a_N)$、每个智能体的奖励函数$r_i(s, a_1, \ldots, a_N)$以及折扣因子$\gamma \in [0,1)$组成。与单智能体MDP的区别只有一处：转移概率和每个人的奖励都依赖于\textbf{所有人}的动作。
 
 每个智能体$i$的目标是最大化累积奖励：
 \begin{equation}
@@ -627,24 +464,14 @@ KKT的互补松弛条件要求：$\mu_p \cdot f_p = 0$
 
 但其他智能体也在学习，所以$\pi_{-i}$在不断变化！
 
-\textbf{后果}：
-\begin{itemize}
-    \item 环境对于单个智能体是\textbf{非平稳}的（规则在变）
-    \item 单智能体RL的收敛性保证不再成立
-    \item "追逐移动目标"问题——你刚学会应对对手的策略，对手又变了
-\end{itemize}
+\textbf{后果}：环境对于单个智能体是\textbf{非平稳}的——规则在变——于是单智能体RL的收敛性保证不再成立，出现"追逐移动目标"的问题：你刚学会应对对手的策略，对手又变了。
 
 \textbf{类比}：想象你在学下棋，但对手每天都在变强。你昨天赢他的策略，今天可能就不管用了。
 \end{warning}
 
 \subsection{CTDE范式：集中训练，分散执行}
 
-解决非平稳性的一个关键思想是\textbf{CTDE}（Centralized Training with Decentralized Execution）：
-
-\begin{itemize}
-    \item \textbf{训练时}：可以使用全局信息（所有智能体的观测和动作）
-    \item \textbf{执行时}：每个智能体只能使用自己的局部观测
-\end{itemize}
+非平稳性的根源是每个智能体只看得到自己的局部信息，把别人当成了环境的一部分。解决它的一个关键思想是\textbf{CTDE}（Centralized Training with Decentralized Execution）：训练时可以使用全局信息（所有智能体的观测和动作），执行时每个智能体只能使用自己的局部观测。训练阶段的全局视角把"别人在变"重新纳入了模型，执行阶段的局部视角则保留了分布式部署的可能。
 
 \begin{figure}[htbp]
 \centering
@@ -657,7 +484,7 @@ KKT的互补松弛条件要求：$\mu_p \cdot f_p = 0$
 
 \subsection{价值分解方法：QMIX}
 
-QMIX是CTDE范式下\textbf{价值分解}（Value Decomposition）方法的代表。
+QMIX是CTDE范式下\textbf{价值分解}（Value Decomposition）方法的代表。它要回答的问题是：训练时学到的全局Q值，怎样才能在执行时被拆给各个只看局部观测的智能体去用？
 
 \begin{definition}[IGM原则——核心思想]
 \textbf{IGM}（Individual-Global-Max）原则要求：
@@ -685,7 +512,10 @@ QMIX是CTDE范式下\textbf{价值分解}（Value Decomposition）方法的代�
 
 由单调性（$Q_{tot}$ 对每个 $Q_i$ 非减），对任意联合动作 $a' = (a_1', \ldots, a_N')$，逐个坐标替换：
 \begin{equation}
-    Q_{tot}(s, a_1^*, a_2^*, \ldots, a_N^*) \geq Q_{tot}(s, a_1', a_2^*, \ldots, a_N^*) \geq Q_{tot}(s, a_1', a_2', \ldots, a_N^*) \geq \cdots \geq Q_{tot}(s, a')
+\begin{aligned}
+    Q_{tot}(s, a_1^*, a_2^*, \ldots, a_N^*) &\geq Q_{tot}(s, a_1', a_2^*, \ldots, a_N^*) \\
+    &\geq Q_{tot}(s, a_1', a_2', \ldots, a_N^*) \geq \cdots \geq Q_{tot}(s, a')
+\end{aligned}
 \end{equation}
 每一步只换一个坐标，用一次单调性。所以$(a_1^*, \ldots, a_N^*)$最大化$Q_{tot}$。
 \end{proof}
@@ -697,13 +527,7 @@ QMIX是CTDE范式下\textbf{价值分解}（Value Decomposition）方法的代�
 \label{fig:qmix}
 \end{figure}
 
-\textbf{QMIX架构的关键组件}（见图\ref{fig:qmix}）：
-\begin{enumerate}
-    \item \textbf{局部Q网络}：每个智能体$i$有一个Q网络$Q_i(o_i, a_i)$，只使用自己的观测
-    \item \textbf{混合网络}：将所有局部Q值组合成全局Q值
-    \item \textbf{超网络}：根据全局状态$s$生成混合网络的权重
-    \item \textbf{非负权重}：通过绝对值或指数函数保证权重非负，从而满足单调性
-\end{enumerate}
+图\ref{fig:qmix}画出了QMIX的架构。每个智能体$i$有一个只使用自己观测的局部Q网络$Q_i(o_i, a_i)$；一个混合网络把所有局部Q值组合成全局Q值；混合网络的权重不是直接学出来的，而是由一个超网络根据全局状态$s$生成；生成时通过绝对值或指数函数保证权重非负，单调性约束也就自动满足了。
 
 \begin{algorithm}
 \caption{QMIX训练流程（伪代码）}
@@ -753,26 +577,17 @@ QMIX假设的是一个\textbf{协作博弈}：每个智能体的"贡献"都是�
 
 \subsection{策略梯度方法：MAPPO}
 
-MAPPO是将PPO（近端策略优化）扩展到多智能体设置的方法。
+价值分解要求动作离散、博弈协作。当动作是连续的，或者智能体之间并非纯粹协作时，我们回到策略梯度。MAPPO是将PPO（近端策略优化）扩展到多智能体设置的方法。
 
 \begin{definition}[MAPPO]
-MAPPO使用Actor-Critic架构：
-\begin{itemize}
-    \item \textbf{Actor}（分散）：每个智能体$i$有自己的策略网络$\pi_i(a_i | o_i)$，只依赖局部观测
-    \item \textbf{Critic}（集中）：一个共享的价值网络$V(s)$，使用全局状态
-\end{itemize}
+MAPPO使用Actor-Critic架构：每个智能体$i$有自己的策略网络$\pi_i(a_i | o_i)$（分散的Actor），只依赖局部观测；所有智能体共享一个使用全局状态的价值网络$V(s)$（集中的Critic）。
 
 \review{第9章}{$L^{\text{CLIP}}$ 的来历见第9章扩展阅读"PPO：用裁剪代替约束"——它是把信赖域约束 $\mathrm{KL}(\pi_\theta \| \pi_{\theta_{\rm old}}) \le \delta$ 的拉格朗日形式换成一个便宜的替代品。}
 策略更新使用PPO的裁剪目标：
 \begin{equation}
     L^{\text{CLIP}}_i = \E\left[ \min\left( r_t(\theta) \hat{A}_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon) \hat{A}_t \right) \right]
 \end{equation}
-其中：
-\begin{itemize}
-    \item $r_t(\theta) = \frac{\pi_\theta(a_t | o_t)}{\pi_{\theta_{\text{old}}}(a_t | o_t)}$：新旧策略的概率比
-    \item $\hat{A}_t$：优势函数估计（这个动作比平均好多少）
-    \item $\epsilon$：裁剪参数（通常取0.1-0.2）
-\end{itemize}
+其中$r_t(\theta) = \frac{\pi_\theta(a_t | o_t)}{\pi_{\theta_{\text{old}}}(a_t | o_t)}$是新旧策略的概率比，$\hat{A}_t$是优势函数估计（这个动作比平均好多少），$\epsilon$是裁剪参数（通常取0.1-0.2）。
 \end{definition}
 
 \begin{remark}[MAPPO vs QMIX]
@@ -797,12 +612,7 @@ MAPPO使用Actor-Critic架构：
 
 \subsection{维度灾难与平均场近似}
 
-当智能体数量很大时（如$N = 10000$个无人机、百万级的交通参与者），直接处理$N$体博弈面临\textbf{维度灾难}：
-\begin{itemize}
-    \item 联合状态空间：$\mathcal{S}^N$
-    \item 联合动作空间：$\mathcal{A}^N$
-    \item 存储和计算指数增长
-\end{itemize}
+当智能体数量很大时（如$N = 10000$个无人机、百万级的交通参与者），直接处理$N$体博弈面临\textbf{维度灾难}：联合状态空间是$\mathcal{S}^N$，联合动作空间是$\mathcal{A}^N$，存储和计算量都随$N$指数增长。CTDE的集中式Critic要吃进所有人的观测，在这个尺度上已经不可能。
 
 \textbf{平均场近似}的思想来自统计物理：
 
@@ -813,12 +623,7 @@ MAPPO使用Actor-Critic架构：
 \sidenoteplain{\textbf{平均场博弈创始人}：MFG由法国数学家Jean-Michel Lasry和Pierre-Louis Lions于2006年合作提出；几乎同时，Huang、Malhamé 和 Caines 在加拿大独立提出了同样的思想。Lions是1994年菲尔兹奖得主（数学界最高荣誉），专长非线性PDE。他在法兰西公学院的MFG课程推动了该领域的蓬勃发展。}
 
 \begin{definition}[平均场博弈]
-在\textbf{平均场博弈}（Mean Field Game, MFG）中：
-\begin{itemize}
-    \item 有无穷多个同质（相同）智能体
-    \item 每个智能体与群体分布$m(x, t)$交互，而不是与具体个体交互
-    \item 群体分布由所有智能体的策略决定
-\end{itemize}
+在\textbf{平均场博弈}（Mean Field Game, MFG）中，有无穷多个同质（相同）的智能体，每个智能体不再与具体的个体交互，而是与群体分布$m(x, t)$交互；而这个群体分布，又由所有智能体的策略共同决定。
 
 \textbf{核心简化}：把``与$N$个具体对手的博弈''替换为``与群体分布的博弈''。
 \end{definition}
@@ -830,13 +635,7 @@ MAPPO使用Actor-Critic架构：
 
 \textbf{平均场视角}：你只需要知道周围水的"平均流动方向"（密度场和速度场）
 
-类似地，在有大量智能体的博弈中：
-\begin{itemize}
-    \item 你不需要知道每个对手的具体策略
-    \item 你只需要知道对手群体的"分布"——有多少比例在做什么
-    \item 基于这个分布，你做出最优响应
-    \item 当每个人都这样做时，形成一个自洽的均衡
-\end{itemize}
+类似地，在有大量智能体的博弈中，你不需要知道每个对手的具体策略，只需要知道对手群体的"分布"——有多少比例在做什么；基于这个分布，你做出最优响应；当每个人都这样做时，就形成了一个自洽的均衡。
 \end{example}
 
 \subsection{MFG的核心思想：两步不动点}
@@ -863,12 +662,12 @@ MAPPO使用Actor-Critic架构：
 \begin{center}
 \begin{tikzpicture}[>=stealth, scale=0.9]
     \node[draw, rounded corners, fill=blue!15, minimum width=3cm, minimum height=1.2cm, align=center] (m) at (0, 0) {群体分布\\$m(x,t)$};
-    \node[draw, rounded corners, fill=orange!15, minimum width=3cm, minimum height=1.2cm, align=center] (u) at (6, 0) {最优策略/价值函数\\$u(x,t), \pi^*$};
+    \node[draw, rounded corners, fill=orange!15, minimum width=3cm, minimum height=1.2cm, align=center] (u) at (7.2, 0) {最优策略/价值函数\\$u(x,t), \pi^*$};
 
     \draw[->, thick] (m.east) -- node[above, font=\small] {固定$m$，解最优控制} node[below, font=\small, gray] {(HJB方程)} (u.west);
-    \draw[->, thick] (u.south) .. controls (6, -2) and (0, -2) .. node[below, font=\small] {按$\pi^*$行动，推导密度} node[above, font=\small, gray] {(FP方程)} (m.south);
+    \draw[->, thick] (u.south) .. controls (7.2, -2) and (0, -2) .. node[below, font=\small] {按$\pi^*$行动，推导密度} node[above, font=\small, gray] {(FP方程)} (m.south);
 
-    \node[font=\small, red] at (3, -2.8) {\textbf{不动点}：$m \xrightarrow{\text{HJB}} u \xrightarrow{\text{FP}} m$};
+    \node[font=\small, red] at (3.6, -2.8) {\textbf{不动点}：$m \xrightarrow{\text{HJB}} u \xrightarrow{\text{FP}} m$};
 \end{tikzpicture}
 \end{center}
 \end{keyidea}
@@ -880,7 +679,10 @@ MAPPO使用Actor-Critic架构：
 \begin{keyformula}[title=平均场博弈方程组]
 \textbf{1. HJB方程}（``给定$m$，求最优策略''）：
 \begin{equation}
-    -\frac{\partial u}{\partial t} - \nu \Delta u + H(x, \nabla u, m) = 0, \quad u(x, T) = g(x), \qquad H(x, p, m) = \max_v \left[ -p \cdot v - L(x, v, m) \right]
+\begin{aligned}
+    -\frac{\partial u}{\partial t} - \nu \Delta u + H(x, \nabla u, m) &= 0, \qquad u(x, T) = g(x), \\
+    H(x, p, m) &= \max_v \left[ -p \cdot v - L(x, v, m) \right]
+\end{aligned}
 \end{equation}
 这是一个\textbf{后向方程}：从终端条件$g(x)$出发，往回算每个时刻的最优代价$u(x,t)$；$\nu \Delta u$ 项来自智能体受到的布朗运动扰动。
 \review{第7章}{$u(x, t)$ 就是第7章的值函数 / 协态：HJB 从终端条件倒着算，和伴随方程"从未来往回算影响"是同一件事。这里的新意只在于 $H$ 里多了一个群体分布 $m$。}
@@ -891,20 +693,11 @@ MAPPO使用Actor-Critic架构：
 \end{equation}
 这是一个\textbf{前向方程}：从初始分布$m_0(x)$出发，根据最优速度场$v^* = -\nabla_p H$往前推演密度如何变化。
 
-\textbf{耦合与不动点}：
-\begin{itemize}
-    \item HJB需要$m$：你的最优策略取决于别人在哪里（拥挤效应等）
-    \item FP需要$u$：密度演化取决于大家的最优运动方向
-    \item \textbf{纳什均衡} = 同时满足两个方程的$(u^*, m^*)$
-\end{itemize}
+\textbf{耦合与不动点}：HJB需要$m$，因为你的最优策略取决于别人在哪里（拥挤效应等）；FP需要$u$，因为密度演化取决于大家的最优运动方向。\textbf{纳什均衡}就是同时满足两个方程的$(u^*, m^*)$。
 \end{keyformula}
 
 \begin{remark}[物理直觉]
-\begin{itemize}
-    \item \textbf{HJB方程}：类似量子力学中的Schrödinger方程，描述``价值波''的演化
-    \item \textbf{FP方程}：就是连续性方程/扩散方程，描述概率密度的输运
-\end{itemize}
-MFG是统计力学和最优控制的交叉——群体行为的``热力学''。
+HJB方程类似量子力学中的Schrödinger方程，描述``价值波''的演化；FP方程就是连续性方程/扩散方程，描述概率密度的输运。MFG是统计力学和最优控制的交叉——群体行为的``热力学''。
 \end{remark}
 
 \begin{example}[线性二次MFG——一个可以精确求解的例子]
@@ -916,12 +709,7 @@ MFG是统计力学和最优控制的交叉——群体行为的``热力学''。
 \begin{equation}
     J = \int_0^T \left[ \frac{1}{2}v^2 + \frac{\alpha}{2}(x - \bar{x})^2 \right] dt + \frac{1}{2}x(T)^2
 \end{equation}
-其中：
-\begin{itemize}
-    \item $\frac{1}{2}v^2$：控制代价——速度越大，``油费''越贵
-    \item $\frac{\alpha}{2}(x - \bar{x})^2$：\textbf{跟随代价}——$\alpha > 0$ 时希望靠近群体平均位置$\bar{x} = \int x \, m(x,t) dx$（$\alpha < 0$ 则变成拥挤代价，越远越好）
-    \item $\frac{1}{2}x(T)^2$：终端代价——最后希望靠近原点
-\end{itemize}
+三项各有含义：$\frac{1}{2}v^2$是控制代价——速度越大，``油费''越贵；$\frac{\alpha}{2}(x - \bar{x})^2$是\textbf{跟随代价}，$\alpha > 0$ 时希望靠近群体平均位置 $\bar{x} = \int x \, m(x,t) dx$（$\alpha < 0$ 则变成拥挤代价，越远越好）；$\frac{1}{2}x(T)^2$是终端代价——最后希望靠近原点。
 
 \textbf{动力学}：每个智能体按$\dot{x} = v$运动，并受布朗运动扰动（扩散系数$\nu$）。
 
@@ -933,17 +721,11 @@ MFG是统计力学和最优控制的交叉——群体行为的``热力学''。
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.95\textwidth]{figs_chap10/mfg_solution.pdf}
-\caption{一维平均场博弈的数值解（有限差分 + 阻尼不动点迭代，代码 \texttt{code\_chap10/chap15\_mfg\_solver.py}）。每个人的运行代价是 $\frac12 v^2+\frac{\alpha}{2}(x-x_{\rm target})^2+\kappa\, m(x,t)$：想去目标点 $x_{\rm target}=1$（黑色点线），但讨厌拥挤。(a) 密度 $m(x,t)$：群体从 $x=-1$ 整体迁往目标点；红色虚线是沿最优速度场 $\dot x=-\partial_x u$ 积分出的个体轨迹——个体随群体一起走，但走在最前面的人会越过目标点，给后面的人让位。(b) 价值函数 $u(x,t)$（离目标越远代价越高）与最优速度 $v^*=-\partial_x u$（箭头）：$u$ 就是第7章的协态、本章的 $\lambda$，它的梯度直接告诉每个人该往哪走、走多快。(c) 不同时刻的密度剖面：有拥挤惩罚（$\kappa=2$）时，$t=T$ 的群体铺成峰值 $1.3$、标准差 $0.28$ 的宽平台；把 $\kappa$ 设为 $0$（灰色虚线）群体就挤成峰值 $2.6$、标准差 $0.16$ 的尖峰。(d) 不动点迭代残差：$m\to$HJB$\to u\to$FP$\to\tilde m$ 每一轮的变化量按指数衰减，约 110 轮后降到 $10^{-8}$——$(u^*,m^*)$ 确实是自洽的纳什均衡，不是画出来的。}
+\caption{一维平均场博弈的数值解（有限差分 + 阻尼不动点迭代，代码 \texttt{code\_chap10/chap10\_mfg\_solver.py}）。每个人的运行代价是 $\frac12 v^2+\frac{\alpha}{2}(x-x_{\rm target})^2+\kappa\, m(x,t)$：想去目标点 $x_{\rm target}=1$（黑色点线），但讨厌拥挤。(a) 密度 $m(x,t)$：群体从 $x=-1$ 整体迁往目标点；红色虚线是沿最优速度场 $\dot x=-\partial_x u$ 积分出的个体轨迹——个体随群体一起走，但走在最前面的人会越过目标点，给后面的人让位。(b) 价值函数 $u(x,t)$（离目标越远代价越高）与最优速度 $v^*=-\partial_x u$（箭头）：$u$ 就是第7章的协态、本章的 $\lambda$，它的梯度直接告诉每个人该往哪走、走多快。(c) 不同时刻的密度剖面：有拥挤惩罚（$\kappa=2$）时，$t=T$ 的群体铺成峰值 $1.3$、标准差 $0.28$ 的宽平台；把 $\kappa$ 设为 $0$（灰色虚线）群体就挤成峰值 $2.6$、标准差 $0.16$ 的尖峰。(d) 不动点迭代残差：$m\to$HJB$\to u\to$FP$\to\tilde m$ 每一轮的变化量按指数衰减，约 110 轮后降到 $10^{-8}$——$(u^*,m^*)$ 确实是自洽的纳什均衡，不是画出来的。}
 \label{fig:mfg}
 \end{figure}
 
-\textbf{从图中可以观察到}：
-\begin{itemize}
-    \item \textbf{(a)}：群体整体从 $x=-1$ 迁往目标点，但并不是每个人都停在目标点上——个体轨迹在 $t=T$ 时分散在 $x\approx0.5$ 到 $1.3$ 之间，前面的人越过目标点给后面的人让位。这就是拥挤代价 $\kappa m$ 在起作用：它是群体分布 $m$ 反过来施加给每个个体的``价格''
-    \item \textbf{(b)}：价值函数在离目标远的地方最大（深色），越靠近目标越平缓；最优速度 $v^*=-\partial_x u$ 在目标点两侧相向指向目标，靠近目标后箭头变短——个体只按自己所在位置的 $\nabla u$ 行动，不需要知道别人的具体位置，这正是平均场近似的含义
-    \item \textbf{(c)}：把 $\kappa$ 从 $2$ 调到 $0$，$t=T$ 的密度从宽平台变成尖峰。拥挤惩罚让个体宁可离目标远一点也要避开人群，宏观上就是群体``摊开''
-    \item \textbf{(d)}：HJB 需要 $m$、FP 需要 $u$，两者互为约束；纳什均衡是这对方程组的不动点，残差按指数衰减到 $10^{-8}$ 说明它被真正算出来了（迭代时要加阻尼 $m\leftarrow(1-\theta)m+\theta\tilde m$，否则``人多的地方大家都想离开''会让迭代来回振荡）
-\end{itemize}
+图\ref{fig:mfg}的四个子图分别对应上面的四个要素。子图(a)里群体整体从 $x=-1$ 迁往目标点，但并不是每个人都停在目标点上——个体轨迹在 $t=T$ 时分散在 $x\approx0.5$ 到 $1.3$ 之间，前面的人越过目标点给后面的人让位。这就是拥挤代价 $\kappa m$ 在起作用：它是群体分布 $m$ 反过来施加给每个个体的``价格''。子图(b)里价值函数在离目标远的地方最大（深色），越靠近目标越平缓；最优速度 $v^*=-\partial_x u$ 在目标点两侧相向指向目标，靠近目标后箭头变短。个体只按自己所在位置的 $\nabla u$ 行动，不需要知道别人的具体位置，这正是平均场近似的含义。子图(c)把 $\kappa$ 从 $2$ 调到 $0$，$t=T$ 的密度就从宽平台变成尖峰：拥挤惩罚让个体宁可离目标远一点也要避开人群，宏观上就是群体``摊开''。子图(d)则回到不动点本身：HJB 需要 $m$、FP 需要 $u$，两者互为约束，纳什均衡是这对方程组的不动点，残差按指数衰减到 $10^{-8}$ 说明它被真正算出来了。迭代时要加阻尼 $m\leftarrow(1-\theta)m+\theta\tilde m$，否则``人多的地方大家都想离开''会让迭代来回振荡。
 
 % ====================================================================================
 \section{本章小结}
@@ -957,17 +739,15 @@ MFG是统计力学和最优控制的交叉——群体行为的``热力学''。
 \end{enumerate}
 
 \begin{physicalmeaning}
-\textbf{$\lambda$ 在本章的意义}：
-\begin{itemize}
-    \item \textbf{玩家自己的约束}：$\lambda_{ij}$ 是玩家 $i$ 为放松第 $j$ 条约束愿意付出的代价——第1章的影子价格原封不动，只是每人各有一份。
-    \item \textbf{交通均衡}：需求约束的乘子 $\lambda_w = \partial \Phi^*/\partial d_w$ 等于均衡旅行时间；非负约束的乘子 $\mu_p$ 是路径 $p$ 比最短路"慢多少"。把 $t_a$ 换成边际社会成本后，多出来的 $x_a t_a'(x_a)$ 就是拥堵费。
-    \item \textbf{平均场极限}：值函数 $u(x, t)$ 是 $\lambda$ 的连续版本（第7章的协态），$\nabla u$ 直接给出每个人的最优速度。
-\end{itemize}
+\textbf{$\lambda$ 在本章的意义}：本章的 $\lambda$ 出现在三个层次上。对玩家自己的约束，$\lambda_{ij}$ 是玩家 $i$ 为放松第 $j$ 条约束愿意付出的代价——第1章的影子价格原封不动，只是每人各有一份。在交通均衡里，需求约束的乘子 $\lambda_w = \partial \Phi^*/\partial d_w$ 等于均衡旅行时间，非负约束的乘子 $\mu_p$ 是路径 $p$ 比最短路"慢多少"；把 $t_a$ 换成边际社会成本后，多出来的 $x_a t_a'(x_a)$ 就是拥堵费。到了平均场极限，值函数 $u(x, t)$ 是 $\lambda$ 的连续版本（第7章的协态），$\nabla u$ 直接给出每个人的最优速度。
+
 第5章 $\lambda$ = 约束力，第7章 $\lambda(t)$ = 伴随变量，第9章 $\lambda$ = 值函数梯度；本章它变成了"别人对我的价格"。下一章（第16章）它将以"安全约束的斥力"再次出现。
 \end{physicalmeaning}
 
 \begin{unification}[title=从微观到宏观的统一视角]
 \begin{center}
+\small
+\setlength{\tabcolsep}{4pt}
 \begin{tabular}{lccc}
 \toprule
 \textbf{维度} & \textbf{微观} & \textbf{中观} & \textbf{宏观} \\
@@ -1042,7 +822,7 @@ MFG是统计力学和最优控制的交叉——群体行为的``热力学''。
     \end{enumerate}
     
     \item \textbf{Braess悖论的数值验证}：
-    参考本章的Python代码（\texttt{chap15\_generate\_figures.py}）：
+    参考本章生成图的 Python 代码 \texttt{code\_chap10/}\allowbreak\texttt{chap10\_generate\_figures.py}：
     \begin{enumerate}
         \item 复现Braess悖论的计算
         \item 修改需求量（从4000变为其他值），观察悖论是否仍然存在
