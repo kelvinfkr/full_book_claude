@@ -4,7 +4,7 @@
 
 \section*{让机器动起来}
 
-\marginnote{Marc Raibert (1949--)是Boston Dynamics创始人。他让机器人第一次像动物一样奔跑、跳跃、翻跟头。他的秘诀？"先让它跳起来，再想怎么落地。"}
+\storynote{Marc Raibert}{Boston Dynamics 创始人（1949--）。1980 年代他在 MIT 造出第一台单腿跳跃机器人，靠三条简单的控制律就让它站稳；后来的 BigDog、Atlas 都是这条路的延续。他的口头禅："先让它跳起来，再想怎么落地。"}
 
 \vspace{0.5cm}
 \noindent\textit{你的手臂有7个自由度，但你从来不需要"计算"如何拿起一杯咖啡。机器人却需要——它必须把"拿杯子"这个任务翻译成每个关节应该转多少度。}
@@ -13,15 +13,15 @@
 
 这个简单的观察背后，是机器人学中一个核心问题：\textbf{运动学}——关节角度和末端位置之间的关系。更深一层，当机器人需要推、拉、抓取物体时，我们还需要\textbf{动力学}——力、质量、加速度之间的关系。
 
-本章将展示：第4章学到的拉格朗日力学如何直接应用于机器人。你会发现，关节力矩、接触力都是拉格朗日乘子的工程化身。
+本章将展示：第4章学到的拉格朗日力学如何直接应用于机器人。你会发现，末端约束力、接触力都是拉格朗日乘子的工程化身，而关节力矩通过 $\tau = J^\top F$ 与它们相连。
 
 \begin{quote}
-\textbf{本章目标}：机器人是拉格朗日力学最直接的工程应用——关节力、接触力都是拉格朗日乘子。本章将建立从"任务描述"到"关节力矩"的完整链条。
+\textbf{本章目标}：机器人是拉格朗日力学最直接的工程应用——把末端"钉"在目标上的约束力、脚与地面之间的接触力，都是第1章的拉格朗日乘子，只是这一次它们是真真切切的牛顿。本章将建立从"任务描述"到"关节力矩"的完整链条。
 \end{quote}
 
 \begin{tcolorbox}[colback=green!5, colframe=green!60!black, title=学完这章，你将能够...]
 \begin{itemize}
-    \item 用D-H参数建立机械臂的正运动学模型
+    \item 用齐次变换建立机械臂的正运动学模型（D-H 参数是它的标准化写法）
     \item 计算雅可比矩阵，分析奇异构型
     \item 求解简单机械臂的逆运动学（解析解或数值解）
     \item 用拉格朗日方法推导机器人动力学方程
@@ -100,7 +100,7 @@
 \toprule
 \textbf{机械臂类型} & \textbf{关节数 $n$} & \textbf{与任务空间比较} & \textbf{特点} \\
 \midrule
-SCARA（平面装配） & 4 & $n < 6$ & 只能在平面内运动 \\
+SCARA（平面装配） & 4 & $n < 6$ & 姿态受限：末端只能绕竖直轴转动 \\
 典型工业臂 & 6 & $n = 6$ & 恰好完成6D任务 \\
 人形机械臂 & 7 & $n > 6$ & 冗余，更灵活 \\
 双臂机器人 & 14 & $n \gg 6$ & 高度冗余 \\
@@ -125,6 +125,7 @@ T = \begin{bmatrix} R & p \\ 0 & 1 \end{bmatrix} \in SE(3)
 \end{definition}
 
 齐次变换的美妙之处在于：\textbf{多次变换可以通过矩阵乘法串联}。
+\preview{$SO(3)$、$SE(3)$ 是"所有旋转矩阵"和"所有位姿"这两个集合的名字。旋转矩阵有 9 个数，为什么只有 3 个自由度？本章末尾的扩展阅读会用拉格朗日乘子法回答。}
 
 \begin{example}[两次变换的串联]
 假设坐标系A相对于世界坐标系的变换是 $T_A$，坐标系B相对于A的变换是 $T_B$，那么B相对于世界坐标系的变换是：
@@ -256,6 +257,7 @@ L_1 \cos q_1 + L_2 \cos(q_1+q_2) & L_2 \cos(q_1+q_2)
 
 \textbf{直觉}：$J$ 把关节速度"放大"成末端速度，$J^\top$ 把末端力"缩小"成关节力矩。速度放大多少倍，力就缩小多少倍——这是杠杆原理的推广！
 \end{physicalmeaning}
+\review{第4章}{第4章把"力"推广成了广义力——作用在广义坐标 $q_i$ 方向上的力。$\tau = J^\top F$ 正是这个推广：末端力 $F$ 投影到每个关节角方向，就是那个关节要出的力矩。}
 
 \begin{example}[力的传递]
 双连杆机械臂，$L_1 = L_2 = 1$m，$q_1 = 90°$，$q_2 = 0°$（手臂竖直向上伸直）。
@@ -280,7 +282,7 @@ J = \begin{bmatrix}
 = \begin{bmatrix} -20 \\ -10 \end{bmatrix} \text{ Nm}
 \]
 
-\textbf{物理解释}：要抵抗水平向右的力，两个关节都需要产生"逆时针"的力矩。肩关节力矩是肘关节的两倍，因为它到末端的力臂更长。
+\textbf{物理解释}：要抵抗水平向右的力，两个关节都需要产生负的（顺时针）力矩。肩关节力矩是肘关节的两倍，因为它到末端的力臂更长。
 \end{example}
 
 \subsection{奇异性：机械臂的"盲区"}
@@ -333,7 +335,7 @@ J = \begin{bmatrix}
 奇异性带来两个问题：
 \begin{enumerate}
     \item \textbf{速度不可达}：某些方向的末端速度无法通过任何关节速度实现
-    \item \textbf{力放大}：在奇异方向上，即使很小的末端力也需要无穷大的关节力矩
+    \item \textbf{力的"死角"}：在奇异方向上，无论关节力矩多大，都无法在末端产生这个方向的力；反过来说，手臂伸直时靠结构就能承受这个方向的载荷，不需要力矩
 \end{enumerate}
 
 \begin{example}[伸直位形的奇异性]
@@ -346,6 +348,38 @@ J = \begin{bmatrix}
 
 \textbf{生活类比}：当你的手臂完全伸直时，很难通过弯曲/伸展来让指尖向前移动。你必须先把手肘弯曲一点，才能向前够东西。
 \end{example}
+
+% ------------------------------------------------------------------------------------
+\section{本章的核心观点}
+
+在动手算逆运动学之前，先把本章放回全书的主线上。
+
+\begin{tcolorbox}[colback=yellow!10, colframe=orange!80, title=核心观点]
+\textbf{机器人学没有新的数学——它就是第1章的拉格朗日乘子法，只不过变量是关节角 $q$，约束是"末端要到某处"或"脚不能穿过地面"，而乘子 $\lambda$ 不再是抽象的"价格"，而是真真切切的力。}
+
+约束是什么？——任务（$f(q) = x_d$）和物理（$\phi(q) \ge 0$）。
+
+乘子是什么？——维持这些约束所需要的力：末端约束力、地面反作用力。它们不是从天上掉下来的，而是从一阶条件里自然涌现的。
+\end{tcolorbox}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\small
+\begin{tabular}{lll}
+\toprule
+ & \textbf{第1章（约束优化）} & \textbf{本章（机器人）} \\
+\midrule
+变量 & $x \in \R^n$ & 关节角 $q \in \R^n$（动力学中还有 $\ddot{q}$） \\
+目标 & $\min f(x)$ & 逆运动学：$\min \tfrac{1}{2}\|q - q_0\|^2$；动力学：作用量 $\int (T - V)\,dt$ \\
+等式约束 & $g(x) = 0$ & 末端到达 $f(q) - x_d = 0$；接触保持 $J_c \ddot{q} + \dot{J}_c \dot{q} = 0$ \\
+不等式约束 & $h(x) \le 0$ & 不穿透 $-\phi(q) \le 0$；摩擦锥 $\|f_t\| - \mu \lambda_n \le 0$ \\
+乘子 & $\lambda$，$\mu \ge 0$ & 末端约束力 $\lambda$；接触力 $\lambda_c$，法向 $\lambda_n \ge 0$ \\
+一阶条件 & $\nabla f + \lambda \nabla g = 0$ & $(q - q_0) + J^\top \lambda = 0$；$M\ddot{q} + C\dot{q} + G = \tau + J_c^\top \lambda_c$ \\
+互补松弛 & $\mu\, h(x) = 0$ & $\lambda_n\, \phi(q) = 0$（悬空无力，接触才有力） \\
+影子价格 & $\lambda = -df^*/d\epsilon$ & 目标点移动 $\delta x$，代价变化 $-\lambda^\top \delta x$ \\
+\bottomrule
+\end{tabular}
+\end{center}
 
 % ------------------------------------------------------------------------------------
 \section{逆运动学：约束优化的工程应用}
@@ -401,6 +435,7 @@ $\lambda$ 的物理意义是\textbf{约束力}：如果用一根刚性杆把末�
 
 这个力通过 $J^\top$ 传递到关节空间，导致关节偏离"自然位置" $q_0$。
 \end{physicalmeaning}
+\review{第1章}{影子价格：约束松一点，目标改善多少。这里的约束是 $f(q) = x_d$，把目标点挪动 $\delta x$，代价 $\tfrac{1}{2}\|q - q_0\|^2$ 的变化是 $-\lambda^\top \delta x$——所以 $\lambda$ 的量纲是"力"（能量/位移）。}
 
 \subsection{牛顿迭代法求解逆运动学}
 
@@ -473,57 +508,59 @@ q \approx q_0 + J(q_0)^{-1}(x_d - f(q_0))
 \begin{example}[牛顿迭代的手算演示]
 双连杆机械臂，$L_1 = L_2 = 1$，目标位置 $x_d = (1.2, 0.9)$。
 
-从初始猜测 $q^{(0)} = (30°, 30°) = (0.524, 0.524)$ rad 开始。
+从初始猜测 $q^{(0)} = (0^\circ, 90^\circ) = (0, 1.571)$ rad 开始（手臂先伸平、再把小臂竖起来）。
 
 \textbf{第一次迭代}：
 
 1. 计算当前末端位置：
 \begin{align}
-x^{(0)} &= \cos(30°) + \cos(60°) = 0.866 + 0.5 = 1.366 \\
-y^{(0)} &= \sin(30°) + \sin(60°) = 0.5 + 0.866 = 1.366
+x^{(0)} &= \cos(0^\circ) + \cos(90^\circ) = 1 + 0 = 1 \\
+y^{(0)} &= \sin(0^\circ) + \sin(90^\circ) = 0 + 1 = 1
 \end{align}
 
 2. 计算误差：
 \[
-e = x_d - x^{(0)} = (1.2, 0.9) - (1.366, 1.366) = (-0.166, -0.466)
+e = x_d - x^{(0)} = (1.2, 0.9) - (1, 1) = (0.2, -0.1)
 \]
 
-3. 计算雅可比（代入 $q_1 = 30°$，$q_2 = 30°$）：
+3. 计算雅可比（代入 $q_1 = 0^\circ$，$q_2 = 90^\circ$）：
 \[
 J = \begin{bmatrix}
--\sin 30° - \sin 60° & -\sin 60° \\
-\cos 30° + \cos 60° & \cos 60°
+-\sin 0^\circ - \sin 90^\circ & -\sin 90^\circ \\
+\cos 0^\circ + \cos 90^\circ & \cos 90^\circ
 \end{bmatrix}
 = \begin{bmatrix}
--1.366 & -0.866 \\
-1.366 & 0.5
-\end{bmatrix}
+-1 & -1 \\
+1 & 0
+\end{bmatrix}, \qquad \det J = 1
 \]
 
 4. 求解 $J \Delta q = e$：
 \[
-\Delta q = J^{-1} e \approx (-0.05, -0.35) \text{ rad} = (-2.9°, -20.1°)
+\Delta q = J^{-1} e = \begin{bmatrix} 0 & 1 \\ -1 & -1 \end{bmatrix} \begin{bmatrix} 0.2 \\ -0.1 \end{bmatrix} = (-0.1, -0.1) \text{ rad} = (-5.7^\circ, -5.7^\circ)
 \]
 
 5. 更新：
 \[
-q^{(1)} = q^{(0)} + \Delta q = (27.1°, 9.9°)
+q^{(1)} = q^{(0)} + \Delta q = (-5.7^\circ, 84.3^\circ)
 \]
 
-继续迭代几次后，会收敛到精确解。
+\textbf{检验}：$q^{(1)}$ 对应的末端位置是 $(\cos(-5.7^\circ) + \cos(78.6^\circ),\ \sin(-5.7^\circ) + \sin(78.6^\circ)) \approx (1.193, 0.881)$，误差已从 $0.22$ 缩小到约 $0.02$。再迭代一两次，就收敛到精确解 $(-4.5^\circ, 82.8^\circ)$（用余弦定理可以验证：$\cos q_2 = (1.2^2 + 0.9^2 - 2)/2 = 0.125$）。
 
 \textbf{关键观察}：每次迭代都在解一个\textbf{线性}方程组 $J \Delta q = e$。非线性问题被分解成了一系列线性问题！
+\tryit{换一个初值 $q^{(0)} = (30^\circ, 30^\circ)$ 再算一遍，你会发现第一步 $\Delta q \approx (-55.8^\circ, 98.9^\circ)$——跨度很大，末端反而离目标更远。牛顿法只在解附近才是"二次收敛"的，初值很重要。}
 \end{example}
 
 \paragraph{当雅可比不可逆时怎么办？}
 
-如果 $n \neq m$（关节数不等于任务空间维度），或者机械臂处于奇异位形，$J$ 不可逆。这时用\textbf{伪逆}：
+如果 $n > m$（冗余机械臂，$J$ 不是方阵），$J$ 没有逆。这时用\textbf{伪逆}（要求 $J$ 行满秩）：
 
 \[
 \Delta q = J^\dagger e, \quad \text{其中 } J^\dagger = J^\top(JJ^\top)^{-1}
 \]
 
-伪逆给出的是\textbf{最小范数解}——在所有能消除误差的 $\Delta q$ 中，选择最小的那个。
+伪逆给出的是\textbf{最小范数解}——在所有能消除误差的 $\Delta q$ 中，选择最小的那个。在奇异位形附近 $JJ^\top$ 接近奇异，伪逆会"爆炸"，实践中改用阻尼最小二乘 $J^\top(JJ^\top + \delta^2 I)^{-1}$（习题 8）。
+\clarify{伪逆不是"另一种方法"，它就是上一小节 KKT 条件的解：$\min \tfrac{1}{2}\|\Delta q\|^2$ s.t. $J\Delta q = e$ 给出 $\Delta q = -J^\top \lambda$，代回约束得 $\lambda = -(JJ^\top)^{-1} e$，于是 $\Delta q = J^\dagger e$。"最小范数解" = 拉格朗日乘子法的解。}
 
 \begin{example}[几何解法 vs 迭代解法]
 双连杆机械臂，$L_1 = L_2 = 1$，目标位置 $(1.0, 1.0)$。
@@ -737,9 +774,9 @@ $z$ 可以怎么选？常见的选择：
 \begin{enumerate}
     \item \textbf{远离关节限位}：
     \[
-    z = k \nabla_q W(q), \quad W(q) = \sum_i \frac{1}{(q_i - q_i^{min})(q_i^{max} - q_i)}
+    z = -k \nabla_q W(q), \quad W(q) = \sum_i \frac{1}{(q_i - q_i^{min})(q_i^{max} - q_i)}
     \]
-    $W$ 在关节接近限位时变大，梯度方向指向"远离限位"。
+    $W$ 在关节接近限位时变大，负梯度方向指向"远离限位"。
     
     \item \textbf{避开障碍物}：
     \[
@@ -784,6 +821,7 @@ $z$ 可以怎么选？常见的选择：
 
 两种构型的末端位置相同，但只有蓝色构型能避开障碍物。冗余自由度提供了这种灵活性。
 \end{example}
+\preview{第8章会把"选一个 $z$ 做次级目标"升级为对整条轨迹 $q(t)$ 做优化：动力学约束用拉格朗日乘子（伴随变量）处理，这就是轨迹优化和 MPC。}
 
 % ------------------------------------------------------------------------------------
 \section{机器人动力学：力与运动的关系}
@@ -825,6 +863,7 @@ $z$ 可以怎么选？常见的选择：
 \end{itemize}
 
 这个方程的美妙之处在于：只要写出动能和势能的表达式，力学方程就自动出来了！
+\clarify{第4章的拉格朗日方程右边是 0，广义力 $F_i = \partial L/\partial q_i$ 指的是保守力（势能的负梯度）。这里右边的 $Q_i$ 是电机、摩擦这类不能写进势能的外力——它们必须单独加在右边。}
 
 \subsection{机器人的动能}
 
@@ -1162,6 +1201,18 @@ M(q)\ddot{q} + C(q,\dot{q})\dot{q} + G(q) = \tau + J_c(q)^\top \lambda_c
 \end{itemize}
 \end{keyformula}
 
+\begin{keyformula}[title=接触动力学的 KKT 形式]
+保持接触时 $\phi(q) \equiv 0$，对时间求两次导得 $J_c \ddot{q} + \dot{J}_c \dot{q} = 0$。把它和动力学方程并起来：
+\begin{equation}
+\begin{bmatrix} M(q) & -J_c^\top \\ J_c & 0 \end{bmatrix}
+\begin{bmatrix} \ddot{q} \\ \lambda_c \end{bmatrix}
+=
+\begin{bmatrix} \tau - C\dot{q} - G \\ -\dot{J}_c \dot{q} \end{bmatrix}
+\end{equation}
+对比第1章的 KKT 矩阵 $\begin{bmatrix} \nabla^2_{xx}\Lag & (\nabla g)^\top \\ \nabla g & 0 \end{bmatrix}$（符号约定不同，结构相同）：质量矩阵 $M$ 扮演 Hessian，约束雅可比 $J_c$ 扮演 $\nabla g$，接触力 $\lambda_c$ 就是乘子。这正是"高斯最小拘束原理"：在所有满足接触约束的加速度中，真实的 $\ddot{q}$ 使 $\tfrac{1}{2}(\ddot{q} - \ddot{q}_{\text{free}})^\top M (\ddot{q} - \ddot{q}_{\text{free}})$ 最小（$\ddot{q}_{\text{free}} = M^{-1}(\tau - C\dot{q} - G)$ 是无接触时的加速度），$\lambda_c$ 是这个二次规划的乘子。
+\end{keyformula}
+\review{第1章}{第1章扩展阅读预告过：KKT 矩阵会在本章以"质量矩阵 + 约束雅可比"的形式出现——就是上面这个分块矩阵。第1章思考题 9 的答案也在这里：$H \leftrightarrow M$，$\nabla g \leftrightarrow J_c$，$\lambda \leftrightarrow$ 接触力。}
+
 \begin{physicalmeaning}
 $J_c^\top$ 把接触点的力"传递"到关节空间，就像 $J^\top$ 把末端力传递到关节一样。
 
@@ -1253,7 +1304,7 @@ $J_c^\top$ 把接触点的力"传递"到关节空间，就像 $J^\top$ 把末端
 \end{figure}
 
 \begin{insightbox}
-互补松弛条件 $\lambda \cdot \phi = 0$ 和线性规划中的互补松弛完全一样！
+互补松弛条件 $\lambda \cdot \phi = 0$ 和第2章线性规划中的互补松弛完全一样！
 
 在线性规划中："免费的资源没人用，稀缺的资源才有价格"。
 
@@ -1261,6 +1312,7 @@ $J_c^\top$ 把接触点的力"传递"到关节空间，就像 $J^\top$ 把末端
 
 这是同一个数学结构在不同领域的体现。
 \end{insightbox}
+\review{第2章}{第2章的互补松弛：对偶变量 $y_i$ 和松弛量 $s_i$ 至少一个为零——"免费的资源没人用，稀缺的资源才有价格"。把 $y_i$ 换成 $\lambda_n$、$s_i$ 换成间隙 $\phi$，就是这里的条件。}
 
 \subsection{摩擦力与库仑锥}
 
@@ -1345,7 +1397,7 @@ $J_c^\top$ 把接触点的力"传递"到关节空间，就像 $J^\top$ 把末端
 
 摩擦锥约束 $\|f_t\| \leq \mu \lambda_n$ 是一个\textbf{二阶锥约束}（Second-Order Cone Constraint）。
 
-带摩擦的接触问题可以formulate为\textbf{二阶锥规划}（SOCP），这是凸优化的一种，可以高效求解。
+带摩擦的接触问题可以写成\textbf{二阶锥规划}（SOCP），这是凸优化的一种，可以高效求解。
 
 \begin{example}[机器人抓取]
 当机械臂抓取一个物体时，手指与物体之间的接触力必须满足：
@@ -1407,6 +1459,7 @@ M(q)\ddot{q} + C\dot{q} + G &= \tau + J_c^\top \lambda_c \quad \text{（动力�
 这个问题是\textbf{非光滑}的（因为互补条件在接触/分离瞬间不可微），数值求解需要特殊的算法。
 
 现代机器人仿真器（如 MuJoCo、Drake、PyBullet）都实现了高效的接触求解器。
+\tryit{在 PyBullet 或 MuJoCo 里把一个球放到地面上方，逐步打印球心高度 $\phi$ 和法向接触力 $\lambda_n$：悬空时 $\lambda_n = 0$，落地后 $\lambda_n \approx mg$，任何时刻 $\lambda_n \cdot \phi \approx 0$。}
 
 % ------------------------------------------------------------------------------------
 \section{综合案例：双连杆机械臂的完整分析}
@@ -1460,7 +1513,7 @@ M(q)\ddot{q} + C\dot{q} + G &= \tau + J_c^\top \lambda_c \quad \text{（动力�
 \textbf{参数}：
 \begin{itemize}
     \item 连杆长度：$L_1 = L_2 = 1$ m
-    \item 连杆质量：$m_1 = 2$ kg，$m_2 = 1$ kg（集中在连杆末端）
+    \item 连杆质量：$m_1 = 2$ kg，$m_2 = 1$ kg（均匀分布在连杆上，质心在连杆中点）
     \item 重力加速度：$g = 9.8$ m/s²
 \end{itemize}
 
@@ -1551,7 +1604,7 @@ G_1 &= m_1 g \frac{L_1}{2} \cos q_1 + m_2 g (L_1 \cos q_1 + \frac{L_2}{2} \cos(q
 G_2 &= m_2 g \frac{L_2}{2} \cos(q_1+q_2)
 \end{align}
 
-（这里假设质量均匀分布在连杆上，所以用 $L/2$。如果质量集中在末端，用 $L$。）
+（质量均匀分布在连杆上，质心在 $L/2$ 处，所以用 $L/2$。如果质量集中在末端，则用 $L$。）
 
 代入数值：
 \begin{align}
@@ -1630,7 +1683,7 @@ J = \begin{bmatrix}
     
     \item \textbf{动力学}来自拉格朗日方程：$M\ddot{q} + C\dot{q} + G = \tau$，把关节力矩与运动联系起来。
     
-    \item \textbf{接触力}是拉格朗日乘子：互补条件 $\lambda \phi = 0$ 描述"接触才有力"，与线性规划的对偶理论一脉相承。
+    \item \textbf{接触力}是拉格朗日乘子：互补条件 $\lambda \phi = 0$ 描述"接触才有力"，与第2章线性规划的对偶理论一脉相承。
 \end{enumerate}
 
 \begin{unification}[title=$\lambda$ 在机器人学中的多重身份]
@@ -1641,9 +1694,10 @@ J = \begin{bmatrix}
 \textbf{场景} & \textbf{$\lambda$ 的含义} & \textbf{与优化的联系} \\
 \midrule
 逆运动学 & 末端约束力 & 等式约束的乘子 \\
-关节限位 & 限位反力 & 不等式约束的乘子 \\
+关节限位（零空间势函数） & 远离限位的"推力" & 不等式约束的罚函数近似 \\
 接触力 & 地面反作用力 & 互补约束的乘子 \\
-闭链机构 & 环路内力 & 代数约束的乘子 \\
+摩擦锥 & 切向摩擦力 & 二阶锥约束的乘子 \\
+接触保持 $J_c\ddot{q} + \dot{J}_c\dot{q} = 0$ & 接触力 & KKT 分块矩阵中的乘子 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -1654,6 +1708,10 @@ J = \begin{bmatrix}
 
 当你看到一个机械臂优雅地抓取物体，或者一个机器人稳健地行走，背后都是这些数学在默默工作。
 \end{insightbox}
+
+\begin{physicalmeaning}
+\textbf{$\lambda$ 在本章的意义}：第1章说 $\lambda$ 是影子价格，第4章说 $\lambda$ 是约束力，本章两者合一——把"不穿透"约束松开 $\delta\phi$（允许脚陷进地面一点点），系统能量能降低 $\lambda_n\,\delta\phi$；这个"每单位穿透能省多少能量"的价格，物理上就是地面反作用力。同样，把逆运动学的目标点挪动 $\delta x$，代价的变化是 $-\lambda^\top \delta x$——末端约束力就是"任务的价格"。第8章会把它继续推广：整条轨迹的动力学约束对应一串乘子（伴随变量），第9章的反向传播用的是同一套东西。
+\end{physicalmeaning}
 
 % ------------------------------------------------------------------------------------
 \section{习题}
@@ -1691,7 +1749,7 @@ J = \begin{bmatrix}
     
     \item 设 $J^\dagger = J^\top(JJ^\top)^{-1}$ 是雅可比矩阵的伪逆。证明：
     \begin{enumerate}
-        \item $JJ^\dagger = I$（左逆性质）
+        \item $JJ^\dagger = I$（右逆性质）
         \item $(I - J^\dagger J)$ 是投影到零空间的投影矩阵，即 $J(I - J^\dagger J) = 0$
     \end{enumerate}
 \end{enumerate}
@@ -1727,7 +1785,7 @@ J = \begin{bmatrix}
     
     \item 为什么工业机器人大多采用6自由度设计，而不是更多？从成本、控制复杂度、可靠性等角度分析。
     
-    \item 接触力学中的互补条件 $\lambda \cdot \phi = 0$ 与线性规划中的互补松弛条件有何联系？从"稀缺资源才有价格"的角度解释接触力的物理意义。
+    \item 接触力学中的互补条件 $\lambda \cdot \phi = 0$ 与第2章线性规划中的互补松弛条件有何联系？从"稀缺资源才有价格"的角度解释接触力的物理意义。
     
     \item 机器人行走时，脚与地面的接触力是如何让机器人前进的？如果地面完全光滑（无摩擦），机器人还能行走吗？为什么？
     
@@ -1749,7 +1807,7 @@ J = \begin{bmatrix}
 
 等等，$R^\top R = I$ 不就是等式约束吗？我们有拉格朗日乘子法啊！
 
-没错。这一节，我们就从拉格朗日乘子法出发，看看它如何自然地引出一个优美的数学结构——\textbf{李群与李代数}。最后，我们会用这些工具来理解一个非常酷的应用：\textbf{高斯泼溅（Gaussian Splatting）}——2023年爆火的三维重建技术。
+没错。这一节，我们就从拉格朗日乘子法出发，看看它如何自然地引出一个优美的数学结构——\textbf{李群与李代数}。最后，我们会用这些工具来理解三维重建里的核心问题——光束法平差与 SLAM（本节末尾）。顺便一提，2023年爆火的\textbf{高斯泼溅（Gaussian Splatting）}也建立在同样的三维重建技术。
 
 %------------------------------------------------------------------------------
 \subsection*{热身：单位向量的约束优化}

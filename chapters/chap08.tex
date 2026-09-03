@@ -5,6 +5,7 @@
 \section*{引言：火箭是怎么知道该怎么飞的？}
 
 2015年12月21日，SpaceX的猎鹰9号火箭在发射后成功返回着陆——这是人类历史上第一次轨道级火箭的垂直回收。火箭在返回过程中需要精确控制发动机推力和姿态，才能稳稳降落在只有足球场大小的着陆平台上。
+\storynote{Lev Pontryagin}{庞特里亚金（1908--1988），苏联数学家，14岁因煤油炉爆炸双目失明，靠母亲为他朗读论文完成研究。1955年他带领几位学生转向工程问题，为苏联空军研究"最短时间拦截"，1956年提出最大值原理——本章的伴随方程正是它的核心。}
 
 \begin{figure}[h]
 \centering
@@ -35,15 +36,34 @@
 
 令人惊喜的是，这个看似复杂的问题，其数学本质仍然是我们熟悉的\textbf{约束优化}——只不过约束变成了微分方程！
 
-\begin{tcolorbox}[colback=yellow!10, colframe=orange!80, title=本章核心]
-轨迹优化 = 变分法 + 拉格朗日乘子法
+\vspace{0.3cm}
+\noindent\textit{为什么火箭"知道"现在该用多大推力？为什么规划一条轨迹要从终点倒着算？为什么自动驾驶每隔零点几秒就把整个计划推翻重来一遍？}
 
-我们将看到：
-\begin{itemize}
-    \item 动力学方程是\textbf{等式约束}
-    \item 乘子变量 $\lambda(t)$ 描述"未来对现在的影响"
-    \item 最优控制问题与深度学习的反向传播有惊人的相似性
-\end{itemize}
+\begin{quote}
+\textbf{本章目标}：把"让一个系统从这里最优地走到那里"写成约束优化问题——目标是累计代价，约束是每个时刻都必须成立的动力学方程 $\dot{x} = f(x, u)$。你会看到，第1章的乘子 $\lambda$ 在这里变成一条随时间变化的曲线 $\lambda(t)$，它必须从终点往回算，这就是伴随方程；而"规划多步、只走一步、再重新规划"的 MPC，则是把这个优化问题塞进反馈回路里的工程做法。读完本章，你已经握住了第9章反向传播和第10章贝尔曼方程的钥匙。
+\end{quote}
+
+\begin{tcolorbox}[colback=yellow!10, colframe=orange!80, title=本章的核心观点]
+\textbf{轨迹优化 = 变分法 + 拉格朗日乘子法。}本章的问题就是第1章的拉格朗日乘子法，只是约束从"一个方程 $g(x) = 0$"变成了"每个时刻一个方程 $\dot{x}(t) = f(x(t), u(t))$"，于是乘子从一个数 $\lambda$ 变成一个函数 $\lambda(t)$。
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabular}{lll}
+\toprule
+ & \textbf{第1章} & \textbf{本章} \\
+\midrule
+变量 & 向量 $x \in \R^n$ & 轨迹 $x(t)$ 与控制 $u(t)$ \\
+目标 & $f(x)$ & $J = \int_0^T L(x, u)\,dt + \phi(x(T))$ \\
+约束 & $g(x) = 0$ & $f(x, u) - \dot{x} = 0$（每个 $t$ 一条） \\
+乘子 & $\lambda$（一个数） & $\lambda(t)$（协态，一条曲线） \\
+拉格朗日函数 & $f + \lambda^\top g$ & $\int_0^T [L + \lambda^\top (f - \dot{x})]\,dt$ \\
+一阶条件 & $\nabla f + \lambda^\top \nabla g = 0$，$g = 0$ & $\partial H/\partial u = 0$，$\dot{\lambda} = -\partial H/\partial x$，$\dot{x} = f$ \\
+$\lambda$ 的意义 & 影子价格 & 未来代价对当前状态的敏感度 \\
+\bottomrule
+\end{tabular}
+\end{center}
+离散化之后（$x_{k+1} = f(x_k, u_k)$），这张表的右栏就变成第9章神经网络那张表的左栏。
 \end{tcolorbox}
 
 \begin{tcolorbox}[colback=green!5, colframe=green!60!black, title=学完这章，你将能够...]
@@ -151,6 +171,7 @@ x_1 = x \quad \text{（位置）}, \quad x_2 = \dot{x} \quad \text{（速度）}
 回顾第1章：等式约束 $g(x) = 0$ 可以用拉格朗日乘子 $\lambda$ 处理。
 
 现在的约束是微分方程 $\dot{x} = f(x, u)$，它必须在\textbf{每个时刻}都成立！
+\review{第1章}{第1章的做法：每条等式约束 $g_i(x) = 0$ 配一个乘子 $\lambda_i$，写成 $\Lag = f + \sum_i \lambda_i g_i$，再对所有变量求导。这里的约束有无穷多条（每个时刻一条），所以乘子也有无穷多个——排成一个函数 $\lambda(t)$。}
 
 所以我们需要\textbf{对每个时刻都引入一个乘子}——这就是连续时间的拉格朗日乘子 $\lambda(t)$。
 
@@ -163,6 +184,7 @@ x_1 = x \quad \text{（位置）}, \quad x_2 = \dot{x} \quad \text{（速度）}
 
 乘子从"数"变成了"函数"！
 \end{insightbox}
+\review{第3章}{"乘子从数变成函数"在第3章已经发生过一次：离散化后每个 $y_{k+1} - y_k = v_k \Delta x$ 配一个 $\lambda_k$，取极限得到 $\lambda(x)$，而且 $\lambda_k = \partial F/\partial v_k$ 恰好是动量。本章只是把自变量从 $x$ 换成时间 $t$，把"斜率 $v$"换成"动力学 $f(x, u)$"。}
 
 \subsection{构造哈密顿函数}
 
@@ -181,18 +203,20 @@ H = \frac{1}{2}u^2 + \lambda_1 x_2 + \lambda_2 u
 
 \textbf{为什么叫哈密顿函数？}
 
-这和分析力学中的哈密顿量有深刻的联系！在力学中，哈密顿量 $H = T + V$（动能 + 势能）。这里的 $H$ 是它在最优控制中的推广。
+这和分析力学中的哈密顿量有深刻的联系！第4章的哈密顿量是 $H = p\dot{q} - L$（保守系统里等于 $T + V$）；这里的 $H = L + \lambda^\top \dot{x}$ 来自同一个勒让德变换：把 $\lambda$ 看成动量 $p$，两者只差 $L$ 前面的符号（一个求最小作用量，一个求最小代价）。
+\review{第4章}{第4章：$H = \sum_i \dot{q}_i \,\partial L/\partial \dot{q}_i - L$，不显含 $t$ 时守恒。这里的 $\lambda$ 扮演 $\partial L/\partial \dot{q}$（动量）的角色——第3章已经证明过"乘子 = 动量"。}
 
 \subsection{增广的目标函数}
 
 把约束"吸收"到目标函数中：
 
 \begin{align}
-J_{aug} &= \int_0^T \left[ L(x, u) + \lambda^\top (\dot{x} - f(x, u)) \right] dt \\
-&= \int_0^T \left[ L(x, u) + \lambda^\top \dot{x} - \lambda^\top f(x, u) \right] dt
+J_{aug} &= \int_0^T \left[ L(x, u) + \lambda^\top (f(x, u) - \dot{x}) \right] dt \\
+&= \int_0^T \left[ L(x, u) + \lambda^\top f(x, u) - \lambda^\top \dot{x} \right] dt
 \end{align}
 
-注意中间那项 $\lambda^\top \dot{x}$，对它用分部积分：
+注意最后那项 $\lambda^\top \dot{x}$，对它用分部积分：
+\clarify{为什么把约束写成 $f - \dot{x}$ 而不是 $\dot{x} - f$？两种写法只差 $\lambda$ 的符号。写成 $f - \dot{x}$ 时，推出来的 $\lambda$ 恰好是"未来代价对当前状态的梯度"，符号最顺手；这是最优控制文献的惯例。}
 
 \[
 \int_0^T \lambda^\top \dot{x} \, dt = [\lambda^\top x]_0^T - \int_0^T \dot{\lambda}^\top x \, dt
@@ -200,7 +224,7 @@ J_{aug} &= \int_0^T \left[ L(x, u) + \lambda^\top (\dot{x} - f(x, u)) \right] dt
 
 代入得：
 \begin{equation}
-J_{aug} = \lambda(T)^\top x(T) - \lambda(0)^\top x(0) + \int_0^T \left[ L - \lambda^\top f - \dot{\lambda}^\top x \right] dt
+J_{aug} = -\lambda(T)^\top x(T) + \lambda(0)^\top x(0) + \int_0^T \left[ \underbrace{L + \lambda^\top f}_{H} + \dot{\lambda}^\top x \right] dt
 \end{equation}
 
 \subsection{变分条件}
@@ -250,8 +274,6 @@ J_{aug} = \lambda(T)^\top x(T) - \lambda(0)^\top x(0) + \int_0^T \left[ L - \lam
 
 这就是原来的动力学约束！
 
-\marginnote{\textbf{庞特里亚金}(1908--1988)：苏联数学家，14岁时因事故双目失明，却成为20世纪最伟大的数学家之一。他的最大值原理(1956)是最优控制理论的基石，本应获菲尔兹奖却因冷战政治被阻止。他靠母亲读论文给他听完成研究。}
-
 \begin{keytheorem}[title=Pontryagin 最大值原理（简化版）]
 最优轨迹 $(x^*(t), u^*(t))$ 和对应的乘子 $\lambda^*(t)$ 满足：
 
@@ -272,6 +294,7 @@ J_{aug} = \lambda(T)^\top x(T) - \lambda(0)^\top x(0) + \int_0^T \left[ L - \lam
     \]
 \end{enumerate}
 \end{keytheorem}
+\preview{这三条方程第9章会原样出现：把"时刻 $t$"换成"第 $i$ 层"，$x$ 换成层输出 $z_i$，$u$ 换成权重 $\theta_i$，伴随方程就叫"反向传播"；第10章再把 $\lambda$ 换成值函数的梯度，伴随方程就变成贝尔曼方程。}
 
 \begin{physicalmeaning}
 $\lambda(t)$ 的物理意义：\textbf{未来总代价对当前状态的敏感度}。
@@ -280,6 +303,7 @@ $\lambda_i(t) = \frac{\partial J^*}{\partial x_i(t)}$ 告诉我们：如果在�
 
 这就像股票的"影子价格"——当前持有的价值取决于未来的收益。
 \end{physicalmeaning}
+\clarify{符号约定提醒：若像第1章那样把约束项写成 $\lambda^\top(\dot{x} - f)$，推出的 $\lambda$ 与这里差一个负号，此时 $\lambda = -\partial J^*/\partial x$。本章离散部分（$\lambda_N = -\partial \phi/\partial x_N$）和第9章（$\lambda_i = -\partial L/\partial z_i$）用的正是这一约定。判断口径只看一条："$\lambda$ 是不是代价对状态的梯度"，差的只是正负号。}
 
 % ------------------------------------------------------------------------------------
 \section{完整求解：最省力移动问题}
@@ -464,10 +488,19 @@ x_1^*(t) = \frac{c_1 t^3}{6} - \frac{c_2 t^2}{2} = -\frac{2t^3}{T^3} + \frac{3t^
 
 这是因为我们的系统是\textbf{线性的}（$\ddot{x} = u$），代价是\textbf{二次的}（$\int u^2 dt$）。
 
-线性系统 + 二次代价 $\Rightarrow$ 最优控制是线性函数
+线性系统 + 二次代价 $\Rightarrow$ 最优控制 $u^*(t)$ 是时间的线性函数
 
-这类问题叫做\textbf{线性二次调节器}（LQR），在控制工程中极其重要。
+严格地说，本例（终端固定、无状态代价）叫\textbf{最小能量控制}。加上状态的二次代价之后，就是控制工程中极其重要的\textbf{线性二次调节器}（LQR）——那时"线性"指的是最优控制是状态的线性反馈 $u = -Kx$。
 \end{insightbox}
+
+图~\ref{fig:chap08_minimum_effort} 画出了这个解析解，并展示了时间越长、所需控制能量越小的规律。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figs_chap08/chap08_fig1.png}
+\caption{最省力移动问题的解析解可视化。左图：最优轨迹$x^*(t) = (t/T)^2(3 - 2t/T)$（位置）和速度曲线——先加速后减速，在中点速度最大；中图：最优控制$u^*(t) = 6/T^2(1 - 2t/T)$——前半段加速（$u > 0$），后半段减速（$u < 0$）；右图：能量消耗随时间长度 $T$ 的关系——时间越长，所需控制能量越小，符合"慢工出细活"的直觉。}
+\label{fig:chap08_minimum_effort}
+\end{figure}
 
 % ------------------------------------------------------------------------------------
 \section{离散时间的视角}
@@ -511,36 +544,7 @@ J = \sum_{k=0}^{N-1} L(x_k, u_k) \cdot \Delta t
 
 这是一个\textbf{有限维的等式约束优化问题}！可以直接用拉格朗日乘子法。
 
-\subsection{例子：$N=2$ 的情况}
-
-取 $N=2$（只有两个时间步），$\Delta t = T/2$。
-
-\textbf{决策变量}：$x_0, x_1, x_2, u_0, u_1$
-
-但 $x_0 = 0$ 和 $x_2 = 1$ 是给定的，所以实际未知量只有：$x_1, u_0, u_1$
-
-（这里简化为一维，$x$ 就是位置）
-
-\textbf{动力学约束}（简化为 $\ddot{x} = u$，用差分近似）：
-
-一阶近似：$v_{k+1} = v_k + \Delta t \cdot u_k$，$x_{k+1} = x_k + \Delta t \cdot v_k$
-
-更简单地，直接用 $x_{k+1} - 2x_k + x_{k-1} = (\Delta t)^2 u_k$。
-
-\textbf{目标函数}：
-\[
-J = \frac{1}{2}u_0^2 + \frac{1}{2}u_1^2
-\]
-
-\textbf{约束}：
-\begin{align}
-x_1 - 2x_0 + x_{-1} &= (\Delta t)^2 u_0 \\
-x_2 - 2x_1 + x_0 &= (\Delta t)^2 u_1
-\end{align}
-
-这太复杂了。让我们用更简单的一阶系统来演示。
-
-\subsection{简化例子：一阶系统}
+\subsection{例子：一阶系统，$N = 2$}
 
 考虑一阶系统 $\dot{x} = u$，从 $x(0) = 0$ 到 $x(T) = 1$。
 
@@ -579,7 +583,8 @@ x_2 &= x_1 + \Delta t \cdot u_1 = x_1 + \frac{T}{2} u_1
 
 \textbf{最优解}：匀速运动！$u_0 = u_1 = \frac{1}{T}$
 
-这与连续时间的解一致（对于一阶系统，最省力的方法就是匀速）。
+这与连续时间的解一致（对于一阶系统，最省力的方法就是匀速）。这种"先离散化、再当成普通约束优化来解"的做法叫\textbf{直接法}。
+\tryit{把 $N$ 改成 4、8、16，用 \texttt{scipy.optimize.minimize} 加等式约束求解，看 $u_k$ 是否始终等于 $1/T$。再把系统换回二阶的 $\ddot{x} = u$（状态取 $(x, v)$），看数值解如何逼近前面的解析解 $u^*(t) = \frac{6}{T^2}(1 - \frac{2t}{T})$。这就是"直接法"。}
 
 % ------------------------------------------------------------------------------------
 \section{伴随方程：反向传播的原型}
@@ -676,11 +681,6 @@ $u_k$ 只出现在 $L_k(x_k, u_k)$ 和 $f(x_k, u_k)$ 中：
 \boxed{\lambda_k = \left(\frac{\partial f}{\partial x_k}\right)^\top \lambda_{k+1} - \frac{\partial L_k}{\partial x_k}^\top}
 \end{equation}
 
-或者写成（取决于符号约定）：
-\begin{equation}
-\lambda_k = \left(\frac{\partial f}{\partial x}\bigg|_{x_k, u_k}\right)^\top \lambda_{k+1} + \left(\frac{\partial L_k}{\partial x}\bigg|_{x_k, u_k}\right)^\top
-\end{equation}
-
 \paragraph{对 $x_N$ 求导}（终端条件）
 
 $x_N$ 出现在 $\phi(x_N)$ 和 $\lambda_N^\top x_N$ 中：
@@ -692,6 +692,7 @@ $x_N$ 出现在 $\phi(x_N)$ 和 $\lambda_N^\top x_N$ 中：
 \begin{equation}
 \boxed{\lambda_N = -\frac{\partial \phi}{\partial x_N}^\top}
 \end{equation}
+\think{把 $\lambda_N = -\partial \phi/\partial x_N$ 与第1章的影子价格 $\lambda = -df^*/d\epsilon$ 对照：终端代价对终点状态的敏感度，正是"把终点放松一点，总代价变多少"。为什么两处都带负号？（提示：这一节把约束写成了 $x_{k+1} - f$，和第1章一样。）}
 
 \subsection{具体例子：手算伴随方程}
 
@@ -739,7 +740,7 @@ x_2 &= x_1 + u_1 = 1 + u_0 + u_1
 
 伴随方程（$k = 1$）：
 \[
-\lambda_1 = \frac{\partial f}{\partial x}^\top \lambda_2 + \frac{\partial L_1}{\partial x}^\top = 1 \cdot \lambda_2 + 0 = \lambda_2 = -20(1 + u_0 + u_1)
+\lambda_1 = \frac{\partial f}{\partial x}^\top \lambda_2 - \frac{\partial L_1}{\partial x}^\top = 1 \cdot \lambda_2 - 0 = \lambda_2 = -20(1 + u_0 + u_1)
 \]
 
 \textbf{第四步：最优性条件}
@@ -855,6 +856,7 @@ x_2 &= x_1 + u_1 = 0.524 - 0.476 = 0.048
 如果我们在起点规划好整条轨迹然后"闭着眼执行"，一点小扰动就会让系统偏离目标！
 
 \textbf{MPC 的哲学}：\textbf{计划赶不上变化，所以我们边走边规划}！
+\think{MPC 每一步都重新解优化问题，那上一步算出的乘子 $\lambda$ 还有用吗？提示：$\lambda$ 是"未来代价对当前状态的敏感度"，而当前状态刚刚被测量更新了。第10章的值函数会给出更系统的答案：它就是"把 $\lambda$ 对所有可能的当前状态预先算好"。}
 
 \subsection{MPC 的核心思想}
 
@@ -1095,15 +1097,15 @@ J &= 0.1 u_0^2 + (2+u_0)^2 + 0.1 u_1^2 + 10(7+u_0)^2 + 10(2+u_0+u_1)^2 + \text{c
 整理 $u_0, u_1$ 的系数：
 \begin{align}
 J &= (0.1 + 1 + 10 + 10) u_0^2 + (0.1 + 10) u_1^2 + 20 u_0 u_1 \\
-&\quad + (4 + 140 + 40 + 20) u_0 + (40) u_1 + \text{const} \\
-&= 21.1 u_0^2 + 10.1 u_1^2 + 20 u_0 u_1 + 204 u_0 + 40 u_1 + \text{const}
+&\quad + (4 + 140 + 40) u_0 + (40) u_1 + \text{const} \\
+&= 21.1 u_0^2 + 10.1 u_1^2 + 20 u_0 u_1 + 184 u_0 + 40 u_1 + \text{const}
 \end{align}
 
 \subsection{第三步：求最优控制}
 
 对 $u_0, u_1$ 求偏导，令其为零：
 \begin{align}
-\frac{\partial J}{\partial u_0} &= 42.2 u_0 + 20 u_1 + 204 = 0 \\
+\frac{\partial J}{\partial u_0} &= 42.2 u_0 + 20 u_1 + 184 = 0 \\
 \frac{\partial J}{\partial u_1} &= 20.2 u_1 + 20 u_0 + 40 = 0
 \end{align}
 
@@ -1111,47 +1113,47 @@ J &= (0.1 + 1 + 10 + 10) u_0^2 + (0.1 + 10) u_1^2 + 20 u_0 u_1 \\
 
 代入第一个方程：
 \[
-42.2 u_0 + 20 \cdot \frac{-40 - 20 u_0}{20.2} + 204 = 0
+42.2 u_0 + 20 \cdot \frac{-40 - 20 u_0}{20.2} + 184 = 0
 \]
 
 \[
-42.2 u_0 - \frac{800 + 400 u_0}{20.2} + 204 = 0
+42.2 u_0 - \frac{800 + 400 u_0}{20.2} + 184 = 0
 \]
 
 乘以 20.2：
 \[
-852.44 u_0 - 800 - 400 u_0 + 4120.8 = 0
+852.44 u_0 - 800 - 400 u_0 + 3716.8 = 0
 \]
 
 \[
-452.44 u_0 = -3320.8
+452.44 u_0 = -2916.8
 \]
 
 \[
-u_0^* = -7.34
+u_0^* \approx -6.45
 \]
 
 代回求 $u_1$：
 \[
-u_1^* = \frac{-40 - 20 \times (-7.34)}{20.2} = \frac{-40 + 146.8}{20.2} = 5.29
+u_1^* = \frac{-40 - 20 \times (-6.45)}{20.2} = \frac{-40 + 129.0}{20.2} \approx 4.40
 \]
 
 \subsection{第四步：MPC 只执行第一步}
 
-最优控制序列是 $(u_0^*, u_1^*) = (-7.34, 5.29)$。
+最优控制序列是 $(u_0^*, u_1^*) \approx (-6.45, 4.40)$。
 
-\textbf{但 MPC 只执行 $u_0^* = -7.34$}（猛踩刹车！）
+\textbf{但 MPC 只执行 $u_0^* = -6.45$}（猛踩刹车！）
 
 执行后，真实状态变为：
 \[
-x_1 = \begin{pmatrix} 5 \\ 2 + (-7.34) \end{pmatrix} = \begin{pmatrix} 5 \\ -5.34 \end{pmatrix}
+x_1 = \begin{pmatrix} 5 \\ 2 + (-6.45) \end{pmatrix} = \begin{pmatrix} 5 \\ -4.45 \end{pmatrix}
 \]
 
-位置到了 5m，但速度变成了 -5.34 m/s（开始往回走了！）
+位置到了 5m，但速度变成了 $-4.45$ m/s（开始往回走了！）
 
 \subsection{第五步：重新规划}
 
-下一时刻，用新的初始状态 $x_0^{new} = \begin{pmatrix} 5 \\ -5.34 \end{pmatrix}$ 重新求解优化问题。
+下一时刻，用新的初始状态 $x_0^{new} = \begin{pmatrix} 5 \\ -4.45 \end{pmatrix}$ 重新求解优化问题。
 
 （计算过程类似，这里省略）
 
@@ -1160,7 +1162,7 @@ x_1 = \begin{pmatrix} 5 \\ 2 + (-7.34) \end{pmatrix} = \begin{pmatrix} 5 \\ -5.3
 \begin{insightbox}
 \textbf{MPC 的精髓}：
 
-我们规划了 $u_0^* = -7.34, u_1^* = 5.29$，但\textbf{只执行 $u_0^*$}。
+我们规划了 $u_0^* \approx -6.45, u_1^* \approx 4.40$，但\textbf{只执行 $u_0^*$}。
 
 为什么不执行 $u_1^*$？因为：
 \begin{itemize}
@@ -1173,55 +1175,16 @@ x_1 = \begin{pmatrix} 5 \\ 2 + (-7.34) \end{pmatrix} = \begin{pmatrix} 5 \\ -5.3
 
 \subsection{MPC 的反馈修正能力}
 
-假设执行 $u_0 = -7.34$ 后，因为路面打滑，实际状态不是 $\begin{pmatrix} 5 \\ -5.34 \end{pmatrix}$，而是 $\begin{pmatrix} 5.5 \\ -4.5 \end{pmatrix}$。
+假设执行 $u_0 = -6.45$ 后，因为路面打滑，实际状态不是 $\begin{pmatrix} 5 \\ -4.45 \end{pmatrix}$，而是 $\begin{pmatrix} 5.5 \\ -3.5 \end{pmatrix}$。
 
-\textbf{开环控制}：继续执行预先计划的 $u_1 = 5.29$，不管实际状态如何。结果可能偏离目标。
+\textbf{开环控制}：继续执行预先计划的 $u_1 = 4.40$，不管实际状态如何。结果可能偏离目标。
 
-\textbf{MPC}：用实际测量的 $\begin{pmatrix} 5.5 \\ -4.5 \end{pmatrix}$ 重新规划。新的 $u_1^{new}$ 会自动补偿偏差！
+\textbf{MPC}：用实际测量的 $\begin{pmatrix} 5.5 \\ -3.5 \end{pmatrix}$ 重新规划。新的 $u_1^{new}$ 会自动补偿偏差！
 
 这就是 MPC 强大的原因：\textbf{它把优化问题嵌入到反馈回路中}，自动适应实际情况。
 
 % ------------------------------------------------------------------------------------
-\section{本章小结}
-
-\begin{enumerate}
-    \item \textbf{轨迹优化}是带微分方程约束的变分问题
-    
-    \item \textbf{拉格朗日乘子} $\lambda(t)$ 处理动力学约束，物理意义是"未来对现在的影响"
-    
-    \item \textbf{哈密顿函数} $H = L + \lambda^\top f$ 是拉格朗日函数的连续时间版本
-    
-    \item \textbf{伴随方程}向后积分，与神经网络的\textbf{反向传播}数学结构相同
-    
-    \item \textbf{MPC} 是"边走边规划"的策略：规划多步，执行一步，用反馈修正
-\end{enumerate}
-
-\begin{unification}[title=统一视角：约束优化无处不在]
-\begin{center}
-\begin{tabular}{lll}
-\toprule
-\textbf{问题} & \textbf{约束} & \textbf{乘子的意义} \\
-\midrule
-静态优化 & $g(x) = 0$ & 约束的"价格" \\
-力学系统 & 运动学约束 & 约束力 \\
-轨迹优化 & $\dot{x} = f(x, u)$ & 未来代价的敏感度 \\
-神经网络 & $z_{k+1} = f(z_k, W_k)$ & 损失对中间层的梯度 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-从静态到动态，从有限维到无限维，拉格朗日乘子法的思想贯穿始终！
-\end{unification}
-
-% ------------------------------------------------------------------------------------
 % 代码演示结果
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{figs_chap08/chap08_fig1.png}
-\caption{最省力移动问题的解析解可视化。左图：最优轨迹$x^*(t) = (t/T)^2(3 - 2t/T)$（位置）和速度曲线——先加速后减速，在中点速度最大；中图：最优控制$u^*(t) = 6/T^2(1 - 2t/T)$——前半段加速（$u > 0$），后半段减速（$u < 0$）；右图：能量消耗随时间horizon的关系——时间越长，所需控制能量越小，符合"慢工出细活"的直觉。}
-\label{fig:chap08_minimum_effort}
-\end{figure}
-
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.98\textwidth]{figs_chap08/chap08_fig2.png}
@@ -1261,6 +1224,15 @@ x_1 = \begin{pmatrix} 5 \\ 2 + (-7.34) \end{pmatrix} = \begin{pmatrix} 5 \\ -5.3
 从静态到动态，从有限维到无限维，拉格朗日乘子法的思想贯穿始终！
 \end{unification}
 
+\begin{physicalmeaning}
+\textbf{$\lambda$ 在本章的意义}：$\lambda(t)$ 是动力学约束在时刻 $t$ 的影子价格——"如果此刻有人把状态 $x(t)$ 推开 $\epsilon$，从现在到终点的最小代价会变化 $\lambda(t)^\top \epsilon$"。它有三张面孔：
+\begin{itemize}
+    \item 往前看第3、4章：把 $L$ 换成拉格朗日量，$\lambda = \partial L/\partial \dot{q}$ 就是广义动量 $p$，伴随方程 $\dot{\lambda} = -\partial H/\partial x$ 就是哈密顿方程 $\dot{p} = -\partial H/\partial q$。
+    \item 往后看第9章：把时间步 $k$ 换成网络层 $i$，$\lambda_k$ 就是"误差信号"，伴随方程就是反向传播。
+    \item 再往后看第10章：把终点推到无穷远、把代价换成奖励，$\lambda$ 就是值函数的梯度 $\nabla_s V(s)$，伴随方程就变成贝尔曼方程。
+\end{itemize}
+\end{physicalmeaning}
+
 % ------------------------------------------------------------------------------------
 \section{习题}
 
@@ -1283,9 +1255,17 @@ x_1 = \begin{pmatrix} 5 \\ 2 + (-7.34) \end{pmatrix} = \begin{pmatrix} 5 \\ -5.3
     \item （离散化）将问题1离散化为 $N = 4$ 步，用拉格朗日乘子法求解离散最优控制 $u_0^*, u_1^*, u_2^*, u_3^*$。验证与连续解的一致性。
 \end{enumerate}
 
-\paragraph{思考题}
+\paragraph{编程题}
 \begin{enumerate}
     \setcounter{enumi}{3}
+    \item 用直接法数值求解最省力移动问题：把 $\ddot{x} = u$ 离散成 $N = 50$ 步，状态取 $(x_k, v_k)$，用 \texttt{scipy.optimize.minimize}（SLSQP）在等式约束下最小化 $\sum_k u_k^2 \Delta t$。画出 $u_k$，与解析解 $u^*(t) = \frac{6}{T^2}(1 - \frac{2t}{T})$ 比较；打印求解器返回的乘子，验证它们近似等于 $\lambda(t_k)$。
+    
+    \item 实现本章"小车刹车"的 MPC 控制器：预测时域 $N = 5$，控制受限 $|u_k| \le 3$，每一步只执行 $u_0^*$；在仿真中加入随机扰动（速度每步加上 $\mathcal{N}(0, 0.3^2)$ 的噪声），比较开环控制与 MPC 的轨迹。
+\end{enumerate}
+
+\paragraph{思考题}
+\begin{enumerate}
+    \setcounter{enumi}{5}
     \item 伴随方程为什么要\textbf{向后}积分？这和"未来影响现在"有什么关系？
     
     \item MPC 每步都要求解一个优化问题，计算量很大。有什么方法可以加速？
@@ -1298,11 +1278,12 @@ x_1 = \begin{pmatrix} 5 \\ 2 + (-7.34) \end{pmatrix} = \begin{pmatrix} 5 \\ -5.3
         \item MPC 在线计算，强化学习离线训练
         \item 它们各有什么优缺点？
     \end{itemize}
+    \preview{第10章会正面回答这道题：强化学习的值函数 $V(s)$ 就是本章的乘子（对所有状态预先算好的 $\lambda$），贝尔曼方程就是伴随方程的无限时域版本；MPC 与强化学习的差别，是"在线解 $\lambda$"还是"离线学 $V$"。}
 \end{enumerate}
 
 \paragraph{拓展题}
 \begin{enumerate}
-    \setcounter{enumi}{7}
+    \setcounter{enumi}{9}
     \item （倒立摆）倒立摆的动力学是非线性的。查阅资料，了解如何用线性化 + MPC 控制倒立摆。
     
     \item （Neural ODE）了解"神经常微分方程"的概念。它如何把神经网络和常微分方程统一起来？
@@ -1865,6 +1846,7 @@ $\text{rank}(A) = n$ $\Rightarrow$ 任意 $b$ 有解 & 李代数秩 $= n$ $\Righ
 （车的横向速度为零）
 
 这是一个\textbf{非完整约束}（nonholonomic constraint）——它约束的是\textbf{速度}，而不是位置。
+\review{第7章}{第7章机器人的约束（关节、接触）都是关于位形 $q$ 的约束，可以写成 $g(q) = 0$ 或 $g(q) \ge 0$，叫完整约束。这里"车不能横向滑动"限制的是速度 $\dot{q}$，而且积分不出一个 $g(q) = 0$——这就是"非完整"的含义。}
 
 \paragraph{非完整约束的特殊性}
 

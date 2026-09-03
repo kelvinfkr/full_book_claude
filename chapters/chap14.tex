@@ -1,4 +1,6 @@
+% ====================================================================================
 \chapter{神经算子：从函数到函数的映射}
+% ====================================================================================
 
 % ====================================================================================
 \section*{引言：一次训练，任意条件}
@@ -6,7 +8,7 @@
 
 \marginnote{神经算子的两个里程碑工作几乎同时出现：Lu Lu等人在2019年提出DeepONet，Zongyi Li等人在2020年提出FNO。两种方法代表了不同的设计哲学——DeepONet基于万能逼近定理，FNO利用傅里叶变换的效率。}
 
-\marginnote{\textbf{陆璐(Lu Lu)}：宾大助理教授，DeepONet的主要作者。她的博士导师是George Karniadakis。她在科学机器学习领域非常活跃，开发了著名的开源库DeepXDE，被广泛用于PINN和神经算子研究。}
+\storynote{Lu Lu}{Karniadakis 的学生，DeepONet 第一作者，也是开源库 DeepXDE 的作者——PINN 与神经算子研究的事实标准工具。DeepONet 的理论基础是 Tianping Chen 与 Hong Chen 1995 年的算子万能逼近定理，一个被埋没了二十多年的结果。}
 
 在上一章中，我们学习了PINN：用神经网络逼近一个特定PDE的解。但你可能已经意识到一个问题：
 
@@ -20,21 +22,17 @@
 
 这就是\textbf{神经算子}（Neural Operator）的目标：不是学习一个特定的解函数$u(x)$，而是学习从"条件函数"到"解函数"的\textbf{映射}。
 
-\begin{framed}
-\textbf{本章目标}：
-\begin{enumerate}
-    \item 理解从"学习函数"到"学习算子"的思维跃迁
-    \item 掌握神经算子的核心特性：离散化无关性
-    \item 深入理解DeepONet和FNO两种主流架构
-    \item 建立格林函数与神经算子的数学联系
-    \item 了解神经算子在天气预报等领域的实际应用
-\end{enumerate}
-\end{framed}
+\vspace{0.3cm}
+\noindent\textit{为什么天气预报模型可以"一次训练、天天用"，而 PINN 却要天天重训？为什么一个在 64 个格点上训练的网络，可以直接在 256 个格点上推理？第5章辛辛苦苦组装的刚度矩阵 $K$，和这里学出来的"算子"是什么关系？}
+
+\begin{quote}
+\textbf{本章目标}：让你看到神经算子不是又一个新架构，而是第5章那句"解方程就是算 $K^{-1}F$"的直接延伸：第5章我们辛辛苦苦组装 $K$ 再去解，本章干脆从数据里把 $K^{-1}$——也就是格林函数——学出来。读完本章你会明白，为什么"一次训练、任意条件"是可能的，为什么它与网格分辨率无关，以及当我们把约束（物理定律）从损失函数里拿掉时，究竟丢掉了什么。
+\end{quote}
 
 \begin{tcolorbox}[colback=green!5, colframe=green!60!black, title=学完这章，你将能够...]
 \begin{itemize}
     \item 解释为什么神经算子比PINN更适合实时预测
-    \item 实现一个简化版DeepONet求解热传导方程
+    \item 实现一个简化版DeepONet学习一个简单算子（反导数算子；热传导方程见习题）
     \item 理解FNO如何用傅里叶变换实现高效的全局卷积
     \item 分析神经算子与格林函数的数学联系
     \item 评估神经算子在给定任务上的适用性
@@ -100,6 +98,7 @@
 \end{equation}
 其中$u_0$是输入函数，$u$是输出函数。
 \end{definition}
+\review{第5章}{有限元把 $-\nabla^2 u = f$ 变成 $KU = F$，解是 $U = K^{-1}F$。$K$ 只依赖方程和网格，不依赖载荷：换一个 $F$ 只需再乘一次 $K^{-1}$。"解算子"就是 $K^{-1}$ 的连续版本——本章要学的正是它。}
 
 \begin{center}
 \begin{tikzpicture}[
@@ -177,8 +176,9 @@
 
 用数学语言说：设$\mathcal{G}^*$是真实的连续算子，$\mathcal{G}_\theta^{(n)}$是在$n$个网格点上的离散近似。离散化无关性意味着：
 \begin{equation}
-    \lim_{n \to \infty} \mathcal{G}_\theta^{(n)} = \mathcal{G}^* \quad \text{（在适当范数意义下）}
+    \lim_{n \to \infty} \mathcal{G}_\theta^{(n)} = \mathcal{G}_\theta \quad \text{（在适当范数意义下）}
 \end{equation}
+\clarify{离散化无关性保证的是：分辨率 $n \to \infty$ 时 $\mathcal{G}_\theta^{(n)}$ 收敛到某个与网格无关的连续算子 $\mathcal{G}_\theta$。它是否等于真实的 $\mathcal{G}^*$，取决于训练得好不好——那是另一回事。}
 
 \begin{example}[零样本超分辨率]
 这是离散化无关性最惊人的应用：
@@ -241,6 +241,29 @@
 
 在深入具体架构之前，让我们建立一个统一的数学框架。
 
+\begin{tcolorbox}[colback=yellow!10, colframe=orange!80, title=本章的核心观点]
+\textbf{本章的问题仍是第1章的拉格朗日乘子法，只是这次我们不求某一个问题的解，而是求"约束放松一点、解变多少"这张影子价格表本身。}
+
+线性情形下这张表有名字：格林函数 $G(x, \xi) = \partial u(x)/\partial f(\xi)$，也就是第5章 $K^{-1}$ 的连续版本。神经算子把它推广到非线性方程，并直接从数据里学。
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabular}{lll}
+\toprule
+ & \textbf{第1章 / 第5章} & \textbf{本章（神经算子）} \\
+\midrule
+变量 & $x \in \R^n$ / 节点值 $U$ & 算子参数 $\theta$（一次学完一族问题） \\
+目标 & $f(x)$ / $\frac{1}{2}U^\top KU - F^\top U$ & 数据误差 $\sum_i \|\mathcal{G}_\theta(a_i) - u_i\|^2$ \\
+约束 & $g(x) = 0$ / 无（已在能量里） & 纯数据驱动：无显式约束；PINO：$\mathcal{N}[\mathcal{G}_\theta(a)] = f$ \\
+乘子 & $\lambda$（影子价格） & 格林函数 $G(x, \xi) = \partial u(x)/\partial f(\xi)$：对源项的影子价格表 \\
+一阶条件 & $\nabla f + \lambda^\top \nabla g = 0$ / $KU = F$ & $u = \int G(x, \xi) f(\xi)\,d\xi$，即 $U = K^{-1}F$ \\
+求解方式 & 组装 $K$，解方程 & 跳过组装，直接学 $K^{-1}$（$\kappa_\theta$、$R(k)$、$b_k t_k$） \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{tcolorbox}
+
 \subsection{线性PDE的解算子}
 
 考虑线性PDE：
@@ -255,7 +278,7 @@
 \begin{equation}
     \mathcal{L}_x[G(x, y)] = \delta(x - y)
 \end{equation}
-那么PDE的解可以写成积分形式：
+且 $G(\cdot, y)$ 满足齐次边界条件，那么PDE的解可以写成积分形式：
 \begin{equation}
     u(x) = \int_\Omega G(x, y) f(y) \, dy
 \end{equation}
@@ -269,7 +292,9 @@
     &= \int_\Omega \delta(x - y) f(y) \, dy \\
     &= f(x) \quad \checkmark
 \end{align}
+（边界条件由 $G(\cdot, y)$ 满足齐次边界条件保证。）
 \end{proof}
+\review{第1章}{影子价格 $\lambda = -df^*/d\epsilon$：约束放松一点，最优值变多少。现在的约束是"每个点 $\xi$ 处方程都成立"，无穷多条；在 $\xi$ 处放松一个单位源 $\delta(x - \xi)$，解在 $x$ 处变化 $G(x, \xi)$。格林函数就是一整张影子价格表，第9章的伴随变量就是这张表乘上目标的梯度。}
 
 \begin{example}[一维泊松方程的格林函数]
 考虑：
@@ -290,6 +315,9 @@
     u(x) = \int_0^1 G(x, y) f(y) \, dy
 \end{equation}
 \end{example}
+
+回想第5章：有限元把这个方程变成 $KU = F$，解是 $U = K^{-1}F$。刚度矩阵 $K$ 只和方程、网格有关，与载荷无关——换一个 $F$，只需再乘一次 $K^{-1}$。所以"解算子"就是 $K^{-1}$，格林函数 $G(x, y)$ 就是 $K^{-1}$ 的连续版本：对一维泊松方程，$K^{-1}$ 的第 $(i, j)$ 元恰好等于 $h\, G(x_i, x_j)$。第5章我们组装 $K$ 再解方程；本章跳过组装，直接从数据里学 $K^{-1}$。
+\tryit{用第5章的代码组装一维泊松方程的刚度矩阵 $K = \frac{1}{h}\,\mathrm{tridiag}(-1, 2, -1)$（$h = 0.1$），算 $K^{-1}$ 并画热力图，与 $G(x, y) = \min(x, y)(1 - \max(x, y))$ 对比：$K^{-1}$ 的第 $(i, j)$ 元恰好等于 $h\, G(x_i, x_j)$。}
 
 \subsection{神经算子的统一形式}
 
@@ -319,7 +347,7 @@
 \toprule
 \textbf{架构} & \textbf{积分核的形式} \\
 \midrule
-DeepONet & $\kappa(x, y) = \sum_k b_k(u) t_k(y) \delta(x - x_{\text{query}})$ \\
+DeepONet & $\sum_k b_k(u)\, t_k(x)$：分支给系数、主干给基函数（分支为线性层时 $\kappa(x,y) = \sum_k t_k(x) \sum_j w_{kj}\delta(y - y_j)$；一般情形对 $u$ 非线性，已超出线性积分算子族） \\
 FNO & $\kappa(x, y) = \kappa(x - y)$（平移不变，频域表示） \\
 GNO & 图上的消息传递（非规则网格） \\
 Transformer & $\kappa(x, y) = \text{softmax}(Q(x)K(y)^T / \sqrt{d})$（数据依赖） \\
@@ -327,6 +355,7 @@ Transformer & $\kappa(x, y) = \text{softmax}(Q(x)K(y)^T / \sqrt{d})$（数据依
 \end{tabular}
 \end{center}
 \end{unification}
+\think{分支网络 $b_k(u)$ 对 $u$ 是非线性的，所以 DeepONet 写不成对 $u$ 线性的 $\int \kappa(x, y) u(y)\,dy$。那它和积分算子框架"统一"在哪里？提示：把分支网络换成线性层，看看 $\kappa$ 长什么样。}
 
 % ====================================================================================
 \section{DeepONet：基函数展开视角}
@@ -371,6 +400,7 @@ DeepONet由两个子网络组成：
     \mathcal{G}_{\theta, \phi}(u)(x) = \sum_{k=1}^{p} b_k(u) \cdot t_k(x) = \mathbf{b}_\theta(u) \cdot \mathbf{t}_\phi(x)
 \end{equation}
 \end{definition}
+\review{第5章}{$\sum_k b_k(u)\, t_k(x)$ 和有限元的 $u_h(x) = \sum_j U_j \phi_j(x)$ 是同一种写法：主干网络学"基函数" $\phi_j$，分支网络学"系数" $U_j$ 对载荷的依赖，也就是 $K^{-1}F$ 这一步。区别只是基函数不再是固定的帐篷函数，而是学出来的。}
 
 \begin{figure}[htbp]
 \centering
@@ -699,6 +729,7 @@ FNO的核心思想基于\textbf{卷积定理}：
     \item FFT方法：$O(N \log N)$
 \end{itemize}
 \end{insightbox}
+\clarify{对周期域上的常系数方程，格林函数是平移不变的 $G(x - y)$，它的傅里叶变换就是微分算子符号的倒数：$-u'' = f \Rightarrow \hat{G}(k) = 1/k^2$。FNO 在线性情形下学到的 $R(k)$ 就是 $1/k^2$——$K^{-1}$ 的谱表示。}
 
 \subsection{FNO层的设计}
 
@@ -805,6 +836,7 @@ x_out = torch.fft.irfft(out_ft_padded, n=n_x, dim=1)
 \subsection{完整FNO实现}
 
 \begin{lstlisting}[language=Python, caption={FNO的完整实现}]
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -1001,7 +1033,7 @@ def demo_fno_burgers():
             # "模拟"T时刻的解（这里简化为耗散+非线性变形）
             # 真实应用需要用数值方法
             decay = 0.5
-            uT = u0 * decay - 0.1 * u0 ** 2
+            uT = u0 * decay - 0.1 * u0 ** 2   # 注意：这是逐点映射，只为演示流程（见下文说明）
             
             U0.append(u0)
             UT.append(uT)
@@ -1127,6 +1159,7 @@ FNO最令人惊讶的特性是\textbf{零样本超分辨率}：
     \kappa(x_i, x_j) = \frac{\exp\left(q(x_i)^T k(x_j) / \sqrt{d}\right)}{\sum_l \exp\left(q(x_i)^T k(x_l) / \sqrt{d}\right)}
 \end{equation}
 \end{proposition}
+\review{第11章}{第11章已证明单层注意力等价于 softmax 核的核回归 $\hat{v}_t = \sum_i k(q_t, k_i) v_i$。这里只是把"序列位置"换成"空间坐标"，核回归就成了积分算子。}
 
 \begin{insightbox}
 Attention与传统积分算子的关键区别：
@@ -1151,24 +1184,24 @@ Attention的积分核是\textbf{输入依赖}的——它根据具体的输入�
 Galerkin Transformer是将Transformer用于算子学习的一个变体：
 
 \begin{definition}[Galerkin Attention]
-在Galerkin Transformer中，注意力机制被修改为：
+在Galerkin Transformer（Cao, 2021）中，注意力去掉了 softmax，变成线性注意力：
 \begin{equation}
-    \text{GalerkinAttn}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{N}}\right) V
+    \text{GalerkinAttn}(Q, K, V) = \frac{1}{N}\, Q \left( \tilde{K}^\top \tilde{V} \right)
 \end{equation}
-注意分母是$\sqrt{N}$（序列长度）而不是$\sqrt{d}$（特征维度）。
+其中 $\tilde{K}, \tilde{V}$ 是做过层归一化的 $K, V$，$N$ 是序列长度（网格点数）。
 \end{definition}
 
 这个简单的修改有深刻的数学意义：
 
-\begin{remark}[为什么除以$\sqrt{N}$？]
+\begin{remark}[为什么除以$N$？]
 回顾积分的黎曼和近似：
 \begin{equation}
     \int_0^1 \kappa(x, y) u(y) \, dy \approx \frac{1}{N} \sum_{j=1}^{N} \kappa(x, y_j) u(y_j)
 \end{equation}
 
-$1/N$因子是积分近似的必要组成部分。Galerkin Transformer通过除以$\sqrt{N}$（在softmax前后各分摊一半）来保证这个缩放。
+$1/N$ 因子是积分近似的求积权重。去掉 softmax 之后，$K^\top V$ 是对网格点求和，必须乘上 $1/N$ 才是积分——这正是"Galerkin"这个名字的来历：它对应有限元弱形式里的内积 $(\kappa, u)$，而不是 softmax 那种"归一化的加权平均"。
 
-这使得模型在不同分辨率$N$下的行为更一致，有助于离散化无关性。
+这使得模型在不同分辨率 $N$ 下的行为一致，有助于离散化无关性；顺便还把复杂度从 $O(N^2)$ 降到了 $O(N d^2)$。
 \end{remark}
 
 \subsection{Transformer vs FNO}
@@ -1229,10 +1262,11 @@ $1/N$因子是积分近似的必要组成部分。Galerkin Transformer通过除�
 性能：
 \begin{itemize}
     \item 推理速度：\textbf{秒级}（vs 数值模式的小时级）
-    \item 预报精度：与IFS相当或略优
+    \item 预报精度：短期、大尺度变量上接近欧洲中心的 IFS，降水等少数变量略优
     \item 能耗：降低$10000\times$
 \end{itemize}
 \end{example}
+\preview{第16章的"世界模型"学的正是"当前状态 $\to$ 下一状态"的映射。气象大模型是世界模型在地球尺度上的实例；把神经算子换成机器人或游戏引擎，就是第16章。}
 
 \begin{example}[GraphCast (DeepMind, 2023)]
 基于\textbf{图神经网络}的架构：
@@ -1270,7 +1304,8 @@ $1/N$因子是积分近似的必要组成部分。Galerkin Transformer通过除�
 \end{warning}
 
 % ====================================================================================
-% 代码演示结果
+图~\ref{fig:chap14_neural_operator} 汇总了本章两种架构的结构，以及它们与格林函数 / 积分算子的对应关系。
+
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.95\textwidth]{figs_chap14/chap14_fig1.png}
@@ -1282,101 +1317,81 @@ $1/N$因子是积分近似的必要组成部分。Galerkin Transformer通过除�
 \section{本章小结}
 % ====================================================================================
 
-\begin{summary}
-\textbf{神经算子的核心思想}：
-\begin{itemize}
-    \item 从学习"函数"跃迁到学习"函数到函数的映射"
-    \item 一次训练，对任意初始/边界条件都能直接推理
-    \item 实现与离散化方式无关的模型
-\end{itemize}
+\begin{enumerate}
+    \item \textbf{从函数到算子}：PINN 学一个特定问题的解 $u(x)$；神经算子学"条件函数 $\to$ 解函数"的映射 $\mathcal{G}$，一次训练、任意条件。
+    \item \textbf{离散化无关性}：模型逼近的是连续算子，训练分辨率和推理分辨率可以不同（零样本超分辨率）。
+    \item \textbf{数学统一}：所有神经算子都可以写成积分算子 $v(x) = \int \kappa(x, y) u(y)\,dy$，不同架构只是参数化积分核 $\kappa$ 的不同方式；线性情形下这个核就是格林函数，也就是第5章 $K^{-1}$ 的连续版本。
+    \item \textbf{两种主流架构}：DeepONet（基函数展开：分支网络给系数、主干网络给基函数，理论清晰、通用）与 FNO（频域卷积：效率高、分辨率无关，适合周期 / 光滑问题）。
+    \item \textbf{与 PINN 的关系}：PINN 把物理约束写进损失、针对单个问题；神经算子把物理隐含在数据里、针对一类问题；PINO 把两者结合。
+\end{enumerate}
 
-\textbf{数学统一}：
-\begin{itemize}
-    \item 所有神经算子都可以写成积分算子形式：$v(x) = \int \kappa(x, y) u(y) dy$
-    \item 不同架构本质上是参数化积分核$\kappa$的不同方式
-\end{itemize}
-
-\textbf{两种主流架构}：
-\begin{center}
-\begin{tabular}{l|ccc}
-\toprule
-\textbf{架构} & \textbf{核心思想} & \textbf{优点} & \textbf{适用场景} \\
-\midrule
-DeepONet & 基函数展开 & 理论清晰 & 通用算子学习 \\
-FNO & 频域卷积 & 效率高、分辨率无关 & 周期/光滑问题 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\textbf{与PINN的关系}：
-\begin{itemize}
-    \item PINN：针对单个问题，物理约束硬编码在损失函数中
-    \item 神经算子：针对一类问题，物理知识隐含在训练数据中
-    \item 可以结合：Physics-Informed Neural Operator (PINO)
-\end{itemize}
-\end{summary}
+\begin{physicalmeaning}
+\textbf{$\lambda$ 在本章的意义}：第1章的 $\lambda$ 回答"这条约束放松一点，目标变多少"；PDE 是一整族约束——每个点 $\xi$ 处方程都要成立——于是影子价格也成了一个函数：在 $\xi$ 处加一个单位源，解在 $x$ 处变化 $G(x, \xi)$。格林函数就是 PDE 约束的影子价格表，第9章的伴随变量就是这张表乘上目标的梯度。神经算子学的就是这张表。代价也在这里：纯数据驱动的 DeepONet / FNO 没有显式约束，$\lambda \equiv 0$，没有人替物理定律"看门"——这就是"应用案例"一节警告"预测可能违反守恒律"的根源；PINO 把第13章的乘子请回来，正是为了补上这个缺口。
+\end{physicalmeaning}
 
 % ====================================================================================
 \section{习题}
 % ====================================================================================
 
-\subsection{概念题}
-
-\begin{exercise}[title = 理解离散化无关性]
-解释为什么以下操作不具有离散化无关性：
+\paragraph{计算题}
 \begin{enumerate}
-    \item 全连接层 $y = Wx + b$，其中$x \in \mathbb{R}^n$
-    \item 固定大小的卷积核
+    \item \textbf{格林函数与DeepONet}：
+    考虑一维泊松方程$-u''(x) = f(x)$，$u(0) = u(1) = 0$。
+    
+    \begin{enumerate}
+        \item 写出格林函数$G(x, y)$的表达式
+        \item 如果用DeepONet学习从$f$到$u$的映射，分支网络的输入是什么？主干网络的输入是什么？
+        \item DeepONet学到的$\sum_k b_k(f) t_k(x)$与格林函数表示$\int G(x,y) f(y) dy$有什么联系？
+    \end{enumerate}
+    
 \end{enumerate}
 
-提出一种使它们具有离散化无关性的修改方案。
-\end{exercise}
-
-\begin{exercise}[title = 格林函数与DeepONet]
-考虑一维泊松方程$-u''(x) = f(x)$，$u(0) = u(1) = 0$。
-
+\paragraph{编程题}
 \begin{enumerate}
-    \item 写出格林函数$G(x, y)$的表达式
-    \item 如果用DeepONet学习从$f$到$u$的映射，分支网络的输入是什么？主干网络的输入是什么？
-    \item DeepONet学到的$\sum_k b_k(f) t_k(x)$与格林函数表示$\int G(x,y) f(y) dy$有什么联系？
-\end{enumerate}
-\end{exercise}
-
-\subsection{编程题}
-
-\begin{exercise}[title = 实现2D FNO]
-将本章的1D FNO代码扩展到2D情况：
-\begin{enumerate}
-    \item 实现\code{SpectralConv2d}类
-    \item 实现\code{FNO2d}类
-    \item 在Darcy流问题上测试：给定渗透率场$a(x,y)$，预测压力场$u(x,y)$
-\end{enumerate}
-
-\textbf{提示}：2D FFT使用\code{torch.fft.rfft2}和\code{torch.fft.irfft2}。
-\end{exercise}
-
-\begin{exercise}[title = DeepONet变体]
-实现以下DeepONet的变体，并比较它们的性能：
-\begin{enumerate}
-    \item \textbf{PI-DeepONet}：在损失函数中加入物理约束
-    \item \textbf{Multi-output DeepONet}：主干网络输出多个查询点的结果
-    \item \textbf{Deep DeepONet}：在内积之后再加一个MLP
-\end{enumerate}
-\end{exercise}
-
-\subsection{思考题}
-
-\begin{exercise}[title = 神经算子的局限]
-讨论神经算子在以下场景中可能遇到的困难：
-\begin{enumerate}
-    \item 激波问题（Burgers方程在黏性趋近于零时）
-    \item 湍流（高雷诺数Navier-Stokes方程）
-    \item 多尺度问题（例如大气-海洋耦合）
+    \setcounter{enumi}{1}
+    \item \textbf{实现2D FNO}：
+    将本章的1D FNO代码扩展到2D情况：
+    \begin{enumerate}
+        \item 实现\code{SpectralConv2d}类
+        \item 实现\code{FNO2d}类
+        \item 在Darcy流问题上测试：给定渗透率场$a(x,y)$，预测压力场$u(x,y)$
+    \end{enumerate}
+    
+    \textbf{提示}：2D FFT使用\code{torch.fft.rfft2}和\code{torch.fft.irfft2}。
+    
+    \item \textbf{DeepONet变体}：
+    实现以下DeepONet的变体，并比较它们的性能：
+    \begin{enumerate}
+        \item \textbf{PI-DeepONet}：在损失函数中加入物理约束
+        \item \textbf{Multi-output DeepONet}：主干网络输出多个查询点的结果
+        \item \textbf{Deep DeepONet}：在内积之后再加一个MLP
+    \end{enumerate}
+    
 \end{enumerate}
 
-你能想到什么改进方法？
-\end{exercise}
-
-\begin{exercise}[title = 算子学习 vs 传统数值方法]
-比较神经算子和传统数值方法（如有限元）的优缺点。在什么情况下应该选择神经算子？在什么情况下应该坚持传统方法？
-\end{exercise}
+\paragraph{思考题}
+\begin{enumerate}
+    \setcounter{enumi}{3}
+    \item \textbf{理解离散化无关性}：
+    解释为什么以下操作不具有离散化无关性：
+    \begin{enumerate}
+        \item 全连接层 $y = Wx + b$，其中$x \in \mathbb{R}^n$
+        \item 固定大小的卷积核
+    \end{enumerate}
+    
+    提出一种使它们具有离散化无关性的修改方案。
+    
+    \item \textbf{神经算子的局限}：
+    讨论神经算子在以下场景中可能遇到的困难：
+    \begin{enumerate}
+        \item 激波问题（Burgers方程在黏性趋近于零时）
+        \item 湍流（高雷诺数Navier-Stokes方程）
+        \item 多尺度问题（例如大气-海洋耦合）
+    \end{enumerate}
+    
+    你能想到什么改进方法？
+    
+    \item \textbf{算子学习 vs 传统数值方法}：
+    比较神经算子和传统数值方法（如有限元）的优缺点。在什么情况下应该选择神经算子？在什么情况下应该坚持传统方法？
+    
+\end{enumerate}

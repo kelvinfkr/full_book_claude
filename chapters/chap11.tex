@@ -7,6 +7,7 @@
 \marginnote{2017年Google团队发表"Attention Is All You Need"，提出Transformer，彻底改变了NLP。论文标题模仿Beatles的歌"All You Need Is Love"。这个架构成为GPT、BERT、ChatGPT的基础。}
 
 ChatGPT、GPT-4、Claude——这些震惊世界的AI系统都基于同一个架构：\textbf{Transformer}。为什么它能取代统治自然语言处理（NLP）十年的循环神经网络（RNN）？
+\storynote{Sepp Hochreiter}{1991年，慕尼黑工大的硕士生 Hochreiter 在 Schmidhuber 指导下写出一篇德文论文，第一次从数学上解释了 RNN 的梯度消失；六年后两人提出 LSTM。这篇论文直到 2000 年代才被英语世界广泛引用——"Attention Is All You Need"其实是在回答他 26 年前提出的问题。}
 
 本章我们将从两个视角回答这个问题：
 \begin{itemize}
@@ -16,15 +17,11 @@ ChatGPT、GPT-4、Claude——这些震惊世界的AI系统都基于同一个架
 
 然后，我们将从零开始构建Transformer，理解它的每一个组件。
 
+\vspace{0.3cm}
+\noindent\textit{为什么一个只有几百万参数的 RNN 记不住 50 个词之前的信息？为什么"注意力"这个看似工程化的技巧，会和第6章的最大熵原理长得一模一样？为什么 Transformer 要给残差连接留一条"高速公路"？}
+
 \begin{quote}
-\textbf{本章目标}：读完这一章，你应该能够：
-\begin{enumerate}
-    \item 从动力系统角度解释RNN的梯度问题
-    \item 理解文本如何被转换成模型可处理的向量
-    \item 解释Q、K、V分别是什么，从哪里来
-    \item 说明多头注意力和位置编码的作用
-    \item 理解Transformer的完整前向传播流程
-\end{enumerate}
+\textbf{本章目标}：把序列建模看成"序列损失 + 隐状态递推约束"的拉格朗日问题。你会发现 RNN 的梯度消失就是乘子 $\lambda_t$（隐状态的影子价格）沿时间指数折损，LSTM 的门控和 Transformer 的残差流都是在保护这个影子价格；而注意力的 softmax 则是第6章最大熵原理的直接产物。读完本章，Q、K、V、缩放、多头、位置编码、残差——都不再是"设计出来的"，而是从约束里自然涌现的。
 \end{quote}
 
 \begin{tcolorbox}[colback=green!5, colframe=green!60!black, title=学完这章，你将能够...]
@@ -67,8 +64,9 @@ ChatGPT、GPT-4、Claude——这些震惊世界的AI系统都基于同一个架
 \end{itemize}
 \end{keyidea}
 
-这和我们在强化学习中看到的结构是一样的！隐状态 $h_t$ 就像MDP中的状态，状态转移函数 $F$ 就像环境的动力学方程。
-\think{回顾一下：第3章变分法、第4章力学、第9章神经网络、第10章强化学习，都有同样的约束结构$x_{t+1} = f(x_t, u_t)$。这不是巧合——它们都是同一个数学框架的不同实例！}
+这和第10章强化学习中看到的结构是一样的！隐状态 $h_t$ 就像MDP中的状态，状态转移函数 $F$ 就像环境的动力学方程。
+\think{回顾一下：第3章变分法、第4章力学、第8章轨迹优化、第9章神经网络、第10章强化学习，都有同样的约束结构$x_{t+1} = f(x_t, u_t)$。这不是巧合——它们都是同一个数学框架的不同实例！}
+\review{第8章}{把 $h_t$ 看成状态、$x_t$ 看成外部输入，$h_{t+1} = F(h_t, x_t; \theta)$ 就是第8章轨迹优化里的离散动力学约束。那里对每个时刻引入一个乘子 $\lambda_t$，这里也一样。}
 
 % ------------------------------------------------------------------------------------
 \subsection{RNN的动力学方程}
@@ -123,6 +121,30 @@ RNN选择了最简单的状态转移函数——线性变换加非线性激活�
     \item \textbf{处理任意长度}：参数数量与序列长度无关，所以可以处理任意长的输入。
 \end{itemize}
 
+\begin{tcolorbox}[colback=yellow!10, colframe=orange!80, title=本章的核心观点]
+\textbf{序列建模不是什么新东西——它就是第1章的拉格朗日乘子法，只不过约束变成了一条长度为 $T$ 的递推链 $h_{t+1} = F(h_t, x_t; \theta)$，乘子 $\lambda_t$ 变成了"沿时间往回传的梯度"。}
+
+本章的问题就是第1章的问题，只是变量多了 $T$ 组隐状态、约束多了 $T$ 条递推方程，于是乘子也多了 $T$ 个。RNN、LSTM、Transformer 的区别，只在于这 $T$ 条约束的\textbf{拓扑}——一条长链，还是一张短而宽的图。
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabular}{lll}
+\toprule
+ & \textbf{第1章（有限维）} & \textbf{本章（序列模型）} \\
+\midrule
+变量 & $x \in \R^n$ & 隐状态 $h_1, \ldots, h_T$ 与参数 $\theta$ \\
+目标 & $f(x)$ & $J = \sum_t \ell(h_t, y_t)$ \\
+约束 & $g(x) = 0$ & $F(h_t, x_t; \theta) - h_{t+1} = 0$（$T$ 条） \\
+乘子 & $\lambda$ & $\lambda_t = \partial J/\partial h_t$（伴随变量） \\
+一阶条件 & $\nabla f + \lambda^\top \nabla g = 0$ & 伴随方程 $\lambda_t = J_t^\top \lambda_{t+1} + \partial \ell/\partial h_t$ \\
+影子价格 & $\partial f^*/\partial c$ & 扰动 $h_t$ 一单位，总损失变化多少 \\
+病态 & 约束雅可比奇异 & $\prod_t J_t$ 指数消失 / 爆炸 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{tcolorbox}
+
 但这个设计也带来了严重的问题——让我们用拉格朗日乘子法来分析。
 
 % ------------------------------------------------------------------------------------
@@ -134,7 +156,7 @@ RNN选择了最简单的状态转移函数——线性变换加非线性激活�
 
 构造拉格朗日函数：
 \begin{equation}
-    \mathcal{L} = \sum_{t=1}^{T} \ell(h_t, y_t) + \sum_{t=1}^{T} \lambda_{t}^\top \left( h_t - F(h_{t-1}, x_t; \theta) \right)
+    \mathcal{L} = \sum_{t=1}^{T} \ell(h_t, y_t) + \sum_{t=0}^{T-1} \lambda_{t+1}^\top \left( F(h_t, x_t; \theta) - h_{t+1} \right)
 \end{equation}
 
 其中 $\lambda_t$ 是拉格朗日乘子。根据KKT条件，对 $h_t$ 求偏导为零，得到\textbf{伴随方程}（也就是反向传播的数学本质）：
@@ -144,6 +166,7 @@ RNN选择了最简单的状态转移函数——线性变换加非线性激活�
 \end{equation}
 
 这里的 $\lambda_t$ 正是梯度 $\frac{\partial J}{\partial h_t}$。
+\clarify{按全书的说法，$\lambda_t$ 是"约束 $h_{t+1} = F(h_t, x_t)$ 的影子价格"：把第 $t$ 步的隐状态推开 $\delta$，总损失变化 $\lambda_t^\top \delta$。第9章里它叫"误差信号"，第8章里叫"协态"，是同一个东西。（约束写成 $F - h_{t+1}$ 而不是 $h_{t+1} - F$，是为了让 $\lambda_t$ 恰好等于 $+\partial J/\partial h_t$，与第8章连续部分一致。）}
 
 \paragraph{各个量的形状}
 
@@ -299,19 +322,20 @@ RNN的状态转移是：
 
 \paragraph{特征值分析}
 
-设 $W_h$ 的特征分解为 $W_h = P \Lambda P^{-1}$，其中 $\Lambda = \text{diag}(\lambda_1, \ldots, \lambda_n)$ 是特征值对角矩阵。则：
+设 $W_h$ 的特征分解为 $W_h = P \Lambda P^{-1}$，其中 $\Lambda = \text{diag}(\mu_1, \ldots, \mu_n)$ 是特征值对角矩阵（这里用 $\mu$ 记特征值，把 $\lambda$ 留给乘子）。则：
 
 \begin{equation}
-    W_h^T = P \Lambda^T P^{-1} = P \cdot \text{diag}(\lambda_1^T, \ldots, \lambda_n^T) \cdot P^{-1}
+    W_h^T = P \Lambda^T P^{-1} = P \cdot \text{diag}(\mu_1^T, \ldots, \mu_n^T) \cdot P^{-1}
 \end{equation}
 
-设最大特征值的模为 $\rho = \max_i |\lambda_i|$：
+设最大特征值的模为 $\rho = \max_i |\mu_i|$：
 
 \begin{itemize}
-    \item 若 $\rho < 1$：$|\lambda_i|^T \to 0$，梯度\textbf{指数衰减}
-    \item 若 $\rho > 1$：$|\lambda_i|^T \to \infty$，梯度\textbf{指数爆炸}
+    \item 若 $\rho < 1$：$|\mu_i|^T \to 0$，梯度\textbf{指数衰减}
+    \item 若 $\rho > 1$：$|\mu_i|^T \to \infty$，梯度\textbf{指数爆炸}
     \item 若 $\rho = 1$：理论上稳定，但实际中难以精确控制
 \end{itemize}
+\think{把 $W_h$ 换成正交矩阵（所有特征值模为 1），连乘还会爆炸或消失吗？非线性 $\sigma'$ 又会把这个结论破坏到什么程度？（提示：这就是"酉 RNN"的出发点。）}
 
 \begin{example}[梯度消失的数值演示]
 假设隐状态维度 $n = 256$，$W_h$ 的最大特征值 $\rho = 0.9$，序列长度 $T = 100$。
@@ -340,7 +364,7 @@ RNN的状态转移是：
 
 除了梯度问题，RNN还有一个更根本的信息论限制。
 
-\begin{keyidea}[title=RNN的信息瓶颈]
+\begin{keyidea}[RNN的信息瓶颈]
 RNN的状态更新具有马尔可夫性：
 \begin{equation}
     X_{<t} \to h_{t-1} \to h_t \to X_{t+1}
@@ -351,8 +375,9 @@ RNN的状态更新具有马尔可夫性：
 根据\textbf{数据处理不等式}（Data Processing Inequality）：
 
 \begin{equation}
-    I(X_{t+k}; X_{<t}) \leq I(X_{t+k}; h_t) \leq I(X_{t+k}; h_{t-1}) \leq \cdots
+    I(X_{<t}; h_{t+k}) \leq I(X_{<t}; h_{t+k-1}) \leq \cdots \leq I(X_{<t}; h_t)
 \end{equation}
+（固定"过去" $X_{<t}$，让隐状态往后走：每走一步，隐状态里关于过去的信息只会减少。）
 
 \begin{figure}[h]
 \centering
@@ -387,7 +412,7 @@ RNN的状态更新具有马尔可夫性：
 \begin{itemize}
     \item 信息只能\textbf{减少}，不能增加
     \item 距离越远，能保留的信息越少
-    \item 这是\textbf{有损压缩}，信息随距离指数衰减
+    \item 这是\textbf{有损压缩}，信息随距离单调衰减（有限容量的隐状态下通常是指数式的）
 \end{itemize}
 
 \begin{remark}
@@ -506,6 +531,7 @@ LSTM引入了一个新的状态——\textbf{细胞状态}（Cell State）$c_t$�
 \end{equation}
 
 当遗忘门 $f_t \approx 1$ 时，梯度可以近乎无损地传播！这就像在动力系统中加入了一条"梯度高速公路"。
+\preview{"梯度高速公路"在本章后面的残差流、第13章 PINN 的深层网络里都会再出现：让主干通路的雅可比接近单位阵，影子价格就不会折损。}
 
 \paragraph{LSTM的局限}
 
@@ -571,9 +597,7 @@ LSTM把"结构性的梯度消失问题"转化为了"可学习的优化问题"—
 \subsection{对比：为什么ResNet能做深？}
 % ------------------------------------------------------------------------------------
 
-\begin{marginnote}
-\textbf{何恺明与ResNet}：ResNet（Deep Residual Learning for Image Recognition, 2016）由微软亚洲研究院的何恺明等人提出，获得CVPR 2016最佳论文奖。这篇论文引用量超过20万次，是深度学习领域被引用最多的论文之一。残差连接的思想看似简单，却彻底改变了深度网络的设计范式。
-\end{marginnote}
+\marginnote{\textbf{何恺明与ResNet}：ResNet（Deep Residual Learning for Image Recognition, 2016）由微软亚洲研究院的何恺明等人提出，获得CVPR 2016最佳论文奖。这篇论文引用量超过20万次，是深度学习领域被引用最多的论文之一。残差连接的思想看似简单，却彻底改变了深度网络的设计范式。}
 
 ResNet和LSTM看起来都有残差结构，为什么表现天差地别？
 
@@ -584,7 +608,7 @@ ResNet和LSTM看起来都有残差结构，为什么表现天差地别？
 \toprule
 & \textbf{ResNet（空间深度）} & \textbf{RNN/LSTM（时间深度）} \\
 \midrule
-\textbf{递推方程} & $x_{\ell+1} = x_\ell + F(x_\ell; \theta_\ell)$ & $h_{t+1} = h_t + F(h_t; \theta)$ \\
+\textbf{递推方程} & $x_{\ell+1} = x_\ell + F(x_\ell; \theta_\ell)$ & $h_{t+1} = F(h_t; \theta)$（LSTM 的细胞态才有 $c_{t+1} = c_t + \cdots$） \\
 \midrule
 \textbf{参数} & 每层不同 $\theta_\ell$ & 所有时间步共享 $\theta$ \\
 \midrule
@@ -688,6 +712,7 @@ Transformer的关键变化：
 \paragraph{代价}
 
 Transformer用 $O(T^2)$ 的计算复杂度换取了优化的稳定性。这在现代GPU上是可接受的。
+\preview{$O(T^2)$ 到底费多少显存、多少算力？第12章会给出可以直接套用的估算公式（KV Cache、FLOPs $\approx 6ND$）。}
 
 % ------------------------------------------------------------------------------------
 % ------------------------------------------------------------------------------------
@@ -703,12 +728,10 @@ Transformer用 $O(T^2)$ 的计算复杂度换取了优化的稳定性。这在�
 
 即先对输入做 LayerNorm，然后过 Attention/MLP，最后与原输入相加。这保证了主干通路 $H$ 上没有任何非线性操作，梯度可以无阻碍地流动。
 
-\begin{marginnote}
-\textbf{Pre-Norm vs. Post-Norm}:
-最早的 Transformer（2017）将 Norm 放在残差相加之后（Post-Norm）：$H \leftarrow \text{Norm}(H + \text{Attn}(H))$。现代大模型为了训练稳定性，普遍改用 Pre-Norm：先 Norm 再过子层。Pre-Norm 让残差主干成为一条"高速公路"，是训练超深 Transformer 的关键。
-\end{marginnote}
+\marginnote{\textbf{Pre-Norm vs. Post-Norm}:
+最早的 Transformer（2017）将 Norm 放在残差相加之后（Post-Norm）：$H \leftarrow \text{Norm}(H + \text{Attn}(H))$。现代大模型为了训练稳定性，普遍改用 Pre-Norm：先 Norm 再过子层。Pre-Norm 让残差主干成为一条"高速公路"，是训练超深 Transformer 的关键。}
 
-这意味着，信息和梯度可以沿着 $H$ 通路无损地向前或向后传播，不被非线性层阻断。这也是 Transformer 能够堆叠到上百层（如 GPT-4）而不发生梯度消失的根本数学原因。
+这意味着，信息和梯度可以沿着 $H$ 通路无损地向前或向后传播，不被非线性层阻断。这也是 Transformer 能够堆叠到近百层（如 GPT-3 的 96 层）而不发生梯度消失的根本数学原因。
 
 \paragraph{现代变体 (SOTA Tricks)}
 在实际工程中，为了进一步提升稳定性与效率，还会采用以下改进：
@@ -764,15 +787,16 @@ Transformer用 $O(T^2)$ 的计算复杂度换取了优化的稳定性。这在�
 
 应用到RNN：
 \begin{equation}
-    I(X_{t+k}; X_{<t}) \leq I(X_{t+k}; h_t) \leq I(X_{t+k}; h_{t-1}) \leq \cdots \leq I(X_{t+k}; h_1)
+    I(X_{<t}; h_{T}) \leq I(X_{<t}; h_{T-1}) \leq \cdots \leq I(X_{<t}; h_t)
 \end{equation}
+（马尔可夫链 $X_{<t} \to h_t \to h_{t+1} \to \cdots$：越往后的隐状态，关于过去的信息越少。）
 
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.85]
     % 信息量的衰减
     \draw[->] (0, 0) -- (12, 0) node[right] {时间步};
-    \draw[->] (0, 0) -- (0, 4) node[above] {互信息 $I(X_T; h_t)$};
+    \draw[->] (0, 0) -- (0, 4) node[above] {互信息 $I(X_1; h_t)$};
     
     % RNN曲线
     \draw[thick, red, domain=0:10, samples=50] plot (\x, {3.5*exp(-0.3*\x)});
@@ -814,10 +838,10 @@ Transformer的注意力机制彻底打破了这种链式结构：
     
     \item \textbf{互信息不衰减}：
     \begin{equation}
-        I(X_t; X_i)_{\text{Transformer}} \approx \text{const} \quad \text{（不随距离 $|t-i|$ 衰减）}
+        I(X_i; h_t^{(1)}) \ \text{与距离 $|t-i|$ 无关} \quad \text{（每个 $x_i$ 到 $h_t$ 都只经过一次处理）}
     \end{equation}
     
-    \item \textbf{绕过数据处理不等式}：信息不再需要经过多次处理，所以不会累积损失
+    \item \textbf{只用一次数据处理不等式}：信息从 $x_i$ 到 $h_t$ 只经过一次处理，损失不会随距离累积
 \end{enumerate}
 
 \paragraph{从最大熵原理推导Attention}
@@ -826,7 +850,7 @@ Transformer的注意力机制彻底打破了这种链式结构：
 
 答案是后者。我们可以从\textbf{第一性原理}推导出Attention的形式。
 
-\begin{keyidea}[title=从第一性原理推导Attention]
+\begin{keyidea}[从第一性原理推导Attention]
 引入三个基本假设：
 
 \textbf{假设1：相似性由内积定义（希尔伯特空间）}
@@ -858,6 +882,7 @@ Transformer的注意力机制彻底打破了这种链式结构：
     \hat{v} = \mathbb{E}_{p(i|q)}[v_i] = \sum_i p(i|q) \cdot v_i
 \end{equation}
 \end{keyidea}
+\review{第6章}{"最大熵 + 期望约束 $\Rightarrow$ 玻尔兹曼分布"正是第6章的推导：$p_i \propto \exp(\beta g_i)$，$\beta$ 是期望约束的拉格朗日乘子。注意力里的 $1/\sqrt{d_k}$ 就是这个 $\beta$。}
 
 把三个假设组合起来：
 \begin{equation}
@@ -1072,7 +1097,7 @@ $O(T^2)$ 的复杂度限制了处理超长序列的能力：
 
 \begin{center}
 \fbox{\parbox{0.9\textwidth}{
-\textbf{Transformer是在给定 $O(T^2)$ 算力预算下的最优结构：}
+\textbf{Transformer是在给定 $O(T^2)$ 算力预算下的一种合理折中：}
 \begin{itemize}
     \item 优化视角：残差连接使梯度稳定传播
     \item 信息论视角：全连接实现互信息最大化
@@ -1225,7 +1250,7 @@ LLaMA-7B & 32,000 & 4,096 \\
 
 注意力机制本身是\textbf{位置无关}的——它只看token之间的相似度，不知道谁在前谁在后。但语言显然是有顺序的："狗咬人"和"人咬狗"意思完全不同！
 
-\begin{keyidea}[title=位置编码（Positional Encoding）]
+\begin{keyidea}[位置编码（Positional Encoding）]
 位置编码给每个位置加上一个独特的"标记"，让模型能够区分不同位置：
 \begin{equation}
     \text{输入} = \text{词嵌入} + \text{位置编码}
@@ -1382,7 +1407,7 @@ LLaMA-7B & 32,000 & 4,096 \\
 
 注意力机制用三个向量来实现这种"选择性关注"：
 
-\begin{keyidea}[title=Q、K、V的含义]
+\begin{keyidea}[Q、K、V的含义]
 \begin{itemize}
     \item \textbf{Query（查询）}$Q$：我在找什么？（当前token的"问题"）
     \item \textbf{Key（键）}$K$：我有什么？（每个token的"标签"）
@@ -1555,6 +1580,7 @@ $\alpha_{ij}$ 就是\textbf{注意力权重}：token $i$ 对 token $j$ 的"关�
 \end{equation}
 
 每个token的输出是所有token的Value的加权组合，权重由Query-Key匹配程度决定。
+\tryit{用 NumPy 生成 $d_k = 64$ 的随机 $q, k \sim \mathcal{N}(0, 1)$，画出除以 $\sqrt{d_k}$ 前后 softmax 输出最大值的直方图，看看"接近 one-hot"有多严重。}
 
 % ------------------------------------------------------------------------------------
 \subsection{注意力的数学本质}
@@ -1562,7 +1588,7 @@ $\alpha_{ij}$ 就是\textbf{注意力权重}：token $i$ 对 token $j$ 的"关�
 
 从数学角度看，注意力机制其实是一个\textbf{可微的软检索}。
 
-\begin{keyidea}[title=注意力 = 核回归]
+\begin{keyidea}[注意力 = 核回归]
 经典的Nadaraya-Watson核回归：
 \begin{equation}
     f(x) = \sum_i \frac{K(x, x_i)}{\sum_j K(x, x_j)} y_i
@@ -1923,6 +1949,7 @@ GPT是\textbf{自回归}模型：生成第 $t$ 个词时，只能看到前 $t-1$
     
     \item \textbf{输出}：$X_2 \in \mathbb{R}^{T \times d}$
 \end{enumerate}
+\tryit{按这八步用 PyTorch 写一个 \texttt{TransformerBlock} 类（约 40 行），用 \texttt{torch.autograd.gradcheck} 检查；第12章"代码实现"一节给出了其中注意力部分的参考实现。}
 
 % ====================================================================================
 \section{输入输出：实际使用指南}
@@ -2057,7 +2084,7 @@ K_i = W_K h_i, \quad V_i = W_V h_i
 \[
 \text{计算新的 } K_t, V_t,\quad \text{然后与缓存中的 } K_{1:t-1}, V_{1:t-1} \text{ 做 Attention。}
 \]
-复杂度从“每次重算 $1\sim t$ 个”变成“只算第 $t$ 个”，总量从 $O(T^2)$ 降到接近 $O(T)$。
+复杂度从“每次重算 $1\sim t$ 个”变成“只算第 $t$ 个”：省掉的是历史 K/V 的重复投影（$O(T^2 d) \to O(T d)$）；注意力本身每步仍要算 $q_t$ 与全部历史的点积，总量仍是 $O(T^2)$。
 
 \marginnote{直观地说：本来每写一个字都要把全文再读一遍，现在改成“以前读过的都用笔记查”，当然快很多。}
 
@@ -2188,7 +2215,7 @@ d = 4096,\quad
 则 KV Cache 需要的显存大约为
 \[
 2 \times 32 \times 2048 \times 4096 \times 2
-\;\approx\; 2.1\times 10^9\ \text{bytes} \;\approx\; 2\ \text{GB}.
+\;\approx\; 1.07\times 10^9\ \text{bytes} \;\approx\; 1\ \text{GB}.
 \]
 这只是\textbf{缓存}占掉的显存，还不包括模型参数本身！
 \end{example}
@@ -2200,6 +2227,7 @@ d = 4096,\quad
     \item 工程上要对 KV Cache 做\textbf{量化}（比如用 \texttt{int8}、\texttt{int4} 存储），来减小显存开销；
     \item 企业部署大模型时，KV Cache 是\textbf{必须精细优化}的一环。
 \end{itemize}
+\preview{第12章会把这个公式扩展成完整的显存预算表：权重、梯度、优化器状态、激活值、KV Cache，并讨论"显存的影子价格"。}
 
 
 
@@ -2271,6 +2299,20 @@ Transformer有一个重要限制：\textbf{最大上下文长度}。
     \item \textbf{多头注意力}：让模型从多个角度关注序列
 \end{enumerate}
 
+\begin{physicalmeaning}[title=$\lambda_t$ 在本章的意义]
+$\lambda_t$ 是第 $t$ 步隐状态的\textbf{影子价格}：把递推约束 $h_{t+1} = F(h_t, x_t)$ 松开一点、让 $h_t$ 多偏 $\delta$，总损失变化 $\lambda_t^\top \delta$。
+\begin{itemize}
+    \item \textbf{梯度消失} = 早期状态的影子价格趋于零：$\lambda_0 \approx (\prod_t J_t)^\top \lambda_T \to 0$，优化器"看不见"早期信息的价值。
+    \item \textbf{LSTM 的遗忘门} $f_t \approx 1$ 让 $\partial c_t/\partial c_{t-1} \approx I$：影子价格不折价地往回传。
+    \item \textbf{Transformer 的残差流} $H^{(\ell+1)} = H^{(\ell)} + f_\ell(H^{(\ell)})$：伴随 $\lambda^{(\ell)} = (I + \partial f_\ell)^\top \lambda^{(\ell+1)} \approx \lambda^{(\ell+1)}$，而且只有 $L$ 层而不是 $T$ 步。
+    \item \textbf{第二个 $\lambda$}：注意力权重 $\mathrm{softmax}(q^\top k/\sqrt{d_k})$ 是第6章最大熵问题的解，$1/\sqrt{d_k}$ 就是"期望相似度"约束的乘子——温度的倒数。
+\end{itemize}
+\end{physicalmeaning}
+
+\begin{unification}[title=统一视角]
+第8章的协态、第9章的误差信号 $\lambda_i$、第10章的伴随变量 $\lambda_t$、本章的 BPTT 梯度 $\partial J/\partial h_t$，是同一个对象：动力学约束的拉格朗日乘子。第12章会问一个更工程的问题：当这 $T$ 条约束占用的显存与算力本身成为约束时，它们的影子价格是多少？
+\end{unification}
+
 
 \begin{table}[h]
 \centering
@@ -2293,9 +2335,28 @@ Transformer有一个重要限制：\textbf{最大上下文长度}。
 \section{习题}
 % ====================================================================================
 
-\paragraph{概念题}
-
+\paragraph{计算题}
 \begin{enumerate}
+    \item 设RNN的权重矩阵 $W_h$ 的特征值为 $\mu_1 = 0.95, \mu_2 = 0.85$。计算经过 $T = 50$ 步后，沿最大特征向量方向的梯度衰减倍数。
+    
+    \item 在一个注意力头中，$d_k = 64$。假设Q和K的每个元素独立服从 $\mathcal{N}(0, 1)$，计算点积 $q \cdot k$ 的标准差。解释为什么要除以 $\sqrt{d_k}$。
+    
+    \item 计算自注意力的时间和空间复杂度。设序列长度为 $T$，嵌入维度为 $d$，头数为 $h$。
+    
+    \item 一个Transformer模型有 $L = 32$ 层，$d = 4096$，$h = 32$ 头。计算KV Cache在处理长度 $T = 8192$ 的序列时占用的显存（假设使用float16）。
+\end{enumerate}
+
+\paragraph{编程题}
+\begin{enumerate}
+    \setcounter{enumi}{4}
+    \item 用 NumPy 手算一个 3 个 token、$d_k = 2$ 的自注意力：自己给定 $Q, K, V$，算出注意力权重矩阵和输出，再用 \texttt{torch.nn.functional.scaled\_dot\_product\_attention} 验证。
+    
+    \item 用 PyTorch 实现一个简化版 \texttt{TransformerBlock}（Pre-Norm：多头注意力 + 前馈网络 + 残差 + LayerNorm，约 40 行），用 \texttt{torch.autograd.gradcheck} 检查梯度，并在一个字符级语言建模玩具任务上训练几百步。
+\end{enumerate}
+
+\paragraph{思考题}
+\begin{enumerate}
+    \setcounter{enumi}{6}
     \item 解释为什么RNN的梯度会消失或爆炸。用特征值的语言描述。
     
     \item 数据处理不等式如何限制了RNN的长距离建模能力？
@@ -2305,26 +2366,6 @@ Transformer有一个重要限制：\textbf{最大上下文长度}。
     \item 解释Q、K、V的含义，以及为什么需要三个不同的投影矩阵。
     
     \item 多头注意力相比单头注意力有什么优势？为什么每个头的维度要缩小？
-\end{enumerate}
-
-\paragraph{计算题}
-
-\begin{enumerate}
-    \setcounter{enumi}{5}
-    
-    \item 设RNN的权重矩阵 $W_h$ 的特征值为 $\lambda_1 = 0.95, \lambda_2 = 0.85$。计算经过 $T = 50$ 步后，沿最大特征向量方向的梯度衰减倍数。
-    
-    \item 在一个注意力头中，$d_k = 64$。假设Q和K的每个元素独立服从 $\mathcal{N}(0, 1)$，计算点积 $q \cdot k$ 的标准差。解释为什么要除以 $\sqrt{d_k}$。
-    
-    \item 计算自注意力的时间和空间复杂度。设序列长度为 $T$，嵌入维度为 $d$，头数为 $h$。
-    
-    \item 一个Transformer模型有 $L = 32$ 层，$d = 4096$，$h = 32$ 头。计算KV Cache在处理长度 $T = 8192$ 的序列时占用的显存（假设使用float16）。
-\end{enumerate}
-
-\paragraph{思考题}
-
-\begin{enumerate}
-    \setcounter{enumi}{9}
     
     \item LSTM的遗忘门 $f_t$ 接近1时可以缓解梯度消失，但为什么不能完全解决长距离依赖问题？从信息论角度思考。
     
@@ -2334,4 +2375,3 @@ Transformer有一个重要限制：\textbf{最大上下文长度}。
     
     \item 从第一性原理角度，注意力机制可以看作是基于最大熵原则的软检索。这与传统的硬检索（如数据库查询）有什么本质区别？
 \end{enumerate}
-

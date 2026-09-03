@@ -17,6 +17,10 @@
 \textbf{深度学习的思路}完全不同：我们不告诉计算机规则，而是给它大量``图片-答案''的配对数据，让它\textbf{自己从数据中学出}识别规则。
 
 这听起来很神奇，但数学上，它不过是一个\textbf{带约束的优化问题}——正是我们前几章学过的内容。
+\storynote{Rumelhart、Hinton 与 Williams}{1986年，三人在 Nature 上发表了一篇只有四页的短文《Learning representations by back-propagating errors》，"反向传播"从此家喻户晓。但同样的公式，控制论学者早在1960年代就用来算火箭轨迹的灵敏度——第8章的伴随方程。本章要讲的，正是这段被遗忘的血缘。}
+
+\vspace{0.3cm}
+\noindent\textit{为什么一个有上亿参数的网络，算一次梯度只比算一次输出贵两三倍？为什么"反向传播"要从最后一层往回算，而不是从第一层往前算？为什么控制论里算火箭轨迹灵敏度的公式，和训练神经网络的公式一模一样？}
 
 \begin{quote}
 \textbf{本章目标}：用拉格朗日乘子法的视角，理解深度学习的数学本质。你会发现，神经网络的``反向传播''算法，正是约束优化中伴随方程的离散版本。
@@ -24,11 +28,11 @@
 
 \begin{tcolorbox}[colback=green!5, colframe=green!60!black, title=学完这章，你将能够...]
 \begin{itemize}
-    \item 手推一个3层神经网络的前向和反向传播
-    \item 解释梯度消失/爆炸的数学原因
-    \item 用PyTorch实现一个简单的图像分类器
+    \item 手推一个两层神经网络的前向和反向传播
+    \item 解释梯度消失/爆炸的数学原因（见扩展阅读）
+    \item 用自己写的自动微分引擎训练一个小型分类器（编程题）
     \item 理解为什么反向传播是伴随方法的离散版本
-    \item 分析不同激活函数、损失函数的选择依据
+    \item 分析激活函数、损失函数的选择依据（见扩展阅读）
 \end{itemize}
 \end{tcolorbox}
 
@@ -187,6 +191,7 @@ L(\theta) = \frac{1}{N} \sum_{k=1}^N \ell\big(f(x^{(k)}; \theta), \, y^{(k)}\big
 \textbf{核心问题}：如何高效计算梯度 $\nabla_\theta L$？
 
 现代神经网络动辄有数百万甚至数十亿参数，直接用有限差分计算梯度（对每个参数扰动一下，观察损失变化）是不现实的。我们需要一种高效的方法。
+\think{有限差分要算多少次前向？$P$ 个参数就要 $P+1$ 次。GPT-3 有 1750 亿个参数——每算一次梯度就要跑 1750 亿次前向传播。反向传播只要"一次前向 + 一次反向"。这就是本章要解释的奇迹。}
 
 % ------------------------------------------------------------------------------------
 \section{计算图：约束优化的视角}
@@ -230,6 +235,29 @@ L &= \ell(z_3)
 \end{equation}
 \end{keyformula}
 
+\begin{tcolorbox}[colback=yellow!10, colframe=orange!80, title=本章的核心观点]
+\textbf{深度学习不是什么新东西——它就是第1章的拉格朗日乘子法，只是约束变成了一串"级联"的等式 $z_i = f_i(z_{i-1}; \theta_i)$——每一层网络一条。}对每条约束引入乘子 $\lambda_i$，一阶条件自动给出反向传播。
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabular}{llll}
+\toprule
+ & \textbf{第1章} & \textbf{第8章（离散）} & \textbf{本章} \\
+\midrule
+变量 & $x$ & 状态 $x_k$、控制 $u_k$ & 层输出 $z_i$、参数 $\theta_i$ \\
+目标 & $f(x)$ & $\sum_k L_k + \phi(x_N)$ & 损失 $\ell(z_n)$ \\
+约束 & $g(x) = 0$ & $x_{k+1} = f(x_k, u_k)$ & $z_i = f_i(z_{i-1}; \theta_i)$ \\
+乘子 & $\lambda$ & $\lambda_k$（协态） & $\lambda_i$（误差信号 $\delta_i = -\lambda_i$） \\
+一阶条件 & $\nabla f + \lambda^\top \nabla g = 0$ & $\lambda_k = (\partial f/\partial x_k)^\top \lambda_{k+1} - (\partial L_k/\partial x_k)^\top$ & $\lambda_i = (\partial f_{i+1}/\partial z_i)^\top \lambda_{i+1}$ \\
+影子价格 & $-df^*/d\epsilon$ & $-\partial J/\partial x_k$ & $-\partial L/\partial z_i$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+这不是巧合：反向传播不是从天上掉下来的，而是把"每层一条约束"交给乘子法之后自然涌现的。
+\end{tcolorbox}
+\review{第8章}{把第8章的离散轨迹优化并排放在这里：状态 $x_k$ $\leftrightarrow$ 层输出 $z_i$，控制 $u_k$ $\leftrightarrow$ 参数 $\theta_i$，动力学 $x_{k+1} = f(x_k, u_k)$ $\leftrightarrow$ 层 $z_i = f_i(z_{i-1}; \theta_i)$，终端代价 $\phi(x_N)$ $\leftrightarrow$ 损失 $\ell(z_n)$。第8章"伴随方程：反向传播的原型"一节已经把答案写好了。}
+
 这就是一个\textbf{带等式约束的优化问题}——和第1章学的完全一样，只是约束变成了一系列级联的等式。
 \think{对比第3章的变分法：那里约束是$y_{k+1} - y_k = v_k \Delta x$，这里约束是$z_{i+1} = f_{i+1}(z_i)$。结构完全一样！神经网络是变分法的离散版本。}
 
@@ -272,7 +300,7 @@ L &= \ell(z_3)
 
 \marginnote{注意：这里我们约定 $z_0 = x$（输入）。每个 $\lambda_i$ 的维度与 $z_i$ 相同。}
 
-\subsection{稳态条件（KKT条件）}
+\subsection{驻点条件（KKT条件）}
 
 在最优点，拉格朗日函数对所有变量的偏导数为零。
 
@@ -313,7 +341,10 @@ $\lambda_i$ 的意义是什么？
 在神经网络中，$\lambda_i = -\frac{\partial L}{\partial z_i}$ 表示：如果第 $i$ 层的输出 $z_i$ 变化一点，最终损失 $L$ 会变化多少。
 
 这就是为什么深度学习文献中常把 $\delta_i = -\lambda_i$ 称为``误差信号''——它告诉我们每一层对最终误差的``贡献''。
+
+一句话总结：本章的约束是"每一层的输出必须等于上一层输出经过这一层的结果"；乘子 $\lambda_i$ 是第 $i$ 层输出的影子价格——偷偷把 $z_i$ 改一点，最终损失会变多少（差一个负号）。反向传播就是从最后一层往回算所有影子价格。
 \end{physicalmeaning}
+\clarify{符号约定：本书从第1章起写 $\Lag = f + \lambda^\top g$，因此 $\lambda$ 等于"目标对约束松弛量导数"的相反数（第1章 $\lambda = -df^*/d\epsilon$）。本章的 $\lambda_i = -\partial L/\partial z_i$ 与第8章离散伴随方程的 $\lambda_N = -\partial\phi/\partial x_N$ 都遵守这一约定；深度学习文献中的 $\delta_i = \partial L/\partial z_i$ 只差一个负号。}
 
 \subsection{参数梯度}
 
@@ -435,6 +466,7 @@ L &\leftarrow \ell(z_n, y) \notag
 
 换言之，\textbf{计算所有参数的梯度，只需要大约两倍于前向传播的时间}。
 \end{theorem}
+\clarify{"两倍"是数量级说法。精确的结论（Baur--Strassen 定理）是：梯度的计算量不超过前向的一个小常数倍（常引用的上界是 4--5 倍）。代价是必须把前向的所有中间值 $z_i$ 存下来——习题7说的"空间换时间"就是这个意思。}
 
 这是一个惊人的结果：无论网络有多少参数（可能数百万甚至数十亿），梯度计算的代价都与前向传播同阶。这使得大规模神经网络的训练成为可能。
 
@@ -456,6 +488,7 @@ L &\leftarrow \ell(z_n, y) \notag
 \begin{equation}
 \dot{p} = -\frac{\partial H}{\partial x}, \quad p(T) = -\nabla \phi(x(T))
 \end{equation}
+\clarify{这里沿用第8章\textbf{离散}部分的符号约定（约束写成 $x_{k+1} - f$），所以 $p(T) = -\nabla\phi$；第8章连续部分把约束写成 $f - \dot{x}$，得到 $\lambda(T) = +\nabla\phi$。两者只差一个符号。}
 
 现在对比神经网络：
 
@@ -464,7 +497,7 @@ L &\leftarrow \ell(z_n, y) \notag
 \toprule
 \textbf{神经网络（离散）} & \textbf{最优控制（连续）} \\
 \midrule
-层：$z_{i+1} = f_i(z_i; \theta_i)$ & 动力学：$\dot{x} = f(x, u)$ \\
+层：$z_i = f_i(z_{i-1}; \theta_i)$ & 动力学：$\dot{x} = f(x, u)$ \\
 损失：$L = \ell(z_n)$ & 终端代价：$\phi(x(T))$ \\
 伴随变量：$\lambda_i$ & 协态变量：$p(t)$ \\
 $\lambda_i = \left(\frac{\partial f_{i+1}}{\partial z_i}\right)^\top \lambda_{i+1}$ & $\dot{p} = -\frac{\partial H}{\partial x}$ \\
@@ -487,6 +520,7 @@ $\lambda_n = -\nabla \ell$ & $p(T) = -\nabla \phi$ \\
 \end{unification}
 
 这个对比解释了为什么深度学习和控制理论可以互相借鉴：Neural ODE、可微物理仿真、端到端机器人学习，都是这个统一框架的实例。
+\preview{第10章会把这里的"终端损失"换成"未来累计奖励"，把网络深度推到无穷，$\lambda$ 变成值函数的梯度；第13章会把自动微分反过来用——对输入坐标而不是参数求导，从而把偏微分方程本身写进损失函数。}
 
 % ------------------------------------------------------------------------------------
 \section{实例：训练一个简单网络}
@@ -536,7 +570,7 @@ L &= \frac{1}{2}\|z_2 - y\|^2 \quad \text{（均方误差损失）}
 % ------------------------------------------------------------------------------------
 \section{自动微分：从代码到内存中的计算图}
 
-\marginnote{\textbf{自动微分的历史}：自动微分（AD）的概念可追溯到1964年Robert Wengert的工作。芬兰学者Seppo Linnainmaa在1970年博士论文中提出了反向模式AD。现代框架如PyTorch（Facebook，2016）、TensorFlow（Google，2015）和JAX（Google，2018）都基于这些思想，但加入了动态/静态计算图、GPU加速等工程创新。}
+\marginnote{\textbf{自动微分的历史}：自动微分（AD）的概念可追溯到1964年Robert Wengert的工作。芬兰学者Seppo Linnainmaa在1970年的硕士论文中提出了反向模式AD。现代框架如PyTorch（Facebook，2016）、TensorFlow（Google，2015）和JAX（Google，2018）都基于这些思想，但加入了动态/静态计算图、GPU加速等工程创新。}
 
 在实践中，我们不需要手动推导每个网络的反向传播公式。现代深度学习框架（PyTorch、TensorFlow、JAX）都实现了\textbf{自动微分}（Automatic Differentiation）。
 
@@ -745,117 +779,6 @@ print(f"dy/dx = {x.grad}")   # 8.0（理论值：2x + 2 = 8）
 
 \paragraph{第二步：\texttt{y = x * x + x * 2 + 1}}
 
-按运算优先级拆开：
-
-\begin{enumerate}
-    \item \texttt{x * x}：建立乘法节点 $m_1$
-    \begin{itemize}
-        \item $m_1$\texttt{.data} = 9.0
-        \item $m_1$\texttt{.\_prev} = \{$x$, $x$\}
-        \item $m_1$\texttt{.\_backward} 记录：\texttt{x.grad += m1.grad * x.data}（执行两次，因为两条边都指向 $x$）
-    \end{itemize}
-    
-    \item \texttt{x * 2}：\texttt{2} 被包装成 \texttt{Variable(2)}，建立乘法节点 $m_2$
-    \begin{itemize}
-        \item $m_2$\texttt{.data} = 6.0
-        \item $m_2$\texttt{.\_prev} = \{$x$, const$_2$\}
-    \end{itemize}
-    
-    \item \texttt{m1 + m2}：建立加法节点 $s_1$
-    \begin{itemize}
-        \item $s_1$\texttt{.data} = 15.0
-        \item $s_1$\texttt{.\_prev} = \{$m_1$, $m_2$\}
-    \end{itemize}
-    
-    \item \texttt{s1 + 1}：\texttt{1} 被包装成 \texttt{Variable(1)}，建立加法节点 $y$
-    \begin{itemize}
-        \item $y$\texttt{.data} = 16.0
-        \item $y$\texttt{.\_prev} = \{$s_1$, const$_1$\}
-    \end{itemize}
-\end{enumerate}
-
-此时内存中的计算图：
-
-\begin{figure}[h]
-\centering
-\begin{tikzpicture}[
-    node distance=1.5cm,
-    var/.style={circle, draw, thick, minimum size=0.9cm, font=\small},
-    const/.style={circle, draw, dashed, minimum size=0.7cm, font=\scriptsize, text=gray},
-    op/.style={rectangle, draw, thick, fill=yellow!20, minimum width=0.6cm, font=\small}
-]
-    % 叶子节点
-    \node[var, fill=blue!10] (x) {$x$};
-    \node[below of=x, yshift=0.8cm, font=\scriptsize] {3.0};
-    
-    % 常数节点
-    \node[const] (c2) [right of=x, xshift=1cm] {2};
-    \node[const] (c1) [right of=c2, xshift=2cm] {1};
-    
-    % 中间节点
-    \node[var] (m1) [below of=x, xshift=-0.5cm, yshift=-0.5cm] {$m_1$};
-    \node[below of=m1, yshift=0.8cm, font=\scriptsize] {9.0};
-    
-    \node[var] (m2) [below of=x, xshift=1.5cm, yshift=-0.5cm] {$m_2$};
-    \node[below of=m2, yshift=0.8cm, font=\scriptsize] {6.0};
-    
-    \node[var] (s1) [below of=m1, xshift=1cm, yshift=-0.3cm] {$s_1$};
-    \node[below of=s1, yshift=0.8cm, font=\scriptsize] {15.0};
-    
-    \node[var, fill=red!10] (y) [below of=s1, xshift=1cm, yshift=-0.3cm] {$y$};
-    \node[below of=y, yshift=0.8cm, font=\scriptsize] {16.0};
-    
-    % 连线
-    \draw[->, thick] (x) -- (m1);
-    \draw[->, thick] (x) to[bend left=20] (m1);
-    \draw[->, thick] (x) -- (m2);
-    \draw[->, thick] (c2) -- (m2);
-    \draw[->, thick] (m1) -- (s1);
-    \draw[->, thick] (m2) -- (s1);
-    \draw[->, thick] (s1) -- (y);
-    \draw[->, thick] (c1) -- (y);
-    
-    % 标注
-    \node[right of=y, xshift=1.5cm, font=\small, align=left] {
-        每个节点存着：\\
-        \texttt{data}（前向值）\\
-        \texttt{grad}（反向值，目前全0）\\
-        \texttt{\_prev}（入边）\\
-        \texttt{\_backward}（局部规则）
-    };
-\end{tikzpicture}
-\caption{执行 \texttt{y = x*x + x*2 + 1} 后内存中的计算图}
-\end{figure}
-
-\subsection{Step 5：完整示例——生成一棵具体的计算图}
-
-\begin{lstlisting}[style=teaching, language=Python]
-# 使用示例：y = x^2 + 2x + 1
-x = Variable(3.0)            # 叶子节点
-y = x * x + x * 2 + 1        # 构图（每一步运算都在建计算图）
-y.backward()                 # 从 y 往回传播梯度
-
-print(f"x = {x.data}")       # 3.0
-print(f"y = {y.data}")       # 16.0
-print(f"dy/dx = {x.grad}")   # 8.0（理论值：2x + 2 = 8）
-\end{lstlisting}
-
-\textbf{我们详细看一下这三行代码执行时，内存中发生了什么}：
-
-\paragraph{第一步：\texttt{x = Variable(3.0)}}
-
-新建对象 \texttt{x}：
-\begin{itemize}
-    \item \texttt{x.data = 3.0}
-    \item \texttt{x.grad = 0.0}
-    \item \texttt{x.\_prev = $\emptyset$}（叶子节点，没有父节点）
-    \item \texttt{x.\_backward = lambda: None}
-\end{itemize}
-
-此时图上只有一个孤立的点 $x$。
-
-\paragraph{第二步：\texttt{y = x * x + x * 2 + 1}}
-
 \textbf{关键问题}：这行代码是被谁``拆''成一步步运算的？
 
 答案是：\textbf{Python 解释器自己拆的}。我们并没有写任何``解析器''，而是利用了 Python 的运算符重载机制。
@@ -915,7 +838,7 @@ print(f"dy/dx = {x.grad}")   # 8.0（理论值：2x + 2 = 8）
     \item \textbf{\texttt{x * x}}：Python 调用 \texttt{x.\_\_mul\_\_(x)}，建立乘法节点 $m_1$
     \begin{itemize}
         \item $m_1$\texttt{.data} = 9.0
-        \item $m_1$\texttt{.\_prev} = \{$x$, $x$\}（同一个对象出现两次）
+        \item $m_1$\texttt{.\_prev} = \{$x$\}（\texttt{set} 会去重；但闭包里对 \texttt{x.grad} 累加了两次）
         \item $m_1$\texttt{.\_backward} 存下闭包：两次累加 \texttt{x.grad += m1.grad * x.data}
     \end{itemize}
     
@@ -1045,52 +968,19 @@ x.\text{grad} = 8 = 2x + 2 \big|_{x=3} = \frac{dy}{dx}
 
 这正是拉格朗日方法的计算机实现：每个节点只需要知道自己的``邻居''，不需要了解整张图的结构。
 \end{physicalmeaning}
+\tryit{给 \texttt{Variable} 加上 \texttt{\_\_pow\_\_} 和 \texttt{exp()}，对 $y = \exp(x^2)$ 调用 \texttt{backward()}，再用中心差分 $[y(x+h) - y(x-h)]/2h$ 核对 \texttt{x.grad}。这是习题4的热身。}
 
 
 \section{梯度下降与优化器}
 有了梯度，下一步就是用它来更新参数。这一节介绍深度学习中常用的优化方法。
 
-回顾前面的内容，我们已经看到：训练一个神经网络，最终要做的事情其实很简单，就是让模型尽量“预测正确”。数学上，这可以写成一个优化问题：
-
-\begin{equation}
-\min_\theta L(\theta)
-= \min_\theta \frac{1}{N} \sum_{k=1}^N
-\ell\big(f(x^{(k)}; \theta), \, y^{(k)}\big),
-\end{equation}
-
-这里
-\begin{itemize}
-    \item $f(x^{(k)};\theta)$ 是模型对第 $k$ 个样本的预测，
-    \item $y^{(k)}$ 是真实答案，
-    \item $\ell(\cdot)$ 是单个样本的损失函数，
-    \item $L(\theta)$ 是所有样本的平均损失。
-\end{itemize}
-
-也就是说，训练神经网络本质上就是一个\textbf{无约束优化问题}：
-找到一组最好的参数 $\theta$，让 $L(\theta)$ 尽可能小。
-
-最直接的办法是梯度下降法：
-
-\begin{equation}
-\theta^{(t+1)}
-= \theta^{(t)} - \eta \, \nabla_\theta L\big(\theta^{(t)}\big),
-\end{equation}
-
-其中 $\eta$ 是学习率，表示每一步更新走多远。
-
-这看起来非常简单，但在真正训练一个大型神经网络时，会遇到很多实际困难：
+回顾本章开头：训练就是 $\min_\theta L(\theta)$——一个关于参数 $\theta$ 的\textbf{无约束}优化问题（约束已经被伴随变量"消化"进梯度里了）。最直接的办法是梯度下降。它看起来很简单，但在真正训练一个大型神经网络时会遇到几个实际困难：
 \begin{itemize}
     \item 数据量很大，不可能每次都计算全部样本；
-    \item 损失地形很复杂，可能非常弯、很深、甚至像峡谷一样；
+    \item 损失地形很复杂，可能像峡谷一样又弯又深；
     \item 不同方向的梯度大小差异巨大，导致震荡或停滞；
-    \item 学习率太大不行、太小也不行；
-    \item 参数数量可能是百万级甚至亿级，需要更聪明的更新方式。
+    \item 学习率太大不行、太小也不行。
 \end{itemize}
-
-这些问题都说明：\textbf{仅靠最基础的梯度下降是不够的}。
-
-因此我们需要各种更先进的“优化器”来帮助我们：
-让训练更快、更稳、更可靠。
 
 接下来，我们将看到 SGD、动量法和 Adam 等方法是如何一步步解决这些问题的。
 
@@ -1188,10 +1078,11 @@ v^{(t+1)} &= \beta \cdot v^{(t)} + \nabla_\theta L(\theta^{(t)}) \\
     \item 有动量：小球有惯性，能``冲过''小坑，沿着主方向加速
 \end{itemize}
 \end{physicalmeaning}
+\review{第4章}{"小球在损失曲面上滚"不只是比喻：把动量法写成连续时间，就是带阻尼的牛顿方程 $\ddot{\theta} + \gamma\dot{\theta} = -\nabla L(\theta)$——第4章的力学，势能就是损失函数，动量系数 $\beta$ 决定阻尼大小。}
 
 \subsection{Adam：自适应学习率}
 
-\marginnote{\textbf{Adam的诞生}：Adam由多伦多大学的Diederik Kingma和Jimmy Ba于2014年提出，发表于ICLR 2015。它巧妙地结合了动量法和RMSprop（Hinton课程中提出）的思想。论文引用超过20万次，Adam成为深度学习中最广泛使用的优化器之一，尤其在NLP和Transformer训练中几乎是标配。}
+\marginnote{\textbf{Adam的诞生}：Adam由阿姆斯特丹大学的Diederik Kingma和多伦多大学的Jimmy Ba于2014年提出，发表于ICLR 2015。它巧妙地结合了动量法和RMSprop（Hinton课程中提出）的思想。论文引用超过20万次，Adam成为深度学习中最广泛使用的优化器之一，尤其在NLP和Transformer训练中几乎是标配。}
 
 不同参数可能需要不同的学习率。\textbf{Adam}（Adaptive Moment Estimation）自动为每个参数调整学习率。
 
@@ -1286,7 +1177,7 @@ def train(model, data_loader, optimizer, num_epochs):
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.95\textwidth]{figs_chap09/chap09_fig1.png}
-\caption{自动微分与反向传播演示。（1）计算图展开：函数$y = (x^2 + 1) \cdot x$的计算图，显示中间变量$z_1 = x^2$, $z_2 = z_1 + 1$, $y = z_2 \cdot x$；（2）前向传播计算各中间值；（3）反向传播计算梯度：从损失$L$反向传播$\lambda$（伴随变量），最终得到$\partial L / \partial x$；（4）梯度验证：自动微分结果与数值差分对比，在$x=3$处得到$dy/dx = 8$，与书中结果一致。}
+\caption{自动微分与反向传播演示。（1）自动微分验证：本章例子 $y = x^2 + 2x + 1$，自动微分给出 $x = 3$ 处的切线斜率 $dy/dx = 8$，与手算一致；（2）用自动微分引擎训练线性回归 $y = 2x$ 的损失曲线；（3）拟合结果；（4）统一视角：神经网络的伴随变量 $\lambda_i$ 与最优控制的协态变量 $p(t)$ 逐项对应——都是约束优化的 KKT 条件。}
 \label{fig:chap09_autograd}
 \end{figure}
 
@@ -1322,6 +1213,15 @@ def train(model, data_loader, optimizer, num_epochs):
 \end{tabular}
 \end{center}
 \end{unification}
+
+\begin{physicalmeaning}
+\textbf{$\lambda$ 在本章的意义}：$\lambda_i$ 是第 $i$ 层等式约束的影子价格——把第 $i$ 层的输出 $z_i$ 悄悄改动 $\epsilon$，最终损失变化 $-\lambda_i^\top \epsilon$。深度学习管 $\delta_i = -\lambda_i$ 叫"误差信号"，控制论管它叫"协态"，第1章管它叫"影子价格"——三个名字，一个东西。
+\begin{itemize}
+    \item 第8章：把"层 $i$"换成"时刻 $k$"、把参数 $\theta_i$ 换成控制 $u_k$，本章的伴随方程逐字变回第8章的离散伴随方程。
+    \item 第10章：把损失换成"未来累计奖励"（符号因此翻转，$\lambda = +\partial J/\partial s$），把网络深度推到无穷，$\lambda$ 变成值函数的梯度，伴随方程变成贝尔曼方程。
+    \item 第13章：把自动微分反过来用——不是对参数求导，而是对输入坐标 $(x, t)$ 求导，就能把偏微分方程本身写进损失函数（PINN）。
+\end{itemize}
+\end{physicalmeaning}
 
 % ------------------------------------------------------------------------------------
 \section{习题}
@@ -1861,7 +1761,7 @@ dis.dis(f)
 
 这就是自动微分框架的设计哲学：\textbf{利用宿主语言的表达式求值机制，免费获得计算图构建能力}。PyTorch、JAX、TensorFlow Eager 都是这个思路。
 
-\section*{扩展阅读：深度学习与数值方法的深刻联系(第五章的后续)}
+\section*{扩展阅读：深度学习与数值方法的深刻联系——第5章的后续}
 \addcontentsline{toc}{section}{扩展阅读：与数值方法的联系}
 
 \marginnote{这一节揭示深度学习与经典数值方法的内在联系。你会发现，很多``新''的深度学习技术，其实是老方法的新面孔。}
@@ -2689,9 +2589,7 @@ Sigmoid的导数有一个优雅的形式：
 
 Sigmoid的最大梯度只有0.25（在$x=0$处）。经过$n$层网络后，梯度最多变成原来的$0.25^n$倍。这就是\textbf{梯度消失}（vanishing gradient）问题——深层网络的参数几乎无法更新。
 
-\begin{marginnote}
-\textbf{历史注记}：梯度消失问题是神经网络在1990年代陷入低谷的重要原因。直到2006年Hinton等人提出逐层预训练，以及后来ReLU的流行，深度学习才迎来复兴。
-\end{marginnote}
+\marginnote{\textbf{历史注记}：梯度消失问题是神经网络在1990年代陷入低谷的重要原因。直到2006年Hinton等人提出逐层预训练，以及后来ReLU的流行，深度学习才迎来复兴。}
 
 ReLU的优势在于：正半轴的梯度恒为1，不会衰减。这使得梯度可以"无损"地流过任意多层。但ReLU也有代价：负输入的梯度为0，一旦某个神经元进入"死亡"状态，它将永远无法恢复。
 
@@ -2851,7 +2749,7 @@ f_\theta : \mathcal{X} \to \mathcal{Y},
 \]
 这里的 $\mathcal{F}$ 可以理解为"在有限参数规模与有限深度下，网络实际能够高效表示的函数类"。
 
-虽然多层感知机（MLP）在理论上具有通用逼近能力，可以逼近任意连续函数，但在有限宽度、有限深度和有限训练样本的条件下，不同结构对不同类型数据的表达效率差异巨大。本章从公式与直觉两方面，分析典型网络结构与数据结构之间的对应关系，并给出一些"某一结构难以识别、另一结构容易识别"的具体例子。
+虽然多层感知机（MLP）在理论上具有通用逼近能力，可以逼近任意连续函数，但在有限宽度、有限深度和有限训练样本的条件下，不同结构对不同类型数据的表达效率差异巨大。本节从公式与直觉两方面，分析典型网络结构与数据结构之间的对应关系，并给出一些"某一结构难以识别、另一结构容易识别"的具体例子。
 
 %----------------------------------------------------------------------
 \subsection*{一、基本单元：仿射变换与非线性}
@@ -3024,6 +2922,7 @@ K = \begin{bmatrix} 1 & 0 & -1\\ 1 & 0 & -1\\ 1 & 0 & -1 \end{bmatrix}.
 
 %----------------------------------------------------------------------
 \subsection*{四、序列建模：RNN 与 Transformer 对长依赖的处理}
+\preview{第11章会专门推导 RNN 的梯度消失（把本章的伴随方程沿时间展开）并介绍 Transformer 的注意力机制；这里只从"函数类"的角度做个预告。}
 %----------------------------------------------------------------------
 
 \paragraph{RNN 的递推结构}

@@ -1,4 +1,6 @@
+% ====================================================================================
 \chapter{物理信息神经网络：当神经网络遇见物理定律}
+% ====================================================================================
 
 % ====================================================================================
 \section*{引言：一个新的求解思路}
@@ -6,7 +8,7 @@
 
 \marginnote{PINN由Raissi、Perdikaris和Karniadakis于2019年在Journal of Computational Physics发表，全称Physics-Informed Neural Networks。这篇论文引用量已超过15000次，开创了AI for Science的重要方向。}
 
-\marginnote{\textbf{George Karniadakis}(1961--)：布朗大学教授，美国工程院院士，PINN的主要推动者。他的研究横跨计算力学和机器学习，是``科学机器学习''(SciML)领域的奠基人之一。他培养了大量学生推动AI for Science的发展。}
+\storynote{George Karniadakis}{1961--，布朗大学教授，美国工程院院士，PINN的主要推动者。他的研究横跨计算力学和机器学习，是``科学机器学习''(SciML)领域的奠基人之一。他培养了大量学生推动AI for Science的发展。}
 
 在传统的数值分析课程中，我们学习用有限差分、有限元等方法求解微分方程。这些方法需要将空间离散成网格，然后在网格点上求解代数方程组。
 
@@ -16,23 +18,19 @@
 
 这个想法听起来很简单，但实现起来却充满挑战。本章我们将用熟悉的\textbf{拉格朗日乘子法}来理解PINN的数学本质，揭示它为什么有时很好用，有时却训练不出来，以及现代研究如何解决这些问题。
 
-\begin{framed}
-\textbf{本章目标}：
-\begin{enumerate}
-    \item 理解PINN的数学本质——它是一个约束优化问题
-    \item 亲手实现一个完整的PINN求解器
-    \item 分析训练困难的根源——梯度竞争与病态优化
-    \item 掌握现代PINN的改进方法——动态权重与拉格朗日对偶
-    \item 了解变分视角如何提供另一条路径
-\end{enumerate}
-\end{framed}
+\vspace{0.3cm}
+\noindent\textit{为什么一个连网格都没有的神经网络能"解"微分方程？为什么损失函数里那个不起眼的权重 $\lambda$ 能决定训练成败？为什么同样的网络，换一种写法（能量而不是残差）就只需要一阶导数？}
+
+\begin{quote}
+\textbf{本章目标}：让你看清 PINN 不是"神经网络的新玩法"，而是第1章的老朋友：物理定律是约束，神经网络只是一个可微的猜测函数，损失函数里那些让人头疼的权重，就是第1章视角三里的罚系数 $\rho$。看懂了这一点，PINN 为什么会训练失败、自适应权重为什么有效、Deep Ritz 为什么只要一阶导数，都会变成同一个问题的不同侧面。
+\end{quote}
 
 \begin{tcolorbox}[colback=green!5, colframe=green!60!black, title=学完这章，你将能够...]
 \begin{itemize}
     \item 用PyTorch实现一个完整的PINN求解Poisson方程
     \item 诊断PINN训练失败的原因（梯度竞争、采样不足等）
-    \item 实现自适应损失加权（NTK权重、拉格朗日乘子法）
-    \item 对比PINN与传统数值方法的优缺点
+    \item 实现自适应损失加权（拉格朗日对偶上升）
+    \item 说出PINN相对传统数值方法的优势与代价
     \item 将PINN应用于简单的反问题（参数识别）
 \end{itemize}
 \end{tcolorbox}
@@ -87,6 +85,7 @@ PINN的想法出奇地简单：
 \begin{equation}
     \frac{\partial u_\theta}{\partial x}, \quad \frac{\partial^2 u_\theta}{\partial x^2}, \quad \nabla^2 u_\theta, \quad \text{等等}
 \end{equation}
+\review{第9章}{自动微分不是数值差分：它沿计算图逐节点套链式法则，导数是精确的。第9章我们手写过一个微型 autograd；PINN 里的 $\partial^2 u_\theta/\partial x^2$ 就是对同一张计算图"再求一次导"。}
 
 \begin{remark}[自动微分 vs 数值微分 vs 符号微分]
 
@@ -130,13 +129,13 @@ PINN的想法出奇地简单：
 \begin{example}[回顾有限维拉格朗日乘子法]
 考虑有限维优化问题：
 \begin{equation}
-    \min_{x \in \mathbb{R}^n} f(x) \quad \text{s.t.} \quad h(x) = 0
+    \min_{x \in \mathbb{R}^n} f(x) \quad \text{s.t.} \quad g(x) = 0
 \end{equation}
 拉格朗日函数为：
 \begin{equation}
-    \mathcal{L}(x, \lambda) = f(x) + \lambda^T h(x)
+    \mathcal{L}(x, \lambda) = f(x) + \lambda^T g(x)
 \end{equation}
-最优解满足KKT条件：$\nabla_x \mathcal{L} = 0$，$h(x) = 0$。
+最优解满足KKT条件：$\nabla_x \mathcal{L} = 0$，$g(x) = 0$。
 \end{example}
 
 对于PINN，如果我们将约束严格写成拉格朗日形式：
@@ -146,9 +145,34 @@ PINN的想法出奇地简单：
 
 但在实践中，我们通常不显式引入拉格朗日乘子函数$\lambda(x)$和$\mu(x)$（因为它们也是无穷维的），而是采用更简单的\textbf{罚函数法}——直接惩罚约束违反的程度。
 
+\begin{tcolorbox}[colback=yellow!10, colframe=orange!80, title=本章的核心观点]
+\textbf{PINN 就是第1章的拉格朗日乘子法，只是约束从几条变成了"每个配点一条"，而且我们先走的是视角三——罚函数——这条近路。}
+
+这不是比喻。PINN 的"约束"就是物理定律本身：在每个内部配点 $x_i$ 要求 $\mathcal{N}[u_\theta](x_i) - f(x_i) = 0$，在每个边界配点 $x_j$ 要求 $u_\theta(x_j) - g(x_j) = 0$——有多少个配点，就有多少条约束。目标函数则出奇地简单：\textbf{什么都不用优化}（$f \equiv 0$），我们只是在找一个可行点；有观测数据时目标才变成数据误差。固定权重 PINN 的损失 $L_{\mathrm{PDE}} + \rho\, L_{\mathrm{BC}}$ 就是第1章的 $f + \frac{\rho}{2}|g|^2$；自适应权重就是把隐含乘子 $\rho\, g$ 换成显式乘子 $\lambda$ 再做对偶上升；硬约束则是第1章的"代入消元"。
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabular}{lll}
+\toprule
+ & \textbf{第1章} & \textbf{本章（PINN）} \\
+\midrule
+变量 & $x \in \R^n$ & 网络参数 $\theta$（决定函数 $u_\theta$） \\
+目标 & $f(x)$ & $0$（纯可行性）或数据项 $L_{\mathrm{data}}$ \\
+约束 & $g(x) = 0$ & $\mathcal{N}[u_\theta](x_i) = f(x_i)$，$u_\theta(x_j) = g(x_j)$（每个配点一条） \\
+乘子 & $\lambda$ & $\lambda_i, \mu_j$：乘子函数 $\lambda(x), \mu(x)$ 在配点上的采样 \\
+罚函数 & $f + \frac{\rho}{2}|g|^2$ & $L_{\mathrm{PDE}} + \rho\, L_{\mathrm{BC}}$（损失权重 $=$ 罚系数） \\
+一阶条件 & $\nabla f + \lambda^\top \nabla g = 0$ & $\nabla_\theta L_{\mathrm{PDE}} + \lambda\, \nabla_\theta L_{\mathrm{BC}} = 0$ \\
+对偶上升 & $\lambda \leftarrow \lambda + \eta\, g$（第2、10章） & $\lambda \leftarrow \lambda + \eta\, r$（自适应权重） \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{tcolorbox}
+\review{第1章}{视角三"罚函数"：把约束 $g(x) = 0$ 软化成 $\frac{\rho}{2}|g|^2$ 加进目标，$\rho \to \infty$ 时隐含乘子 $\rho\, g(x)$ 趋向真正的 $\lambda$。PINN 损失里的权重就是这个 $\rho$。}
+
 \subsection{PINN的损失函数：罚函数法}
 
-\begin{keyidea}{配点（Collocation Points）是什么？——大白话版}
+\begin{keyidea}[配点（Collocation Points）是什么？——大白话版]
 在传统方法中，我们需要在整个区域建立"网格"，在每个网格点上求解。但PINN使用的是\textbf{配点法}（collocation method）：
 
 \textbf{核心思想}：随机撒一些点，检查神经网络在这些点上是否"正确"。
@@ -175,17 +199,18 @@ PINN的损失函数由两部分组成：
     \item $\lambda > 0$是\textbf{罚参数}（penalty parameter），平衡两个损失项的重要性
 \end{itemize}
 \end{definition}
+\clarify{别把损失权重和拉格朗日乘子混为一谈。第1章的对照：罚系数 $\rho$ 是你定的"罚款单价"，乘子 $\lambda$ 是问题自己算出来的"影子价格"。本章沿用 PINN 文献的习惯把这个权重记作 $\lambda$——请记住它扮演的是 $\rho$ 的角色；只有后面"拉格朗日对偶视角"一节的对偶上升，才真正把乘子请出来。}
 
 \begin{remark}[罚函数法的本质]
-回顾你学过的罚函数法：将约束优化问题
+回顾第1章视角三的罚函数法：将约束优化问题
 \begin{equation}
-    \min f(x) \quad \text{s.t.} \quad h(x) = 0
+    \min f(x) \quad \text{s.t.} \quad g(x) = 0
 \end{equation}
 转化为无约束问题：
 \begin{equation}
-    \min f(x) + \frac{\lambda}{2}\|h(x)\|^2
+    \min f(x) + \frac{\rho}{2}\|g(x)\|^2
 \end{equation}
-当$\lambda \to \infty$时，最优解趋近于原问题的解。
+当$\rho \to \infty$时，最优解趋近于原问题的解，而隐含乘子 $\rho\, g(x)$ 趋向真正的拉格朗日乘子。
 
 PINN正是这个思路：$L_{\text{PDE}}$惩罚方程不被满足的程度，$L_{\text{BC}}$惩罚边界条件不被满足的程度。
 \end{remark}
@@ -198,6 +223,7 @@ PINN正是这个思路：$L_{\text{PDE}}$惩罚方程不被满足的程度，$L_
 \end{itemize}
 这个两难困境是PINN训练困难的核心原因之一，我们将在第\ref{sec:gradient_pathology}节详细讨论。
 \end{tcolorbox}
+\review{第5章}{有限元处理 Dirichlet 边界的"大数法"也是罚函数：把对角元改成 $10^{20}$ 强迫 $U_0 \approx g_0$，代价是刚度矩阵条件数变差。PINN 里 $\lambda$ 太大导致训练变慢，是同一种病——见第5章扩展阅读"条件数"。}
 
 \subsubsection{罚参数$\lambda$的影响：实验验证}
 
@@ -556,7 +582,7 @@ Epoch  3000 | Loss: 8.67e-05 | PDE: 8.65e-05 | BC: 1.45e-07
 
 \textbf{1. 收敛行为}。总损失从初始的$10^{-1}$量级下降到$10^{-5}$量级，说明网络成功学习到了满足PDE和边界条件的解。训练过程中，PDE损失和边界损失呈现出典型的"阶梯式"下降模式，这是因为我们每个epoch都重新采样配点，引入了随机性。
 
-\textbf{2. 解的精度}。最终的均方误差（MSE）达到$4.60 \times 10^{-8}$，最大绝对误差约$3.4 \times 10^{-4}$。这个精度对于一个简单问题来说是令人满意的，说明PINN确实能够学习到正确的物理解。
+\textbf{2. 解的精度}。最终的均方误差（MSE）达到$4.60 \times 10^{-8}$（上面那次运行为 $2.34 \times 10^{-7}$；不同随机种子下结果在 $10^{-8}$ 到 $10^{-7}$ 量级之间波动），最大绝对误差约$3.4 \times 10^{-4}$。这个精度对于一个简单问题来说是令人满意的，说明PINN确实能够学习到正确的物理解。
 
 \textbf{3. 边界条件的满足}。边界损失最终稳定在$10^{-7}$到$10^{-8}$量级，说明网络在边界点$x=0$和$x=1$处的预测值非常接近零。这体现了软约束（罚函数法）的有效性。
 
@@ -630,6 +656,7 @@ $x$ & 解析解 $u_{\text{exact}}(x)$ & PINN预测 $u_\theta(x)$ & 绝对误差 
     \item $N_\theta(x)$是普通的神经网络，可以输出任意值
 \end{itemize}
 \end{definition}
+\storynote{Lagaris, Likas \& Fotiadis}{1998年，三位希腊学者就用神经网络解微分方程，用的正是这里的"提升函数 + 距离函数"形式 $u = A(x) + B(x) N_\theta(x)$。当时没有自动微分框架也没有 GPU，这个想法沉睡了近二十年，直到 PINN 把它唤醒。}
 
 \begin{example}[一维齐次边界条件]
 对于$u(0) = 0, u(1) = 0$的边界条件，我们可以选择：
@@ -934,7 +961,7 @@ plt.show()
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.95\textwidth]{figs_chap13/spectral_bias.pdf}
-    \caption{频谱偏置现象演示。目标函数$u(x) = \sin(2\pi x) + 0.5\sin(20\pi x)$包含低频和高频成分。四个子图展示不同训练阶段的拟合效果：左上为初始状态，右上为第500轮，左下为第2000轮，右下为第5000轮。可见网络先学会低频成分，高频成分需要更长时间才能拟合。}
+    \caption{频谱偏置现象演示。目标函数$u(x) = \sin(2\pi x) + 0.1\sin(20\pi x)$包含低频和高频成分。四个子图展示不同训练阶段的拟合效果：左上为初始状态，右上为第500轮，左下为第2000轮，右下为第5000轮。可见网络先学会低频成分，高频成分需要更长时间才能拟合。}
     \label{fig:spectral_bias}
 \end{figure}
 
@@ -1059,7 +1086,7 @@ class FourierPINN(nn.Module):
         \item scale=30.0：能学习更高频，但训练初期可能有波动
     \end{itemize}
 
-    \item \textbf{实践建议}。scale参数应该根据目标函数的最高频率来选择。经验法则是$\text{scale} \approx 10 \times f_{\max}$，其中$f_{\max}$是目标函数中期望捕捉的最高频率。
+    \item \textbf{实践建议}。scale参数应该根据目标函数的最高频率来选择。经验法则是$\text{scale} \approx f_{\max}$（本实验 $f_{\max} = 10$，scale $= 10$ 最好），其中$f_{\max}$是目标函数中期望捕捉的最高频率。
 \end{enumerate}
 
 \begin{tcolorbox}[colback=green!5, colframe=green!50, title=傅里叶特征的本质]
@@ -1088,6 +1115,7 @@ class FourierPINN(nn.Module):
 \end{equation}
 即两个梯度的夹角大于90°，那么一个任务的优化会损害另一个任务。
 \end{definition}
+\think{梯度竞争的本质是"目标"和"约束"在参数空间抢方向。第1章的 KKT 条件 $\nabla f + \lambda \nabla g = 0$ 恰恰说：在最优点两者的梯度必须共线反向。所以夹角大于 $90^\circ$ 不是 bug，而是"还没到最优点"的信号——问题在于固定的 $\lambda$ 永远没法让它们恰好抵消。}
 
 \begin{figure}[htbp]
     \centering
@@ -1165,7 +1193,7 @@ for epoch in range(num_epochs):
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.95\textwidth]{figs_chap13/gradient_diagnosis.pdf}
-    \caption{梯度冲突诊断结果。左图：PDE损失梯度与边界条件损失梯度的余弦相似度，负值表示梯度方向冲突；右图：两个损失项的梯度范数对比，边界条件梯度范数通常较大（因为权重$\lambda=100$）。}
+    \caption{梯度冲突诊断结果。左图：PDE损失梯度与边界条件损失梯度的余弦相似度，负值表示梯度方向冲突；右图：两个损失项的梯度范数对比，PDE 梯度范数比边界条件梯度大 1–3 个数量级（即使边界项权重取 $\lambda = 100$）。}
     \label{fig:gradient_diagnosis}
 \end{figure}
 
@@ -1203,7 +1231,7 @@ for epoch in range(num_epochs):
     \min_\theta L_{\text{PDE}}(\theta) \quad \text{s.t.} \quad L_{\text{BC}}(\theta) = 0
 \end{equation}
 
-增广拉格朗日函数为：
+拉格朗日函数为：
 \begin{equation}
     \mathcal{L}(\theta, \lambda) = L_{\text{PDE}}(\theta) + \lambda L_{\text{BC}}(\theta)
 \end{equation}
@@ -1212,12 +1240,14 @@ for epoch in range(num_epochs):
 对偶上升法（Dual Ascent）交替更新原始变量和对偶变量：
 \begin{align}
     \theta^{k+1} &= \arg\min_\theta \mathcal{L}(\theta, \lambda^k) \quad \text{（原始更新）} \\
-    \lambda^{k+1} &= \lambda^k + \rho \cdot L_{\text{BC}}(\theta^{k+1}) \quad \text{（对偶更新）}
+    \lambda^{k+1} &= \lambda^k + \eta_\lambda \cdot L_{\text{BC}}(\theta^{k+1}) \quad \text{（对偶更新，$\eta_\lambda$ 是对偶步长）}
 \end{align}
 \end{definition}
+\review{第2章}{对偶上升不是新东西：第2章的对偶函数 $d(\lambda) = \min_\theta \mathcal{L}(\theta, \lambda)$ 满足 $\partial d/\partial \lambda = g(\theta^*)$，所以 $\lambda \leftarrow \lambda + \eta\, g$ 就是沿对偶函数爬山。第10章用同一招求最短路。}
+\clarify{一个数学上的细节：$L_{\mathrm{BC}}$ 是残差的\textbf{平方和}，把它当成单条约束时，可行点处 $\nabla L_{\mathrm{BC}} = 0$，乘子会退化；而且对偶更新的增量正比于残差的平方，残差一小乘子就"冻住"。更规范的做法是逐点约束 $r_j = 0$、逐点带符号更新 $\lambda_j \leftarrow \lambda_j + \eta\, r_j$——这也和前面的乘子函数 $\mu(x)$ 自洽。}
 
 \begin{tcolorbox}[colback=green!5, colframe=green!50, title=关键洞察]
-对偶更新$\lambda^{k+1} = \lambda^k + \rho \cdot L_{\text{BC}}(\theta^{k+1})$的直觉：
+对偶更新$\lambda^{k+1} = \lambda^k + \eta_\lambda \cdot L_{\text{BC}}(\theta^{k+1})$的直觉：
 \begin{itemize}
     \item 如果边界条件没被满足好（$L_{\text{BC}}$大），就增大$\lambda$，加强惩罚
     \item 如果已经满足得很好（$L_{\text{BC}}$小），$\lambda$就保持稳定
@@ -1309,6 +1339,7 @@ history = trainer.train(num_epochs=10000)
     \item 过大的固定权重可能并非最优选择
     \item 自适应方法能自动找到合适的平衡点
 \end{itemize}
+\think{自适应得到的 $\lambda \approx 1.04$ 比人工设定的 100 小两个数量级，精度却更差，矛盾吗？提示：对偶更新的增量正比于 $L_{\mathrm{BC}}$，而它是残差的平方；残差降到 $10^{-3}$ 时 $\lambda$ 每步只涨 $10^{-7}$——乘子"冻住"了。改用带符号的逐点残差 $r_j$ 来更新会怎样？}
 
 \textbf{3. 精度对比}。在本实验中，固定权重方法的MSE（$4.60 \times 10^{-8}$）略优于自适应方法（$3.32 \times 10^{-6}$）。这是因为对于这个简单问题，$\lambda=100$恰好是一个较好的选择。
 
@@ -1427,9 +1458,9 @@ loss = torch.mean(residual ** 2) + lambda_ic * loss_ic + lambda_bc * loss_bc
 \begin{definition}[因果权重函数]
 定义因果权重：
 \begin{equation}
-    w(t) = \exp\left( -\epsilon \int_0^t |r(x, s)|^2 \, ds \right)
+    w(t) = \exp\left( -\epsilon \int_0^t L_r(s) \, ds \right), \qquad L_r(s) = \frac{1}{N_x}\sum_i |r(x_i, s)|^2
 \end{equation}
-其中$r(x, t)$是PDE残差，$\epsilon > 0$是控制因果性强度的参数。
+其中$r(x, t)$是PDE残差，$L_r(s)$是 $s$ 时刻的空间平均残差，$\epsilon > 0$是控制因果性强度的参数。
 \end{definition}
 
 \textbf{直觉}：只有当$t' < t$时刻的残差足够小，$t$时刻的权重$w(t)$才会接近1。
@@ -1495,6 +1526,7 @@ loss = torch.mean(residual ** 2) + lambda_ic * loss_ic + lambda_bc * loss_bc
 \begin{theorem}[能量原理]
 $u$是泊松方程的解，当且仅当$u$是能量泛函$J[u]$的极小点。
 \end{theorem}
+\review{第5章}{"有限元 = 能量最小化"：第5章证明了 $KU = F$ 是 $\min_U \frac{1}{2}U^\top KU - F^\top U$ 的一阶条件，而这个二次型正是 $J[u]$ 在有限元基下的离散版本。Deep Ritz 只是把基函数换成了神经网络。}
 
 \begin{proof}
 对$J[u]$求变分。设$v$是任意满足$v|_{\partial\Omega} = 0$的函数，考虑：
@@ -1586,7 +1618,7 @@ def compute_ritz_loss(model, x_interior, x_boundary, f_func, lambda_bc=100.0):
 \begin{tcolorbox}[colback=blue!5, colframe=blue!50, title=Deep Ritz的优势]
 \begin{enumerate}
     \item \textbf{导数阶数降低}：只需要一阶导数，计算更稳定
-    \item \textbf{物理直觉}：对应最小作用量原理——物理系统总是"选择"能量最低的状态
+    \item \textbf{物理直觉}：对应最小势能原理（第3章的变分原理、第5章的"有限元 = 能量最小化"）——静态系统总是"选择"能量最低的状态
     \item \textbf{高维友好}：蒙特卡洛积分在高维空间中效率较高
 \end{enumerate}
 \end{tcolorbox}
@@ -1870,7 +1902,7 @@ $(0.25, 0.75)$ & 0.5000000 & 0.4998247 & $1.8 \times 10^{-4}$ \\
     
     \item \textbf{拉格朗日对偶视角}
     \begin{itemize}
-        \item 罚函数法是拉格朗日方法的特例
+        \item 罚函数法是拉格朗日乘子法的近似（$\rho \to \infty$ 的极限，第1章视角三）
         \item 对偶上升法提供自适应调整权重的机制
     \end{itemize}
     
@@ -1887,27 +1919,30 @@ $(0.25, 0.75)$ & 0.5000000 & 0.4998247 & $1.8 \times 10^{-4}$ \\
     \end{itemize}
 \end{enumerate}
 
-\subsection{与前几章的联系}
-
+\begin{physicalmeaning}
+\textbf{$\lambda$ 在本章的意义}：$\lambda_j$ 是"在边界点 $x_j$ 把边界条件放松一点，PDE 残差能降多少"——边界条件的影子价格。它大，说明网络正被边界条件"卡住"，PDE 和边界在抢梯度；它趋于零，说明边界已不是瓶颈。固定权重 PINN 看不到这个价格，只能靠人猜一个 $\rho$；对偶上升让 $\lambda$ 自己涨到该有的大小；硬约束则用第1章"代入消元"的办法把边界约束干脆消掉，于是 $\lambda$ 不再需要。
 \begin{itemize}
-    \item \textbf{第1章（拉格朗日乘子法）}：PINN中的软约束就是罚函数法，硬约束则消除了约束
-    \item \textbf{第3章（变分法）}：Deep Ritz Method直接使用了能量泛函最小化
-    \item \textbf{第5章扩展阅读（条件数）}：PINN的训练困难与优化问题的条件数密切相关
+    \item \textbf{第1章（拉格朗日乘子法）}：软约束就是视角三的罚函数法，硬约束就是代入消元
+    \item \textbf{第3章（变分法）与第5章（有限元）}：Deep Ritz 直接最小化能量泛函，只是把帐篷函数换成了神经网络
+    \item \textbf{第5章扩展阅读（条件数）}：PINN 的训练困难与优化问题的条件数密切相关
+    \item \textbf{第9章}：PINN 把自动微分反过来用——对输入坐标而不是参数求导
+    \item \textbf{往后看第14章}：把"对每一个点的方程约束放松一个单位"的影子价格整张表学出来，那就是格林函数
 \end{itemize}
+\end{physicalmeaning}
 
 % ====================================================================================
-\section{思考题}
+\section{习题}
 % ====================================================================================
 
+\paragraph{计算题}
 \begin{enumerate}
     \item \textbf{硬约束设计}：对于二维圆域$\Omega = \{(x, y) : x^2 + y^2 < 1\}$上的齐次边界条件，设计一个硬约束形式的网络$u_\theta(x, y)$。（提示：参考例\ref{ex:circle}）
     
-    \item \textbf{条件数分析}：在有限差分法中，刚度矩阵的条件数通常与$h^{-2}$成正比（$h$是网格步长）。你认为PINN的优化问题是否也存在类似的条件数问题？这与哪些因素有关？
-    
-    \item \textbf{能量与残差}：对于非椭圆型方程（如对流方程$u_t + c u_x = 0$），是否存在相应的能量泛函？Deep Ritz Method是否适用？
-    
-    \item \textbf{逆问题的可辨识性}：在逆问题中，如果观测数据太少，参数可能无法唯一确定。举一个具体的例子说明这一点。
-    
+\end{enumerate}
+
+\paragraph{编程题}
+\begin{enumerate}
+    \setcounter{enumi}{1}
     \item \textbf{编程实践}：实现一个完整的PINN求解器，求解二维泊松方程
     \begin{equation}
         -\nabla^2 u = 2\pi^2 \sin(\pi x)\sin(\pi y), \quad (x, y) \in [0, 1]^2
@@ -1916,6 +1951,19 @@ $(0.25, 0.75)$ & 0.5000000 & 0.4998247 & $1.8 \times 10^{-4}$ \\
         u = 0, \quad (x, y) \in \partial[0, 1]^2
     \end{equation}
     解析解为$u(x, y) = \sin(\pi x)\sin(\pi y)$。比较软约束和硬约束方法的效果。
+\end{enumerate}
+
+\paragraph{思考题}
+\begin{enumerate}
+    \setcounter{enumi}{2}
+    \item \textbf{条件数分析}：在第5章的有限元法中，刚度矩阵的条件数通常与$h^{-2}$成正比（$h$是网格步长）。你认为PINN的优化问题是否也存在类似的条件数问题？这与哪些因素有关？
+    
+    
+    \item \textbf{能量与残差}：对于非椭圆型方程（如对流方程$u_t + c u_x = 0$），是否存在相应的能量泛函？Deep Ritz Method是否适用？
+    
+    
+    \item \textbf{逆问题的可辨识性}：在逆问题中，如果观测数据太少，参数可能无法唯一确定。举一个具体的例子说明这一点。
+    
 \end{enumerate}
 
 % 

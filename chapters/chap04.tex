@@ -21,6 +21,12 @@ Maupertuis 是这样推理的：如果上帝创造了这个世界，他一定会
     \item 粒子物理的标准模型由一个作用量完全描述
 \end{itemize}
 
+\vspace{0.3cm}
+\noindent\textit{为什么单摆的绳子张力可以"不用算"就自动出现？为什么游戏引擎里的布料、机器人仿真里的关节，都用同一套方程？为什么一个"上帝很节俭"的神学猜想，会变成物理学最深刻的原理？}
+
+\vspace{0.3cm}
+答案都藏在同一个地方：\textbf{力学是一个约束优化问题}，而约束力就是第1章的拉格朗日乘子。
+
 \begin{quote}
 \textbf{本章目标}：展示牛顿定律不是"公理"，而是从一个更深刻的优化原理推导出来的结果。你在第1章学过的拉格朗日乘子法，正是分析约束力学系统的标准工具。
 \end{quote}
@@ -34,13 +40,14 @@ Maupertuis 是这样推理的：如果上帝创造了这个世界，他一定会
     \item 理解约束力如何自然地由拉格朗日乘子给出
 \end{itemize}
 \end{tcolorbox}
+\preview{第7章机器人动力学 $M(q)\ddot{q} + C(q,\dot{q})\dot{q} + G(q) = \tau$ 就是本章拉格朗日方程的矩阵写法；第8章轨迹优化则把 $\delta S = 0$ 反过来用——不是求运动，而是设计运动。}
 
 % ------------------------------------------------------------------------------------
 \section{两种世界观：牛顿 vs 拉格朗日}
 
 \subsection{牛顿的视角：力导致运动}
 
-\marginnote{\textbf{牛顿}(1643--1727)：人类历史上最伟大的科学家之一。他发明了微积分、发现万有引力、建立经典力学体系。牛顿出生那年伽利略去世，爱因斯坦出生那年麦克斯韦去世——科学史的巧合令人惊叹。}
+\marginnote{\textbf{牛顿}(1642--1727，按当时英国使用的儒略历)：人类历史上最伟大的科学家之一。他发明了微积分、发现万有引力、建立经典力学体系。牛顿出生那年伽利略去世，爱因斯坦出生那年麦克斯韦去世——科学史的巧合令人惊叹。}
 
 你在大一物理课上学过牛顿第二定律：
 \[
@@ -153,6 +160,42 @@ Maupertuis 是这样推理的：如果上帝创造了这个世界，他一定会
 \end{insightbox}
 
 % ------------------------------------------------------------------------------------
+\section{本章的核心观点}
+
+在进入计算之前，先把本章放回全书的主线上。
+
+\begin{tcolorbox}[colback=yellow!10, colframe=orange!80, title=核心观点]
+\textbf{力学不是什么新东西——它就是第1章的拉格朗日乘子法，只不过变量是一整条路径 $q(t)$，目标是作用量 $S = \int L\,dt$，而约束（绳长、斜面、轨道）的乘子恰好是约束力。}
+
+无约束时，$\delta S = 0$ 就是第3章的 E-L 方程。有约束时，照第1章的做法把约束乘上乘子加进目标：
+\[
+\Lag[q, \lambda] = \int_{t_1}^{t_2} \Big[ L(q, \dot{q}, t) + \lambda(t)\, g(q, t) \Big] dt .
+\]
+对 $q$ 取变分得到运动方程，对 $\lambda$ 取变分得回约束 $g = 0$。乘子是一个函数 $\lambda(t)$——因为约束每个时刻都要成立，正如第3章每个格点都有一个 $\lambda_k$。这不是巧合。
+\end{tcolorbox}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\small
+\begin{tabular}{llll}
+\toprule
+& \textbf{第1章} & \textbf{第3章} & \textbf{本章} \\
+\midrule
+变量 & 向量 $\mathbf{x} \in \R^n$ & 曲线 $y(x)$ & 路径 $q(t)$ \\
+目标 & $f(\mathbf{x})$ & $J[y] = \int F\,dx$ & $S[q] = \int (T - V)\,dt$ \\
+约束 & $g(\mathbf{x}) = 0$ & $y_{k+1} - y_k = v_k \Delta x$ & $g(q, t) = 0$（绳长、斜面） \\
+乘子 & $\lambda$（影子价格） & $\lambda_k = \partial F / \partial v_k$（动量） & $\lambda(t)$，约束力 $= \lambda \nabla g$ \\
+一阶条件 & $\nabla f + \lambda \nabla g = 0$ & E-L 方程 & $\frac{d}{dt}\frac{\partial L}{\partial \dot{q}} - \frac{\partial L}{\partial q} = \lambda \frac{\partial g}{\partial q}$ \\
+影子价格 & $df^*/dc$ & $dJ^*/dc$ & 静力学时 $\partial V^*/\partial l$ = 张力 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{直觉疑问}：牛顿力学里"力"是原因，为什么这里"力"反而成了优化问题的副产品？
+
+\textbf{回答}：因为约束力从来不是独立的物理输入——它的大小恰好是"让约束成立所需的量"。第1章里 $\lambda$ 是"让 $g = 0$ 成立所需的价格"，这里它是"让绳子不断、滑块不穿透斜面所需的力"。同一个数学，两种说法。
+
+% ------------------------------------------------------------------------------------
 \section{作用量与拉格朗日量}
 
 \subsection{什么是作用量？}
@@ -184,19 +227,22 @@ S[q] = \int_{t_1}^{t_2} L(q, \dot{q}, t) \, dt
 \end{equation}
 其中 $T$ 是\textbf{动能}，$V$ 是\textbf{势能}。
 \end{definition}
+\clarify{注意区分两个"拉格朗日"：第1章的拉格朗日函数 $\Lag = f + \lambda^\top g$ 是"目标 + 乘子 $\times$ 约束"；本章的拉格朗日量 $L = T - V$ 只是目标函数（作用量）的被积函数。本章出现约束时，第1章意义上的 $\Lag$ 是 $\int [L + \lambda g]\,dt$。}
 
 \paragraph{为什么是 $T - V$ 而不是 $T + V$？}
 
-这是一个很好的问题。$T + V$ 是总能量，似乎更"自然"。但让我们看看两者的区别：
+这是一个很好的问题。$T + V$ 是总能量，似乎更"自然"。
 
-\begin{itemize}
-    \item $T + V$：总能量，在保守系统中是\textbf{守恒量}（不随时间变化）
-    \item $T - V$：拉格朗日量，是\textbf{变化量}（随位置和速度变化）
-\end{itemize}
+一个常见但\textbf{错误}的解释是："$T+V$ 守恒，所以对所有路径积分都一样，无法区分路径。"错在哪里？能量守恒只在\textbf{真实轨迹}上成立；变分原理比较的是所有\textbf{试探路径}，在那些路径上 $T+V$ 并不是常数。
 
-如果用 $T + V$ 做被积函数，由于它是常数，对不同路径积分会得到相同的值——无法区分路径的好坏！
+真正的理由要靠计算。对谐振子取 $L = T + V = \frac{1}{2}m\dot{x}^2 + \frac{1}{2}kx^2$，套用第3章的 E-L 方程，得到
+\[
+m\ddot{x} = +kx,
+\]
+力的符号反了——解是指数增长，而不是振荡。换成 $L = T - V$，才得到正确的 $m\ddot{x} = -kx$。
 
-只有 $T - V$ 才能从变分原理导出正确的运动方程。这不是人为选择，而是数学推导的\textbf{必然结果}。
+\textbf{一句话}：$T - V$ 不是人为约定，而是"变分原理必须重现牛顿定律"这一要求的\textbf{必然结果}。
+\tryit{自己动手：对 $L = \frac{1}{2}m\dot{x}^2 + \frac{1}{2}kx^2$ 写出 E-L 方程，再对 $L = \frac{1}{2}m\dot{x}^2 - \frac{1}{2}kx^2$ 写一遍，比较两个方程的解。}
 
 \begin{example}[一维谐振子的拉格朗日量]
 弹簧-质量系统，弹簧常数 $k$，质量 $m$。
@@ -252,7 +298,7 @@ L = T - V = \frac{1}{2}m\dot{x}^2 - \frac{1}{2}kx^2
 \end{equation}
 \end{keytheorem}
 
-这里 $\delta S = 0$ 是第4章学过的变分条件——泛函的一阶变分为零。
+这里 $\delta S = 0$ 是第3章学过的变分条件——泛函的一阶变分为零。
 
 \paragraph{为什么是"极值"而不是"最小值"？}
 
@@ -265,7 +311,7 @@ L = T - V = \frac{1}{2}m\dot{x}^2 - \frac{1}{2}kx^2
 
 \subsection{从变分原理到运动方程}
 
-现在让我们推导拉格朗日方程——这直接应用第4章的 Euler-Lagrange 方程。
+现在让我们推导拉格朗日方程——这直接应用第3章的 Euler-Lagrange 方程。
 
 \paragraph{问题设置}
 
@@ -278,7 +324,7 @@ L = T - V = \frac{1}{2}m\dot{x}^2 - \frac{1}{2}kx^2
 
 \paragraph{应用 E-L 方程}
 
-这正是第4章的变分问题！把 $x \to t$，$y \to q$，$y' \to \dot{q}$，$F \to L$，E-L 方程变成：
+这正是第3章的变分问题！把 $x \to t$，$y \to q$，$y' \to \dot{q}$，$F \to L$，E-L 方程变成：
 
 \begin{keyformula}[title=拉格朗日方程]
 \begin{equation}
@@ -483,7 +529,7 @@ L = \frac{1}{2}m\dot{x}^2 - \frac{1}{2}kx^2
 
 位置：
 \[
-x = l\sin\theta, \quad y = -l\cos\theta \quad \text{（取支点为原点，向下为正）}
+x = l\sin\theta, \quad y = -l\cos\theta \quad \text{（取支点为原点，$y$ 向上为正，摆球在支点下方）}
 \]
 
 速度：
@@ -500,14 +546,12 @@ x = l\sin\theta, \quad y = -l\cos\theta \quad \text{（取支点为原点，向�
 T = \frac{1}{2}mv^2 = \frac{1}{2}m(l\dot{\theta})^2 = \frac{1}{2}ml^2\dot{\theta}^2
 \]
 
-势能（取支点为零势能点，向下为负）：
+势能（取支点为零势能点；$y$ 向上为正，所以 $V = mgy$）：
 \[
-V = -mgy = -mg(-l\cos\theta) = mgl\cos\theta
+V = mgy = -mgl\cos\theta
 \]
 
-\textit{注}：当 $\theta = 0$（最低点），$V = mgl$；当 $\theta = \pi/2$（水平），$V = 0$。这个选择使得最低点势能最大，看起来有点奇怪。我们也可以取最低点为零势能点，那么 $V = mgl(1 - \cos\theta)$。这只是一个常数差，不影响运动方程。
-
-为了简单，我们用 $V = -mgl\cos\theta$（取支点下方 $l$ 处为零势能点）。
+\textit{注}：当 $\theta = 0$（最低点），$V = -mgl$ 最小；当 $\theta = \pi/2$（水平），$V = 0$。如果改取最低点为零势能点，则 $V = mgl(1 - \cos\theta)$，两者只差常数 $mgl$，不影响运动方程。
 
 \paragraph{步骤4：写出拉格朗日量}
 
@@ -547,7 +591,8 @@ ml^2\ddot{\theta} + mgl\sin\theta = 0
 \ddot{\theta} = -\frac{g}{l}\theta
 \]
 
-这是谐振子方程！周期 $T = 2\pi\sqrt{l/g}$，与质量无关。
+这是谐振子方程！周期 $T = 2\pi\sqrt{l/g}$，与质量无关。图~\ref{fig:chap04_simple_pendulum} 展示了这个近似在多大角度内可靠：$30^\circ$ 以内误差约 $2\%$，$90^\circ$ 时误差超过 $15\%$。
+\tryit{把图~\ref{fig:chap04_simple_pendulum} 的实验自己跑一遍：$\theta_0$ 从 $10^\circ$ 到 $170^\circ$，画出周期的相对误差（精确周期含椭圆积分，可用 \texttt{scipy.special.ellipk}）。}
 
 \textbf{注意}：整个推导过程中，我们\textbf{没有分析绳子的张力}！这就是拉格朗日方法的优势。
 
@@ -613,16 +658,19 @@ f(q_1, q_2, \ldots, q_n, t) = 0
 右边的 $\lambda \frac{\partial f}{\partial q_i}$ 正是\textbf{约束力}在 $q_i$ 方向上的分量！
 
 \begin{physicalmeaning}
-\textbf{拉格朗日乘子 $\lambda$ 就是约束力的大小！}
+\textbf{拉格朗日乘子 $\lambda$ 就是约束力！}更准确地说，约束力等于 $\lambda \nabla f$：$\lambda$ 给出大小（差一个 $|\nabla f|$ 的比例因子），$\nabla f$ 给出方向（垂直于约束曲面）。
 
 \begin{itemize}
-    \item 单摆：$\lambda$ = 绳子的张力
-    \item 斜面滑块：$\lambda$ = 斜面的支持力
-    \item 圆环上的珠子：$\lambda$ = 圆环对珠子的反作用力
+    \item 单摆：$\lambda \nabla f$ = 绳子的张力
+    \item 斜面滑块：$\lambda \nabla f$ = 斜面的支持力
+    \item 圆环上的珠子：$\lambda \nabla f$ = 圆环对珠子的反作用力
 \end{itemize}
 
-这与第1章的"影子价格"完全对应：$\lambda$ 告诉我们约束有多"紧"。
+如果把约束写成 $f = \sqrt{x^2+y^2} - l$（此时 $|\nabla f| = 1$），$|\lambda|$ 就恰好等于张力。
+
+这与第1章的"影子价格"完全对应：$\lambda$ 告诉我们约束有多"紧"——绳子拉得越紧，把绳子放长一点能"省下"的势能就越多。
 \end{physicalmeaning}
+\think{影子价格的检验：单摆静止悬挂时，最小势能 $V^* = -mgl$，$\mathrm{d}V^*/\mathrm{d}l = -mg$，大小恰是张力。把绳子放长 1 米，系统"省下"的势能 = 张力 $\times$ 1 米——这正是第1章的影子价格。}
 
 \subsection{例5：用约束坐标分析单摆}
 
@@ -677,7 +725,7 @@ x^2 + y^2 = l^2
 
 \paragraph{求解约束力}
 
-把坐标用角度表示：$x = l\sin\theta$，$y = -l\cos\theta$
+把坐标用角度表示（注意本例 $y$ 向下为正）：$x = l\sin\theta$，$y = l\cos\theta$
 
 代入运动方程，经过计算可以得到：
 \[
@@ -770,6 +818,7 @@ p_i = \frac{\partial L}{\partial \dot{q}_i} = \text{常数}
 \]
 
 \textbf{结论}：对应的广义动量守恒！
+\review{第3章}{$F$ 不显含 $y$ 时 $\partial F/\partial y'$ 守恒，不显含 $x$ 时 $F - y'\,\partial F/\partial y'$ 守恒。本节只是把 $(x, y, F)$ 换成 $(t, q, L)$：前者是动量守恒，后者取负号正是哈密顿量 $H$。}
 
 \begin{definition}[循环坐标]
 不出现在拉格朗日量中的坐标叫做\textbf{循环坐标}（cyclic coordinate）或\textbf{可遗坐标}（ignorable coordinate）。
@@ -971,7 +1020,8 @@ L = T - V
 
 双摆虽然是完全确定性的系统（没有任何随机性），但它的长期行为实际上是\textbf{不可预测}的——因为我们永远无法精确测量初始条件。
 
-这就是"确定性混沌"：方程是确定的，但结果是不可预测的。
+这就是"确定性混沌"：方程是确定的，但结果是不可预测的。图~\ref{fig:chap04_double_pendulum} 用数值实验展示了这一点：两条初始角度只差 $0.001$ 弧度的轨迹，约 6 秒后就完全分道扬镳。
+\preview{第8章的 MPC 每隔几步就重新规划，而不是一次规划到底——"长期不可预测"正是原因之一。}
 
 % ------------------------------------------------------------------------------------
 \section{拉格朗日方法的威力}
@@ -1011,7 +1061,7 @@ L = T - V
 现代物理仿真（如游戏引擎、机器人仿真）大量使用拉格朗日方法：
 \begin{itemize}
     \item 约束可以用数值方法强制满足
-    \item 辛积分器保持能量守恒
+    \item 辛积分器让能量误差有界、不会系统性漂移（见扩展阅读）
     \item 便于处理复杂的多体系统
 \end{itemize}
 
@@ -1027,7 +1077,7 @@ L = T - V
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.95\textwidth]{figs_chap04/chap04_fig2.png}
-\caption{单摆：小角度近似的有效范围。左图：不同初始角度下精确解（实线）与近似解（虚线）的对比——$\theta_0 < 30°$时两者几乎重合；中图：周期误差分析——$\theta_0 = 30°$时误差约2\%，$\theta_0 = 90°$时误差超过15\%；右图：相空间对比——小角度近似给出椭圆（蓝），精确解给出更复杂的曲线（红），差异在大振幅时明显。}
+\caption{单摆：小角度近似的有效范围。左图：不同初始角度下精确解（实线）与近似解（虚线）的对比——$\theta_0 < 30^\circ$时两者几乎重合；中图：周期误差分析——$\theta_0 = 30^\circ$时误差约2\%，$\theta_0 = 90^\circ$时误差超过15\%；右图：相空间对比——小角度近似给出椭圆（蓝），精确解给出更复杂的曲线（红），差异在大振幅时明显。}
 \label{fig:chap04_simple_pendulum}
 \end{figure}
 
@@ -1043,7 +1093,7 @@ L = T - V
     \[
     \frac{d}{dt}\frac{\partial L}{\partial \dot{q}_i} - \frac{\partial L}{\partial q_i} = 0
     \]
-    这是变分法在力学中的应用，与第4章的 E-L 方程完全一致。
+    这是变分法在力学中的应用，与第3章的 E-L 方程完全一致。
     
     \item \textbf{约束处理}：
     \begin{itemize}
@@ -1061,7 +1111,7 @@ L = T - V
 \begin{physicalmeaning}
 \textbf{$\lambda$ 在力学中的意义}：
 
-拉格朗日乘子就是\textbf{约束力}本身！
+拉格朗日乘子给出\textbf{约束力}：约束力 $= \lambda \nabla f$。
 \begin{itemize}
     \item 单摆的绳子张力
     \item 斜面的支持力
@@ -1069,9 +1119,14 @@ L = T - V
     \item ……
 \end{itemize}
 
-这与第1章的"影子价格"完美对应：约束力告诉我们，如果约束稍微放松一点，系统的能量会变化多少。
+这与第1章的"影子价格"完美对应：约束力告诉我们，如果约束稍微放松一点（绳子放长一点、斜面挪开一点），作用量（静力学时就是势能）会变化多少。
 
-从优化问题的影子价格，到物理系统的约束力，$\lambda$ 的意义在不同领域间美妙地统一。
+从优化问题的影子价格，到物理系统的约束力，$\lambda$ 的意义在不同领域间美妙地统一。下一站：
+\begin{itemize}
+    \item 第5章：有限元里，固定边界的乘子是\textbf{支座反力}
+    \item 第7章：机器人里，接触约束的乘子是\textbf{接触力}，任务约束的乘子给出\textbf{关节力矩}
+    \item 第8章：动力学方程本身变成约束，它的乘子 $\lambda(t)$ 是\textbf{协态变量}
+\end{itemize}
 \end{physicalmeaning}
 
 % ------------------------------------------------------------------------------------
@@ -1295,6 +1350,8 @@ W = \frac{\lambda}{2}(\text{tr}\,\boldsymbol{\varepsilon})^2 + \mu \, \text{tr}(
 \boxed{\rho \frac{\partial^2 \mathbf{u}}{\partial t^2} = (\lambda + \mu)\nabla(\nabla \cdot \mathbf{u}) + \mu \nabla^2 \mathbf{u}}
 \end{equation}
 
+\clarify{这里的 $\lambda, \mu$ 是 Lam\'e 常数（材料参数），不是拉格朗日乘子。第5章有限元会把这个弹性势能泛函离散化求极小，那时支座约束的乘子才是"力"。}
+
 \subsection*{流体力学：Navier-Stokes方程}
 
 流体力学的拉格朗日描述比较复杂，但思想是一致的。对于不可压缩粘性流体：
@@ -1311,7 +1368,7 @@ W = \frac{\lambda}{2}(\text{tr}\,\boldsymbol{\varepsilon})^2 + \mu \, \text{tr}(
 \begin{insightbox}
 \textbf{压力是拉格朗日乘子！}
 
-在流体力学中，压力$p$的角色就是不可压缩约束$\nabla \cdot \mathbf{v} = 0$的拉格朗日乘子。这与第1章的"影子价格"、第4章的"约束力"完全一致——$\lambda$在不同领域有不同的物理名称，但数学本质相同。
+在流体力学中，压力$p$的角色就是不可压缩约束$\nabla \cdot \mathbf{v} = 0$的拉格朗日乘子。这与第1章的"影子价格"、本章的"约束力"完全一致——$\lambda$在不同领域有不同的物理名称，但数学本质相同。
 \end{insightbox}
 
 \subsection*{物理问题与PDE对应表}
@@ -1324,7 +1381,7 @@ W = \frac{\lambda}{2}(\text{tr}\,\boldsymbol{\varepsilon})^2 + \mu \, \text{tr}(
 \textbf{物理系统} & \textbf{作用量/能量泛函} & \textbf{PDE} \\
 \midrule
 弦振动 & $S = \int\!\!\int [\frac{\rho}{2}\dot{u}^2 - \frac{T}{2}u'^2]\,dx\,dt$ & $u_{tt} = c^2 u_{xx}$（波动方程）\\
-热传导 & $F = \int [\frac{k}{2}|\nabla u|^2 + fu]\,dx$ & $-k\nabla^2 u = f$（Poisson方程）\\
+热传导 & $F = \int [\frac{k}{2}|\nabla u|^2 - fu]\,dx$ & $-k\nabla^2 u = f$（Poisson方程）\\
 弹性体 & $\Pi = \int W(\varepsilon)\,dV - \int \mathbf{f}\cdot\mathbf{u}\,dS$ & Navier方程 \\
 不可压流体 & $L = T - \int p(\nabla\cdot\mathbf{v})\,dV$ & Navier-Stokes方程 \\
 薛定谔场 & $S = \int \bar{\psi}(i\hbar\partial_t + \frac{\hbar^2}{2m}\nabla^2)\psi\,dx\,dt$ & 薛定谔方程 \\

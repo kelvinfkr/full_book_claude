@@ -26,9 +26,11 @@
 Shannon把这个"问题数"叫做\textbf{比特（bit）}——1 bit就是一个"是/否"问题能传递的信息量。
 \end{insightbox}
 
-\marginnote{Claude Shannon (1916--2001) 是个有趣的人。他喜欢骑独轮车，会在贝尔实验室的走廊里边骑边抛球杂耍。他发明了"bit"这个词，建立了整个信息论学科。业余时间，他炒股赚了很多钱，还造了各种稀奇古怪的机器。}
+\storynote{Claude Shannon}{1916--2001。他是个有趣的人。他喜欢骑独轮车，会在贝尔实验室的走廊里边骑边抛球杂耍。他发明了"bit"这个词，建立了整个信息论学科。业余时间，他炒股赚了很多钱，还造了各种稀奇古怪的机器。}
 
 \vspace{0.5cm}
+\noindent\textit{为什么压缩文件有极限？为什么分类网络的最后一层非用 softmax 不可？为什么"我只知道平均值"这一句话，就足以推出整个分布？}
+
 \begin{quote}
 \textbf{本章目标}：你会发现，"信息"这个日常概念可以被精确量化，而计算最大熵分布的方法，正是我们在第1章学过的拉格朗日乘子法！逻辑回归、softmax函数、交叉熵损失，都可以从最大熵原理推导出来。
 \end{quote}
@@ -39,7 +41,7 @@ Shannon把这个"问题数"叫做\textbf{比特（bit）}——1 bit就是一个
     \item 用拉格朗日乘子法推导最大熵分布（如指数分布、正态分布）
     \item 解释为什么机器学习用交叉熵作为损失函数
     \item 从最大熵原理推导softmax函数和逻辑回归
-    \item 理解信息瓶颈、KL散度等信息论概念
+    \item 理解KL散度、交叉熵与最大似然之间的关系
 \end{itemize}
 \end{tcolorbox}
 
@@ -251,8 +253,9 @@ W = \frac{6!}{2! \cdot 2! \cdot 2!} = \frac{720}{8} = 90 \text{ 种}
 
 （最后一步用到 $\ln n_i = \ln(p_i N) = \ln p_i + \ln N$）
 
-\marginnote{\textbf{玻尔兹曼}(1844--1906)：奥地利物理学家，统计力学奠基人。他的墓碑上刻着$S = k \log W$——熵等于微观态数的对数。这个公式连接了宏观热力学和微观统计力学。他因学术争论而抑郁，最终自杀，但他的理论被后世完全证实。}
+\storynote{Ludwig Boltzmann}{1844--1906，奥地利物理学家，统计力学奠基人。他的墓碑上刻着$S = k \log W$——熵等于微观态数的对数。这个公式连接了宏观热力学和微观统计力学。他因学术争论而抑郁，最终自杀，但他的理论被后世完全证实。}
 
+\clarify{从这里开始，我们改用自然对数 $\ln$（单位是奈特 nat），它与 $\log_2$（比特）只差常数 $\ln 2$。凡是与比特有关的地方（编码、压缩）会再换回 $\log_2$。}
 \begin{keytheorem}[title=熵的组合学意义]
 \begin{equation}
 H(p) = -\sum_i p_i \ln p_i \approx \frac{1}{N} \ln W
@@ -346,11 +349,38 @@ H(p) = -\sum_i p_i \ln p_i \approx \frac{1}{N} \ln W
     \item \textbf{决策论理由}：如果你用错误的分布做决策，最大熵分布让你的"最坏情况损失"最小
 \end{enumerate}
 
-\marginnote{\textbf{杰恩斯}(1922--1998)：美国物理学家，最大熵原理的现代奠基人。他1957年的论文将熵和概率推理统一起来，影响了统计学、机器学习、贝叶斯推断等领域。他认为``概率是知识的逻辑，不是物理的性质''。}
+\storynote{Edwin Jaynes}{1922--1998，美国物理学家，最大熵原理的现代奠基人。他1957年的论文将熵和概率推理统一起来，影响了统计学、机器学习、贝叶斯推断等领域。他认为``概率是知识的逻辑，不是物理的性质''。}
+
+\begin{tcolorbox}[colback=yellow!10, colframe=orange!80, title=本章的核心观点]
+\textbf{最大熵原理不是什么新东西——它就是第1章的拉格朗日乘子法，只不过"变量"从一个向量 $x$ 变成了一个概率分布 $p$，"目标"从某个代价变成了熵。}
+
+约束是什么？——你\textbf{已知}的东西：概率必须归一化，某些量的平均值必须等于观测值。
+
+乘子是什么？——每条已知信息的"熵价格"：$\beta_j = -\partial H^*/\partial c_j$。在物理里它给出温度的倒数，在机器学习里它是特征权重 $w_j$。这不是巧合。
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabular}{lll}
+\toprule
+ & \textbf{第1章（约束优化）} & \textbf{本章（最大熵）} \\
+\midrule
+变量 & 向量 $x \in \R^n$ & 分布 $p = (p_1, \ldots, p_k)$ 或密度 $p(x)$ \\
+目标 & $\min f(x)$ & $\max H(p) = -\sum_i p_i \ln p_i$ \\
+约束 & $g(x) = 0$ & $\sum_i p_i = 1$，$\sum_i p_i g_j(x_i) = c_j$ \\
+乘子 & $\lambda$ & $\alpha$（给出配分函数 $Z$），$\beta_j$（特征权重 / 逆温度） \\
+一阶条件 & $\nabla f + \lambda \nabla g = 0$ & $-\ln p_i - 1 + \alpha + \sum_j \beta_j g_j(x_i) = 0$ \\
+解 & 驻点 $x^*$ & 指数族 $p_i = e^{\sum_j \beta_j g_j(x_i)} / Z$ \\
+影子价格 & $\lambda = -df^*/d\epsilon$ & $\beta_j = -\partial H^*/\partial c_j$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{tcolorbox}
 
 \subsection{用拉格朗日乘子法求解}
 
 这是一个带等式约束的优化问题——正是第1章拉格朗日乘子法的舞台！
+\review{第1章}{拉格朗日函数 $\Lag = f + \lambda^\top g$，对所有变量（包括乘子）求导令其为零。这里 $f = -H(p)$（最小化负熵），$g$ 是归一化和矩约束，每个约束配一个乘子——本章把它们记作 $\alpha$ 和 $\beta_j$，以免与指数分布的率参数 $\lambda$ 混淆。}
 
 \paragraph{Step 1：构造拉格朗日函数}
 \begin{equation}
@@ -383,6 +413,7 @@ Z(\bm{\beta}) = \sum_i \exp\left( \sum_j \beta_j g_j(x_i) \right)
 \begin{keytheorem}[title=最大熵分布的指数形式]
 \begin{equation}
 \boxed{p_i = \frac{1}{Z} \exp\left( \sum_j \beta_j g_j(x_i) \right)}
+\label{eq:maxent}
 \end{equation}
 
 其中：
@@ -392,6 +423,8 @@ Z(\bm{\beta}) = \sum_i \exp\left( \sum_j \beta_j g_j(x_i) \right)
     \item $\beta_j$ 的值由约束条件隐式确定
 \end{itemize}
 \end{keytheorem}
+\preview{这个"指数族"形式就是深度学习里的 softmax：第9章分类网络的输出层、第11章 Transformer 的注意力权重 $\mathrm{softmax}(q \cdot k / \sqrt{d})$ 都是它的实例，第11章还会把 $\sqrt{d}$ 解释成"温度"。}
+\review{第2章}{"$\beta$ 的值由约束隐式确定"其实就是在解对偶问题：$\min_\beta [\ln Z(\beta) - \beta^\top c]$。它无约束、且是凸的（log-sum-exp 减线性），对 $\beta_j$ 求导恰好得到 $\langle g_j \rangle = c_j$。}
 
 \begin{physicalmeaning}
 拉格朗日乘子 $\beta_j$ 的意义：
@@ -401,16 +434,17 @@ Z(\bm{\beta}) = \sum_i \exp\left( \sum_j \beta_j g_j(x_i) \right)
     \item $\beta_j < 0$：倾向于让 $g_j(x)$ 大的状态概率减少
 \end{itemize}
 
-在物理中，$\beta = 1/kT$ 是逆温度；在机器学习中，$\beta$ 是特征权重。
+在物理中，取 $g = E$（能量）时得到玻尔兹曼分布 $p \propto e^{-E/kT}$，即 $\beta = -1/kT$（物理惯例把乘子取相反符号），$|\beta|$ 是逆温度；在机器学习中，$\beta$ 是特征权重。
 
-从第1章的"影子价格"到这里的"特征权重"，$\lambda$ 的统一性再次显现！
+更准确地说：$\beta_j = -\dfrac{\partial H^*}{\partial c_j}$——它度量"多知道一点信息（约束值变一个单位），最大熵下降多少"。这与第1章的 $\lambda = -df^*/d\epsilon$ 完全对应：从"影子价格"到"特征权重"，$\lambda$ 的统一性再次显现！
 \end{physicalmeaning}
+\think{按第1章"影子价格"的定义，$\beta_j$ 应该等于哪个导数？提示：把最优熵 $H^*$ 看成 $c_j$ 的函数，用包络定理，你会得到 $\beta_j = -\partial H^*/\partial c_j$。热力学里 $\partial S/\partial U = 1/T$——温度的倒数正是"能量约束的影子价格"。}
 
 % ------------------------------------------------------------------------------------
 \section{经典分布的推导}
 
 现在让我们用最大熵原理推导几个著名的概率分布。
-\preview{如果你没学过概率论，不用担心——下面推导的这些分布（均匀分布、指数分布、高斯分布）是最基础的概率分布，学完本节你就掌握了概率论最核心的几个分布！}
+\clarify{如果你没学过概率论，不用担心——下面推导的这些分布（均匀分布、指数分布、高斯分布）是最基础的概率分布，学完本节你就掌握了概率论最核心的几个分布！}
 
 \subsection{均匀分布：一无所知时}
 
@@ -453,6 +487,7 @@ p(x) = \frac{1}{Z} e^{\beta x}
 \end{equation}
 
 为了让 $p(x)$ 在 $[0, \infty)$ 上可积，必须 $\beta < 0$。令 $\lambda = -\beta > 0$：
+\clarify{这里的 $\lambda = -\beta$ 只是指数分布的率参数（rate），和第1章的乘子 $\lambda$ 不是一回事——本章的乘子记作 $\alpha$、$\beta_j$。}
 \begin{equation}
 p(x) = \frac{1}{Z} e^{-\lambda x}
 \end{equation}
@@ -513,6 +548,7 @@ p(x) = \frac{1}{Z} \exp\left( \beta_1 x + \beta_2 (x-\mu)^2 \right)
 
 这解释了为什么高斯分布在自然界和统计学中如此普遍——当你只知道均值和方差时，高斯分布是"最诚实"的选择。
 \end{keytheorem}
+\tryit{用 numpy 各生成 10 万个均值 0、方差 1 的样本（高斯、均匀 $[-\sqrt{3}, \sqrt{3}]$、拉普拉斯），用直方图估计熵，验证高斯最大：理论值分别约 1.42、1.24、1.35 nat。}
 
 \subsection{经典分布总结}
 
@@ -632,6 +668,7 @@ $D_{KL}(Q \| P)$ 衡量"用 $P$ 近似 $Q$"的代价——在 $Q$ 概率大的�
 
 \textbf{最大熵 = 在约束下离均匀分布最近}
 \end{unification}
+\preview{把这里的均匀分布 $u$ 换成"旧策略"，$\min D_{KL}(p \| u)$ 就变成第10章信任域方法（TRPO/PPO）里"新策略别离旧策略太远"的约束。}
 
 \textit{证明}：
 \begin{align}
@@ -706,10 +743,10 @@ D(p\|q) = \int \left( A p(x) \ln p(x) + B p(x) \ln q(x) + C p(x) \right) dx
 \frac{B p(x)}{q(x)} + \lambda = 0
 \]
 
-为了让最优解 $q^*(x) = p(x)$，且满足凸性和零点条件，唯一的解是 $A = 1$，$B = -1$。
+为了让最优解是 $q^*(x) = p(x)$、且 $D(p\|p) = 0$，需要 $A + B = 0$，$B < 0$（极小性）；取归一化 $A = -B = 1$（相当于选定对数底），就得到：
 
 \begin{keytheorem}[title=KL散度的唯一性]
-满足局部性、可加性、一致性三条公理的\textbf{唯一}差异度量是：
+满足局部性、可加性、一致性三条公理的差异度量，在相差一个正常数（即对数底的选择）的意义下是\textbf{唯一}的：
 \begin{equation}
 \boxed{D_{KL}(p \| q) = \int p(x) \ln \frac{p(x)}{q(x)} \, dx = -H(p) - \int p(x) \ln q(x) \, dx}
 \end{equation}
@@ -735,7 +772,7 @@ D(p\|q) = \int \left( A p(x) \ln p(x) + B p(x) \ln q(x) + C p(x) \right) dx
 
 \begin{center}
 \renewcommand{\arraystretch}{1.6}
-\begin{tabular}{p{2.2cm}|p{3cm}|p{2.5cm}|p{5cm}}
+\begin{tabular}{p{1.8cm}|p{2.6cm}|p{2cm}|p{4.6cm}}
 \toprule
 \textbf{损失函数} & \textbf{数学形式} & \textbf{违反的公理} & \textbf{为何要违反？} \\
 \midrule
@@ -839,7 +876,7 @@ p_i = \frac{e^{z_i}}{\sum_j e^{z_j}}
 \begin{insightbox}
 \textbf{Softmax的推导：从最大熵到神经网络}
 
-回顾前面推导的最大熵分布形式（式6.17）：
+回顾前面推导的最大熵分布形式（式~\eqref{eq:maxent}）：
 \[
 p_i = \frac{1}{Z} \exp\left( \sum_j \beta_j g_j(x_i) \right)
 \]
@@ -866,7 +903,7 @@ Softmax 函数给出的是满足约束 $\langle z \rangle = \sum_i p_i z_i = c$ 
 
 其中 $z_i$ 是神经网络的 logits（未归一化得分），$c$ 是由网络参数决定的常数。
 
-\textbf{神经网络学习的是特征权重 $z_i = \bm{w}_i^\top \bm{x}$，即最大熵分布的拉格朗日乘子！}
+\textbf{神经网络学习的权重 $\bm{w}_i$ 是最大熵分布的拉格朗日乘子，logit $z_i = \bm{w}_i^\top \bm{x}$ 是"乘子 $\times$ 特征"。}
 \end{unification}
 
 \begin{physicalmeaning}
@@ -991,13 +1028,14 @@ A = 0, B = 10, C = 11
 那么，最好的变长编码能做到多好？
 
 \begin{keytheorem}[title=Shannon第一定理（信源编码定理）]
-对于信源 $X$，任何无损前缀码的平均码长 $\bar{L}$ 满足：
+对于信源 $X$，任何无损前缀码的平均码长都不低于 $H(X)$，而\textbf{最优}前缀码的平均码长 $\bar{L}$ 满足：
 \begin{equation}
 H(X) \leq \bar{L} < H(X) + 1
 \end{equation}
 
 \textbf{熵是压缩的理论极限}——不可能把平均码长压到熵以下！
 \end{keytheorem}
+\think{为什么平均码长不可能低于熵？提示：把码长看成一个分布 $q_i = 2^{-l_i}$（Kraft 不等式保证 $\sum q_i \le 1$），平均码长 $\sum p_i l_i = -\sum p_i \log_2 q_i$ 就是交叉熵 $H(p, q) \ge H(p)$——正是习题 5 的 Gibbs 不等式。}
 
 \textbf{直觉理解}：
 \begin{itemize}
@@ -1269,6 +1307,15 @@ KL散度 & 与均匀分布的"距离" \\
 
 信息论的核心问题——"在约束下找最均匀的分布"——正是第1章拉格朗日乘子法的直接应用！
 \end{unification}
+
+\begin{physicalmeaning}
+\textbf{$\lambda$ 在本章的意义}：本章的乘子叫 $\beta_j$，它是第 $j$ 条已知信息的"熵价格"——$\beta_j = -\partial H^*/\partial c_j$，约束值每变一个单位，最大可达的熵变多少。
+\begin{itemize}
+    \item 物理：$\partial S/\partial U = 1/T$，温度的倒数是"能量约束的影子价格"
+    \item 机器学习：logit $z = w^\top x$ 中的权重 $w$ 就是乘子，softmax 就是最大熵分布
+    \item 往前看：第1章的影子价格、第4章的约束力、第6章的逆温度，是同一个 $\lambda$；第9章会把 softmax 放进网络的最后一层，第11章会把它变成注意力权重，第10章的最大熵强化学习（SAC）则把熵直接加进目标
+\end{itemize}
+\end{physicalmeaning}
 
 % ------------------------------------------------------------------------------------
 \section{习题}

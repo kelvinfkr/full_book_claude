@@ -6,7 +6,7 @@
 
 1943年，第二次世界大战正酣。英国工程师们面临一个紧迫的问题：如何计算新型飞机机翼的应力分布？机翼形状复杂，传统的解析方法根本无法应对。
 
-\marginnote{\textbf{理查德·库朗}(1888--1972)：德裔美国数学家，有限元方法的先驱。纳粹上台后逃离德国，在纽约大学创建了著名的库朗数学研究所(Courant Institute)。他与希尔伯特合著的《数学物理方法》至今仍是经典教材。}
+\storynote{Richard Courant}{1888--1972，德裔美国数学家，有限元方法的先驱。纳粹上台后逃离德国，在纽约大学创建了著名的库朗数学研究所(Courant Institute)。他与希尔伯特合著的《数学物理方法》至今仍是经典教材。}
 
 数学家 Richard Courant 提出了一个革命性的想法：与其求解整个连续体的方程，不如把机翼\textbf{切成很多小三角形}，在每个三角形内假设应力是简单的（比如线性的），然后把这些小块``拼起来''。
 
@@ -78,19 +78,42 @@
 \end{itemize}
 \end{example}
 
+\vspace{0.5cm}
+\noindent\textit{为什么一台连微分方程都不会解的计算机，能算出机翼上每一点的应力？为什么把区域切成三角形之后，问题反而变简单了？为什么工程师说"固定端的支反力"，数学家却说"边界条件的乘子"？}
+
+\begin{quote}
+\textbf{本章目标}：让你看清一个事实——工程师用来算桥梁、飞机的有限元软件，骨子里做的就是第1章那件事：写下一个能量（目标函数），把边界条件当约束，求导等于零。唯一的新东西是"把无限维的函数切成有限个帐篷"。读完本章，你应该能徒手算出一个刚度矩阵，并且说得清 $\lambda$ 为什么是边界上的热流或支反力。
+\end{quote}
+
 \subsection*{本章的核心观点}
 
 令人惊讶的是，这个强大的工程工具的数学本质就是我们已经学过的\textbf{变分法的离散化}：
 \review{第3章}{还记得变分法吗？我们把连续曲线离散成$y_0, y_1, \ldots, y_N$，把积分变成求和，把泛函极值问题变成有限维优化问题。有限元方法用的是完全相同的套路！}
 
 \begin{tcolorbox}[colback=yellow!10, colframe=orange!80, title=核心观点]
-有限元方法 = 把无限维的能量最小化问题变成有限维的，然后求解线性方程组 $KU = F$。
+\textbf{有限元不是什么新东西——它就是第1章的拉格朗日乘子法，只不过变量从几个数变成了成千上万个节点值。}目标函数是总势能 $J(U) = \frac{1}{2}U^\top KU - F^\top U$，约束是"边界上的值被钉死"，求导等于零就得到 $KU = F$。
 
 \begin{itemize}
     \item $K$：刚度矩阵（描述系统的"硬度"）
     \item $U$：节点位移/温度/电势……（我们要求的未知量）
     \item $F$：载荷向量（外部作用力/热源/电荷……）
 \end{itemize}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabular}{lll}
+\toprule
+ & \textbf{第1章} & \textbf{本章（有限元）} \\
+\midrule
+变量 & $x \in \R^n$ & 节点值 $U \in \R^n$（离散化的 $u(x)$） \\
+目标 & $f(x)$ & 总势能 $J(U) = \frac{1}{2}U^\top KU - F^\top U$ \\
+约束 & $g(x) = 0$ & Dirichlet 边界条件 $BU = g$ \\
+乘子 & $\lambda$（影子价格） & $\lambda$ = 边界热流 / 支反力 \\
+一阶条件 & $\nabla f + \lambda \nabla g = 0$ & $KU + B^\top \lambda = F$，$BU = g$ \\
+\bottomrule
+\end{tabular}
+\end{center}
 \end{tcolorbox}
 
 \begin{tcolorbox}[colback=green!5, colframe=green!60!black, title=学完这章，你将能够...]
@@ -143,23 +166,24 @@
 \subsection{Poisson方程从哪里来？}
 
 在有限元和PINN中，你会反复遇到\textbf{Poisson方程}（泊松方程）。让我们从物理第一性原理推导它。
+\preview{第13章的 PINN 也要解同一个 Poisson 方程，只是把这里的"形函数"换成神经网络。学完本章再看第13章，你会发现两者只差一个"基函数怎么选"。}
 
-\begin{keyidea}{Poisson方程的推导——大白话版}
+\begin{keyidea}[Poisson方程的推导——大白话版]
 \textbf{核心物理}：守恒律 + 本构关系 = 偏微分方程
 
 \textbf{步骤1：守恒律}
 
-考虑热传导。取一小段$[x, x+\Delta x]$，稳态下热量``进 = 出 + 生成''：
+考虑热传导。取一小段$[x, x+\Delta x]$，稳态下热量``流进 + 生成 = 流出''：
 \[
-q(x) = q(x + \Delta x) + f(x)\Delta x
+q(x) + f(x)\Delta x = q(x + \Delta x)
 \]
-其中$q(x)$是热流密度（单位时间流过$x$处的热量），$f(x)$是热源强度。
+其中$q(x)$是热流密度（单位时间流过$x$处的热量，向右为正），$f(x)$是热源强度。
 
-整理得：$\frac{q(x+\Delta x) - q(x)}{\Delta x} = -f(x)$
+整理得：$\frac{q(x+\Delta x) - q(x)}{\Delta x} = f(x)$
 
 当$\Delta x \to 0$：
 \[
-\frac{dq}{dx} = -f(x) \quad \text{（守恒律）}
+\frac{dq}{dx} = f(x) \quad \text{（守恒律：热流的增量来自热源）}
 \]
 
 \textbf{步骤2：本构关系（傅里叶定律）}
@@ -174,7 +198,7 @@ q = -k\frac{du}{dx} \quad \text{（傅里叶定律）}
 
 把傅里叶定律代入守恒律：
 \[
-\frac{d}{dx}\left(-\frac{du}{dx}\right) = -f(x) \quad \Rightarrow \quad \boxed{-\frac{d^2u}{dx^2} = f(x)}
+\frac{d}{dx}\left(-\frac{du}{dx}\right) = f(x) \quad \Rightarrow \quad \boxed{-\frac{d^2u}{dx^2} = f(x)}
 \]
 
 这就是一维Poisson方程！高维情况只需把$\frac{d^2}{dx^2}$换成Laplacian算子$\nabla^2$：
@@ -246,8 +270,8 @@ u(0) = 0, \quad u(1) = 0
 方程 $-u'' = f$ 说的是：在稳态下，热源产生的热量 = 热传导带走的热量。
 
 \begin{itemize}
-    \item 如果 $u'' < 0$（温度曲线向下凸），热量从这点向两边流出
-    \item 如果 $u'' > 0$（温度曲线向上凸），热量从两边流入这点
+    \item 如果 $u'' < 0$（温度曲线开口向下，像山峰），热量从这点向两边流出
+    \item 如果 $u'' > 0$（温度曲线开口向上，像山谷），热量从两边流入这点
     \item 稳态要求：流入 = 流出 + 热源产生
 \end{itemize}
 
@@ -285,7 +309,7 @@ u(x) = \frac{x(1-x)}{2}
 
 \subsection{从微分方程到能量最小化}
 
-第4章告诉我们，很多微分方程可以从变分原理推导出来。热传导方程也不例外！
+第3章和第4章告诉我们，很多微分方程可以从变分原理推导出来。热传导方程也不例外！
 
 \begin{keytheorem}[title=能量原理]
 定义\textbf{能量泛函}：
@@ -310,10 +334,11 @@ u^* = \arg\min_u J[u] \quad \Longleftrightarrow \quad -u^{*\prime\prime} = f
 \end{itemize}
 
 系统自然趋向于总势能最小的状态——这就是能量最小化原理！
+\think{能量泛函里为什么是 $-\int fu\,dx$ 而不是 $+\int fu\,dx$？提示：把 $f$ 想成重力、$u$ 想成位移，外力做功会降低系统的势能。}
 
 \subsection{验证：从变分到微分方程}
 
-让我们用第4章的 Euler-Lagrange 方程验证这个等价性。
+让我们用第3章的 Euler-Lagrange 方程验证这个等价性。
 
 泛函：$J[u] = \int_0^1 F(x, u, u') \, dx$，其中 $F = \frac{1}{2}(u')^2 - fu$
 
@@ -395,6 +420,8 @@ E-L 方程：
 \boxed{\int_0^1 u' \cdot v' \, dx = \int_0^1 f \cdot v \, dx}
 \end{equation}
 \end{keyformula}
+
+\clarify{"弱"不是"不严格"。弱形式的解若恰好足够光滑，它一定也满足强形式；反过来，材料交界处梯度不连续的解只满足弱形式。弱形式是"更宽容"，不是"更马虎"。}
 
 \paragraph{弱形式的优点}
 
@@ -516,6 +543,7 @@ u_h(x_i) = \sum_j U_j \phi_j(x_i) = \sum_j U_j \delta_{ji} = U_i
 \end{keyformula}
 
 这就是有限元的核心方程！一个无限维的变分问题，变成了一个 $n \times n$ 的线性方程组。
+\preview{本章"与优化的联系"一节会证明：$KU = F$ 正是 $J(U) = \frac{1}{2}U^\top KU - F^\top U$ 的一阶条件 $\nabla_U J = 0$——还是第1章"求导等于零"的老套路。}
 
 % ------------------------------------------------------------------------------------
 \section{刚度矩阵的计算}
@@ -706,7 +734,7 @@ K = \frac{1}{h}
 \end{equation}
 
 \begin{insightbox}
-\textbf{惊人的巧合}：对于均匀网格，有限元得到的矩阵 $\frac{1}{h}[-1, 2, -1]$ 与\textbf{二阶中心差分}完全相同！
+\textbf{这不是巧合}：对于均匀网格，有限元得到的矩阵 $\frac{1}{h}[-1, 2, -1]$ 与\textbf{二阶中心差分}完全相同！后面"殊途同归"一节会解释原因。
 
 但有限元的优势在于：
 \begin{itemize}
@@ -802,7 +830,7 @@ K = \frac{1}{h}
 \caption{有限元近似解的构造：$u_h(x) = U_1\phi_1(x) + U_2\phi_2(x) + U_3\phi_3(x)$。每个形函数 $\phi_j$ 在节点 $j$ 处取值为 1，乘以节点值 $U_j$ 后叠加得到分段线性的近似解。灰色虚线为精确解 $u(x) = \frac{x(1-x)}{2}$。}
 \end{figure}
 
-\begin{insightbox}{形函数的"插值"本质}
+\begin{insightbox}[title=形函数的"插值"本质]
 形函数的关键性质是 $\phi_i(x_j) = \delta_{ij}$（在自己的节点上等于1，在其他节点上等于0）。
 
 这意味着：
@@ -953,6 +981,34 @@ u(0.75) = \frac{0.75 \times 0.25}{2} = 0.09375
 
 这是一维问题的特殊性质。在二维、三维问题中，有限元解在节点处通常只是近似值，但仍然是"最优"的（在能量范数意义下）。
 \end{insightbox}
+
+\subsection{十行代码：一维线性有限元}
+
+上面的手算过程可以直接翻译成代码。刚度矩阵是三对角的，载荷向量在 $f = 1$ 时就是 $h$：
+
+\begin{lstlisting}[style=teaching, caption=一维线性有限元求解 $-u''=1$，$u(0)=u(1)=0$]
+import numpy as np
+
+N = 4                       # 单元数
+h = 1.0 / N                 # 步长
+n = N - 1                   # 内部节点数（两端节点已知为 0）
+K = (np.diag(2*np.ones(n)) - np.diag(np.ones(n-1), 1)
+     - np.diag(np.ones(n-1), -1)) / h       # 刚度矩阵：(1/h)[-1, 2, -1]
+F = h * np.ones(n)          # 载荷向量：f = 1 时 F_i = h
+U = np.linalg.solve(K, F)   # 求解 KU = F
+x = np.linspace(h, 1-h, n)
+print(U)                    # [0.09375 0.125   0.09375]
+print(x*(1-x)/2)            # 精确解在节点处的值——完全一致
+\end{lstlisting}
+
+把 \texttt{N} 改成 8、16、32，你会看到节点值始终与精确解重合，而节点之间的最大误差按 $O(h^2)$ 下降（图~\ref{fig:chap05_fem}）。这十行代码就是所有商业有限元软件的"内核"——剩下的只是把 $K$ 组装得更聪明、解得更快（见本章扩展阅读）。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figs_chap05/chap05_fig2.png}
+\caption{一维有限元求解热传导问题。左图展示有限元解与解析解$u(x) = x(1-x)/2$的对比，二者几乎完全重合；中图显示刚度矩阵$K$的三对角稀疏结构——这源于帐篷函数的局部支撑性；右图展示网格细化时的收敛行为，验证了线性元的$O(h^2)$收敛阶。}
+\label{fig:chap05_fem}
+\end{figure}
 
 % ------------------------------------------------------------------------------------
 \section{单元组装：从局部到整体}
@@ -1144,8 +1200,9 @@ $\lambda$ 的物理意义是边界处的\textbf{法向通量}：
     \item 弹性力学：$\lambda$ = 边界反力（N）
 \end{itemize}
 
-这与第5章力学中的约束力完全对应——边界条件本质上也是约束！
+这与第4章力学中的约束力完全对应——边界条件本质上也是约束！
 \end{physicalmeaning}
+\review{第1章}{影子价格：$\lambda = -\dfrac{df^*}{d\epsilon}$。这里的 $\epsilon$ 是边界温度 $g$ 的微小改变，$f^*$ 是最小总势能。所以 $\lambda$ 度量"边界值抬高一点，总势能变多少"——量纲恰好是热流。}
 
 % ------------------------------------------------------------------------------------
 \section{误差分析与收敛性}
@@ -1205,6 +1262,7 @@ $\lambda$ 的物理意义是边界处的\textbf{法向通量}：
 \end{center}
 
 每次加密一倍，误差减少到约 $\frac{1}{4}$——符合 $O(h^2)$ 的理论预测！
+\clarify{表中的"最大误差"取在单元中点。前面说过一维线性元在节点处是精确的，所以误差全部来自节点之间的线性插值，中点误差恰好是 $h^2/8$（$h = 0.25$ 时为 $0.0078$）。}
 
 % ------------------------------------------------------------------------------------
 \section{二维问题简介}
@@ -2019,8 +2077,9 @@ $J(U) = \frac{1}{2}U^\top KU - F^\top U$ 的物理意义：
 
 拉格朗日乘子 $\lambda_1$ 就是固定端的支反力——墙壁对梁的作用力。
 
-如果放松约束（允许 $U_1$ 有微小位移），系统能量会下降 $\lambda_1 \cdot \delta U_1$。
+如果放松约束（允许 $U_1$ 有微小位移 $\delta U_1$），最小总势能会改变 $-\lambda_1\, \delta U_1$——这正是第1章的约定 $dJ^*/dg = -\lambda$：乘子就是影子价格。
 \end{example}
+\review{第4章}{在第4章，乘子 $\lambda$ 给出约束力（绳子的张力、斜面的支持力）。这里的 $\lambda_1$ 是墙对梁的支反力——同一个东西，只是从"连续体"换成了"离散节点"。}
 
 % ------------------------------------------------------------------------------------
 \section{打破传统：间断有限元初探}
@@ -2151,6 +2210,7 @@ K_{block}^{-1} = \begin{bmatrix}
 \end{equation}
 
 \textbf{这意味着}：每个单元可以\textbf{独立求解}！
+\clarify{"每个单元独立求解"有个前提：界面力 $\lambda$ 已知。$\lambda$ 本身要靠界面方程解出——这正是本章扩展阅读里 Schur 补与区域分解的思路。}
 
 \begin{center}
 \renewcommand{\arraystretch}{1.4}
@@ -2182,17 +2242,17 @@ GPU 加速 & 有限 & 极度友好 \\
 
 不强制 $U^{(1)} = U^{(2)}$，而是惩罚它们的差距：
 \begin{equation}
-J_\alpha(U) = \frac{1}{2}U^\top K_{block} U - F^\top U + \frac{\alpha}{2}\|CU\|^2
+J_\rho(U) = \frac{1}{2}U^\top K_{block} U - F^\top U + \frac{\rho}{2}\|CU\|^2
 \end{equation}
 
-其中 $\alpha$ 是罚参数（很大的正数）。
+其中 $\rho$ 是罚参数（很大的正数）——记号与第1章"视角三：罚函数"一致。
 
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[scale=0.9]
     % 弱罚
     \begin{scope}
-        \node[font=\bfseries] at (1.5, 1.8) {弱罚（$\alpha$ 小）};
+        \node[font=\bfseries] at (1.5, 1.8) {弱罚（$\rho$ 小）};
         \draw[fill=blue!20, thick] (0,0) rectangle (2,1);
         \draw[fill=blue!20, thick] (2.5,0) rectangle (4.5,1);
         \draw[decorate, decoration={coil,aspect=0.5,segment length=3mm,amplitude=3mm}, thick, red] (2,0.5) -- (2.5,0.5);
@@ -2203,7 +2263,7 @@ J_\alpha(U) = \frac{1}{2}U^\top K_{block} U - F^\top U + \frac{\alpha}{2}\|CU\|^
     
     % 强罚
     \begin{scope}[xshift=6cm]
-        \node[font=\bfseries] at (1.5, 1.8) {强罚（$\alpha \to \infty$）};
+        \node[font=\bfseries] at (1.5, 1.8) {强罚（$\rho \to \infty$）};
         \draw[fill=blue!20, thick] (0,0) rectangle (2.1,1);
         \draw[fill=blue!20, thick] (2.2,0) rectangle (4.3,1);
         \draw[decorate, decoration={coil,aspect=0.3,segment length=1mm,amplitude=2mm}, thick, red] (2.1,0.5) -- (2.2,0.5);
@@ -2215,7 +2275,7 @@ J_\alpha(U) = \frac{1}{2}U^\top K_{block} U - F^\top U + \frac{\alpha}{2}\|CU\|^
 \caption{罚函数就像在断口处装了一个弹簧}
 \end{figure}
 
-当 $\alpha \to \infty$：
+当 $\rho \to \infty$：
 \begin{itemize}
     \item 任何微小的 Gap 都会产生巨大的惩罚
     \item 系统被迫让 $CU \to 0$
@@ -2223,37 +2283,22 @@ J_\alpha(U) = \frac{1}{2}U^\top K_{block} U - F^\top U + \frac{\alpha}{2}\|CU\|^
 \end{itemize}
 
 \begin{physicalmeaning}
-罚函数的物理图像：在断口处装一个\textbf{刚度为 $\alpha$ 的弹簧}。
+罚函数的物理图像：在断口处装一个\textbf{刚度为 $\rho$ 的弹簧}。
 
 \begin{itemize}
-    \item $\alpha$ 小：弹簧软，拉不住，Gap 大
-    \item $\alpha$ 大：弹簧硬，瞬间把两端吸在一起
+    \item $\rho$ 小：弹簧软，拉不住，Gap 大
+    \item $\rho$ 大：弹簧硬，瞬间把两端吸在一起
 \end{itemize}
 
 这与深度学习中的正则化项异曲同工！
 \[
-\text{Loss} = \text{Data\_Fidelity} + \lambda \cdot \text{Regularization}
+\text{Loss} = \text{Data\_Fidelity} + \rho \cdot \text{Regularization}
 \]
 
 这个思想也激励了我们探索物理信息神经网络(PINN)。
 \end{physicalmeaning}
 
 % ------------------------------------------------------------------------------------
-% 代码演示结果
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{figs_chap05/chap05_fig1.png}
-\caption{Python性能优化实验：GIL对多线程的影响、缓存局部性的重要性、以及NumPy向量化的加速效果。左图显示Python多线程在CPU密集任务上受GIL限制，multiprocessing才能真正并行；中图展示行优先vs列优先遍历的性能差异（缓存局部性）；右图对比循环与向量化操作的速度——向量化可获得数十倍加速。}
-\label{fig:chap05_python}
-\end{figure}
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{figs_chap05/chap05_fig2.png}
-\caption{一维有限元求解热传导问题。左图展示有限元解与解析解$u(x) = x(1-x)/2$的对比，二者几乎完全重合；中图显示刚度矩阵$K$的三对角稀疏结构——这源于帐篷函数的局部支撑性；右图展示网格细化时的收敛行为，验证了线性元的$O(h^2)$收敛阶。}
-\label{fig:chap05_fem}
-\end{figure}
-
 % ------------------------------------------------------------------------------------
 \section{本章小结}
 
@@ -2292,6 +2337,12 @@ J_\alpha(U) = \frac{1}{2}U^\top K_{block} U - F^\top U + \frac{\alpha}{2}\|CU\|^
 
 从第1章的拉格朗日乘子，到这里的有限元，$\lambda$ 始终扮演着"约束力"的角色。
 \end{unification}
+
+\begin{physicalmeaning}
+\textbf{$\lambda$ 在本章的意义}：边界条件是约束，$\lambda$ 是"把边界钉住"所需的力——热传导里是边界热流，弹性力学里是支反力，间断元里是单元之间的界面力。它仍然是影子价格：$\lambda_i = -\partial J^*/\partial g_i$，边界值放松一点，最小总势能就改变 $\lambda_i$ 那么多。
+
+回头看：第1章的 $\lambda$ 是影子价格，第4章的 $\lambda$ 是约束力，本章把两者接在了一起——约束力就是能量对约束的敏感度。往前看：第7章机器人的接触力，以及第13章 PINN 把 PDE 当作软约束写进损失函数，用的都是同一个 $\lambda$。
+\end{physicalmeaning}
 
 
 % ------------------------------------------------------------------------------------
@@ -2904,7 +2955,7 @@ Schur 补的物理意义：
 
 $S$ 就是界面上的\textbf{等效刚度}——它告诉你：如果界面位移是 $u_\Gamma$，界面上受到的力是多少。
 
-这与第1章中消去部分变量得到约束力的想法完全一致！
+这与第1章"代入消元"（思考题里的 Schur 补）和第4章"约束力就是乘子"的想法完全一致！
 \end{physicalmeaning}
 
 
@@ -3887,6 +3938,15 @@ print(f"按列访问: {time.time() - t0:.2f} 秒")
 \end{itemize}
 
 %==============================================================================
+图~\ref{fig:chap05_python} 汇总了上面几个小实验的结果：多线程受 GIL 限制、按行访问快于按列访问、向量化远快于循环。下面逐一解释背后的原因。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figs_chap05/chap05_fig1.png}
+\caption{Python性能优化实验：GIL对多线程的影响、缓存局部性的重要性、以及NumPy向量化的加速效果。左图显示Python多线程在CPU密集任务上受GIL限制，multiprocessing才能真正并行；中图展示行优先vs列优先遍历的性能差异（缓存局部性）；右图对比循环与向量化操作的速度——向量化可获得数十倍加速。}
+\label{fig:chap05_python}
+\end{figure}
+
 \subsection*{Python 的 GIL：为什么多线程常常"白忙活"？}
 %==============================================================================
 
@@ -4000,7 +4060,7 @@ NumPy 的矩阵运算实际上调用的是 BLAS（Basic Linear Algebra Subprogra
 \end{itemize}
 
 %------------------------------------------------------------------------------
-\paragraph{你可以自己做的小实验 3：}感受 NumPy 的速度
+\paragraph{你可以自己做的小实验 3：感受 NumPy 的速度}
 %------------------------------------------------------------------------------
 
 \begin{lstlisting}[style=teaching, language=Python]
@@ -4279,18 +4339,14 @@ Turek和Hron在2006年提出了一系列FSI基准测试问题，其中\textbf{FS
 \end{tabular}
 \end{center}
 
-\begin{marginnote}
-\textbf{为什么圆心偏心？} 如果圆柱在通道正中央，由于对称性，初始阶段不会产生涡脱落。偏心打破了对称性，使得流动从一开始就不稳定，更快进入周期性振荡状态。
-\end{marginnote}
+\marginnote{\textbf{为什么圆心偏心？} 如果圆柱在通道正中央，由于对称性，初始阶段不会产生涡脱落。偏心打破了对称性，使得流动从一开始就不稳定，更快进入周期性振荡状态。}
 
 % ------------------------------------------------------------------------------------
 \subsection*{二、涡激振动机理}
 
 当流体绕过圆柱时，会在圆柱两侧交替脱落旋转方向相反的涡——这就是著名的\textbf{卡门涡街}（Kármán vortex street）。
 
-\begin{marginnote}
-\textbf{西奥多·冯·卡门}（Theodore von Kármán, 1881--1963）是20世纪最伟大的航空工程师之一。他不仅发现了卡门涡街，还创立了喷气推进实验室（JPL），培养了钱学森等众多杰出学生。
-\end{marginnote}
+\marginnote{\textbf{西奥多·冯·卡门}（Theodore von Kármán, 1881--1963）是20世纪最伟大的航空工程师之一。他不仅发现了卡门涡街，还创立了喷气推进实验室（JPL），培养了钱学森等众多杰出学生。}
 
 \begin{figure}[htbp]
 \centering
@@ -4333,6 +4389,15 @@ f_s = \text{St} \cdot \frac{U}{D}
 \label{fig:turek_fsi2_analysis}
 \end{figure}
 
+图\ref{fig:turek_fsi2_vortex_street}展示了涡街演化与固体振动的耦合过程，清晰可见卡门涡街的交替脱落如何驱动弹性板的周期性摆动。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.98\textwidth]{figs_chap05/turek_fsi2_cfd_velocity.pdf}
+\caption{Turek-Hron FSI2基准测试的CFD模拟结果（Kratos Multiphysics开源软件）。颜色表示流体速度大小（蓝色=低速，红色=高速）。可以清楚看到：(1) 卡门涡街从圆柱后方交替脱落并向下游对流移动；(2) 弹性板（白色）随着涡的周期性脱落发生大幅度弯曲振荡；(3) 流场呈现典型的涡激振动特征，高速区（红/橙色）和低速区（蓝色）交替出现。}
+\label{fig:turek_fsi2_vortex_street}
+\end{figure}
+
 \paragraph{文献参考值}
 Turek和Hron报告的FSI2基准结果：
 \begin{itemize}
@@ -4371,9 +4436,7 @@ EI \frac{\partial^4 w}{\partial x^4} + \rho A \frac{\partial^2 w}{\partial t^2} 
 \end{pmatrix}
 \end{equation}
 
-\begin{marginnote}
-\textbf{注意}：FSI2涉及大变形，严格来说需要使用几何非线性公式（如协同旋转法或Total Lagrangian公式）。这里的线性梁模型只是演示目的。
-\end{marginnote}
+\marginnote{\textbf{注意}：FSI2涉及大变形，严格来说需要使用几何非线性公式（如协同旋转法或Total Lagrangian公式）。这里的线性梁模型只是演示目的。}
 
 % ------------------------------------------------------------------------------------
 \subsection*{五、完整FSI求解的挑战}
@@ -4405,8 +4468,7 @@ Turek-Hron FSI2之所以成为经典基准，是因为它包含了FSI问题的�
 % ------------------------------------------------------------------------------------
 \subsection*{六、开源实现}
 
-\begin{marginnote}
-\textbf{开源FSI框架}：
+\marginnote{\textbf{开源FSI框架}：
 \begin{itemize}
     \item \textbf{Kratos Multiphysics}：完整的多物理场框架
     \item \textbf{preCICE}：耦合库，连接不同求解器
@@ -4414,8 +4476,7 @@ Turek-Hron FSI2之所以成为经典基准，是因为它包含了FSI问题的�
     \item \textbf{oomph-lib}：牛津大学开发的多物理场库
     \item \textbf{OpenFOAM + CalculiX}：流体+结构组合
 \end{itemize}
-这些都包含Turek-Hron基准案例的实现。
-\end{marginnote}
+这些都包含Turek-Hron基准案例的实现。}
 
 完整的Python可视化代码位于\texttt{code\_chap05/turek\_fsi2\_visualization.py}，用于生成本节的示意图。真正的FSI2求解需要使用专业的多物理场软件。
 
@@ -4445,41 +4506,7 @@ def flag_deformation(s, t, amplitude=0.080, freq=2.0):
     \item \textbf{能源工程}：风力机叶片、热交换器管束的振动
 \end{itemize}
 
-\begin{marginnote}
-\textbf{塔科马海峡大桥}（1940年坍塌）长期被误解为共振导致。现代分析表明，真正原因是\textbf{气动弹性颤振}——一种更复杂的流固耦合不稳定性。但涡激振动确实是该桥在坍塌前频繁振动的重要原因。
-\end{marginnote}
-
-如果你的FSI代码能正确重现Turek-Hron基准的结果，那它就有了一定的可信度。这就是为什么FSI2成为了验证FSI求解器的"金标准"。
-
-\begin{references}
-\bibitem{turek2006proposal} S. Turek and J. Hron, ``Proposal for Numerical Benchmarking of Fluid-Structure Interaction between an Elastic Object and Laminar Incompressible Flow,'' in \textit{Fluid-Structure Interaction}, Lecture Notes in Computational Science and Engineering, vol. 53, Springer, 2006, pp. 371--385.
-\end{references}
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.98\textwidth]{figs_chap05/turek_fsi2_time_history.pdf}
-\caption{Turek-Hron FSI2动力学分析。\textbf{左上}：板端Y位移时间历程，经过短暂瞬态后进入稳态振荡。\textbf{右上}：相空间轨迹，稳态时形成极限环（limit cycle）。\textbf{左下}：频谱分析显示主频约2 Hz。\textbf{右下}：振动包络展示一个周期内板的位置叠加。}
-\label{fig:turek_fsi2_analysis}
-\end{figure}
-
-\paragraph{涡激振动机理}
-为什么弹性板会自发振荡？图\ref{fig:turek_fsi2_mechanism}解释了涡激振动的物理机理：
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.98\textwidth]{figs_chap05/turek_fsi2_mechanism.pdf}
-\caption{涡激振动机理示意。流体绕过圆柱时形成交替脱落的卡门涡街。(a) 当上方涡脱落时，上方形成低压区，产生向上的升力，推动板向上弯曲。(b) 半个周期后，下方涡脱落，下方形成低压区，产生向下的升力。这种交替的压力差驱动板的周期性振荡。当涡脱落频率接近板的固有频率时，发生\textbf{锁定}（lock-in），振幅达到最大。图中颜色表示速度大小（红色高速、蓝色低速），白色流线显示流动方向和涡的旋转。}
-\label{fig:turek_fsi2_mechanism}
-\end{figure}
-
-图\ref{fig:turek_fsi2_vortex_street}展示了涡街演化与固体振动的耦合过程，清晰可见卡门涡街的交替脱落如何驱动弹性板的周期性摆动。
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.98\textwidth]{figs_chap05/turek_fsi2_cfd_velocity.pdf}
-\caption{Turek-Hron FSI2基准测试的CFD模拟结果（Kratos Multiphysics开源软件）。颜色表示流体速度大小（蓝色=低速，红色=高速）。可以清楚看到：(1) 卡门涡街从圆柱后方交替脱落并向下游对流移动；(2) 弹性板（白色）随着涡的周期性脱落发生大幅度弯曲振荡；(3) 流场呈现典型的涡激振动特征，高速区（红/橙色）和低速区（蓝色）交替出现。}
-\label{fig:turek_fsi2_vortex_street}
-\end{figure}
+\marginnote{\textbf{塔科马海峡大桥}（1940年坍塌）长期被误解为共振导致。现代分析表明，真正原因是\textbf{气动弹性颤振}——一种更复杂的流固耦合不稳定性。但涡激振动确实是该桥在坍塌前频繁振动的重要原因。}
 
 \begin{insightbox}
 \textbf{为什么Turek-Hron基准如此重要？}
@@ -4490,42 +4517,10 @@ def flag_deformation(s, t, amplitude=0.080, freq=2.0):
     \item \textbf{自激振荡}：不是外加强迫振动，而是系统自发产生的不稳定性
     \item \textbf{无实验噪声}：作为数值基准，可以进行严格的代码间比较
 \end{enumerate}
-
-如果你的FSI代码能正确重现Turek-Hron基准的结果，那它就有了一定的可信度。
 \end{insightbox}
 
-\begin{marginnote}
-\textbf{开源实现}：许多开源FSI框架都包含Turek-Hron基准案例，包括：
-\begin{itemize}
-    \item Kratos Multiphysics
-    \item preCICE（耦合库）
-    \item Feel++
-    \item oomph-lib
-\end{itemize}
-这些都是学习完整FSI仿真的好资源。
-\end{marginnote}
-
-\paragraph{与本节模型的对比}
-本节前面的悬臂梁模型（单向耦合、小变形）与Turek-Hron问题（双向耦合、大变形）有本质区别：
-
-\begin{center}
-\renewcommand{\arraystretch}{1.3}
-\begin{tabular}{l|c|c}
-\toprule
-& \textbf{本节简化模型} & \textbf{Turek-Hron FSI2} \\
-\midrule
-流固耦合 & 单向（流$\to$固） & 双向（流$\leftrightarrow$固） \\
-变形量级 & 小变形（$w \ll L$） & 大变形（$w \sim L$） \\
-流动建模 & 经验公式（Strouhal） & 完整Navier-Stokes \\
-计算成本 & 秒级 & 小时/天级 \\
-适用场景 & 工程估算、物理直觉 & 精确预测、代码验证 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-从简化模型到完整的双向耦合FSI，是计算成本增加几个数量级的跨越。但两者并非互斥——简化模型帮助我们建立物理直觉，完整模型用于精确预测和验证。
+如果你的FSI代码能正确重现Turek-Hron基准的结果，那它就有了一定的可信度。这就是为什么FSI2成为了验证FSI求解器的"金标准"。
 
 \begin{references}
 \bibitem{turek2006proposal} S. Turek and J. Hron, ``Proposal for Numerical Benchmarking of Fluid-Structure Interaction between an Elastic Object and Laminar Incompressible Flow,'' in \textit{Fluid-Structure Interaction}, Lecture Notes in Computational Science and Engineering, vol. 53, Springer, 2006, pp. 371--385.
 \end{references}
-
