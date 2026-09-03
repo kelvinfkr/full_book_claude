@@ -1,7 +1,5 @@
 % ====================================================================================
-\chapter*{附录B：实验环境速成——服务器与环境配置}
-\addcontentsline{toc}{chapter}{附录B：实验环境速成——服务器与环境配置}
-\markboth{附录B\quad 实验环境速成}{附录B\quad 实验环境速成}
+\appendixchapter{实验环境速成——服务器与环境配置}{实验环境速成}
 % ====================================================================================
 
 \sidenoteplain{本附录原是“大模型工程”一章（现附录C）的扩展阅读，给完全没有服务器使用经验的同学准备。如果你已经熟悉 Linux 和 Git，可以跳过前面的基础部分。}
@@ -80,7 +78,7 @@ Host cluster
 
 服务器通常运行Linux系统（如Ubuntu）。这里列出最常用的命令：
 
-\paragraph{文件与目录操作}
+\paragraph{文件与目录操作}\mbox{}\par\nopagebreak
 
 \begin{table}[H]
 \centering
@@ -106,7 +104,7 @@ Host cluster
 \caption{常用文件操作命令}
 \end{table}
 
-\paragraph{进程与资源监控}
+\paragraph{进程与资源监控}\mbox{}\par\nopagebreak
 
 \begin{table}[H]
 \centering
@@ -180,7 +178,7 @@ Git是代码版本管理的标准工具。即使只有你一个人写代码，�
 
 Git 记录你的每一次修改，所以任何时候都可以回退到之前的某个版本；有了这层保险，你就不必担心改坏代码——改坏了就退回去。它还解决了另一个很实际的问题：代码要在本地和服务器等多台机器之间来回同步，多人合作时还要合并各自的改动，靠手工拷贝文件很快就会乱套，而 Git 正是为此设计的。
 
-\paragraph{Git基本工作流程}
+\paragraph{Git基本工作流程}\mbox{}\par\nopagebreak
 
 \begin{figure}[H]
 \centering
@@ -347,7 +345,7 @@ python -c "import torch; print(torch.cuda.is_available())"
 
 在公用服务器上，\textbf{版本管理}是一个非常重要但经常被忽视的问题。理解下面这些概念，能帮你避免“一改配置全组遭殃”的惨剧。
 
-\paragraph{三个版本的区别}
+\paragraph{三个版本的区别}\mbox{}\par\nopagebreak
 
 \begin{table}[H]
 \centering
@@ -448,7 +446,7 @@ CUDA_VISIBLE_DEVICES="" python train.py
 \end{enumerate}
 \end{warning}
 
-\paragraph{版本不匹配的常见报错}
+\paragraph{版本不匹配的常见报错}\mbox{}\par\nopagebreak
 
 \begin{table}[H]
 \centering
@@ -742,7 +740,7 @@ ssh -L 6006:localhost:6006 lab
 # 然后在本地浏览器打开 http://localhost:6006
 \end{lstlisting}
 
-\paragraph{常见问题排查}
+\paragraph{常见问题排查}\mbox{}\par\nopagebreak
 
 \begin{table}[H]
 \centering
@@ -1112,7 +1110,7 @@ python -m vllm.entrypoints.openai.api_server \
 # curl http://localhost:8000/v1/completions ...
 \end{lstlisting}
 
-\paragraph{其他推理框架}
+\paragraph{其他推理框架}\mbox{}\par\nopagebreak
 
 \begin{table}[H]
 \centering

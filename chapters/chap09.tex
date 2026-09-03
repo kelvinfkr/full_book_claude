@@ -2673,7 +2673,7 @@ PPO 的想法是：与其用 KL 散度约束概率比 $r(\theta) = \frac{\pi_\th
 
 当 $A > 0$（好动作）时，我们想增大 $r(\theta)$，但超过 $1+\epsilon$ 后梯度消失，防止过度增加；当 $A < 0$（坏动作）时，我们想减小 $r(\theta)$，但低于 $1-\epsilon$ 后梯度消失，防止过度减少。这相当于\textbf{隐式地}限制了策略的变化幅度，而不需要显式计算 KL 散度或 Fisher 矩阵！
 
-\paragraph{PPO vs TRPO 的数值比较}
+\paragraph{PPO vs TRPO 的数值比较}\mbox{}\par\nopagebreak
 
 \begin{table}[H]
 \centering
@@ -3247,7 +3247,7 @@ class PPO_KL:
 每轮选择 UCB 值最大的臂：$a_t = \arg\max_i \text{UCB}_i(t)$
 \end{keyidea}
 
-\paragraph{为什么这样设计？}
+\paragraph{为什么这样设计？}\mbox{}\par\nopagebreak
 
 \begin{figure}[H]
 \centering

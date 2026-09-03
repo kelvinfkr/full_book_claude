@@ -1,7 +1,5 @@
 % ====================================================================================
-\chapter*{附录C：大模型工程速成——显存、算力与实现}
-\addcontentsline{toc}{chapter}{附录C：大模型工程速成——显存、算力与实现}
-\markboth{附录C\quad 大模型工程速成}{附录C\quad 大模型工程速成}
+\appendixchapter{大模型工程速成——显存、算力与实现}{大模型工程速成}
 % ====================================================================================
 % ====================================================================================
 
@@ -1137,7 +1135,7 @@ MoE是另一种提升模型能力同时控制计算量的技术，被GPT-4、Mix
 \end{keyidea}
 \tryit{按激活参数 13B，用“计算量估算”一节的公式算 Mixtral 8x7B 每 token 的训练 FLOPs；再按 KV Cache 公式算它的缓存（32 层、GQA 8 个 KV 头、head\_dim = 128）。你会发现 MoE 省算力，不省显存。}
 
-\paragraph{架构对比}
+\paragraph{架构对比}\mbox{}\par\nopagebreak
 
 \begin{figure}[H]
 \centering
@@ -1207,7 +1205,7 @@ MoE是另一种提升模型能力同时控制计算量的技术，被GPT-4、Mix
 其中$g_i$是门控权重，$\text{TopK}$是得分最高的K个专家。
 \end{keyformula}
 
-\paragraph{MoE的优势与挑战}
+\paragraph{MoE的优势与挑战}\mbox{}\par\nopagebreak
 
 \begin{table}[H]
 \centering

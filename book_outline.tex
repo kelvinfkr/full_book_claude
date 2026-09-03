@@ -344,6 +344,18 @@
 \usepackage{titlesec}
 % 章标题与页眉用中文"第 N 章"（ctex 宏包默认 scheme=plain，保留英文 Chapter，这里显式改掉）
 \renewcommand{\chaptername}{第\thechapter 章}
+
+% 附录章：\chapter* 不推进章计数器，导致附录里的表/图/代码编号仍是"17.x"。
+% 这里显式推进计数器并清零，配合 \appendix 后 \thechapter 为字母，编号变为 A.1、B.2……
+\newcommand{\appendixchapter}[2]{%
+  \stepcounter{chapter}\setcounter{section}{0}\setcounter{table}{0}\setcounter{figure}{0}%
+  \setcounter{equation}{0}\setcounter{lstlisting}{0}%
+  \ifcsname c@algorithm\endcsname\setcounter{algorithm}{0}\fi
+  \chapter*{附录\thechapter：#1}%
+  \addcontentsline{toc}{chapter}{附录\thechapter：#1}%
+  \markboth{附录\thechapter\quad #2}{附录\thechapter\quad #2}}
+\renewcommand{\lstlistingname}{代码}
+
 \titleformat{\chapter}[display]
 {\normalfont\huge\bfseries}{\chaptername}{20pt}{\Huge}
 \makeatletter
@@ -764,6 +776,7 @@ $\lambda$不只是数学上的“技巧”，它有深刻的物理/经济/信息
 
 \input{chapters/epilogue}        % 后记：Bitter Lesson 与持续学习
 
+\appendix   % 章计数器归零、\thechapter 改为字母
 \input{chapters/appendix_index}  % 附录A：核心概念索引
 \input{chapters/appendix_env}    % 附录B：实验环境速成——服务器与环境配置
 \input{chapters/appendix_llm}    % 附录C：大模型工程速成——显存、算力与实现（原第12章）
