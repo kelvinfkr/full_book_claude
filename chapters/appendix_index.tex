@@ -9,7 +9,7 @@
 全书只有一条主线。每一章都在回答同样的三个问题：\textbf{目标是什么？约束是什么？$\lambda$代表什么？}下面的表格就是按这条主线整理的。
 
 % ------------------------------------------------------------------------------------
-\section*{一条主线：各章的"目标 / 约束 / $\lambda$"}
+\section*{一条主线：各章的“目标 / 约束 / $\lambda$”}
 
 \begin{center}
 \renewcommand{\arraystretch}{1.4}
@@ -53,7 +53,7 @@
 
 \textbf{拉格朗日乘子} $\lambda$
 & 第1章
-& \textbf{Ch1}: 约束的"影子价格" \newline
+& \textbf{Ch1}: 约束的“影子价格” \newline
   \textbf{Ch2}: 对偶变量、资源的价格 \newline
   \textbf{Ch3}: 广义动量 $\partial F/\partial y'$ \newline
   \textbf{Ch5}: 约束力（绳子张力、支持力） \newline
@@ -148,7 +148,7 @@
 
 \begin{description}
     \item[拉格朗日乘子 (Lagrange Multiplier)]
-    约束优化中引入的辅助变量，表示约束放松一个单位时目标函数的改进量（"影子价格"）。
+    约束优化中引入的辅助变量，表示约束放松一个单位时目标函数的改进量（“影子价格”）。
     \[
     \mathcal{L}(x, \lambda) = f(x) + \lambda g(x)
     \]
@@ -203,7 +203,7 @@
     \[ p_i \propto \exp\Big(\sum\nolimits_j \beta_j g_j(x_i)\Big). \]
 
     \item[KL散度 (Kullback-Leibler Divergence)]
-    两个分布之间的"差异"（非对称）：
+    两个分布之间的“差异”（非对称）：
     \[
     D_{KL}(P \| Q) = \sum_i p_i \log \frac{p_i}{q_i}
     \]
@@ -228,13 +228,13 @@
     末端速度 $\dot x = J\dot q$，则关节力矩与末端力满足 $\tau = J^\top F$（虚功原理）。
 
     \item[接触互补条件]
-    间隙 $\phi \ge 0$，接触力 $\lambda \ge 0$，$\lambda\phi = 0$："只有接触才有力"。
+    间隙 $\phi \ge 0$，接触力 $\lambda \ge 0$，$\lambda\phi = 0$：“只有接触才有力”。
 
     \item[最优控制 (Optimal Control)]
     选择控制输入 $u(t)$ 使得系统轨迹最优化某个目标泛函。
 
     \item[伴随方程 (Adjoint Equation)]
-    描述"未来代价对当前状态的敏感度"的微分方程，从终点向起点反向求解：
+    描述“未来代价对当前状态的敏感度”的微分方程，从终点向起点反向求解：
     \[
     \dot{\lambda} = -\frac{\partial H}{\partial x}
     \]
@@ -281,7 +281,7 @@
     $V(s) = \max_a [r(s,a) + \gamma V(f(s,a))]$。它不是定义，而是序贯决策约束优化问题的KKT条件。
 
     \item[值函数 (Value Function)]
-    状态转移约束的拉格朗日乘子："处在状态 $s$ 值多少分"。
+    状态转移约束的拉格朗日乘子：“处在状态 $s$ 值多少分”。
 
     \item[对偶上升 vs 原始改进]
     Dijkstra维护最优性（对偶上升），Bellman-Ford维护可行性（原始改进）；现代RL算法都是这两种思路的变体。
@@ -294,7 +294,7 @@
     用神经网络逼近PDE的解，把PDE残差作为约束写进损失函数（罚函数法），或用架构强制满足（硬约束）。
 
     \item[神经算子 (Neural Operator)]
-    学习从"条件函数"到"解函数"的映射 $v(x)=\int \kappa(x,y)u(y)\,dy$，一次训练、任意条件。
+    学习从“条件函数”到“解函数”的映射 $v(x)=\int \kappa(x,y)u(y)\,dy$，一次训练、任意条件。
 
     \item[格林函数 (Green's Function)]
     线性PDE的解算子的积分核，
@@ -325,18 +325,18 @@
     智能体对环境的内部表示：学习结构而非拟合像素。
 
     \item[控制障碍函数 (CBF)]
-    安全约束 $h(x)\ge 0$ 的可微形式化：$\dot h \ge -\alpha h$。安全控制器是一个QP，其乘子是安全约束的"价格"。
+    安全约束 $h(x)\ge 0$ 的可微形式化：$\dot h \ge -\alpha h$。安全控制器是一个QP，其乘子是安全约束的“价格”。
 
     \item[可微仿真 (Differentiable Simulation)]
     物理仿真的可微分版本，允许通过反向传播（伴随方法）计算控制输入的梯度。
 
     \item[自由能原理 (Free Energy Principle)]
-    感知、学习与行动都在最小化"惊奇"（变分自由能）的猜想。
+    感知、学习与行动都在最小化“惊奇”（变分自由能）的猜想。
 \end{description}
 
     \begin{description}
     \item[视觉--语言--动作模型 (VLA)]
-    以视觉--语言模型为骨干、输出动作（离散 token 或连续动作块）的机器人策略；流匹配把"生成一段动作"变成解一个 ODE。
+    以视觉--语言模型为骨干、输出动作（离散 token 或连续动作块）的机器人策略；流匹配把“生成一段动作”变成解一个 ODE。
 
     \item[真机强化学习 (Real-world RL)]
     直接在物理系统上学习：三条约束（动力学、安全集、数据预算）同时在场，三个乘子同时在算。
@@ -346,7 +346,7 @@
 
 \begin{description}
     \item[RLHF 目标 (KL-regularized RL)]
-    $\max_\pi \mathbb{E}_\pi[r] - \beta\,\mathrm{KL}(\pi\|\pi_{\rm ref})$：奖励是目标，"别离参考策略太远"是约束，$\beta$ 是它的价格；闭式解 $\pi^*\propto \pi_{\rm ref}\,e^{r/\beta}$ 是第4章的玻尔兹曼分布。
+    $\max_\pi \mathbb{E}_\pi[r] - \beta\,\mathrm{KL}(\pi\|\pi_{\rm ref})$：奖励是目标，“别离参考策略太远”是约束，$\beta$ 是它的价格；闭式解 $\pi^*\propto \pi_{\rm ref}\,e^{r/\beta}$ 是第4章的玻尔兹曼分布。
 
     \item[DPO (Direct Preference Optimization)]
     把奖励用闭式解反解并代入偏好模型，配分函数消掉，直接在策略上做回归——对偶消元。
@@ -457,7 +457,7 @@
 \textbf{章} & \textbf{标题} & \textbf{核心关键词} \\
 \midrule
 1 & 从高数到约束优化 & 拉格朗日乘子、KKT条件、影子价格、罚函数 \\
-2 & 对偶理论 & 弱/强对偶、互补松弛、矩阵"身材"、凸优化 \\
+2 & 对偶理论 & 弱/强对偶、互补松弛、矩阵“身材”、凸优化 \\
 3 & 变分法 & 泛函、Euler-Lagrange方程、守恒律、等周问题 \\
 4 & 信息与编码 & 熵、最大熵、KL散度、交叉熵、Softmax \\
 5 & 经典力学 & 最小作用量、拉格朗日方程、约束力、双摆 \\

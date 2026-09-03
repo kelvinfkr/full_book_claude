@@ -4,7 +4,7 @@
 \markboth{附录B\quad 实验环境速成}{附录B\quad 实验环境速成}
 % ====================================================================================
 
-\sidenoteplain{本附录原是"大模型工程"一章（现附录C）的扩展阅读，给完全没有服务器使用经验的同学准备。如果你已经熟悉 Linux 和 Git，可以跳过前面的基础部分。}
+\sidenoteplain{本附录原是“大模型工程”一章（现附录C）的扩展阅读，给完全没有服务器使用经验的同学准备。如果你已经熟悉 Linux 和 Git，可以跳过前面的基础部分。}
 
 \noindent\textit{本附录不讲数学。}它回答的是一个很实际的问题：当你的笔记本电脑跑不动第8--16章的实验时，怎样在实验室服务器或学校集群上把代码跑起来——连接服务器、配置环境、提交训练任务、把结果取回来。各节相互独立，随用随查。
 
@@ -345,7 +345,7 @@ python -c "import torch; print(torch.cuda.is_available())"
 
 \sidenoteplain{这一节是很多新手踩的最大坑：不理解CUDA版本、PyTorch版本、驱动版本之间的关系，随意升级，结果把组里老代码全搞挂了。}
 
-在公用服务器上，\textbf{版本管理}是一个非常重要但经常被忽视的问题。理解下面这些概念，能帮你避免"一改配置全组遭殃"的惨剧。
+在公用服务器上，\textbf{版本管理}是一个非常重要但经常被忽视的问题。理解下面这些概念，能帮你避免“一改配置全组遭殃”的惨剧。
 
 \paragraph{三个版本的区别}
 
@@ -362,7 +362,7 @@ python -c "import torch; print(torch.cuda.is_available())"
 \textbf{PyTorch CUDA版本} & PyTorch编译时用的CUDA & pip安装时选择 & 可以，但要匹配 \\
 \bottomrule
 \end{tabularx}
-\caption{三种"CUDA版本"的区别}
+\caption{三种“CUDA版本”的区别}
 \end{table}
 
 \begin{keyidea}[版本兼容的关键原则]
@@ -392,7 +392,7 @@ python -c "import torch; print(torch.cuda.is_available())"
 \end{lstlisting}
 
 \begin{remark}
-\texttt{nvidia-smi}显示的"CUDA Version"容易让人误解。那是\textbf{驱动支持的最高CUDA版本}，不是你实际安装的CUDA版本。实际版本要用\texttt{nvcc --version}查看。
+\texttt{nvidia-smi}显示的“CUDA Version”容易让人误解。那是\textbf{驱动支持的最高CUDA版本}，不是你实际安装的CUDA版本。实际版本要用\texttt{nvcc --version}查看。
 \end{remark}
 
 \paragraph{什么是 \texttt{cuda:0}？}
@@ -485,7 +485,7 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 \end{lstlisting}
 
-\begin{example}[一个典型的"版本地狱"场景]
+\begin{example}[一个典型的“版本地狱”场景]
 师兄的代码在服务器上跑得好好的。你为了跑一个新论文的代码，把系统 CUDA 从 11.8 升级到 12.2。结果，师兄的 PyTorch 是 cu118 版本，现在 \texttt{torch.cuda.is\_available()} 返回 False；师姐用的 TensorFlow 也挂了；导师开始问为什么大家的实验都跑不了了……
 
 正确的做法是不碰系统 CUDA：用 Conda 创建一个新环境，在里面装 cu118 版本的 PyTorch（驱动向下兼容，没有问题）；如果新代码确实需要更新的 CUDA，就联系管理员，在不影响现有环境的前提下另外添加一个版本。
