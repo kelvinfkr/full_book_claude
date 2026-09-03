@@ -1,14 +1,10 @@
 % ====================================================================================
 \chapter*{附录A：核心概念索引}
 \addcontentsline{toc}{chapter}{附录A：核心概念索引}
+\markboth{附录A\quad 核心概念索引}{附录A\quad 核心概念索引}
 % ====================================================================================
 
-本附录提供全书核心概念的快速索引，帮助读者：
-\begin{itemize}
-    \item 查找概念的首次出现位置和完整定义
-    \item 理解同一概念在不同章节中的不同形态
-    \item 复习时快速定位关键内容
-\end{itemize}
+本附录是全书核心概念的快速索引：它告诉你一个概念在哪一章首次出现、完整定义在哪里，同一个概念在不同章节里换成了什么形态，以便复习时能直接定位。
 
 全书只有一条主线。每一章都在回答同样的三个问题：\textbf{目标是什么？约束是什么？$\lambda$代表什么？}下面的表格就是按这条主线整理的。
 
@@ -16,9 +12,9 @@
 \section*{一条主线：各章的"目标 / 约束 / $\lambda$"}
 
 \begin{center}
-\renewcommand{\arraystretch}{1.5}
-\small
-\begin{tabular}{c|p{3.2cm}|p{3.6cm}|p{3.8cm}|p{2.6cm}}
+\renewcommand{\arraystretch}{1.4}
+\footnotesize
+\begin{tabular}{@{}c@{\hspace{4pt}}p{2.6cm}p{2.9cm}p{3.2cm}p{2.3cm}@{}}
 \toprule
 \textbf{章} & \textbf{目标函数} & \textbf{约束} & \textbf{$\lambda$ 的身份} & \textbf{一阶条件} \\
 \midrule
@@ -49,7 +45,8 @@
 \begin{center}
 \renewcommand{\arraystretch}{1.6}
 \small
-\begin{tabular}{p{2.8cm}|p{2.2cm}|p{8cm}}
+\small
+\begin{tabular}{@{}p{2.5cm}p{1.9cm}p{7.8cm}@{}}
 \toprule
 \textbf{概念} & \textbf{首次出现} & \textbf{各章节中的形态} \\
 \midrule
@@ -202,7 +199,8 @@
     \]
 
     \item[最大熵原理]
-    在已知约束下选择熵最大的分布。乘子法给出指数族 $p_i \propto \exp(\sum_j \beta_j g_j(x_i))$。
+    在已知约束下选择熵最大的分布。乘子法给出指数族
+    \[ p_i \propto \exp\Big(\sum\nolimits_j \beta_j g_j(x_i)\Big). \]
 
     \item[KL散度 (Kullback-Leibler Divergence)]
     两个分布之间的"差异"（非对称）：
@@ -299,7 +297,9 @@
     学习从"条件函数"到"解函数"的映射 $v(x)=\int \kappa(x,y)u(y)\,dy$，一次训练、任意条件。
 
     \item[格林函数 (Green's Function)]
-    线性PDE的解算子的积分核：$u(x)=\int G(x,\xi) f(\xi)\,d\xi$。它是解对源项的敏感度。
+    线性PDE的解算子的积分核，
+    \[ u(x)=\int G(x,\xi) f(\xi)\,d\xi, \]
+    它是解对源项的敏感度。
 \end{description}
 
 \subsection*{H. 多智能体（第10章）}
@@ -451,7 +451,8 @@
 
 \begin{center}
 \renewcommand{\arraystretch}{1.3}
-\begin{tabular}{c|l|l}
+\small
+\begin{tabular}{@{}c@{\hspace{5pt}}p{4.3cm}p{7.6cm}@{}}
 \toprule
 \textbf{章} & \textbf{标题} & \textbf{核心关键词} \\
 \midrule

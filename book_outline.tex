@@ -75,6 +75,7 @@
 \usepackage{enumitem}
 \usepackage{booktabs}
 \usepackage{array}
+\usepackage{tabularx}   % 宽表格：X 列自动换行，防止超出版心
 \usepackage{multirow}
 \usepackage{longtable}
 
@@ -92,6 +93,8 @@
 \usepackage{tcolorbox}
 \makeatletter
 \tcbset{every box/.append style={before upper app={\global\advance\insideboxdepth\@ne}, after upper app={\global\advance\insideboxdepth\m@ne}}}
+% 盒子允许跨页，避免整页留白
+\tcbset{every box/.append style={breakable}}
 \makeatother
 \tcbuselibrary{theorems,skins,breakable,hooks}
 
@@ -331,8 +334,14 @@
 
 % ========== 章节格式 ==========
 \usepackage{titlesec}
+% 章标题与页眉用中文"第 N 章"（ctex 宏包默认 scheme=plain，保留英文 Chapter，这里显式改掉）
+\renewcommand{\chaptername}{第\thechapter 章}
 \titleformat{\chapter}[display]
-{\normalfont\huge\bfseries}{\chaptertitlename\ \thechapter}{20pt}{\Huge}
+{\normalfont\huge\bfseries}{\chaptername}{20pt}{\Huge}
+\makeatletter
+\renewcommand{\chaptermark}[1]{\markboth{第\thechapter 章\quad #1}{}}
+\renewcommand{\sectionmark}[1]{\markright{\thesection\quad #1}}
+\makeatother
 
 % 部分（\part）改为"top"类：标题占页首，同一页紧接"本部分导读"，而不是一页只印一个标题
 \titleclass{\part}{top}
@@ -461,11 +470,13 @@
 % ========== 前言（含阅读导航图）==========
 \input{chapters/preface}
 
+\setcounter{tocdepth}{1}   % 目录只列到节：列到小节时目录长达 18 页
 \tableofcontents
 
 % ========== 导论：全书核心思想 ==========
 \chapter*{全书核心思想}
 \addcontentsline{toc}{chapter}{全书核心思想}
+\markboth{全书核心思想}{全书核心思想}
 
 \begin{keyformula}[title=统一框架]
 \begin{equation}
@@ -530,13 +541,8 @@ IV 物理智能 & 物理、学习、决策怎样合到一起成为物理智能�
 \begin{partintro}
 \textbf{本部分回答的问题}：一个"有条件的最优"问题，怎样写成方程？方程里多出来的那个 $\lambda$ 是什么？不确定性也能写成约束吗？
 
-四章的关系是"由数到函数到分布"：
-\begin{itemize}
-    \item \textbf{第1章}在有限维里建立全书的语言：$\Lag = f + \lambda^\top g$、KKT 条件、$\lambda$ 是约束的\textbf{影子价格}；
-    \item \textbf{第2章}换一个角度看同一个问题——把 $\lambda$ 当主角，得到对偶问题，并由此得到第一批算法（对偶上升、增广拉格朗日）；
-    \item \textbf{第3章}把"点"换成"函数"，KKT 条件变成欧拉--拉格朗日方程，为第二部分的物理原理准备语言；
-    \item \textbf{第4章}把"点"换成"概率分布"：熵取极大、矩约束给定，$\lambda$ 变成\textbf{逆温度}和\textbf{每比特的代价}，softmax、交叉熵、KL 散度全部从这里长出来——这是第三部分学习方法的语言。
-\end{itemize}
+四章的关系是"由数到函数到分布"。第1章在有限维里建立全书的语言：把问题写成 $\Lag = f + \lambda^\top g$，一阶条件是 KKT 条件，而 $\lambda$ 是约束的\textbf{影子价格}。第2章换一个角度看同一个问题，把 $\lambda$ 当主角，得到对偶问题，并由此得到第一批算法——对偶上升与增广拉格朗日法。第3章把"点"换成"函数"，KKT 条件于是变成欧拉--拉格朗日方程，这是第二部分物理原理所需的语言。第4章再把"点"换成"概率分布"：熵取极大、矩约束给定，$\lambda$ 变成\textbf{逆温度}和\textbf{每比特的代价}，softmax、交叉熵、KL 散度全部从这里长出来，它们是第三部分学习方法的语言。
+
 \textbf{往后看}：全书后面 13 章没有一章离得开这四章。第二部分直接用第 3 章的变分法；第三部分的反向传播、强化学习是第 1 章 KKT 条件在"时间/层"上的重复，它们的损失函数、熵正则和 RLHF 的玻尔兹曼策略都来自第 4 章；第四部分的有限元与 PINN 是第 3 章变分法的数值化，多智能体是第 2 章对偶的多方版本。
 \end{partintro}
 
@@ -552,12 +558,8 @@ IV 物理智能 & 物理、学习、决策怎样合到一起成为物理智能�
 \part{物理与运动：从最小作用量到最优控制}
 
 \begin{partintro}
-\textbf{本部分回答的问题}：物理定律为什么长成那样？知道了物理定律之后，怎样让一个物理系统按我们的意愿运动？三章是同一条拉格朗日力学的线：定律 $\to$ 机构 $\to$ 控制。
-\begin{itemize}
-    \item \textbf{第5章 最小作用量}：作用量取极值 $\Rightarrow$ 牛顿方程、哈密顿方程；$\lambda$ 是\textbf{约束力}和\textbf{广义动量}。自然自己在做约束优化。
-    \item \textbf{第6章 机器人运动学与动力学}：把"物理系统"具体化成机械臂——几何约束（运动学）、接触约束（动力学）；$\lambda$ 是\textbf{接触力}和\textbf{关节力矩}。
-    \item \textbf{第7章 轨迹优化与 MPC}：约束不再是一条静态方程，而是随时间演化的动力学 $\dot x = f(x,u)$；$\lambda(t)$ 变成\textbf{协态变量}，一阶条件变成\textbf{伴随方程}（Pontryagin 原理）；MPC 则是"边走边重解"。
-\end{itemize}
+\textbf{本部分回答的问题}：物理定律为什么长成那样？知道了物理定律之后，怎样让一个物理系统按我们的意愿运动？三章是同一条拉格朗日力学的线：定律 $\to$ 机构 $\to$ 控制。第5章讲最小作用量：作用量取极值就给出牛顿方程与哈密顿方程，$\lambda$ 是\textbf{约束力}和\textbf{广义动量}——自然自己在做约束优化。第6章把"物理系统"具体化成机械臂，几何约束给出运动学，接触约束给出动力学，$\lambda$ 相应地是\textbf{接触力}和\textbf{关节力矩}。第7章讲轨迹优化与 MPC：约束不再是一条静态方程，而是随时间演化的动力学 $\dot x = f(x,u)$，于是 $\lambda(t)$ 变成\textbf{协态变量}，一阶条件变成\textbf{伴随方程}（Pontryagin 原理），MPC 则是"边走边重解"。
+
 \textbf{为什么第7章是全书的枢纽}：它的"前向算状态、后向算 $\lambda$"这一对方程，在第8章叫反向传播，在第9章叫贝尔曼方程，在第16章叫可微物理。读懂第7章，后面三章的核心公式都可以自己推出来。连续介质与场（有限元）放到第四部分，紧挨着它的下游 PINN 与神经算子。
 \end{partintro}
 
@@ -572,14 +574,8 @@ IV 物理智能 & 物理、学习、决策怎样合到一起成为物理智能�
 \part{学习与决策：把物理换成数据}
 
 \begin{partintro}
-\textbf{本部分回答的问题}：当物理模型不完整、或者根本写不出来时，模型和策略从哪里来？答案是从数据里学——而"学习"仍然是约束优化，只是约束从"物理定律"换成了"计算图"、"经验数据"和"别人的行为"。五章的顺序是：一个网络 $\to$ 一个智能体 $\to$ 很多个智能体 $\to$ 多模态 $\to$ 后训练与数据。
-\begin{itemize}
-    \item \textbf{第8章 反向传播}：每一层网络是一条等式约束，$\lambda_i$ 是\textbf{误差信号}，反向传播就是第7章的伴随方程；
-    \item \textbf{第9章 强化学习}：把第7章的终点推到无穷远，$\lambda$ 变成\textbf{值函数的梯度}，伴随方程变成贝尔曼方程；
-    \item \textbf{第10章 多智能体}：很多个第9章的智能体互为约束，$\lambda$ 变成\textbf{均衡价格}和\textbf{拥挤费}，纳什均衡是联立的 KKT 条件，平均场是它的连续极限；
-    \item \textbf{第11章 序列建模与视觉--语言模型}：把时间放进网络（RNN 的时间反传）再放进注意力（Transformer），并把图像也变成 token；
-    \item \textbf{第12章 智能体的后训练与数据流水线}：RLHF 的 $\beta$ 就是 $\lambda$，最优策略是第4章的玻尔兹曼分布；造数据的流水线是从约束分布采样——验证器是约束，过滤是 $\lambda\to\infty$。
-\end{itemize}
+\textbf{本部分回答的问题}：当物理模型不完整、或者根本写不出来时，模型和策略从哪里来？答案是从数据里学——而"学习"仍然是约束优化，只是约束从"物理定律"换成了"计算图"、"经验数据"和"别人的行为"。五章的顺序是：一个网络 $\to$ 一个智能体 $\to$ 很多个智能体 $\to$ 多模态 $\to$ 后训练与数据。第8章讲反向传播：每一层网络是一条等式约束，$\lambda_i$ 是\textbf{误差信号}，反向传播就是第7章的伴随方程。第9章讲强化学习：把第7章的终点推到无穷远，$\lambda$ 变成\textbf{值函数的梯度}，伴随方程变成贝尔曼方程。第10章讲多智能体：很多个第9章的智能体互为约束，$\lambda$ 变成\textbf{均衡价格}和\textbf{拥挤费}，纳什均衡是联立的 KKT 条件，平均场是它的连续极限。第11章讲序列建模与视觉--语言模型：先把时间放进网络（RNN 的时间反传），再放进注意力（Transformer），最后把图像也变成 token。第12章讲智能体的后训练与数据流水线：RLHF 的 $\beta$ 就是 $\lambda$，最优策略是第4章的玻尔兹曼分布；造数据的流水线是从约束分布采样——验证器是约束，过滤是 $\lambda\to\infty$。
+
 \textbf{往后看}：第8章的"可微"是第14、15、16章的前提；第11、12章的多模态模型与后训练方法是第17章 VLA 和真机学习的骨架；显存、算力这些"资源约束"放在附录C。
 \end{partintro}
 
@@ -596,14 +592,8 @@ IV 物理智能 & 物理、学习、决策怎样合到一起成为物理智能�
 \part{物理智能：从解方程到嵌入物理到具身}
 
 \begin{partintro}
-\textbf{本部分回答的问题}：物理（第二部分）和学习（第三部分）怎样合到一起，成为能在物理世界里感知、预测、行动的智能？五章从"场"走到"身体"：
-\begin{itemize}
-    \item \textbf{第13章 有限元}：势能取极小 $\Rightarrow$ $KU = F$；$\lambda$ 是\textbf{节点力}和\textbf{边界反力}——要把物理嵌进学习，先得知道物理是怎么被算出来的；
-    \item \textbf{第14章 物理信息神经网络}：把 PDE 当约束加进损失——第13章的方程 + 第8章的网络；$\rho$ 是罚系数，$\lambda$ 是\textbf{边界条件的影子价格}；
-    \item \textbf{第15章 神经算子}：不学一个解，学"方程到解"的整个映射——第13章的 $K^{-1}$ 换成可学习的算子；
-    \item \textbf{第16章 世界模型与安全控制}：把第7章的动力学换成学出来的模型（潜空间动力学、可微物理），用第1章的不等式约束保证安全（控制屏障函数）；$\lambda$ 是\textbf{安全约束的价格}；
-    \item \textbf{第17章 VLA、真机强化学习与展望}：把第11章的 VLM 接上动作、用第12章的方法在真机上继续学；动力学、安全集、数据预算三条约束同时在场，三个 $\lambda$ 同时在算。
-\end{itemize}
+\textbf{本部分回答的问题}：物理（第二部分）和学习（第三部分）怎样合到一起，成为能在物理世界里感知、预测、行动的智能？五章从"场"走到"身体"。第13章讲有限元：势能取极小给出 $KU = F$，$\lambda$ 是\textbf{节点力}和\textbf{边界反力}——要把物理嵌进学习，先得知道物理是怎么被算出来的。第14章讲物理信息神经网络：把 PDE 当约束加进损失，也就是第13章的方程加上第8章的网络，$\rho$ 是罚系数，$\lambda$ 是\textbf{边界条件的影子价格}。第15章讲神经算子：不学一个解，而学"方程到解"的整个映射，把第13章的 $K^{-1}$ 换成可学习的算子。第16章讲世界模型与安全控制：把第7章的动力学换成学出来的模型（潜空间动力学、可微物理），用第1章的不等式约束保证安全（控制屏障函数），$\lambda$ 是\textbf{安全约束的价格}。第17章讲 VLA、真机强化学习与展望：把第11章的 VLM 接上动作，用第12章的方法在真机上继续学；动力学、安全集、数据预算三条约束同时在场，三个 $\lambda$ 同时在算。
+
 \textbf{回到起点}：全书总结把 17 章排成一张表——目标 $f$ 是什么、约束 $g$ 是什么、$\lambda$ 代表什么。物理智能的理论基础，就是这张表。
 \end{partintro}
 
@@ -619,6 +609,7 @@ IV 物理智能 & 物理、学习、决策怎样合到一起成为物理智能�
 
 \chapter*{全书总结：约束优化的统一视角}
 \addcontentsline{toc}{chapter}{全书总结}
+\markboth{全书总结}{全书总结}
 
 我们从一个简单的问题开始：
 \begin{quote}
