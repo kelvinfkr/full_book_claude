@@ -986,7 +986,7 @@ u(0.75) = \frac{0.75 \times 0.25}{2} = 0.09375
 
 上面的手算过程可以直接翻译成代码。刚度矩阵是三对角的，载荷向量在 $f = 1$ 时就是 $h$：
 
-\begin{lstlisting}[style=teaching, caption=一维线性有限元求解 $-u''=1$，$u(0)=u(1)=0$]
+\begin{lstlisting}[style=teaching, caption={一维线性有限元求解 $-u''=1$，$u(0)=u(1)=0$}]
 import numpy as np
 
 N = 4                       # 单元数
@@ -3435,8 +3435,8 @@ Jacobi（$M = \text{diag}(K)$） & $O(h^{-2})$ & $O(n)$ & 简单，但改善有�
 
 \textbf{观察}：
 \begin{itemize}
-    \item 高频误差（振荡剧烈的部分）：几次迭代就消失了 ✓
-    \item 低频误差（缓慢变化的部分）：迭代几百次还在！✗
+    \item 高频误差（振荡剧烈的部分）：几次迭代就消失了 \checkmark{}
+    \item 低频误差（缓慢变化的部分）：迭代几百次还在！$\times$
 \end{itemize}
 
 这就是 Jacobi/Gauss-Seidel 等简单迭代法的通病：\textbf{只擅长消除高频，对低频束手无策}。
@@ -4521,6 +4521,6 @@ def flag_deformation(s, t, amplitude=0.080, freq=2.0):
 
 如果你的FSI代码能正确重现Turek-Hron基准的结果，那它就有了一定的可信度。这就是为什么FSI2成为了验证FSI求解器的"金标准"。
 
-\begin{references}
+\begin{thebibliography}{9}
 \bibitem{turek2006proposal} S. Turek and J. Hron, ``Proposal for Numerical Benchmarking of Fluid-Structure Interaction between an Elastic Object and Laminar Incompressible Flow,'' in \textit{Fluid-Structure Interaction}, Lecture Notes in Computational Science and Engineering, vol. 53, Springer, 2006, pp. 371--385.
-\end{references}
+\end{thebibliography}

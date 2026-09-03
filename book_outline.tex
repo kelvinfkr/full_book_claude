@@ -5,7 +5,9 @@
 \usepackage[UTF8]{ctex}
 
 % 单独给西里尔字母指定一个字体
-\newfontfamily\cyrillicfont{Times New Roman}
+\IfFontExistsTF{Times New Roman}{\newfontfamily\cyrillicfont{Times New Roman}}{\newfontfamily\cyrillicfont{DejaVu Serif}}
+% 生僻字（第6章的"龘、靐"）Fandol 字体没有，若装了 Noto CJK 就用它兜底
+\IfFontExistsTF{Noto Serif CJK SC}{\newCJKfontfamily\rarecjkfont{Noto Serif CJK SC}}{\newcommand{\rarecjkfont}{}}
 
 % ========== 数学 ==========
 \usepackage{amsmath,amssymb,amsthm}
@@ -97,6 +99,8 @@
     belowskip=10pt,
     captionpos=b,
     escapeinside={(*@}{@*)},
+    % 代码注释里偶尔出现的希腊字母与数学符号，等宽字体没有，映射为数学模式
+    literate={α}{{$\alpha$}}1 {λ}{{$\lambda$}}1 {∇}{{$\nabla$}}1 {²}{{$^{2}$}}1 {·}{{$\cdot$}}1 {←}{$\leftarrow$}2,
 }
 
 \lstdefinestyle{teaching}{
@@ -138,7 +142,7 @@
     keepspaces=true,
     tabsize=4,
     showstringspaces=false,
-    literate={->}{$\rightarrow$}2 {←}{$\leftarrow$}2,
+    literate={->}{$\rightarrow$}2 {←}{$\leftarrow$}2 {α}{{$\alpha$}}1 {λ}{{$\lambda$}}1 {∇}{{$\nabla$}}1 {²}{{$^{2}$}}1 {·}{{$\cdot$}}1,
 }
 
 % 行内代码命令
@@ -627,9 +631,7 @@ $\lambda$不只是数学上的"技巧"，它有深刻的物理/经济/信息含�
 \begin{center}
 
 \textit{希望这本书能让你在未来的AI研究中，\\
-
 透过复杂的代码和架构，\\
-
 看到那贯穿始终的数学本质。}
 
 \end{center}

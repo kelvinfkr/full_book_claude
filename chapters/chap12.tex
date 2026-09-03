@@ -347,8 +347,8 @@ LLaMA-70B & 70B & 280 GB & 140 GB & 70 GB & 35 GB \\
 \toprule
 \textbf{模型} & \textbf{FP16推理} & \textbf{全量微调} & \textbf{单卡可行性} & \textbf{解决方案} \\
 \midrule
-GPT-2 (1.5B) & 3 GB & $\approx$20 GB & RTX 3090 ✓ & 单卡可跑 \\
-LLaMA-7B & 14 GB & $\approx$100 GB & A100-80G ✗ & DeepSpeed / LoRA \\
+GPT-2 (1.5B) & 3 GB & $\approx$20 GB & RTX 3090 \checkmark{} & 单卡可跑 \\
+LLaMA-7B & 14 GB & $\approx$100 GB & A100-80G $\times$ & DeepSpeed / LoRA \\
 LLaMA-13B & 26 GB & $\approx$180 GB & 单卡不可能 & 多卡并行 \\
 LLaMA-70B & 140 GB & $\approx$1 TB & 单卡不可能 & 集群训练 \\
 \bottomrule
@@ -1053,9 +1053,9 @@ LoRA的显存优势：
 \toprule
 \textbf{方法} & \textbf{7B模型训练显存} & \textbf{单卡可行性} \\
 \midrule
-全量微调 & $\approx$100 GB & A100-80GB ✗ \\
-LoRA ($r=8$) & $\approx$18 GB & RTX 3090 ✓ \\
-QLoRA (4-bit + LoRA) & $\approx$6 GB & RTX 3080 ✓ \\
+全量微调 & $\approx$100 GB & A100-80GB $\times$ \\
+LoRA ($r=8$) & $\approx$18 GB & RTX 3090 \checkmark{} \\
+QLoRA (4-bit + LoRA) & $\approx$6 GB & RTX 3080 \checkmark{} \\
 \bottomrule
 \end{tabular}
 \caption{不同微调方法的显存需求对比}

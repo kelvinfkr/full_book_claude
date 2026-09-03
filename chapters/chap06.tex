@@ -58,7 +58,7 @@ Shannon把这个"问题数"叫做\textbf{比特（bit）}——1 bit就是一个
 
 哪条消息的信息量更大？
 
-直觉告诉我们是消息B。为什么？因为消息A是必然发生的事（概率≈1），而消息B是罕见事件（概率很小）。
+直觉告诉我们是消息B。为什么？因为消息A是必然发生的事（概率 $\approx 1$），而消息B是罕见事件（概率很小）。
 
 \begin{keyformula}[title=单个事件的信息量]
 事件 $x$ 的信息量（自信息）定义为：
@@ -261,7 +261,7 @@ W = \frac{6!}{2! \cdot 2! \cdot 2!} = \frac{720}{8} = 90 \text{ 种}
 H(p) = -\sum_i p_i \ln p_i \approx \frac{1}{N} \ln W
 \end{equation}
 
-\textbf{熵 ∝ 微观态数的对数}
+\textbf{熵 $\propto$ 微观态数的对数}
 
 熵大 $\Leftrightarrow$ 微观实现方式多 $\Leftrightarrow$ 更"自然"、更容易出现
 \end{keytheorem}
@@ -985,7 +985,7 @@ P(y=1 | \bm{x}) = \sigma(\bm{w}^\top \bm{x}) = \frac{1}{1 + e^{-\bm{w}^\top \bm{
 \begin{insightbox}
 \textbf{核心直觉}：高频符号用短码，低频符号用长码。
 
-就像常用汉字笔画少（"一、人、大"），罕见汉字笔画多（"龘、靐、鑫"）。
+就像常用汉字笔画少（"一、人、大"），罕见汉字笔画多（"{\rarecjkfont 龘、靐}、鑫"）。
 
 或者想想摩尔斯电码：最常用的字母 E 只需要一个点（$\cdot$），而罕见的 Q 需要四个符号（$--\cdot-$）。
 \end{insightbox}

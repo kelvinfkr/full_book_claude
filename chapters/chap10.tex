@@ -1729,7 +1729,7 @@ def q_learning(env, episodes=2000, gamma=1.0, alpha=0.1, epsilon=0.1):
             td_error = td_target - Q[state[0], state[1], action]
             
             # --- 第四步：更新 Q 值 ---
-            # Q(s,a) ← Q(s,a) + α * (TD目标 - Q(s,a))
+            # Q(s,a) <- Q(s,a) + alpha * (TD目标 - Q(s,a))
             Q[state[0], state[1], action] += alpha * td_error
             
             # --- 第五步：移动到下一状态 ---

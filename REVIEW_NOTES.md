@@ -152,3 +152,16 @@
 - 旧的重复脚本未删（`code/chap10_rl.py`、`code/chap12_transformer.py`、`code_chap07/chap07_robotics.py`、`code_chap12/chap12_transformer.py`、`code_chap16/chap16_world_model.py`），它们生成的是旧图或写到旧路径，建议清理；新图一律由 `figure_docs` 中标明的脚本生成。
 - 本环境没有 TeX，无法编译；对所有改动过的章节做了 `\begin/\end` 与花括号配对检查。
 - 计时类图（第 2 章）的绝对秒数依赖机器，caption 用了"约"。
+
+## 六、编译验证（TeX Live 2023，XeLaTeX）
+
+在容器里装了 TeX Live（`texlive-xetex`、`texlive-lang-chinese`、`texlive-latex-extra`、`texlive-science`、`texlive-pictures`、`texlive-fonts-extra`），用 `xelatex -output-directory=build book_outline.tex` 连跑多遍，最终 **0 个错误、0 个未定义引用，664 页**。为此做的修正：
+
+1. **仓库根目录下的 27 个 `.sty` 存根**（`tcolorbox.sty`、`hyperref.sty`、`listings.sty`……，早先没有 TeX 时写的"兼容实现"）会屏蔽 TeX Live 的真包，导致上百个错误；已全部移到 `latex_stubs/`（保留备查，编译时不再被找到）。
+2. `\newfontfamily\cyrillicfont{Times New Roman}` 在没有该字体的机器上直接报错，改为 `\IfFontExistsTF` 回退到 DejaVu Serif；第 6 章的生僻字"龘、靐"Fandol 字体没有，加了 `\rarecjkfont`（有 Noto Serif CJK 时用它兜底）。
+3. 第 5 章：`lstlisting` 的 caption 含 `=` 和 `$`，加花括号；`\begin{references}` 不存在，改为 `thebibliography`。
+4. `book_outline.tex` 结尾的 `\textit{...}` 内有空行，导致"Paragraph ended"错误；已合并。
+5. 缺字：文本模式的 ✓/✗/≈/∝ 改为 `\checkmark`、`$\times$`、`$\approx$`、`$\propto$`；数学下标里的中文与全角冒号（`d_{可行}`、`_{L_{\text{PDE}}：...}`）包进 `\text{}`；代码清单里的 α、λ、∇、²、· 通过 `literate` 映射为数学符号。
+6. `.gitignore` 增加 `build/`。
+
+剩余警告只有 hyperref 的"Token not allowed in a PDF string"（章节标题含公式，影响书签文字，不影响正文）和 fontspec 对 Fandol 字体缺少某些 OpenType 特性的提示，均无害。

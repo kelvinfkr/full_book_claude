@@ -190,7 +190,7 @@ PINN的想法出奇地简单：
 \begin{definition}[PINN损失函数]
 PINN的损失函数由两部分组成：
 \begin{equation}
-    \mathcal{L}_{\text{PINN}}(\theta) = \underbrace{\frac{1}{N_r}\sum_{i=1}^{N_r} \left|\mathcal{N}[u_\theta](x_i^r) - f(x_i^r)\right|^2}_{L_{\text{PDE}}：\text{PDE残差}} + \underbrace{\lambda \cdot \frac{1}{N_b}\sum_{j=1}^{N_b} \left|u_\theta(x_j^b) - g(x_j^b)\right|^2}_{L_{\text{BC}}：\text{边界条件残差}}
+    \mathcal{L}_{\text{PINN}}(\theta) = \underbrace{\frac{1}{N_r}\sum_{i=1}^{N_r} \left|\mathcal{N}[u_\theta](x_i^r) - f(x_i^r)\right|^2}_{L_{\text{PDE}}\text{：PDE残差}} + \underbrace{\lambda \cdot \frac{1}{N_b}\sum_{j=1}^{N_b} \left|u_\theta(x_j^b) - g(x_j^b)\right|^2}_{L_{\text{BC}}\text{：边界条件残差}}
 \end{equation}
 其中：
 \begin{itemize}
@@ -1312,7 +1312,7 @@ class AdaptiveWeightPINN:
             history['lambda'].append(lam)
             
             if (epoch + 1) % 1000 == 0:
-                print(f"Epoch {epoch+1}: PDE={loss_pde:.2e}, BC={loss_bc:.2e}, λ={lam:.2f}")
+                print(f"Epoch {epoch+1}: PDE={loss_pde:.2e}, BC={loss_bc:.2e}, lambda={lam:.2f}")
         
         return history
 
@@ -1578,7 +1578,7 @@ def compute_ritz_loss(model, x_interior, x_boundary, f_func, rho_bc=100.0):
     x = x_interior.requires_grad_(True)
     u = model(x)
     
-    # 计算梯度 ∇u
+    # 计算梯度 grad u
     grad_u = torch.autograd.grad(
         outputs=u,
         inputs=x,
@@ -1586,7 +1586,7 @@ def compute_ritz_loss(model, x_interior, x_boundary, f_func, rho_bc=100.0):
         create_graph=True
     )[0]
     
-    # 能量泛函: (1/2)|∇u|² - f·u
+    # 能量泛函: (1/2)|grad u|^2 - f*u
     f = f_func(x)
     energy = 0.5 * torch.sum(grad_u ** 2, dim=1) - f.squeeze() * u.squeeze()
     loss_energy = torch.mean(energy)
@@ -1682,7 +1682,7 @@ Deep Ritz（能量最小化） & $4.84 \times 10^{-7}$ & 只需一阶导数 \\
 PINN天然适合逆问题！只需将$D$也作为可学习参数：
 
 \begin{equation}
-    \mathcal{L}(\theta, D) = \underbrace{\sum_i |u_\theta(x_i, t_i) - u_i^{\text{obs}}|^2}_{L_{\text{data}}：\text{拟合观测数据}} + \underbrace{\rho \sum_j |r_D(x_j, t_j)|^2}_{L_{\text{PDE}}：\text{PDE残差}}
+    \mathcal{L}(\theta, D) = \underbrace{\sum_i |u_\theta(x_i, t_i) - u_i^{\text{obs}}|^2}_{L_{\text{data}}\text{：拟合观测数据}} + \underbrace{\rho \sum_j |r_D(x_j, t_j)|^2}_{L_{\text{PDE}}\text{：PDE残差}}
 \end{equation}
 
 其中残差$r_D = \partial_t u_\theta - D \partial_{xx} u_\theta$依赖于待定参数$D$。
