@@ -7,18 +7,9 @@
 
 \sidenoteplain{\textbf{深度学习三巨头}：Geoffrey Hinton、Yann LeCun、Yoshua Bengio因``深度学习的突破性贡献''共同获得2018年图灵奖（计算机界的诺贝尔奖）。2012年Hinton学生的AlexNet在ImageNet竞赛中取得突破，标志着深度学习时代的开始。}
 
-\sidenoteplain{\textbf{图灵奖}以计算机科学之父Alan Turing命名，是计算机界最高荣誉。图灵(1912--1954)提出了图灵机概念，奠定了现代计算机理论基础。他在二战中破解了纳粹密码，却因同性恋被迫害，最终服毒自杀。2009年英国政府正式道歉，2013年英女王宣布对其赦免。}
+想象一个问题：如何让计算机识别手写数字？给计算机一张 $28 \times 28$ 像素的灰度图片（共784个数字，每个数字表示一个像素的亮度），它需要输出 0-9 中的某个答案。传统方法是人工设计规则：``6有一个圈''、``7有一横一竖''。但这种方法太脆弱——字迹潦草一点就失效了。深度学习的思路完全不同：我们不告诉计算机规则，而是给它大量``图片-答案''的配对数据，让它\textbf{自己从数据中学出}识别规则。
 
-想象一个问题：如何让计算机识别手写数字？
-
-给计算机一张 $28 \times 28$ 像素的灰度图片（共784个数字，每个数字表示一个像素的亮度），它需要输出 0-9 中的某个答案。
-
-\textbf{传统方法}是人工设计规则：``6有一个圈''、``7有一横一竖''。但这种方法太脆弱——字迹潦草一点就失效了。
-
-\textbf{深度学习的思路}完全不同：我们不告诉计算机规则，而是给它大量``图片-答案''的配对数据，让它\textbf{自己从数据中学出}识别规则。
-
-这听起来很神奇，但数学上，它不过是一个\textbf{带约束的优化问题}——正是我们前几章学过的内容。
-\storynote{Rumelhart、Hinton 与 Williams}{1986年，三人在 Nature 上发表了一篇只有四页的短文《Learning representations by back-propagating errors》，"反向传播"从此家喻户晓。但同样的公式，控制论学者早在1960年代就用来算火箭轨迹的灵敏度——第7章的伴随方程。本章要讲的，正是这段被遗忘的血缘。}
+这听起来很神奇，但数学上，它不过是一个\textbf{带约束的优化问题}——正是我们前几章学过的内容。2024 年，Geoffrey Hinton 获得诺贝尔物理学奖，得知消息时他说自己``目瞪口呆''（flabbergasted）。一位研究神经网络的学者拿到物理学奖，乍看有些意外；但读完本章你会觉得顺理成章——反向传播背后的数学，正是物理学家熟悉的拉格朗日乘子法。
 
 \vspace{0.3cm}
 \noindent\textit{为什么一个有上亿参数的网络，算一次梯度只比算一次输出贵两三倍？为什么"反向传播"要从最后一层往回算，而不是从第一层往前算？为什么控制论里算火箭轨迹灵敏度的公式，和训练神经网络的公式一模一样？}
@@ -36,14 +27,10 @@
     \item 分析激活函数、损失函数的选择依据（见扩展阅读）
 \end{itemize}
 \end{tcolorbox}
+\storynote{Rumelhart、Hinton 与 Williams}{1986年，三人在 Nature 上发表了一篇只有四页的短文《Learning representations by back-propagating errors》，"反向传播"从此家喻户晓。但同样的公式，控制论学者早在1960年代就用来算火箭轨迹的灵敏度——第7章的伴随方程。本章要讲的，正是这段被遗忘的血缘。}
 
 \begin{insightbox}
-\textbf{阅读本章前，请确保你理解}：
-\begin{itemize}
-    \item 拉格朗日乘子法的基本思想（第1章：把约束融入目标函数）
-    \item 约束优化的KKT条件（第1章：最优解满足的必要条件）
-    \item （推荐）伴随方程的直觉（第7章：从未来往回算影响）
-\end{itemize}
+\textbf{阅读本章前，请确保你理解}第1章的两件事：拉格朗日乘子法的基本思想（把约束融入目标函数）和约束优化的 KKT 条件（最优解满足的必要条件）。如果还记得第7章伴随方程的直觉（从未来往回算影响），本章读起来会更顺。
 
 \textbf{如果你跳过了前面的章节}，至少要理解这个核心思想：
 \begin{center}
@@ -65,6 +52,7 @@ f: \mathbb{R}^{784} \to \{0, 1, \ldots, 9\}
 \end{equation}
 
 输入是784维向量（图片的像素值），输出是一个类别标签。
+\sidenoteplain{\textbf{图灵奖}以计算机科学之父Alan Turing命名，是计算机界最高荣誉。图灵(1912--1954)提出了图灵机概念，奠定了现代计算机理论基础。他在二战中破解了纳粹密码，却因同性恋被迫害，最终服毒自杀。2009年英国政府正式道歉，2013年英女王宣布对其赦免。}
 
 但这样的函数有无穷多个，我们怎么找到``正确''的那个？答案是：\textbf{用数据来约束}。
 
@@ -90,13 +78,7 @@ f(x; \theta) = f_n \circ f_{n-1} \circ \cdots \circ f_2 \circ f_1(x)
 \begin{equation}
 f_i(z; W_i, b_i) = \sigma(W_i z + b_i)
 \end{equation}
-这里：
-\begin{itemize}
-    \item $W_i \in \mathbb{R}^{d_{i} \times d_{i-1}}$ 是第 $i$ 层的\textbf{权重矩阵}
-    \item $b_i \in \mathbb{R}^{d_i}$ 是第 $i$ 层的\textbf{偏置向量}
-    \item $\sigma: \mathbb{R} \to \mathbb{R}$ 是\textbf{激活函数}（非线性函数），逐元素作用
-    \item $\theta = \{W_1, b_1, \ldots, W_n, b_n\}$ 是所有待学习的参数
-\end{itemize}
+其中 $W_i \in \mathbb{R}^{d_{i} \times d_{i-1}}$ 是第 $i$ 层的\textbf{权重矩阵}，$b_i \in \mathbb{R}^{d_i}$ 是第 $i$ 层的\textbf{偏置向量}，$\sigma: \mathbb{R} \to \mathbb{R}$ 是逐元素作用的非线性\textbf{激活函数}，而 $\theta = \{W_1, b_1, \ldots, W_n, b_n\}$ 是所有待学习的参数。
 \end{definition}
 
 \begin{figure}[htbp]
@@ -135,6 +117,8 @@ f_i(z; W_i, b_i) = \sigma(W_i z + b_i)
 
 \subsection{为什么需要非线性？}
 
+既然每一层都是 $\sigma(W_i z + b_i)$，一个自然的问题是：非线性 $\sigma$ 究竟是不是必要的？能否只堆叠线性层、省掉激活函数？下面的定理给出否定的回答。
+
 \begin{theorem}[线性函数复合的退化性]
 多个线性函数的复合仍然是线性函数。具体地，如果 $f_i(z) = W_i z$，则：
 \begin{equation}
@@ -146,11 +130,7 @@ f_n \circ \cdots \circ f_1(x) = W_n W_{n-1} \cdots W_1 x = W' x
 这意味着，如果没有非线性激活函数 $\sigma$，无论堆叠多少层，神经网络的表达能力都等价于单层线性变换。非线性是深度网络表达能力的来源。
 
 \begin{definition}[常用激活函数]
-\begin{itemize}
-    \item \textbf{ReLU}（Rectified Linear Unit）：$\sigma(x) = \max(0, x)$
-    \item \textbf{Sigmoid}：$\sigma(x) = \frac{1}{1 + e^{-x}}$
-    \item \textbf{Tanh}：$\sigma(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}}$
-\end{itemize}
+最常用的三种激活函数是 \textbf{ReLU}（Rectified Linear Unit）$\sigma(x) = \max(0, x)$、\textbf{Sigmoid} $\sigma(x) = \frac{1}{1 + e^{-x}}$ 和 \textbf{Tanh} $\sigma(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}}$。
 \end{definition}
 
 \sidenoteplain{ReLU因其计算简单且能缓解``梯度消失''问题，成为现代深度学习中最常用的激活函数。它的导数在正半轴恒为1，使得梯度能够有效传播。}
@@ -167,12 +147,7 @@ f_n \circ \cdots \circ f_1(x) = W_n W_{n-1} \cdots W_1 x = W' x
 L(\theta) = \frac{1}{N} \sum_{k=1}^N \ell\big(f(x^{(k)}; \theta), \, y^{(k)}\big)
 \end{equation}
 
-其中 $\ell(\hat{y}, y)$ 是单个样本的损失。常用的损失函数包括：
-
-\begin{itemize}
-    \item \textbf{均方误差}（用于回归）：$\ell(\hat{y}, y) = \frac{1}{2}\|\hat{y} - y\|^2$
-    \item \textbf{交叉熵}（用于分类）：$\ell(\hat{y}, y) = -\sum_c y_c \log \hat{y}_c$
-\end{itemize}
+其中 $\ell(\hat{y}, y)$ 是单个样本的损失。回归问题常用\textbf{均方误差} $\ell(\hat{y}, y) = \frac{1}{2}\|\hat{y} - y\|^2$，分类问题常用\textbf{交叉熵} $\ell(\hat{y}, y) = -\sum_c y_c \log \hat{y}_c$。
 \clarify{还记得第4章吗？交叉熵损失就是最小化预测分布和真实分布的KL散度。选择交叉熵不是拍脑袋决定的，而是信息论的必然结论！}
 
 \subsection{优化问题}
@@ -242,7 +217,7 @@ L &= \ell(z_3)
 \begin{center}
 \renewcommand{\arraystretch}{1.3}
 \small
-\begin{tabular}{llll}
+\begin{tabularx}{\linewidth}{@{}l>{\raggedright\arraybackslash}p{2.5cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X@{}}
 \toprule
  & \textbf{第1章} & \textbf{第7章（离散）} & \textbf{本章} \\
 \midrule
@@ -250,10 +225,10 @@ L &= \ell(z_3)
 目标 & $f(x)$ & $\sum_k L_k + \phi(x_N)$ & 损失 $\ell(z_n)$ \\
 约束 & $g(x) = 0$ & $x_{k+1} = f(x_k, u_k)$ & $z_i = f_i(z_{i-1}; \theta_i)$ \\
 乘子 & $\lambda$ & $\lambda_k$（协态） & $\lambda_i$（误差信号 $\delta_i = \lambda_i$） \\
-一阶条件 & $\nabla f + \lambda^\top \nabla g = 0$ & $\lambda_k = (\partial f/\partial x_k)^\top \lambda_{k+1} + (\partial L_k/\partial x_k)^\top$ & $\lambda_i = (\partial f_{i+1}/\partial z_i)^\top \lambda_{i+1}$ \\
+一阶条件 & $\nabla f + \lambda^\top \nabla g = 0$ & $\lambda_k = (\partial f/\partial x_k)^\top \lambda_{k+1}$\newline$\quad{} + (\partial L_k/\partial x_k)^\top$ & $\lambda_i = (\partial f_{i+1}/\partial z_i)^\top \lambda_{i+1}$ \\
 影子价格 & $-df^*/d\epsilon$ & $\partial J^*/\partial x_k$ & $\partial L/\partial z_i$ \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{center}
 这不是巧合：反向传播不是从天上掉下来的，而是把"每层一条约束"交给乘子法之后自然涌现的。
 \end{tcolorbox}
@@ -303,18 +278,12 @@ L &= \ell(z_3)
 
 \subsection{驻点条件（KKT条件）}
 
-在最优点，拉格朗日函数对所有变量的偏导数为零。
-
-\textbf{对 $z_i$ 求导}（$i < n$）：
-
-$z_i$ 出现在两个地方：第 $i$ 个约束项 $-\lambda_i^\top z_i$ 和第 $i+1$ 个约束项 $\lambda_{i+1}^\top f_{i+1}(z_i; \theta_{i+1})$。因此：
+在最优点，拉格朗日函数对所有变量的偏导数为零。这些驻点条件里藏着什么？我们先对中间层的输出 $z_i$（$i < n$）求导。$z_i$ 在拉格朗日函数里只出现在两项中：第 $i$ 个约束项 $-\lambda_i^\top z_i$，以及第 $i+1$ 个约束项 $\lambda_{i+1}^\top f_{i+1}(z_i; \theta_{i+1})$。因此
 \begin{equation}
 \frac{\partial \mathcal{L}}{\partial z_i} = -\lambda_i + \left(\frac{\partial f_{i+1}}{\partial z_i}\right)^\top \lambda_{i+1} = 0
 \end{equation}
 
-\textbf{对 $z_n$ 求导}（最后一层）：
-
-$z_n$ 出现在损失项 $\ell(z_n)$ 和约束项 $-\lambda_n^\top z_n$ 中：
+最后一层的 $z_n$ 略有不同：它出现在损失项 $\ell(z_n)$ 和约束项 $-\lambda_n^\top z_n$ 中，于是
 \begin{equation}
 \frac{\partial \mathcal{L}}{\partial z_n} = \nabla \ell(z_n) - \lambda_n = 0 \quad \Rightarrow \quad \lambda_n = \nabla \ell(z_n)
 \end{equation}
@@ -366,9 +335,7 @@ $\lambda_i$ 的意义是什么？
 % ------------------------------------------------------------------------------------
 \section{传统链式法则 vs 拉格朗日方法}
 
-你可能会问：``这和直接用链式法则有什么区别？''
-
-让我们对比一下两种方法。
+你可能会问：``这和直接用链式法则有什么区别？''毕竟，反向传播公式用链式法则也推得出来。区别不在结果，而在推导的过程和出错的机会。让我们对比一下两种方法。
 
 \subsection{链式法则的困境}
 
@@ -377,24 +344,11 @@ $\lambda_i$ 的意义是什么？
 \frac{\partial L}{\partial W_1} = \frac{\partial L}{\partial z_n} \cdot \frac{\partial z_n}{\partial z_{n-1}} \cdot \frac{\partial z_{n-1}}{\partial z_{n-2}} \cdots \frac{\partial z_2}{\partial z_1} \cdot \frac{\partial z_1}{\partial W_1}
 \end{equation}
 
-\textbf{问题在于}：
-
-\begin{enumerate}
-    \item \textbf{维度地狱}：$\frac{\partial z_i}{\partial z_{i-1}}$ 是雅可比矩阵，$\frac{\partial z_1}{\partial W_1}$ 是三阶张量。维度匹配极易出错。
-    
-    \item \textbf{转置迷宫}：到底是 $W^\top \delta$ 还是 $\delta^\top W$？初学者常常靠``凑维度''来写代码。
-    
-    \item \textbf{全局依赖}：你必须在脑中保持整条链路，一旦中间断了，全盘皆输。
-\end{enumerate}
+问题在于，这条链上的因子没有一个是标量。首先是\textbf{维度地狱}：$\frac{\partial z_i}{\partial z_{i-1}}$ 是雅可比矩阵，$\frac{\partial z_1}{\partial W_1}$ 是三阶张量，维度匹配极易出错。随之而来的是\textbf{转置迷宫}：到底是 $W^\top \delta$ 还是 $\delta^\top W$？初学者常常靠``凑维度''来写代码。更根本的是\textbf{全局依赖}：你必须在脑中保持整条链路，一旦中间断了，全盘皆输。
 
 \subsection{拉格朗日方法的优雅}
 
-拉格朗日方法的关键优势是\textbf{局部性}：
-
-\begin{itemize}
-    \item 想求 $\lambda_i$？只需看 $z_i$ 出现在拉格朗日函数的哪些项中。
-    \item 想求 $\frac{\partial L}{\partial W_i}$？只需看 $W_i$ 出现在哪一项中。
-\end{itemize}
+拉格朗日方法的关键优势是\textbf{局部性}：想求 $\lambda_i$，只需看 $z_i$ 出现在拉格朗日函数的哪些项中；想求 $\frac{\partial L}{\partial W_i}$，只需看 $W_i$ 出现在哪一项中。链路的其余部分与当前这一步无关，可以完全不看。
 
 \begin{center}
 \begin{tabular}{lll}
@@ -433,7 +387,7 @@ $\lambda_i$ 的意义是什么？
 
 \sidenoteplain{\textbf{反向传播的历史}：反向传播的数学思想可追溯到1960年代Bryson和Ho的控制理论工作。1974年，哈佛博士生Paul Werbos在博士论文中首次将其应用于神经网络。但直到1986年，Rumelhart、Hinton和Williams在Nature发表的论文才让反向传播广为人知，成为深度学习的基石。}
 
-现在我们可以写出完整的算法了。
+上一节得到了两条公式：伴随变量的递推，以及由伴随变量给出的参数梯度。把它们与前向计算按顺序排好，就是完整的算法。
 
 \begin{keyformula}[title=反向传播算法]
 \textbf{输入}：输入 $x$，标签 $y$，网络参数 $\theta = \{W_i, b_i\}_{i=1}^n$
@@ -474,13 +428,9 @@ L &\leftarrow \ell(z_n, y) \notag
 % ------------------------------------------------------------------------------------
 \section{与最优控制的统一}
 
-
-
-
-
 \sidenoteplain{Neural ODE（神经常微分方程）是深度学习与控制理论交叉的热门方向。它把离散的神经网络层看作连续动力系统的离散化，用伴随方法计算梯度。}
 
-回忆第7章的最优控制问题：
+本章的伴随方程和第7章的协态方程长得如此相像，这不是巧合。要看清两者的关系，最直接的办法是把它们并排放在一起。回忆第7章的最优控制问题：
 \begin{equation}
 \min_u \phi(x(T)) \quad \text{s.t.} \quad \dot{x} = f(x, u), \; x(0) = x_0
 \end{equation}
@@ -520,7 +470,7 @@ $\lambda_n = \nabla \ell$ & $p(T) = \nabla \phi$ \\
 \end{equation}
 \end{unification}
 
-这个对比解释了为什么深度学习和控制理论可以互相借鉴：Neural ODE、可微物理仿真、端到端机器人学习，都是这个统一框架的实例。
+这个对比解释了为什么深度学习和控制理论可以互相借鉴：Neural ODE、可微物理仿真、端到端机器人学习，都是这个统一框架的实例。它也解释了为什么同一个算法会在不同年代被不同的人写下：Seppo Linnainmaa 1970 年的硕士论文给出了反向模式自动微分，Paul Werbos 1974 年的博士论文把它用于神经网络，而直到 Rumelhart、Hinton 与 Williams 1986 年发表在《自然》上的论文，``反向传播''这个名字才广为人知——他们各自撞上的，是同一个伴随方程。
 \preview{第9章会把这里的"终端损失"换成"未来累计奖励"，把网络深度推到无穷，$\lambda$ 变成值函数的梯度；第14章会把自动微分反过来用——对输入坐标而不是参数求导，从而把偏微分方程本身写进损失函数。}
 
 % ------------------------------------------------------------------------------------
@@ -573,7 +523,7 @@ L &= \frac{1}{2}\|z_2 - y\|^2 \quad \text{（均方误差损失）}
 
 \sidenoteplain{\textbf{自动微分的历史}：自动微分（AD）的概念可追溯到1964年Robert Wengert的工作。芬兰学者Seppo Linnainmaa在1970年的硕士论文中提出了反向模式AD。现代框架如PyTorch（Facebook，2016）、TensorFlow（Google，2015）和JAX（Google，2018）都基于这些思想，但加入了动态/静态计算图、GPU加速等工程创新。}
 
-在实践中，我们不需要手动推导每个网络的反向传播公式。现代深度学习框架（PyTorch、TensorFlow、JAX）都实现了\textbf{自动微分}（Automatic Differentiation）。
+上一节的公式告诉我们梯度``是什么''，但面对一个几十层、结构随意的网络，谁来逐层写出 $\partial f_i/\partial z_{i-1}$？在实践中，我们不需要手动推导每个网络的反向传播公式：现代深度学习框架（PyTorch、TensorFlow、JAX）都实现了\textbf{自动微分}（Automatic Differentiation），把这件事交给了程序。
 
 这一节我们用几十行Python代码，自己写一个``迷你版PyTorch''，让它能自动计算：
 \begin{equation}
@@ -582,12 +532,7 @@ y = x^2 + 2x + 1 \quad \Rightarrow \quad \frac{dy}{dx} = ?
 
 \subsection{核心思想}
 
-自动微分的核心思想是：
-\begin{enumerate}
-    \item 每个中间量都是一个 \texttt{Variable} 对象
-    \item 运算时顺便搭建一棵\textbf{计算图}（函数树）
-    \item \texttt{backward()} 走一遍这棵图，按链式法则把梯度往回传
-\end{enumerate}
+自动微分的核心思想只有一句话：让每个中间量都是一个 \texttt{Variable} 对象，运算时顺便搭建一棵\textbf{计算图}（函数树），最后由 \texttt{backward()} 走一遍这棵图，按链式法则把梯度往回传。下面分五步把它写出来。
 
 \subsection{Step 1：定义计算图节点——Variable类}
 
@@ -656,19 +601,7 @@ Python 就会自动调用你写的函数。\\
         return out
 \end{lstlisting}
 
-\textbf{当执行 \texttt{z = x + y} 时，内存中发生了什么？}
-
-\begin{enumerate}
-    \item 新建 \texttt{Variable} 对象 \texttt{out}：
-    \begin{itemize}
-        \item \texttt{out.data = x.data + y.data}
-        \item \texttt{out.grad = 0}
-        \item \texttt{out.\_prev = \{x, y\}} （指针指向两个父节点）
-    \end{itemize}
-    \item \texttt{out.\_backward} 指向刚定义的闭包函数
-\end{enumerate}
-
-整棵图多了一个``加法节点''，它知道：自己是谁（\texttt{data}）、自己从哪来（\texttt{\_prev}）、将来反向时怎么把梯度分给父节点（\texttt{\_backward}）。
+\textbf{当执行 \texttt{z = x + y} 时，内存中发生了什么？}首先新建一个 \texttt{Variable} 对象 \texttt{out}：它的 \texttt{out.data} 等于 \texttt{x.data + y.data}，\texttt{out.grad} 初始化为 0，\texttt{out.\_prev} 为 \texttt{\{x, y\}}（指针指向两个父节点）；随后把 \texttt{out.\_backward} 指向刚定义的闭包函数。于是整棵图多了一个``加法节点''，它知道：自己是谁（\texttt{data}）、自己从哪来（\texttt{\_prev}）、将来反向时怎么把梯度分给父节点（\texttt{\_backward}）。
 
 \begin{figure}[htbp]
 \centering
@@ -745,11 +678,7 @@ Python 就会自动调用你写的函数。\\
     \item \texttt{for v in reversed(topo)}：从输出节点开始，按依赖顺序反向遍历。对每个节点调用 \texttt{v.\_backward()}，里面会读 \texttt{out.grad}，按链式法则更新父节点的 \texttt{grad}。
 \end{enumerate}
 
-你可以把这看成：
-\begin{itemize}
-    \item \texttt{build\_topo}：在内存里从 \texttt{self} 沿 \texttt{\_prev} 指针，把计算图``铺平''成一个列表
-    \item \texttt{reversed(topo)}：从输出往叶子走一遍，把梯度一层层推回去
-\end{itemize}
+你可以把这看成两个动作：\texttt{build\_topo} 在内存里从 \texttt{self} 沿 \texttt{\_prev} 指针，把计算图``铺平''成一个列表；\texttt{reversed(topo)} 则从输出往叶子走一遍，把梯度一层层推回去。
 
 \subsection{Step 5：完整示例——生成一棵具体的计算图}
 
@@ -768,15 +697,7 @@ print(f"dy/dx = {x.grad}")   # 8.0（理论值：2x + 2 = 8）
 
 \paragraph{第一步：\texttt{x = Variable(3.0)}}
 
-新建对象 \texttt{x}：
-\begin{itemize}
-    \item \texttt{x.data = 3.0}
-    \item \texttt{x.grad = 0.0}
-    \item \texttt{x.\_prev = $\emptyset$}（叶子节点，没有父节点）
-    \item \texttt{x.\_backward = lambda: None}
-\end{itemize}
-
-此时图上只有一个孤立的点 $x$。
+新建对象 \texttt{x}，其中 \texttt{x.data = 3.0}，\texttt{x.grad = 0.0}，\texttt{x.\_prev} 为空集 $\emptyset$（叶子节点，没有父节点），\texttt{x.\_backward = lambda: None}。此时图上只有一个孤立的点 $x$。
 
 \paragraph{第二步：\texttt{y = x * x + x * 2 + 1}}
 
@@ -836,30 +757,13 @@ print(f"dy/dx = {x.grad}")   # 8.0（理论值：2x + 2 = 8）
 现在让我们看看每一步具体发生了什么：
 
 \begin{enumerate}
-    \item \textbf{\texttt{x * x}}：Python 调用 \texttt{x.\_\_mul\_\_(x)}，建立乘法节点 $m_1$
-    \begin{itemize}
-        \item $m_1$\texttt{.data} = 9.0
-        \item $m_1$\texttt{.\_prev} = \{$x$\}（\texttt{set} 会去重；但闭包里对 \texttt{x.grad} 累加了两次）
-        \item $m_1$\texttt{.\_backward} 存下闭包：两次累加 \texttt{x.grad += m1.grad * x.data}
-    \end{itemize}
-    
-    \item \textbf{\texttt{x * 2}}：Python 调用 \texttt{x.\_\_mul\_\_(2)}
-    \begin{itemize}
-        \item 因为 \texttt{2} 不是 \texttt{Variable}，在 \texttt{\_\_mul\_\_} 内部被包装成 \texttt{Variable(2)}
-        \item 建立乘法节点 $m_2$，$m_2$\texttt{.data} = 6.0，$m_2$\texttt{.\_prev} = \{$x$, const$_2$\}
-    \end{itemize}
-    
-    \item \textbf{\texttt{m1 + m2}}：Python 调用 \texttt{m1.\_\_add\_\_(m2)}，建立加法节点 $s_1$
-    \begin{itemize}
-        \item $s_1$\texttt{.data} = 15.0
-        \item $s_1$\texttt{.\_prev} = \{$m_1$, $m_2$\}
-    \end{itemize}
-    
-    \item \textbf{\texttt{s1 + 1}}：Python 调用 \texttt{s1.\_\_add\_\_(1)}，\texttt{1} 被包装，建立加法节点 $y$
-    \begin{itemize}
-        \item $y$\texttt{.data} = 16.0
-        \item $y$\texttt{.\_prev} = \{$s_1$, const$_1$\}
-    \end{itemize}
+    \item \textbf{\texttt{x * x}}：Python 调用 \texttt{x.\_\_mul\_\_(x)}，建立乘法节点 $m_1$。$m_1$\texttt{.data} = 9.0；$m_1$\texttt{.\_prev} = \{$x$\}（\texttt{set} 会去重，但闭包里对 \texttt{x.grad} 累加了两次）；$m_1$\texttt{.\_backward} 存下闭包，反向时会两次把 \texttt{m1.grad * x.data} 累加到 \texttt{x.grad} 上。
+
+    \item \textbf{\texttt{x * 2}}：Python 调用 \texttt{x.\_\_mul\_\_(2)}。因为 \texttt{2} 不是 \texttt{Variable}，它在 \texttt{\_\_mul\_\_} 内部被包装成 \texttt{Variable(2)}；然后建立乘法节点 $m_2$，$m_2$\texttt{.data} = 6.0，$m_2$\texttt{.\_prev} = \{$x$, const$_2$\}。
+
+    \item \textbf{\texttt{m1 + m2}}：Python 调用 \texttt{m1.\_\_add\_\_(m2)}，建立加法节点 $s_1$，$s_1$\texttt{.data} = 15.0，$s_1$\texttt{.\_prev} = \{$m_1$, $m_2$\}。
+
+    \item \textbf{\texttt{s1 + 1}}：Python 调用 \texttt{s1.\_\_add\_\_(1)}，\texttt{1} 同样被包装，建立加法节点 $y$，$y$\texttt{.data} = 16.0，$y$\texttt{.\_prev} = \{$s_1$, const$_1$\}。
 \end{enumerate}
 
 此时内存中的计算图：
@@ -960,30 +864,13 @@ x.\text{grad} = 8 = 2x + 2 \big|_{x=3} = \frac{dy}{dx}
 \sidenoteplain{PyTorch的\texttt{autograd}和这个简化版本原理完全相同，只是添加了：GPU支持、更多运算符、内存优化、支持高阶导数等工程细节。理解了这50行代码，你就理解了现代深度学习框架的核心。}
 
 \begin{physicalmeaning}
-这个极简引擎揭示了自动微分的本质：
-\begin{itemize}
-    \item \textbf{前向传播}：执行计算的同时，在内存中搭建一棵``函数树''
-    \item \textbf{反向传播}：从树根（输出）往叶子走一遍，用链式法则把梯度一层层推回去
-    \item \textbf{每个节点的 \texttt{\_backward}}：就是伴随方程的``局部版本''
-\end{itemize}
-
-这正是拉格朗日方法的计算机实现：每个节点只需要知道自己的``邻居''，不需要了解整张图的结构。
+这个极简引擎揭示了自动微分的本质：\textbf{前向传播}在执行计算的同时，在内存中搭建一棵``函数树''；\textbf{反向传播}从树根（输出）往叶子走一遍，用链式法则把梯度一层层推回去；而每个节点的 \texttt{\_backward} 就是伴随方程的``局部版本''。这正是拉格朗日方法的计算机实现：每个节点只需要知道自己的``邻居''，不需要了解整张图的结构。
 \end{physicalmeaning}
 \tryit{给 \texttt{Variable} 加上 \texttt{\_\_pow\_\_} 和 \texttt{exp()}，对 $y = \exp(x^2)$ 调用 \texttt{backward()}，再用中心差分 $[y(x+h) - y(x-h)]/2h$ 核对 \texttt{x.grad}。这是习题4的热身。}
 
 
 \section{梯度下降与优化器}
-有了梯度，下一步就是用它来更新参数。这一节介绍深度学习中常用的优化方法。
-
-回顾本章开头：训练就是 $\min_\theta L(\theta)$——一个关于参数 $\theta$ 的\textbf{无约束}优化问题（约束已经被伴随变量"消化"进梯度里了）。最直接的办法是梯度下降。它看起来很简单，但在真正训练一个大型神经网络时会遇到几个实际困难：
-\begin{itemize}
-    \item 数据量很大，不可能每次都计算全部样本；
-    \item 损失地形很复杂，可能像峡谷一样又弯又深；
-    \item 不同方向的梯度大小差异巨大，导致震荡或停滞；
-    \item 学习率太大不行、太小也不行。
-\end{itemize}
-
-接下来，我们将看到 SGD、动量法和 Adam 等方法是如何一步步解决这些问题的。
+有了梯度，下一步就是用它来更新参数。回顾本章开头：训练就是 $\min_\theta L(\theta)$——一个关于参数 $\theta$ 的\textbf{无约束}优化问题（约束已经被伴随变量"消化"进梯度里了），最直接的办法是梯度下降。它看起来很简单，但在真正训练一个大型神经网络时会遇到几个实际困难：数据量很大，不可能每次都计算全部样本；损失地形很复杂，可能像峡谷一样又弯又深；不同方向的梯度大小差异巨大，导致震荡或停滞；学习率太大不行、太小也不行。接下来我们会看到，SGD、动量法和 Adam 分别针对其中哪个困难，又是如何一步步解决它们的。
 
 
 \subsection{vanilla 梯度下降}
@@ -1027,11 +914,7 @@ x.\text{grad} = 8 = 2x + 2 \big|_{x=3} = \frac{dy}{dx}
 \caption{梯度下降：沿着负梯度方向，一步步走向最小值点}
 \end{figure}
 
-\textbf{学习率的选择}是一门艺术：
-\begin{itemize}
-    \item $\eta$ 太大：可能跳过最优点，甚至发散
-    \item $\eta$ 太小：收敛太慢，训练时间过长
-\end{itemize}
+\textbf{学习率的选择}是一门艺术：$\eta$ 太大，可能跳过最优点，甚至发散；$\eta$ 太小，收敛太慢，训练时间过长。
 
 \subsection{随机梯度下降（SGD）}
 
@@ -1059,9 +942,7 @@ x.\text{grad} = 8 = 2x + 2 \big|_{x=3} = \frac{dy}{dx}
 
 \sidenoteplain{\textbf{动量法的历史}：动量方法由苏联数学家Boris Polyak于1964年提出（``Some methods of speeding up the convergence of iteration methods''）。这个简单而优雅的想法——给梯度加上``惯性''——至今仍是训练大型视觉模型（如ResNet、ViT）的首选方法。}
 
-vanilla SGD 的问题：在``峡谷''地形中会来回震荡，收敛很慢。
-
-\textbf{动量法}的想法：引入``惯性''，让更新方向更平滑。
+vanilla SGD 在``峡谷''地形中会来回震荡，收敛很慢，原因是每一步只看当前的坡度。\textbf{动量法}的想法是引入``惯性''，让更新方向更平滑。
 
 \begin{keyformula}[title=SGD with Momentum]
 \begin{align}
@@ -1073,11 +954,7 @@ v^{(t+1)} &= \beta \cdot v^{(t)} + \nabla_\theta L(\theta^{(t)}) \\
 \end{keyformula}
 
 \begin{physicalmeaning}
-可以把优化过程想象成一个小球在损失曲面上滚动：
-\begin{itemize}
-    \item 没有动量：小球每一步只看当前坡度，容易来回震荡
-    \item 有动量：小球有惯性，能``冲过''小坑，沿着主方向加速
-\end{itemize}
+可以把优化过程想象成一个小球在损失曲面上滚动。没有动量时，小球每一步只看当前坡度，容易来回震荡；有了动量，小球有惯性，能``冲过''小坑，沿着主方向加速。
 \end{physicalmeaning}
 \review{第5章}{"小球在损失曲面上滚"不只是比喻：把动量法写成连续时间，就是带阻尼的牛顿方程 $\ddot{\theta} + \gamma\dot{\theta} = -\nabla L(\theta)$——第5章的力学，势能就是损失函数，动量系数 $\beta$ 决定阻尼大小。}
 
@@ -1098,18 +975,14 @@ v^{(t+1)} &= \beta_2 v^{(t)} + (1 - \beta_2) (g^{(t)})^2 \quad \text{（二阶�
 默认超参数：$\beta_1 = 0.9$，$\beta_2 = 0.999$，$\epsilon = 10^{-8}$，$\eta = 0.001$。
 \end{keyformula}
 
-\textbf{Adam 的直觉}：
-\begin{itemize}
-    \item $m$：梯度的滑动平均，提供动量效果
-    \item $v$：梯度平方的滑动平均，估计每个参数的``典型梯度大小''
-    \item 更新量 $\propto \frac{m}{\sqrt{v}}$：梯度大的方向步子小，梯度小的方向步子大
-\end{itemize}
+\textbf{Adam 的直觉}是这样的：$m$ 是梯度的滑动平均，提供动量效果；$v$ 是梯度平方的滑动平均，估计每个参数的``典型梯度大小''；更新量正比于 $m/\sqrt{v}$，于是梯度大的方向步子小，梯度小的方向步子大。
 
 \subsection{优化器对比}
 
 \begin{center}
 \renewcommand{\arraystretch}{1.4}
-\begin{tabular}{l|c|c|l}
+\small
+\begin{tabularx}{\textwidth}{lccX}
 \toprule
 \textbf{优化器} & \textbf{自适应学习率} & \textbf{动量} & \textbf{适用场景} \\
 \midrule
@@ -1118,7 +991,7 @@ SGD + Momentum & 否 & 是 & 大多数视觉任务 \\
 Adam & 是 & 是 & NLP、快速原型、默认选择 \\
 AdamW & 是 & 是 & Adam + 权重衰减，Transformer标配 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{center}
 
 \sidenoteplain{实践中的经验：Adam 收敛快但泛化可能略差；SGD+Momentum 需要更多调参但最终效果常常更好。很多顶级模型用 SGD+Momentum 训练。}
@@ -1217,11 +1090,7 @@ def train(model, data_loader, optimizer, num_epochs):
 
 \begin{physicalmeaning}
 \textbf{$\lambda$ 在本章的意义}：$\lambda_i$ 是第 $i$ 层等式约束的影子价格——把第 $i$ 层的输出 $z_i$ 悄悄改动 $\epsilon$，最终损失变化 $\lambda_i^\top \epsilon$。深度学习管它叫"误差信号"$\delta_i$，控制论管它叫"协态"，第1章管它叫"影子价格"——三个名字，一个东西。
-\begin{itemize}
-    \item 第7章：把"层 $i$"换成"时刻 $k$"、把参数 $\theta_i$ 换成控制 $u_k$，本章的伴随方程逐字变回第7章的离散伴随方程。
-    \item 第9章：把损失换成"未来累计奖励"（符号因此翻转，$\lambda = +\partial J/\partial s$），把网络深度推到无穷，$\lambda$ 变成值函数的梯度，伴随方程变成贝尔曼方程。
-    \item 第14章：把自动微分反过来用——不是对参数求导，而是对输入坐标 $(x, t)$ 求导，就能把偏微分方程本身写进损失函数（PINN）。
-\end{itemize}
+往回看，把"层 $i$"换成"时刻 $k$"、把参数 $\theta_i$ 换成控制 $u_k$，本章的伴随方程逐字变回第7章的离散伴随方程。往前看，第9章会把损失换成"未来累计奖励"（符号因此翻转，$\lambda = +\partial J/\partial s$），把网络深度推到无穷，$\lambda$ 变成值函数的梯度，伴随方程变成贝尔曼方程；第14章则把自动微分反过来用——不是对参数求导，而是对输入坐标 $(x, t)$ 求导，就能把偏微分方程本身写进损失函数（PINN）。
 \end{physicalmeaning}
 
 % ------------------------------------------------------------------------------------
@@ -1244,12 +1113,7 @@ def train(model, data_loader, optimizer, num_epochs):
 \paragraph{编程题}
 \begin{enumerate}
     \setcounter{enumi}{3}
-    \item 扩展本章的自动微分引擎，添加以下运算：
-    \begin{itemize}
-        \item 矩阵乘法 $Y = XW$
-        \item ReLU激活函数
-        \item 交叉熵损失
-    \end{itemize}
+    \item 扩展本章的自动微分引擎，添加三种运算：矩阵乘法 $Y = XW$、ReLU 激活函数和交叉熵损失。
     
     \item 用你的引擎训练一个两层神经网络，在MNIST数据集的一个子集上进行手写数字分类。对比PyTorch的结果。
 \end{enumerate}
@@ -1311,14 +1175,7 @@ def train(model, data_loader, optimizer, num_epochs):
 
 \subsection*{为什么深度学习偏好分母布局？}
 
-深度学习中，我们最关心的是\textbf{标量对向量的导数}：损失 $L$ 对参数 $\theta$ 的梯度。
-
-设 $L \in \R$（标量），$\theta \in \R^n$（向量）。
-
-\begin{itemize}
-    \item \textbf{分子布局}：$\frac{\partial L}{\partial \theta} \in \R^{1 \times n}$（行向量）
-    \item \textbf{分母布局}：$\frac{\partial L}{\partial \theta} \in \R^{n \times 1}$（列向量）
-\end{itemize}
+深度学习中，我们最关心的是\textbf{标量对向量的导数}：损失 $L \in \R$ 对参数 $\theta \in \R^n$ 的梯度。按分子布局，$\frac{\partial L}{\partial \theta} \in \R^{1 \times n}$ 是行向量；按分母布局，$\frac{\partial L}{\partial \theta} \in \R^{n \times 1}$ 是列向量。
 
 分母布局的好处是：\textbf{梯度和参数形状相同}。这样梯度下降可以直接写成：
 \begin{equation}
@@ -1340,24 +1197,9 @@ def train(model, data_loader, optimizer, num_epochs):
 }
 
 
-\subsubsection*{一个最简单的例子（为什么分母布局更顺手？）}
+\subsubsection*{一个能手算的例子}
 
-深度学习中，最常见的梯度是 \textbf{标量损失 $L$ 对向量参数 $\theta$ 的导数}。
-
-\[
-L \in \mathbb{R}, \qquad \theta \in \mathbb{R}^n.
-\]
-
-两种常见定义是：
-
-\begin{itemize}
-    \item \textbf{分子布局（numerator layout）}：$\displaystyle \frac{\partial L}{\partial \theta} \in \mathbb{R}^{1 \times n}$（行向量）
-    \item \textbf{分母布局（denominator layout）}：$\displaystyle \nabla_\theta L = \frac{\partial L}{\partial \theta} \in \mathbb{R}^{n \times 1}$（列向量）
-\end{itemize}
-
-深度学习框架（PyTorch / TensorFlow）统一采用分母布局，因为它使得梯度和参数形状一致，更新规则非常自然。
-
-下面通过一个能够\textbf{直接代入数字手算}的例子来说明。
+上面的说法还有些抽象，下面用一个能够\textbf{直接代入数字手算}的例子，看看两种布局在更新公式上的差别到底在哪里。设 $L \in \mathbb{R}$，$\theta \in \mathbb{R}^n$：分子布局（numerator layout）给出行向量 $\frac{\partial L}{\partial \theta} \in \mathbb{R}^{1 \times n}$，分母布局（denominator layout）给出列向量 $\nabla_\theta L = \frac{\partial L}{\partial \theta} \in \mathbb{R}^{n \times 1}$。深度学习框架（PyTorch / TensorFlow）统一采用分母布局，因为它使得梯度和参数形状一致，更新规则非常自然。
 
 \paragraph{例子：最简单的线性模型}
 
@@ -1576,22 +1418,10 @@ J = \frac{\partial y}{\partial x} = \begin{pmatrix}
 
 \subsection*{记忆技巧：维度分析}
 
-当你不确定某个公式时，\textbf{维度分析}是最可靠的检验：
-
-\begin{itemize}
-    \item $W \in \R^{m \times n}$，$x \in \R^n$，则 $Wx \in \R^m$ \checkmark{}
-    \item $\delta \in \R^m$（与 $z$ 同形状），$x \in \R^n$
-    \item $\frac{\partial L}{\partial W}$ 应与 $W$ 同形状，即 $\R^{m \times n}$
-    \item $\delta x^\top \in \R^{m \times 1} \cdot \R^{1 \times n} = \R^{m \times n}$ \checkmark{}
-\end{itemize}
+当你不确定某个公式时，\textbf{维度分析}是最可靠的检验。以 $\partial L/\partial W = \delta\, x^\top$ 为例：$W \in \R^{m \times n}$，$x \in \R^n$，所以 $Wx \in \R^m$；$\delta$ 与 $z$ 同形状，即 $\delta \in \R^m$；而 $\frac{\partial L}{\partial W}$ 应与 $W$ 同形状，即 $\R^{m \times n}$。再看候选答案：$\delta x^\top \in \R^{m \times 1} \cdot \R^{1 \times n} = \R^{m \times n}$，维度恰好吻合。
 
 \begin{insightbox}[title=实用建议]
-\begin{enumerate}
-    \item \textbf{坚持一种布局}：推荐分母布局（梯度与变量同形状）。
-    \item \textbf{标量是安全的}：遇到复杂情况，先把 $L$ 写成标量形式，对每个分量求导，再组装。
-    \item \textbf{维度检验}：每一步都检查维度是否匹配。
-    \item \textbf{用迹的技巧}：$a^\top X b = \tr(ab^\top X^\top) = \tr(b a^\top X)$，迹对矩阵求导有简洁公式。
-\end{enumerate}
+推导矩阵梯度时，有四条经验值得坚持。第一，\textbf{坚持一种布局}，推荐分母布局（梯度与变量同形状）。第二，\textbf{标量是安全的}：遇到复杂情况，先把 $L$ 写成标量形式，对每个分量求导，再组装。第三，\textbf{维度检验}：每一步都检查维度是否匹配。第四，\textbf{用迹的技巧}：$a^\top X b = \tr(ab^\top X^\top) = \tr(b a^\top X)$，迹对矩阵求导有简洁公式。
 \end{insightbox}
 
 \subsection*{与拉格朗日方法的联系}
@@ -1605,20 +1435,14 @@ J = \frac{\partial y}{\partial x} = \begin{pmatrix}
 \mathcal{L} = L(z_n) + \sum_i \lambda_i^\top (f_i(z_{i-1}; W_i) - z_i)
 \end{equation}
 
-每一项都是标量（$\lambda_i^\top (\cdots)$ 是向量内积，结果是标量）。对标量求导：
-\begin{itemize}
-    \item 对向量求导 → 得到同形状的向量
-    \item 对矩阵求导 → 得到同形状的矩阵
-\end{itemize}
-
-不需要处理雅可比矩阵、三阶张量这些复杂对象。转置符号也会从标量求导的规则中\textbf{自动出现}，而不需要我们去猜。
+每一项都是标量（$\lambda_i^\top (\cdots)$ 是向量内积，结果是标量）。标量对向量求导得到同形状的向量，对矩阵求导得到同形状的矩阵，不需要处理雅可比矩阵、三阶张量这些复杂对象。转置符号也会从标量求导的规则中\textbf{自动出现}，而不需要我们去猜。
 
 这就是拉格朗日方法的优雅之处：它把高维的矩阵微积分问题，降维成了一系列标量微积分问题。
 
 
 % 扩展阅读"Python 表达式求值"已移至附录D。
 
-\section*{扩展阅读：深度学习与数值方法的深刻联系——第13章的后续}
+\section*{扩展阅读：深度学习与数值方法的联系}
 \addcontentsline{toc}{section}{扩展阅读：与数值方法的联系}
 
 \sidenoteplain{这一节揭示深度学习与经典数值方法的内在联系。你会发现，很多``新''的深度学习技术，其实是老方法的新面孔。}
@@ -1679,12 +1503,7 @@ H_{ij} = \frac{\partial^2 L}{\partial \theta_i \partial \theta_j}
 \caption{条件数决定损失曲面的``形状''：圆形容易优化，扁椭圆困难}
 \end{figure}
 
-\begin{itemize}
-    \item \textbf{$\kappa$ 小}：各方向曲率相近，等高线接近圆形，梯度直指最低点
-    \item \textbf{$\kappa$ 大}：有的方向很陡，有的方向很平，梯度下降会在陡峭方向来回震荡
-\end{itemize}
-
-这与求解线性方程组 $Ax = b$ 时的情况完全一致！
+Hessian 的条件数 $\kappa$ 小时，各方向曲率相近，等高线接近圆形，梯度直指最低点；$\kappa$ 大时，有的方向很陡，有的方向很平，梯度下降会在陡峭方向来回震荡。这与求解线性方程组 $Ax = b$ 时的情况完全一致。
 
 \subsection*{优化器 = 预条件子}
 
@@ -1709,12 +1528,7 @@ Jacobi 预条件 & Adagrad / RMSprop & $M = \text{diag}(\sqrt{v})$ \\
 \theta^{(t+1)} = \theta^{(t)} - \eta \cdot \frac{\hat{m}}{\sqrt{\hat{v}} + \epsilon} = \theta^{(t)} - \eta \cdot M^{-1} \hat{m}
 \end{equation}
 
-\begin{itemize}
-    \item 梯度大的方向（$\hat{v}$ 大）：步长缩小，防止震荡
-    \item 梯度小的方向（$\hat{v}$ 小）：步长放大，加速收敛
-\end{itemize}
-
-这与数值线性代数中的 Jacobi 预条件思想完全一致！
+梯度大的方向（$\hat{v}$ 大）步长缩小，防止震荡；梯度小的方向（$\hat{v}$ 小）步长放大，加速收敛。这与数值线性代数中的 Jacobi 预条件思想完全一致。
 
 \subsection*{稀疏性：从有限元到卷积网络}
 
@@ -1767,22 +1581,10 @@ Jacobi 预条件 & Adagrad / RMSprop & $M = \text{diag}(\sqrt{v})$ \\
 \caption{全连接层 vs 卷积层：稀疏连接大幅减少参数}
 \end{figure}
 
-\textbf{卷积神经网络（CNN）}利用了与有限元相同的原理：
-
-\begin{itemize}
-    \item \textbf{局部连接}：每个输出只依赖局部输入（类比：每个节点只与邻居耦合）
-    \item \textbf{权值共享}：不同位置用相同的卷积核（类比：均匀网格上的单元刚度矩阵相同）
-    \item \textbf{稀疏性}：参数量从 $O(n^2)$ 降到 $O(n)$
-\end{itemize}
+\textbf{卷积神经网络（CNN）}利用了与有限元相同的原理。它是\textbf{局部连接}的，每个输出只依赖局部输入，正如有限元里每个节点只与邻居耦合；它\textbf{权值共享}，不同位置用相同的卷积核，正如均匀网格上每个单元的刚度矩阵相同；两者合起来就是\textbf{稀疏性}，参数量从 $O(n^2)$ 降到 $O(n)$。
 
 \begin{insightbox}[title=局部性的力量]
-有限元方法和卷积神经网络都在利用\textbf{局部性}——物理世界的大多数相互作用是局部的：
-\begin{itemize}
-    \item 热量从高温流向低温（局部传导）
-    \item 力通过接触传递（局部作用）
-    \item 图像特征是局部的（边缘、纹理）
-\end{itemize}
-局部性导致稀疏结构，稀疏结构带来计算上的巨大节省！
+有限元方法和卷积神经网络都在利用\textbf{局部性}，而局部性来自物理世界本身：热量从高温流向低温是局部传导，力通过接触传递是局部作用，图像的特征（边缘、纹理）同样是局部的。局部性导致稀疏结构，稀疏结构带来计算上的巨大节省。
 \end{insightbox}
 
 \subsection*{多重网格与 U-Net}
@@ -1883,18 +1685,7 @@ U-Net 在医学图像分割等任务中非常成功——它继承了多重网�
 矩阵乘法中，每个输出元素 $Y_{ij} = \sum_k X_{ik} W_{kj}$ 可以\textbf{独立计算}——这是天然的并行结构！
 
 \begin{insightbox}[title=GPU 友好的计算模式]
-\begin{enumerate}
-    \item \textbf{大量独立的相同操作}（如 batch 中每个样本的前向传播）
-    \item \textbf{规则的内存访问}（如矩阵乘法的连续读写）
-    \item \textbf{少量分支逻辑}（避免 if-else 导致的线程分化）
-\end{enumerate}
-
-这解释了为什么：
-\begin{itemize}
-    \item Transformer 比 RNN 更容易并行（无时序依赖）
-    \item 卷积比全连接更高效（局部性好，缓存友好）
-    \item Batch Normalization 比 Layer Normalization 更 GPU 友好
-\end{itemize}
+GPU 喜欢三类计算模式：\textbf{大量独立的相同操作}（如 batch 中每个样本的前向传播）、\textbf{规则的内存访问}（如矩阵乘法的连续读写）和\textbf{少量分支逻辑}（避免 if-else 导致的线程分化）。这解释了为什么 Transformer 比 RNN 更容易并行（无时序依赖），为什么卷积比全连接更高效（局部性好，缓存友好），也解释了为什么 Batch Normalization 比 Layer Normalization 更 GPU 友好。
 \end{insightbox}
 
 \subsection*{统一的视角}
@@ -1933,7 +1724,7 @@ U-Net 在医学图像分割等任务中非常成功——它继承了多重网�
 % ------------------------------------------------------------------------------------
 \subsection*{一、激活函数全家福}
 
-图\ref{fig:activation_functions}展示了8种常用激活函数及其导数。注意几个关键观察：
+图\ref{fig:activation_functions}展示了8种常用激活函数及其导数，它们大致可以分成三代。
 
 \begin{figure}[htbp]
 \centering
@@ -1942,13 +1733,7 @@ U-Net 在医学图像分割等任务中非常成功——它继承了多重网�
 \label{fig:activation_functions}
 \end{figure}
 
-\begin{itemize}
-    \item \textbf{Sigmoid和Tanh}：输出被"压缩"到有限区间（$[0,1]$或$[-1,1]$），这曾被认为符合生物神经元的激活特性。但它们有严重的\textbf{梯度饱和}问题。
-
-    \item \textbf{ReLU}：极其简单——保留正值，置零负值。计算快、不饱和（正半轴），但可能导致"神经元死亡"。
-
-    \item \textbf{改进版ReLU}：Leaky ReLU、ELU在负半轴保留非零梯度；Swish和GELU则是光滑版本，避免了导数的不连续性。
-\end{itemize}
+第一代是 \textbf{Sigmoid 和 Tanh}：输出被"压缩"到有限区间（$[0,1]$ 或 $[-1,1]$），这曾被认为符合生物神经元的激活特性，但它们有严重的\textbf{梯度饱和}问题。第二代是 \textbf{ReLU}：极其简单——保留正值，置零负值——计算快，正半轴不饱和，但可能导致"神经元死亡"。于是有了第三代，\textbf{改进版 ReLU}：Leaky ReLU、ELU 在负半轴保留非零梯度，Swish 和 GELU 则是光滑版本，避免了导数的不连续性。
 
 \subsection*{二、手写实现：以Sigmoid为例}
 
@@ -2061,12 +1846,7 @@ GELU的定义：
 
 Swish则更简单：$\text{Swish}(x) = x \cdot \sigma(x)$。
 
-这些光滑激活函数的优势：
-\begin{itemize}
-    \item 导数处处连续，优化过程更稳定
-    \item 负半轴不完全为0，避免神经元死亡
-    \item 在大规模模型上的实验效果略优于ReLU
-\end{itemize}
+这些光滑激活函数的优势在于：导数处处连续，优化过程更稳定；负半轴不完全为0，避免了神经元死亡；在大规模模型上的实验效果也略优于 ReLU。
 
 \subsection*{七、手写自动微分}
 
@@ -2113,27 +1893,14 @@ class Tensor:
 
 \subsection*{八、设计哲学小结}
 
-激活函数的演化体现了深度学习的工程智慧：
-
-\begin{enumerate}
-    \item \textbf{生物启发 → 数学便利}：Sigmoid模拟神经元激活概率，但数学性质不好。ReLU虽不生物，但训练效果好。
-
-    \item \textbf{简单 → 光滑}：ReLU计算快但不连续，GELU光滑但计算稍贵。在大模型时代，光滑性带来的稳定性更重要。
-
-    \item \textbf{理论 → 实验}：没有任何理论证明GELU一定比ReLU好。选择激活函数更多靠实验调参。
-\end{enumerate}
+激活函数的演化体现了深度学习的工程智慧，可以概括为三次转向。第一次是从\textbf{生物启发到数学便利}：Sigmoid 模拟神经元激活概率，但数学性质不好；ReLU 虽不生物，但训练效果好。第二次是从\textbf{简单到光滑}：ReLU 计算快但不连续，GELU 光滑但计算稍贵；在大模型时代，光滑性带来的稳定性更重要。第三次是从\textbf{理论到实验}：没有任何理论证明 GELU 一定比 ReLU 好，选择激活函数更多靠实验调参。
 
 \begin{insightbox}[title=实践建议]
-\begin{itemize}
-    \item \textbf{默认选ReLU}：简单、快、效果好
-    \item \textbf{大模型用GELU}：GPT/BERT的标配
-    \item \textbf{遇到"死神经元"换Leaky ReLU}：负半轴保留梯度
-    \item \textbf{不确定就实验}：在你的任务上跑几个对比
-\end{itemize}
+实践中可以这样选：默认选 ReLU，简单、快、效果好；大模型用 GELU，这是 GPT/BERT 的标配；遇到"死神经元"就换 Leaky ReLU，让负半轴保留梯度；拿不准就在你的任务上跑几个对比实验。
 \end{insightbox}
 
 %======================================================================
-\section*{扩展阅读：为什么不能随便选择神经网络架构}
+\section*{扩展阅读：网络架构为什么不能随便选}
 \addcontentsline{toc}{section}{扩展阅读：神经网络架构选择}
 %======================================================================
 
@@ -2177,16 +1944,7 @@ f(x) = \sum_{i=1}^m \alpha_i \,\sigma(w_i^\top x + b_i) + c,
 \]
 其中 $w_i, b_i$ 为第 $i$ 个隐层神经元的参数，$\alpha_i, c$ 为输出层的参数。
 
-此类网络在理论上满足通用逼近定理：当 $m\to\infty$ 时，在 mild 条件下可以逼近任意连续函数。然而，在固定宽度 $m$ 下，能方便表示的函数仍有强烈结构性。不同的网络结构可以被视为在以下几个方面作出不同的"工程性假设"：
-
-\begin{itemize}
-\item 输入特征之间是否存在空间或拓扑结构；
-\item 函数是否具有平移、旋转或其他对称性；
-\item 是否存在时间或序列依赖；
-\item 是否存在图结构（节点与边）约束。
-\end{itemize}
-
-后续各节将围绕这些问题展开。
+此类网络在理论上满足通用逼近定理：当 $m\to\infty$ 时，在 mild 条件下可以逼近任意连续函数。然而，在固定宽度 $m$ 下，能方便表示的函数仍有强烈结构性。不同的网络结构可以被视为对数据作出了不同的"工程性假设"：输入特征之间是否存在空间或拓扑结构，函数是否具有平移、旋转或其他对称性，是否存在时间或序列依赖，是否存在图结构（节点与边）的约束。后续各节将围绕这些问题依次展开。
 
 %----------------------------------------------------------------------
 \subsection*{二、线性可分性与 XOR：一层网络的能力极限}
@@ -2213,15 +1971,7 @@ w^\top x + b > 0 \Rightarrow y=1,\quad w^\top x + b < 0 \Rightarrow y=0,
 (0,0)\to 0,\quad (1,1)\to 0,\quad (1,0)\to 1,\quad (0,1)\to 1.
 \]
 
-将这些点画在二维平面上，可以观察到：
-
-\begin{itemize}
-\item $(0,0)$ 与 $(1,1)$ 属于一类；
-\item $(1,0)$ 与 $(0,1)$ 属于另一类；
-\item 无论怎样画一条直线，都无法将这两类点完全分开。
-\end{itemize}
-
-因此 XOR 数据不是线性可分的。一层感知机的决策边界为 $w_1x_1 + w_2x_2 + b = 0$，只能得到一条直线，即只能表示线性可分类。故一层网络无法表示 XOR 函数。
+将这些点画在二维平面上可以看到，$(0,0)$ 与 $(1,1)$ 属于一类，$(1,0)$ 与 $(0,1)$ 属于另一类，无论怎样画一条直线，都无法将这两类点完全分开。因此 XOR 数据不是线性可分的。一层感知机的决策边界为 $w_1x_1 + w_2x_2 + b = 0$，只能得到一条直线，即只能表示线性可分类。故一层网络无法表示 XOR 函数。
 
 \paragraph{两层网络如何表示 XOR}
 
@@ -2256,19 +2006,12 @@ f(x) = H(h_1 + h_2 - 0.5),
 这个例子说明：即使有非线性激活，一层结构的表达能力仍严格受限，只能表示线性可分问题。增加一层后，决策边界可以组合多个线性片段，从而表示更复杂模式。
 
 %----------------------------------------------------------------------
-\subsection*{三、卷积网络与局部结构：为什么 CNN 在图像上高效}
+\subsection*{三、卷积网络：为什么在图像上高效}
 %----------------------------------------------------------------------
 
 \paragraph{图像的局部相关性与平移等变性}
 
-将灰度图像视为矩阵 $X \in \mathbb{R}^{H\times W}$，每个像素 $X_{i,j}$ 与其邻近像素在空间上高度相关。许多模式（边缘、角点、纹理）具有以下特征：
-
-\begin{itemize}
-\item \textbf{局部性}：可以仅通过一个小邻域（例如 $3\times 3$）来判断；
-\item \textbf{平移等变性}：同一个局部模式出现在图像的不同位置时，其语义一致。
-\end{itemize}
-
-将这两点作为假设，可以构造卷积神经网络。
+将灰度图像视为矩阵 $X \in \mathbb{R}^{H\times W}$，每个像素 $X_{i,j}$ 与其邻近像素在空间上高度相关。许多模式（边缘、角点、纹理）具有两个特征：一是\textbf{局部性}，可以仅通过一个小邻域（例如 $3\times 3$）来判断；二是\textbf{平移等变性}，同一个局部模式出现在图像的不同位置时，其语义一致。把这两点作为假设写进网络结构，就得到卷积神经网络；1989 年，Yann LeCun 在贝尔实验室用来识别手写邮政编码的，正是这样的卷积网络。
 
 \paragraph{卷积运算的形式}
 
@@ -2276,12 +2019,7 @@ f(x) = H(h_1 + h_2 - 0.5),
 \[
 (Y = K * X)_{i,j} = \sum_{u=-r}^r \sum_{v=-r}^r K_{u,v}\, X_{i+u, j+v},
 \]
-其中 $k = 2r+1$。该公式反映两点重要性质：
-
-\begin{itemize}
-\item \textbf{局部感受野}：输出 $Y_{i,j}$ 只依赖于输入中 $(i,j)$ 附近的像素；
-\item \textbf{权重共享}：同一个卷积核 $K$ 在整张图像上平移使用。
-\end{itemize}
+其中 $k = 2r+1$。该公式反映两点重要性质：\textbf{局部感受野}，即输出 $Y_{i,j}$ 只依赖于输入中 $(i,j)$ 附近的像素；\textbf{权重共享}，即同一个卷积核 $K$ 在整张图像上平移使用。
 
 若将图像展开为向量 $x\in\mathbb{R}^{HW}$，则卷积对应一个稀疏矩阵 $W_{\text{conv}}$：
 \[
@@ -2369,7 +2107,7 @@ RNN 需要在 $h_t$ 中长期保存栈式信息，且训练时梯度需要通过
 
 \paragraph{Transformer 的自注意力机制}
 
-Transformer 使用自注意力机制（self-attention）直接让每个位置与全序列交互。对长度为 $T$ 的序列，先通过线性变换得到
+Transformer 用自注意力（self-attention）让每个位置直接与全序列交互。对长度为 $T$ 的序列，先通过线性变换得到
 \[
 Q = X W_Q,\quad K = X W_K,\quad V = X W_V,
 \]
@@ -2405,16 +2143,7 @@ h_t = F(h_{t-1}, x_t),
 
 \paragraph{图结构数据的特征}
 
-图 $G = (V, E)$ 由节点集合 $V$ 与边集合 $E$ 组成。典型例子包括：
-
-\begin{itemize}
-\item 社交网络：节点为用户，边为好友关系；
-\item 交通网络：节点为路口或站点，边为道路或轨道；
-\item 电力网络：节点为变电站或母线，边为输电线路；
-\item 分子结构：节点为原子，边为化学键。
-\end{itemize}
-
-图数据的重要特征在于：拓扑结构本身承载了关键信息。节点的功能不仅由其自身特征决定，还由其邻居及更远节点的结构关系决定。
+图 $G = (V, E)$ 由节点集合 $V$ 与边集合 $E$ 组成。社交网络是图，节点为用户，边为好友关系；交通网络是图，节点为路口或站点，边为道路或轨道；电力网络是图，节点为变电站或母线，边为输电线路；分子结构也是图，节点为原子，边为化学键。图数据的重要特征在于：拓扑结构本身承载了关键信息。节点的功能不仅由其自身特征决定，还由其邻居及更远节点的结构关系决定。
 
 \paragraph{图神经网络的消息传递框架}
 
@@ -2422,33 +2151,11 @@ h_t = F(h_{t-1}, x_t),
 \[
 h_i^{(k+1)} = \phi\Big(h_i^{(k)},\ \square_{j\in\mathcal{N}(i)} \psi\big(h_i^{(k)}, h_j^{(k)}, e_{ij}\big)\Big),
 \]
-其中
-\begin{itemize}
-\item $h_i^{(k)}$ 为节点 $i$ 在第 $k$ 层的表示；
-\item $\mathcal{N}(i)$ 为节点 $i$ 的邻居集合；
-\item $e_{ij}$ 为边 $(i,j)$ 的特征；
-\item $\psi$ 为消息函数，$\phi$ 为更新函数；
-\item $\square$ 为一个置换不变的聚合算子（如求和、平均或最大）。
-\end{itemize}
-
-该形式体现了图结构的两个关键性质：
-
-\begin{itemize}
-\item \textbf{局部性}：节点表示由邻居的表示聚合而来；
-\item \textbf{置换不变性}：邻居节点顺序可以任意变换，不影响聚合结果。
-\end{itemize}
+其中 $h_i^{(k)}$ 为节点 $i$ 在第 $k$ 层的表示，$\mathcal{N}(i)$ 为节点 $i$ 的邻居集合，$e_{ij}$ 为边 $(i,j)$ 的特征，$\psi$ 为消息函数，$\phi$ 为更新函数，$\square$ 为一个置换不变的聚合算子（如求和、平均或最大）。该形式体现了图结构的两个关键性质：\textbf{局部性}，节点表示由邻居的表示聚合而来；\textbf{置换不变性}，邻居节点顺序可以任意变换，不影响聚合结果。
 
 \paragraph{图结构上 CNN 的局限}
 
-若尝试将普通 CNN 直接应用于图，存在若干困难：
-
-\begin{itemize}
-\item 图通常是非规则结构，不存在自然的二维网格坐标 $(i,j)$；
-\item 不同节点的度数不同，难以定义固定形状的"卷积核邻域"；
-\item 图结构不存在平移对称性，不能简单依赖权重共享在规则网格上的平移。
-\end{itemize}
-
-因此，传统卷积无法直接刻画图上的邻接关系与拓扑属性。而 GNN 通过邻居聚合的形式，将图的邻接结构内置到更新规则中。例如，一阶 GCN（Graph Convolutional Network）层可写作：
+若尝试将普通 CNN 直接应用于图，会遇到几重困难：图通常是非规则结构，不存在自然的二维网格坐标 $(i,j)$；不同节点的度数不同，难以定义固定形状的"卷积核邻域"；图结构也不存在平移对称性，不能简单依赖权重共享在规则网格上的平移。因此，传统卷积无法直接刻画图上的邻接关系与拓扑属性。而 GNN 通过邻居聚合的形式，将图的邻接结构内置到更新规则中。例如，一阶 GCN（Graph Convolutional Network）层可写作：
 \[
 H^{(k+1)} = \sigma\left(\tilde{D}^{-1/2} \tilde{A} \tilde{D}^{-1/2} H^{(k)} W^{(k)}\right),
 \]
@@ -2481,19 +2188,7 @@ H^{(k+1)} = \sigma\left(\tilde{D}^{-1/2} \tilde{A} \tilde{D}^{-1/2} H^{(k)} W^{(
 \mathcal{F} = \{f_\theta : \theta\in\Theta\}.
 \]
 
-\begin{itemize}
-\item 对于全连接网络，$\Theta_{\text{fc}}$ 包含所有稠密矩阵参数，$\mathcal{F}_{\text{fc}}$ 十分宽泛；
-\item 对于卷积网络，$\Theta_{\text{conv}}$ 仅包含卷积核参数，且强制权重共享，$\mathcal{F}_{\text{conv}}$ 是 $\mathcal{F}_{\text{fc}}$ 的一个子集；
-\item 对于 RNN/Transformer/GNN，$\Theta$ 中都包含特定形式的权重共享、对称性或拓扑约束。
-\end{itemize}
-
-这些约束可以被视为归纳偏置（inductive bias）：在函数空间中优先选择满足某些不变性或等变性的函数。例如：
-
-\begin{itemize}
-\item 卷积层偏向选择平移等变函数；
-\item GNN 偏向选择在节点重标号下保持不变的图函数；
-\item 自注意力层偏向选择依赖于 token 间相对相似性的函数。
-\end{itemize}
+对于全连接网络，$\Theta_{\text{fc}}$ 包含所有稠密矩阵参数，$\mathcal{F}_{\text{fc}}$ 十分宽泛；对于卷积网络，$\Theta_{\text{conv}}$ 仅包含卷积核参数，且强制权重共享，$\mathcal{F}_{\text{conv}}$ 是 $\mathcal{F}_{\text{fc}}$ 的一个子集；对于 RNN、Transformer 和 GNN，$\Theta$ 中都包含特定形式的权重共享、对称性或拓扑约束。这些约束可以被视为归纳偏置（inductive bias）：在函数空间中优先选择满足某些不变性或等变性的函数。卷积层偏向选择平移等变函数，GNN 偏向选择在节点重标号下保持不变的图函数，自注意力层则偏向选择依赖于 token 间相对相似性的函数。
 
 \paragraph{对称性与等变性}
 
@@ -2511,15 +2206,7 @@ f(T_g x) = T'_g f(x),
 
 当数据的真实生成机制具有某种对称性或结构时，将相同的结构内置到网络中，可以显著减少所需参数与训练样本。相反，若选择与数据结构不匹配的网络结构，则需要更多参数、更多数据才能"在函数空间中搜索到"合适的函数，甚至在有限资源下根本难以学到。
 
-从这个角度看，不同架构的"适用领域"可以概括为：
-
-\begin{itemize}
-\item MLP：适合无明显空间或拓扑结构的小规模特征；
-\item CNN：适合具有局部相关性和平移等变性的网格数据（图像、某些 PDE 网格）；
-\item RNN/LSTM：适合中短距离依赖为主的序列；
-\item Transformer：适合存在长距离依赖或全局交互的序列与多模态数据；
-\item GNN：适合拓扑结构重要、以图为基本对象的数据。
-\end{itemize}
+从这个角度看，不同架构的"适用领域"可以概括如下：MLP 适合无明显空间或拓扑结构的小规模特征；CNN 适合具有局部相关性和平移等变性的网格数据（图像、某些 PDE 网格）；RNN/LSTM 适合中短距离依赖为主的序列；Transformer 适合存在长距离依赖或全局交互的序列与多模态数据；GNN 适合拓扑结构重要、以图为基本对象的数据。
 
 %----------------------------------------------------------------------
 \subsection*{七、小结}
