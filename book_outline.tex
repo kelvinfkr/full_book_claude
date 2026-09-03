@@ -1,0 +1,967 @@
+\documentclass[11pt,a4paper,twoside,openright]{book}
+
+% ========== 中文支持 ==========
+\usepackage{fontspec}
+\usepackage[UTF8]{ctex}
+
+% 单独给西里尔字母指定一个字体
+\newfontfamily\cyrillicfont{Times New Roman}
+
+% ========== 数学 ==========
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{bm}
+\usepackage{bbm}
+
+% ========== 宽边距笔记本风格排版 ==========
+\usepackage{geometry}
+\geometry{
+    a4paper,
+    inner=2cm,
+    outer=6cm,
+    top=2.5cm,
+    bottom=2.5cm,
+    marginparwidth=4.5cm,
+    marginparsep=0.5cm
+}
+
+\usepackage{stmaryrd}
+\newcommand{\jump}[1]{\llbracket #1 \rrbracket}
+\newcommand{\avg}[1]{\langle #1 \rangle}
+
+% ========== 算法环境（修复冲突） ==========
+% 方案：只用 algorithm + algpseudocode，不用 algorithm2e
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+% 中文化算法标题
+\floatname{algorithm}{算法}
+\renewcommand{\algorithmicrequire}{\textbf{输入:}}
+\renewcommand{\algorithmicensure}{\textbf{输出:}}
+
+% ========== 页边栏设置 ==========
+\usepackage{marginnote}
+\usepackage{mparhack}
+\usepackage{ragged2e}
+\usepackage{sidenotes}
+
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{longtable}
+
+% ========== 图形 ==========
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,shapes,positioning,calc,fit,decorations.pathreplacing,patterns}
+\usepackage{graphicx}
+
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+% ========== 颜色与盒子 ==========
+\usepackage{xcolor}
+\usepackage{framed}
+\usepackage{tcolorbox}
+\tcbuselibrary{theorems,skins,breakable}
+
+% ========== 代码环境 ==========
+\usepackage{listings}
+
+% 配色方案
+\definecolor{codebg}{HTML}{F7F7F7}
+\definecolor{keywordcolor}{HTML}{0070C0}
+\definecolor{stringcolor}{HTML}{DD1144}
+\definecolor{commentcolor}{HTML}{6A737D}
+\definecolor{numcolor}{HTML}{888888}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!60!black}\itshape,
+    stringstyle=\color{red!60!black},
+    numberstyle=\tiny\color{gray},
+    numbers=left,
+    numbersep=8pt,
+    frame=single,
+    framesep=5pt,
+    breaklines=true,
+    breakatwhitespace=true,
+    tabsize=4,
+    showstringspaces=false,
+    backgroundcolor=\color{gray!5},
+    xleftmargin=15pt,
+    xrightmargin=5pt,
+    aboveskip=10pt,
+    belowskip=10pt,
+    captionpos=b,
+    escapeinside={(*@}{@*)},
+}
+
+\lstdefinestyle{teaching}{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{keywordcolor}\bfseries,
+    stringstyle=\color{stringcolor},
+    commentstyle=\color{commentcolor}\itshape,
+    numberstyle=\tiny\color{numcolor},
+    numbers=left,
+    numbersep=8pt,
+    frame=single,
+    rulecolor=\color{black!20},
+    breaklines=true,
+    breakatwhitespace=false,
+    columns=fullflexible,
+    keepspaces=true,
+    showstringspaces=false,
+    tabsize=4,
+    captionpos=b,
+    aboveskip=\baselineskip,  % 确保listing前有足够空间
+    belowskip=\baselineskip,
+    resetmargins=true,        % 重置边距，避免paragraph后缩进问题
+}
+
+\lstdefinestyle{decision}{
+    basicstyle=\ttfamily\small,
+    keywordstyle=\bfseries\color{blue!70!black},
+    commentstyle=\color{gray},
+    stringstyle=\color{green!50!black},
+    keywords={if, elif, else, then, return},
+    frame=single,
+    backgroundcolor=\color{gray!5},
+    rulecolor=\color{gray!30},
+    xleftmargin=1em,
+    framexleftmargin=0.5em,
+    breaklines=true,
+    columns=fullflexible,
+    keepspaces=true,
+    tabsize=4,
+    showstringspaces=false,
+    literate={->}{$\rightarrow$}2 {←}{$\leftarrow$}2,
+}
+
+% 行内代码命令
+\newcommand{\code}[1]{\texttt{#1}}
+
+% ========== 定理环境 ==========
+\theoremstyle{definition}
+\newtheorem{theorem}{定理}[section]
+\newtheorem{lemma}[theorem]{引理}
+\newtheorem{proposition}[theorem]{命题}
+\newtheorem{corollary}[theorem]{推论}
+\newtheorem{definition}[theorem]{定义}
+\newtheorem{example}[theorem]{例}
+\newtheorem{remark}[theorem]{注记}
+
+% ========== tcolorbox 盒子环境 ==========
+
+% 核心公式盒子
+\newtcolorbox{keyformula}[1][]{
+    colback=blue!5!white,
+    colframe=blue!75!black,
+    fonttitle=\bfseries,
+    title=核心公式,
+    breakable,
+    #1
+}
+
+% 例子盒子
+\newtcolorbox{examplebox}[1][]{
+    colback=green!5!white,
+    colframe=green!50!black,
+    fonttitle=\bfseries,
+    title={#1},
+    breakable
+}
+
+% 关键定理盒子
+\newtcolorbox{keytheorem}[1][]{
+    colback=red!5!white,
+    colframe=red!75!black,
+    fonttitle=\bfseries,
+    title=关键定理,
+    breakable,
+    #1
+}
+
+% 物理意义盒子
+\newtcolorbox{physicalmeaning}[1][]{
+    colback=green!5!white,
+    colframe=green!50!black,
+    fonttitle=\bfseries,
+    title=物理意义,
+    breakable,
+    #1
+}
+
+% 统一视角盒子
+\newtcolorbox{unification}[1][]{
+    colback=orange!5!white,
+    colframe=orange!75!black,
+    fonttitle=\bfseries,
+    title=统一视角,
+    breakable,
+    #1
+}
+
+% 关键洞察盒子（两个版本兼容）
+\newtcolorbox{insightbox}[1][]{
+    colback=yellow!10!white,
+    colframe=yellow!75!black,
+    fonttitle=\bfseries,
+    title=关键洞察,
+    breakable,
+    #1
+}
+
+\newtcolorbox{keyinsight}[1][]{
+    colback=yellow!10,
+    colframe=orange!60,
+    fonttitle=\bfseries,
+    title={关键洞察},
+    breakable,
+    #1
+}
+
+% 警告盒子
+\newtcolorbox{warning}[1][]{
+    colback=red!5,
+    colframe=red!60,
+    fonttitle=\bfseries,
+    title={注意},
+    breakable,
+    #1
+}
+
+% 优势盒子
+\newtcolorbox{advantage}[1][]{
+    colback=blue!5,
+    colframe=blue!60,
+    fonttitle=\bfseries,
+    title={优势},
+    breakable,
+    #1
+}
+
+% 小结盒子
+\newtcolorbox{summary}[1][]{
+    colback=gray!5!white,
+    colframe=gray!75!black,
+    fonttitle=\bfseries,
+    title=本章小结,
+    breakable,
+    #1
+}
+
+% 习题盒子
+\newtcolorbox{exercise}[1][]{
+    colback=cyan!5!white,
+    colframe=cyan!75!black,
+    fonttitle=\bfseries,
+    title=习题,
+    breakable,
+    #1
+}
+
+% 关键思想盒子
+\newtcolorbox{keyidea}[1][]{
+    colback=blue!5,
+    colframe=blue!50,
+    fonttitle=\bfseries,
+    title={#1},
+    breakable,
+    enhanced,
+    attach boxed title to top left={yshift=-2mm, xshift=5mm},
+    boxed title style={colback=blue!50, colframe=blue!50}
+}
+
+% 物理直觉盒子（新增，兼容前面章节）
+\newtcolorbox{physicalintuition}[1][]{
+    colback=teal!5,
+    colframe=teal!60,
+    fonttitle=\bfseries,
+    title={物理直觉},
+    breakable,
+    #1
+}
+
+% 哲学思考盒子（新增，兼容终章）
+\newtcolorbox{philosophy}[1][]{
+    colback=brown!5,
+    colframe=brown!60,
+    fonttitle=\bfseries,
+    title={哲学思考},
+    breakable,
+    #1
+}
+
+
+% ========== 章节格式 ==========
+\usepackage{titlesec}
+\titleformat{\chapter}[display]
+{\normalfont\huge\bfseries}{\chaptertitlename\ \thechapter}{20pt}{\Huge}
+
+% ========== 超链接 ==========
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=blue,
+    urlcolor=blue
+}
+
+% ========== 自定义数学命令 ==========
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Lag}{\mathcal{L}}
+\newcommand{\pd}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\dd}[2]{\frac{d #1}{d #2}}
+\newcommand{\argmin}{\operatornamewithlimits{argmin}}
+\newcommand{\argmax}{\operatornamewithlimits{argmax}}
+\newcommand{\st}{\text{s.t.}}
+\newcommand{\tr}{\text{tr}}
+
+% ========== 页边栏命令（5种类型） ==========
+
+% 类型1：科学家小故事
+\newcommand{\storynote}[2]{%
+    \marginnote{\small\raggedright
+        \textcolor{blue!70!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
+        \textbf{{\color{blue!70!black}人物} #1}\\[3pt]
+        \textit{#2}\\[-2pt]
+        \textcolor{blue!70!black}{\rule{\marginparwidth}{1pt}}
+    }%
+}
+
+% 类型2：概念澄清
+\newcommand{\clarify}[1]{%
+    \marginnote{\small\raggedright
+        \textcolor{orange!80!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
+        \textbf{{\color{orange!80!black}澄清}}\\[3pt]
+        #1\\[-2pt]
+        \textcolor{orange!80!black}{\rule{\marginparwidth}{1pt}}
+    }%
+}
+
+% 类型3：前方预告
+\newcommand{\preview}[1]{%
+    \marginnote{\small\raggedright
+        \textcolor{purple!70!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
+        \textbf{{\color{purple!70!black}预告}}\\[3pt]
+        #1\\[-2pt]
+        \textcolor{purple!70!black}{\rule{\marginparwidth}{1pt}}
+    }%
+}
+
+% 类型4：动手试试
+\newcommand{\tryit}[1]{%
+    \marginnote{\small\raggedright
+        \textcolor{green!60!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
+        \textbf{{\color{green!60!black}动手试试}}\\[3pt]
+        \ttfamily\small #1\\[-2pt]
+        \textcolor{green!60!black}{\rule{\marginparwidth}{1pt}}
+    }%
+}
+
+% 类型5：思考题
+\newcommand{\think}[1]{%
+    \marginnote{\small\raggedright
+        \textcolor{red!70!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
+        \textbf{{\color{red!70!black}想一想}}\\[3pt]
+        #1\\[-2pt]
+        \textcolor{red!70!black}{\rule{\marginparwidth}{1pt}}
+    }%
+}
+
+% 类型6：回顾前置知识
+\newcommand{\review}[2]{%
+    \marginnote{\small\raggedright
+        \textcolor{teal!80!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
+        \textbf{{\color{teal!80!black}回顾} #1}\\[3pt]
+        #2\\[-2pt]
+        \textcolor{teal!80!black}{\rule{\marginparwidth}{1pt}}
+    }%
+}
+
+% 页边空白笔记区域标记
+\newcommand{\notespace}{%
+    \marginnote{\color{gray!30}\rule{\marginparwidth}{0.5pt}\\[5mm]\rule{\marginparwidth}{0.5pt}\\[5mm]\rule{\marginparwidth}{0.5pt}\\[5mm]\rule{\marginparwidth}{0.5pt}}%
+}
+
+
+% ========== 文档信息 ==========
+\title{
+    \vspace{-2cm}
+    {\Huge\bfseries 大二开始的物理智能} \\[1cm]
+}
+\author{冯恺睿，何斌}
+\date{\today}
+
+% ==================== 正文开始 ====================
+\begin{document}
+
+\maketitle
+
+% ========== 全书核心 ==========
+\chapter*{全书核心思想}
+\addcontentsline{toc}{chapter}{全书核心思想}
+
+\begin{keyformula}[title=统一框架]
+\begin{equation}
+\boxed{
+\Lag(x, \lambda) = f(x) + \lambda^\top g(x) \quad \Rightarrow \quad \nabla_x \Lag = 0, \quad \nabla_\lambda \Lag = 0
+}
+\end{equation}
+\textbf{这个简单的框架将贯穿全书每一章。}
+\end{keyformula}
+
+\vspace{1cm}
+
+\begin{unification}[title=各领域的统一模板]
+\[
+\text{目标函数} + \text{约束} \xrightarrow{\text{拉格朗日/对偶}} \text{统一方程体系}
+\]
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{领域} & \textbf{目标+约束} & \textbf{结果} \\
+\midrule
+经典力学 & 作用量 + 动力学约束 & Euler-Lagrange方程 \\
+有限元 & 能量极小 + 边界约束 & 刚度矩阵方程 $KU=F$ \\
+机器人 & 任务目标 + 运动学/动力学约束 & 关节力矩/接触力 \\
+轨迹优化 & 代价最小 + ODE约束 & Pontryagin最大值原理 \\
+强化学习 & 累积奖励 + MDP动力学 & Bellman方程 \\
+反向传播 & 损失函数 + 计算图约束 & 伴随方程 \\
+PINN & 数据拟合 + PDE约束 & 物理信息损失 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{unification}
+
+\tableofcontents
+
+% ####################################################################################
+%                              第一部分：数学基础
+% ####################################################################################
+
+\part{数学基础与统一语言}
+
+\input{chapters/chap01}  % 第1章：从高数到约束优化
+\input{chapters/chap02}  % 第2章：对偶理论
+\input{chapters/chap03}  % 第3章：变分法
+
+% ####################################################################################
+%                              第二部分：物理应用
+% ####################################################################################
+
+\part{物理世界中的约束优化}
+
+\input{chapters/chap04}  % 第4章：经典力学
+\input{chapters/chap05}  % 第5章：有限元方法
+
+% ####################################################################################
+%                              第三部分：控制与信息
+% ####################################################################################
+
+\part{控制、信息与机器人}
+
+\input{chapters/chap06}  % 第6章：信息与编码
+\input{chapters/chap07}  % 第7章：机器人运动学与动力学
+\input{chapters/chap08}  % 第8章：轨迹优化与MPC
+
+% ####################################################################################
+%                              第四部分：机器学习
+% ####################################################################################
+
+\part{机器学习中的约束优化}
+
+\input{chapters/chap09}  % 第9章：反向传播
+\input{chapters/chap10}  % 第10章：强化学习
+\input{chapters/chap11}  % 第11章：图神经网络
+\input{chapters/chap12}  % 第12章：序列建模
+%\input{chapters/chap12-5}  % 第12章：序列建模
+
+% ####################################################################################
+%                              第五部分：前沿交叉
+% ####################################################################################
+
+\part{前沿交叉}
+
+\input{chapters/chap13}  % 第13章：PINN
+\input{chapters/chap14}  % 第14章：算子学习
+\input{chapters/chap15}  % 第15章：多智能体与博弈
+\input{chapters/chap16}  % 第16章：展望
+
+% ####################################################################################
+%                              全书总结
+% ####################################################################################
+
+\chapter*{全书总结：约束优化的统一视角}
+\addcontentsline{toc}{chapter}{全书总结}
+
+我们从一个简单的问题开始：
+\begin{quote}
+\textit{如何在满足约束的条件下，最大化（或最小化）一个目标？}
+\end{quote}
+
+拉格朗日的天才在于：引入乘子$\lambda$，把约束"吸收"进目标函数：
+\begin{equation}
+L(x, \lambda) = f(x) + \lambda^T g(x)
+\end{equation}
+
+这个简单的技巧，竟然能统一如此多的领域：
+
+\begin{center}
+\begin{tabular}{c|c|c}
+\toprule
+\textbf{领域} & \textbf{目标} & \textbf{$\lambda$的意义} \\
+\midrule
+经济学 & 效用最大化 & 边际价格 \\
+力学 & 最小作用量 & 约束力 \\
+有限元 & 能量最小 & 节点力 \\
+信息论 & 最大熵 & 每比特代价 \\
+控制 & 轨迹优化 & 协态变量 \\
+机器学习 & 损失最小 & 梯度递推 \\
+博弈论 & 纳什均衡 & 联合最优性 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{1em}
+
+\textbf{核心信息}：当你在任何领域遇到"有条件的优化"问题时，都可以用约束优化的框架来思考。
+$\lambda$不只是数学上的"技巧"，它有深刻的物理/经济/信息含义——它度量了约束的"价格"。
+
+希望这本书能帮助你建立这种统一的思维方式。当你下次看到一个复杂的问题时，
+不妨问自己：\textbf{这里的约束是什么？$\lambda$代表什么？}
+
+
+
+
+ 
+
+
+
+\begin{keyinsight}
+
+\textbf{贯穿全书的数学之美}：
+
+ 
+
+无论是单摆的运动、PDE的解、机器人的控制，还是智能体的决策，它们都可以用同一个数学框架来理解：
+
+ 
+
+\begin{center}
+
+\fbox{\Large 在约束下寻找最优}
+
+\end{center}
+
+ 
+
+这就是物理学与人工智能的深刻统一。
+
+\end{keyinsight}
+
+ 
+
+% ====================================================================================
+
+\section*{结语：约束中的自由}
+
+% ====================================================================================
+
+ 
+
+\vspace{1cm}
+
+ 
+
+当我们回顾这本书，从最简单的$F = ma$，到求解数百万参数的神经网络；从拉格朗日的$\lambda$乘子，到控制机器人的障碍函数。我们发现，人类理解世界的方式惊人地一致：
+
+ 
+
+\begin{center}
+
+\textit{世界是混乱的，但它是被约束的。}
+
+\end{center}
+
+ 
+
+物理定律是自然的\textbf{硬约束}——质能守恒、熵增原理、光速极限。
+
+ 
+
+伦理道德是社会的\textbf{软约束}——法律、规范、价值观。
+
+ 
+
+而\textbf{智能}（Intelligence），或许就是在这些重重约束的夹缝中，\textbf{寻找最优解的那道光}。
+
+ 
+
+\vspace{0.5cm}
+
+ 
+
+拉格朗日在1788年写下《解析力学》时，可能没有想到他的乘子会被用来训练神经网络。
+
+ 
+
+香农在1948年创立信息论时，可能没有想到"惊奇最小化"会成为理解大脑的钥匙。
+
+ 
+
+而今天的我们，站在巨人的肩膀上，正在用这些古老而优美的数学工具，构建能够感知、思考、行动的智能系统。
+
+ 
+
+\vspace{0.5cm}
+
+ 
+
+\begin{center}
+
+\textit{希望这本书能让你在未来的AI研究中，\\
+
+透过复杂的代码和架构，\\
+
+看到那贯穿始终的数学本质。}
+
+\end{center}
+
+ 
+
+\vspace{2cm}
+
+% ====================================================================================
+\chapter*{附录：核心概念索引}
+\addcontentsline{toc}{chapter}{附录：核心概念索引}
+% ====================================================================================
+
+本附录提供全书核心概念的快速索引，帮助读者：
+\begin{itemize}
+    \item 查找概念的首次出现位置和完整定义
+    \item 理解同一概念在不同章节中的不同形态
+    \item 复习时快速定位关键内容
+\end{itemize}
+
+% ------------------------------------------------------------------------------------
+\section*{核心概念跨章对照表}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.6}
+\small
+\begin{tabular}{p{2.8cm}|p{2.2cm}|p{8cm}}
+\toprule
+\textbf{概念} & \textbf{首次出现} & \textbf{各章节中的形态} \\
+\midrule
+
+\textbf{拉格朗日乘子} $\lambda$
+& 第1章
+& \textbf{Ch1}: 约束的"影子价格" \newline
+  \textbf{Ch5}: 对偶问题的变量 \newline
+  \textbf{Ch6}: 最大熵分布的特征权重 \newline
+  \textbf{Ch8}: 伴随变量（协态变量） \newline
+  \textbf{Ch9}: 反向传播中的误差信号 \newline
+  \textbf{Ch15}: 博弈论中的边际价值 \\
+\midrule
+
+\textbf{KKT条件}
+& 第1章
+& \textbf{Ch1}: 约束优化的必要条件 \newline
+  \textbf{Ch5}: 强对偶性的充分条件 \newline
+  \textbf{Ch7}: SVM的支持向量条件 \newline
+  \textbf{Ch15}: 纳什均衡的刻画 \\
+\midrule
+
+\textbf{对偶性}
+& 第5章
+& \textbf{Ch5}: 原问题与对偶问题的关系 \newline
+  \textbf{Ch6}: 最大熵 = 最小KL散度 \newline
+  \textbf{Ch7}: SVM原问题与对偶问题 \\
+\midrule
+
+\textbf{梯度/导数}
+& 第3章
+& \textbf{Ch3}: 矩阵求导规则 \newline
+  \textbf{Ch4}: 正则化项的梯度 \newline
+  \textbf{Ch9}: 反向传播计算梯度 \newline
+  \textbf{Ch16}: 可微物理中的梯度 \\
+\midrule
+
+\textbf{伴随方程/变量}
+& 第8章
+& \textbf{Ch8}: 最优控制中的协态方程 \newline
+  \textbf{Ch9}: 神经网络的反向传播 \newline
+  \textbf{Ch16}: 可微仿真中的梯度计算 \\
+\midrule
+
+\textbf{熵}
+& 第6章
+& \textbf{Ch6}: Shannon熵，信息量的期望 \newline
+  \textbf{Ch6}: KL散度中的负熵项 \newline
+  \textbf{Ch12-5}: 注意力中的熵惩罚 \\
+\midrule
+
+\textbf{Softmax}
+& 第6章
+& \textbf{Ch6}: 最大熵分布的形式 \newline
+  \textbf{Ch9}: 分类器输出层 \newline
+  \textbf{Ch12}: Attention的权重归一化 \\
+\midrule
+
+\textbf{注意力机制}
+& 第12章
+& \textbf{Ch12}: Query-Key-Value结构 \newline
+  \textbf{Ch12-5}: FlashAttention优化 \newline
+  \textbf{Ch12-5}: 多头注意力 \\
+\midrule
+
+\textbf{正则化}
+& 第4章
+& \textbf{Ch4}: L1/L2范数惩罚 \newline
+  \textbf{Ch7}: SVM的间隔最大化 \newline
+  \textbf{Ch12-5}: MoE的负载均衡损失 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ------------------------------------------------------------------------------------
+\section*{核心概念快速定义}
+
+\subsection*{A. 优化基础（第1-5章）}
+
+\begin{description}
+    \item[拉格朗日乘子 (Lagrange Multiplier)]
+    约束优化中引入的辅助变量，表示约束放松一个单位时目标函数的改进量（"影子价格"）。
+    \[
+    \mathcal{L}(x, \lambda) = f(x) + \lambda g(x)
+    \]
+
+    \item[KKT条件 (Karush-Kuhn-Tucker Conditions)]
+    约束优化问题最优解的必要条件，包括：
+    \begin{enumerate}
+        \item 梯度条件：$\nabla f + \sum \lambda_i \nabla g_i = 0$
+        \item 可行性：$g_i(x) \leq 0$（或 $= 0$）
+        \item 互补松弛：$\lambda_i g_i(x) = 0$
+        \item 对偶可行：$\lambda_i \geq 0$（不等式约束）
+    \end{enumerate}
+
+    \item[对偶问题 (Dual Problem)]
+    通过拉格朗日函数构造的另一个优化问题，提供原问题最优值的下界。强对偶性成立时，两者最优值相等。
+
+    \item[凸优化 (Convex Optimization)]
+    目标函数和可行域都是凸的优化问题。局部最优 = 全局最优，KKT条件是充分必要条件。
+\end{description}
+
+\subsection*{B. 信息与学习（第6-7章）}
+
+\begin{description}
+    \item[熵 (Entropy)]
+    分布不确定性的度量，也是平均信息量：
+    \[
+    H(p) = -\sum_i p_i \log p_i
+    \]
+
+    \item[KL散度 (Kullback-Leibler Divergence)]
+    两个分布之间的"差异"（非对称）：
+    \[
+    D_{KL}(P \| Q) = \sum_i p_i \log \frac{p_i}{q_i}
+    \]
+
+    \item[交叉熵 (Cross Entropy)]
+    用分布 $Q$ 编码分布 $P$ 的平均比特数：
+    \[
+    H(P, Q) = -\sum_i p_i \log q_i = H(P) + D_{KL}(P \| Q)
+    \]
+
+    \item[Softmax函数]
+    将实数向量转换为概率分布的函数，是最大熵分布的形式：
+    \[
+    p_i = \frac{e^{z_i}}{\sum_j e^{z_j}}
+    \]
+
+    \item[支持向量机 (SVM)]
+    间隔最大化的分类器，对偶问题只依赖于支持向量。
+\end{description}
+
+\subsection*{C. 控制与动态（第8章、第16章）}
+
+\begin{description}
+    \item[最优控制 (Optimal Control)]
+    选择控制输入 $u(t)$ 使得系统轨迹最优化某个目标泛函。
+
+    \item[伴随方程 (Adjoint Equation)]
+    描述"未来代价对当前状态的敏感度"的微分方程，从终点向起点反向求解：
+    \[
+    \dot{\lambda} = -\frac{\partial H}{\partial x}
+    \]
+
+    \item[哈密顿函数 (Hamiltonian)]
+    综合目标函数和约束的函数：
+    \[
+    H(x, u, \lambda) = L(x, u) + \lambda^\top f(x, u)
+    \]
+
+    \item[可微仿真 (Differentiable Simulation)]
+    物理仿真的可微分版本，允许通过反向传播计算控制输入的梯度。
+\end{description}
+
+\subsection*{D. 神经网络（第9章、第12章）}
+
+\begin{description}
+    \item[反向传播 (Backpropagation)]
+    高效计算神经网络梯度的算法，本质是伴随方程的离散版本。
+
+    \item[计算图 (Computational Graph)]
+    表示计算过程的有向无环图，前向传播计算值，反向传播计算梯度。
+
+    \item[Transformer]
+    基于自注意力机制的神经网络架构，不使用循环或卷积。
+
+    \item[注意力机制 (Attention)]
+    根据Query和Key的相似度对Value加权求和：
+    \[
+    \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^\top}{\sqrt{d_k}}\right) V
+    \]
+
+    \item[FlashAttention]
+    IO感知的注意力算法，通过分块计算减少内存访问。
+
+    \item[MoE (Mixture of Experts)]
+    稀疏激活的架构，每个输入只激活部分专家网络。
+\end{description}
+
+\subsection*{E. 多智能体（第15章）}
+
+\begin{description}
+    \item[纳什均衡 (Nash Equilibrium)]
+    每个玩家都采用最优响应的策略组合，没有人有动机单方面偏离。
+
+    \item[最优响应 (Best Response)]
+    给定其他玩家策略时，最大化自己收益的策略。
+
+    \item[Cournot竞争]
+    企业同时选择产量的寡头竞争模型，纳什均衡通过KKT条件求解。
+\end{description}
+
+% ------------------------------------------------------------------------------------
+\section*{概念演化图谱}
+
+\begin{center}
+\begin{tikzpicture}[
+    node distance=1.8cm,
+    concept/.style={rectangle, rounded corners, draw=blue!50, fill=blue!10,
+                    text width=2.5cm, align=center, minimum height=1cm},
+    arrow/.style={->, >=stealth, thick, blue!60}
+]
+
+% 第一行：基础
+\node[concept] (lagrange) {拉格朗日乘子\\(Ch1)};
+\node[concept, right=of lagrange] (kkt) {KKT条件\\(Ch1)};
+\node[concept, right=of kkt] (dual) {对偶性\\(Ch5)};
+
+% 第二行：分支应用
+\node[concept, below=of lagrange] (adjoint) {伴随方程\\(Ch8)};
+\node[concept, below=of kkt] (entropy) {最大熵\\(Ch6)};
+\node[concept, below=of dual] (svm) {SVM\\(Ch7)};
+
+% 第三行：现代应用
+\node[concept, below=of adjoint] (bp) {反向传播\\(Ch9)};
+\node[concept, below=of entropy] (softmax) {Softmax\\(Ch6,12)};
+\node[concept, below=of svm] (nash) {纳什均衡\\(Ch15)};
+
+% 第四行：前沿
+\node[concept, below=of bp] (diffsim) {可微仿真\\(Ch16)};
+\node[concept, below=of softmax] (attention) {注意力\\(Ch12)};
+
+% 箭头
+\draw[arrow] (lagrange) -- (kkt);
+\draw[arrow] (kkt) -- (dual);
+\draw[arrow] (lagrange) -- (adjoint);
+\draw[arrow] (lagrange) -- (entropy);
+\draw[arrow] (dual) -- (svm);
+\draw[arrow] (adjoint) -- (bp);
+\draw[arrow] (entropy) -- (softmax);
+\draw[arrow] (kkt) -- (nash);
+\draw[arrow] (bp) -- (diffsim);
+\draw[arrow] (softmax) -- (attention);
+
+% 虚线连接（表示概念联系）
+\draw[dashed, gray] (adjoint) -- (bp);
+\draw[dashed, gray] (bp) to[bend right=20] (diffsim);
+
+\end{tikzpicture}
+\end{center}
+
+\vspace{0.5cm}
+\begin{center}
+\textit{箭头表示概念的继承/发展关系，虚线表示本质相同的不同表述。}
+\end{center}
+
+% ------------------------------------------------------------------------------------
+\section*{本书的核心信息}
+
+\begin{unification}[title=一个公式，多个化身]
+拉格朗日函数的梯度条件
+\[
+\nabla_x \mathcal{L} = \nabla f + \lambda \nabla g = 0
+\]
+在不同领域有不同的名字：
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{l|l}
+\toprule
+\textbf{领域} & \textbf{名字} \\
+\midrule
+微积分 & 拉格朗日乘子法 \\
+运筹学 & KKT条件 \\
+物理学 & 哈密顿原理 \\
+控制论 & 伴随方程 \\
+机器学习 & 反向传播 \\
+信息论 & 最大熵分布 \\
+博弈论 & 纳什均衡条件 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{理解了拉格朗日乘子的本质，就等于理解了它们的共同根源。}
+\end{unification}
+
+% ------------------------------------------------------------------------------------
+\section*{章节速查}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{c|l|l}
+\toprule
+\textbf{章} & \textbf{标题} & \textbf{核心关键词} \\
+\midrule
+1 & 从高数到约束优化 & 拉格朗日乘子、KKT条件、影子价格 \\
+2 & 线性代数回顾 & 特征值、SVD、正定矩阵 \\
+3 & 矩阵求导 & 链式法则、Jacobian、Hessian \\
+4 & 范数与正则化 & L1/L2范数、稀疏性、过拟合 \\
+5 & 凸优化与对偶 & 对偶问题、强对偶、凸集 \\
+6 & 信息与编码 & 熵、KL散度、交叉熵、Softmax \\
+7 & 支持向量机 & 间隔、核技巧、对偶形式 \\
+8 & 最优控制 & 伴随方程、Pontryagin原理 \\
+9 & 神经网络 & 反向传播、计算图、自动微分 \\
+10 & 动态规划 & Bellman方程、值函数 \\
+12 & Transformer & 自注意力、多头注意力 \\
+12-5 & 高效计算 & FlashAttention、MoE \\
+14 & 强化学习 & 策略梯度、Actor-Critic \\
+15 & 多智能体 & 纳什均衡、博弈论 \\
+16 & 世界模型 & 可微仿真、模型预测控制 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+
+\end{document}

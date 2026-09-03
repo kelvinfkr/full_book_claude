@@ -1,0 +1,408 @@
+% physics-ai-book.sty
+% 《大二开始的物理智能》自定义样式文件
+% 作者：冯恺睿，何斌
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{physics-ai-book}[2024/01/01 Physics AI Book Style]
+
+% ========== 中文支持 ==========
+\RequirePackage{fontspec}
+\RequirePackage[UTF8]{ctex}
+
+% 单独给西里尔字母指定一个字体
+\newfontfamily\cyrillicfont{Times New Roman}
+
+% ========== 数学 ==========
+\RequirePackage{amsmath,amssymb,amsthm}
+\RequirePackage{mathtools}
+\RequirePackage{bm}
+\RequirePackage{bbm}
+
+% ========== 宽边距笔记本风格排版 ==========
+\RequirePackage{geometry}
+\geometry{
+    a4paper,
+    inner=2cm,
+    outer=6cm,
+    top=2.5cm,
+    bottom=2.5cm,
+    marginparwidth=4.5cm,
+    marginparsep=0.5cm
+}
+
+\RequirePackage{stmaryrd}
+\newcommand{\jump}[1]{\llbracket #1 \rrbracket}
+\newcommand{\avg}[1]{\langle #1 \rangle}
+
+% ========== 算法环境 ==========
+\RequirePackage{algorithm}
+\RequirePackage{algpseudocode}
+
+% 中文化算法标题
+\floatname{algorithm}{算法}
+\renewcommand{\algorithmicrequire}{\textbf{输入:}}
+\renewcommand{\algorithmicensure}{\textbf{输出:}}
+
+% ========== 页边栏设置 ==========
+\RequirePackage{marginnote}
+\RequirePackage{mparhack}
+\RequirePackage{ragged2e}
+\RequirePackage{sidenotes}
+
+\RequirePackage{enumitem}
+\RequirePackage{booktabs}
+\RequirePackage{array}
+\RequirePackage{multirow}
+\RequirePackage{longtable}
+
+% ========== 图形 ==========
+\RequirePackage{tikz}
+\usetikzlibrary{arrows.meta,shapes,positioning,calc,fit,decorations.pathreplacing,patterns}
+\RequirePackage{graphicx}
+
+\RequirePackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+% ========== 颜色与盒子 ==========
+\RequirePackage{xcolor}
+\RequirePackage{framed}
+\RequirePackage{tcolorbox}
+\tcbuselibrary{theorems,skins,breakable}
+
+% ========== 代码环境 ==========
+\RequirePackage{listings}
+
+% 配色方案
+\definecolor{codebg}{HTML}{F7F7F7}
+\definecolor{keywordcolor}{HTML}{0070C0}
+\definecolor{stringcolor}{HTML}{DD1144}
+\definecolor{commentcolor}{HTML}{6A737D}
+\definecolor{numcolor}{HTML}{888888}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!60!black}\itshape,
+    stringstyle=\color{red!60!black},
+    numberstyle=\tiny\color{gray},
+    numbers=left,
+    numbersep=8pt,
+    frame=single,
+    framesep=5pt,
+    breaklines=true,
+    breakatwhitespace=true,
+    tabsize=4,
+    showstringspaces=false,
+    backgroundcolor=\color{gray!5},
+    xleftmargin=15pt,
+    xrightmargin=5pt,
+    aboveskip=10pt,
+    belowskip=10pt,
+    captionpos=b,
+    escapeinside={(*@}{@*)},
+}
+
+\lstdefinestyle{teaching}{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{keywordcolor}\bfseries,
+    stringstyle=\color{stringcolor},
+    commentstyle=\color{commentcolor}\itshape,
+    numberstyle=\tiny\color{numcolor},
+    numbers=left,
+    numbersep=8pt,
+    frame=single,
+    rulecolor=\color{black!20},
+    breaklines=true,
+    breakatwhitespace=false,
+    columns=fullflexible,
+    keepspaces=true,
+    showstringspaces=false,
+    tabsize=4,
+    captionpos=b,
+    aboveskip=\baselineskip,
+    belowskip=\baselineskip,
+    resetmargins=true,
+}
+
+\lstdefinestyle{decision}{
+    basicstyle=\ttfamily\small,
+    keywordstyle=\bfseries\color{blue!70!black},
+    commentstyle=\color{gray},
+    stringstyle=\color{green!50!black},
+    keywords={if, elif, else, then, return},
+    frame=single,
+    backgroundcolor=\color{gray!5},
+    rulecolor=\color{gray!30},
+    xleftmargin=1em,
+    framexleftmargin=0.5em,
+    breaklines=true,
+    columns=fullflexible,
+    keepspaces=true,
+    tabsize=4,
+    showstringspaces=false,
+    literate={->}{$\rightarrow$}2 {←}{$\leftarrow$}2,
+}
+
+% 行内代码命令
+\newcommand{\code}[1]{\texttt{#1}}
+
+% ========== 定理环境 ==========
+\theoremstyle{definition}
+\newtheorem{theorem}{定理}[section]
+\newtheorem{lemma}[theorem]{引理}
+\newtheorem{proposition}[theorem]{命题}
+\newtheorem{corollary}[theorem]{推论}
+\newtheorem{definition}[theorem]{定义}
+\newtheorem{example}[theorem]{例}
+\newtheorem{remark}[theorem]{注记}
+
+% ========== tcolorbox 盒子环境 ==========
+
+% 核心公式盒子
+\newtcolorbox{keyformula}[1][]{
+    colback=blue!5!white,
+    colframe=blue!75!black,
+    fonttitle=\bfseries,
+    title=核心公式,
+    breakable,
+    #1
+}
+
+% 例子盒子
+\newtcolorbox{examplebox}[1][]{
+    colback=green!5!white,
+    colframe=green!50!black,
+    fonttitle=\bfseries,
+    title={#1},
+    breakable
+}
+
+% 关键定理盒子
+\newtcolorbox{keytheorem}[1][]{
+    colback=red!5!white,
+    colframe=red!75!black,
+    fonttitle=\bfseries,
+    title=关键定理,
+    breakable,
+    #1
+}
+
+% 物理意义盒子
+\newtcolorbox{physicalmeaning}[1][]{
+    colback=green!5!white,
+    colframe=green!50!black,
+    fonttitle=\bfseries,
+    title=物理意义,
+    breakable,
+    #1
+}
+
+% 统一视角盒子
+\newtcolorbox{unification}[1][]{
+    colback=orange!5!white,
+    colframe=orange!75!black,
+    fonttitle=\bfseries,
+    title=统一视角,
+    breakable,
+    #1
+}
+
+% 关键洞察盒子（两个版本兼容）
+\newtcolorbox{insightbox}[1][]{
+    colback=yellow!10!white,
+    colframe=yellow!75!black,
+    fonttitle=\bfseries,
+    title=关键洞察,
+    breakable,
+    #1
+}
+
+\newtcolorbox{keyinsight}[1][]{
+    colback=yellow!10,
+    colframe=orange!60,
+    fonttitle=\bfseries,
+    title={关键洞察},
+    breakable,
+    #1
+}
+
+% 警告盒子
+\newtcolorbox{warning}[1][]{
+    colback=red!5,
+    colframe=red!60,
+    fonttitle=\bfseries,
+    title={注意},
+    breakable,
+    #1
+}
+
+% 优势盒子
+\newtcolorbox{advantage}[1][]{
+    colback=blue!5,
+    colframe=blue!60,
+    fonttitle=\bfseries,
+    title={优势},
+    breakable,
+    #1
+}
+
+% 小结盒子
+\newtcolorbox{summary}[1][]{
+    colback=gray!5!white,
+    colframe=gray!75!black,
+    fonttitle=\bfseries,
+    title=本章小结,
+    breakable,
+    #1
+}
+
+% 习题盒子
+\newtcolorbox{exercise}[1][]{
+    colback=cyan!5!white,
+    colframe=cyan!75!black,
+    fonttitle=\bfseries,
+    title=习题,
+    breakable,
+    #1
+}
+
+% 关键思想盒子
+\newtcolorbox{keyidea}[1][]{
+    colback=blue!5,
+    colframe=blue!50,
+    fonttitle=\bfseries,
+    title={#1},
+    breakable,
+    enhanced,
+    attach boxed title to top left={yshift=-2mm, xshift=5mm},
+    boxed title style={colback=blue!50, colframe=blue!50}
+}
+
+% 物理直觉盒子
+\newtcolorbox{physicalintuition}[1][]{
+    colback=teal!5,
+    colframe=teal!60,
+    fonttitle=\bfseries,
+    title={物理直觉},
+    breakable,
+    #1
+}
+
+% 哲学思考盒子
+\newtcolorbox{philosophy}[1][]{
+    colback=brown!5,
+    colframe=brown!60,
+    fonttitle=\bfseries,
+    title={哲学思考},
+    breakable,
+    #1
+}
+
+% ========== 章节格式 ==========
+\RequirePackage{titlesec}
+\titleformat{\chapter}[display]
+{\normalfont\huge\bfseries}{\chaptertitlename\ \thechapter}{20pt}{\Huge}
+
+% ========== 超链接 ==========
+\RequirePackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    citecolor=blue,
+    urlcolor=blue
+}
+
+% ========== 自定义数学命令 ==========
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Lag}{\mathcal{L}}
+\newcommand{\pd}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\dd}[2]{\frac{d #1}{d #2}}
+\newcommand{\argmin}{\operatornamewithlimits{argmin}}
+\newcommand{\argmax}{\operatornamewithlimits{argmax}}
+\newcommand{\st}{\text{s.t.}}
+\newcommand{\tr}{\text{tr}}
+
+% ========== 页边栏命令（6种类型） ==========
+
+% 类型1：科学家小故事
+\newcommand{\storynote}[2]{%
+    \marginnote{\small\raggedright
+        \textcolor{blue!70!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
+        \textbf{{\color{blue!70!black}人物} #1}\\[3pt]
+        \textit{#2}\\[-2pt]
+        \textcolor{blue!70!black}{\rule{\marginparwidth}{1pt}}
+    }%
+}
+
+% 类型2：概念澄清
+\newcommand{\clarify}[1]{%
+    \marginnote{\small\raggedright
+        \textcolor{orange!80!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
+        \textbf{{\color{orange!80!black}澄清}}\\[3pt]
+        #1\\[-2pt]
+        \textcolor{orange!80!black}{\rule{\marginparwidth}{1pt}}
+    }%
+}
+
+% 类型3：前方预告
+\newcommand{\preview}[1]{%
+    \marginnote{\small\raggedright
+        \textcolor{purple!70!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
+        \textbf{{\color{purple!70!black}预告}}\\[3pt]
+        #1\\[-2pt]
+        \textcolor{purple!70!black}{\rule{\marginparwidth}{1pt}}
+    }%
+}
+
+% 类型4：动手试试
+\newcommand{\tryit}[1]{%
+    \marginnote{\small\raggedright
+        \textcolor{green!60!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
+        \textbf{{\color{green!60!black}动手试试}}\\[3pt]
+        \ttfamily\small #1\\[-2pt]
+        \textcolor{green!60!black}{\rule{\marginparwidth}{1pt}}
+    }%
+}
+
+% 类型5：思考题
+\newcommand{\think}[1]{%
+    \marginnote{\small\raggedright
+        \textcolor{red!70!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
+        \textbf{{\color{red!70!black}想一想}}\\[3pt]
+        #1\\[-2pt]
+        \textcolor{red!70!black}{\rule{\marginparwidth}{1pt}}
+    }%
+}
+
+% 类型6：回顾前置知识
+\newcommand{\review}[2]{%
+    \marginnote{\small\raggedright
+        \textcolor{teal!80!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
+        \textbf{{\color{teal!80!black}回顾} #1}\\[3pt]
+        #2\\[-2pt]
+        \textcolor{teal!80!black}{\rule{\marginparwidth}{1pt}}
+    }%
+}
+
+% 页边空白笔记区域标记
+\newcommand{\notespace}{%
+    \marginnote{\color{gray!30}\rule{\marginparwidth}{0.5pt}\\[5mm]\rule{\marginparwidth}{0.5pt}\\[5mm]\rule{\marginparwidth}{0.5pt}\\[5mm]\rule{\marginparwidth}{0.5pt}}%
+}
+
+% ========== 参考文献环境 ==========
+% 章节末参考文献列表
+\newenvironment{references}{%
+    \subsection*{参考文献}%
+    \begin{list}{}{\setlength{\leftmargin}{1.5em}\setlength{\itemindent}{-1.5em}\setlength{\itemsep}{0.5ex}\setlength{\parsep}{0pt}}%
+}{%
+    \end{list}%
+}
+
+% bibitem命令（简化版）
+\providecommand{\bibitem}[1]{\item[\textbf{[#1]}]}
+
+\endinput

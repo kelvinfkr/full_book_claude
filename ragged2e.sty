@@ -1,0 +1,16 @@
+%% ragged2e.sty - Ragged text with hyphenation
+%% Minimal implementation
+%%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{ragged2e}[2023/01/01 Ragged2e]
+
+\newcommand{\RaggedRight}{\raggedright}
+\newcommand{\RaggedLeft}{\raggedleft}
+\newcommand{\Centering}{\centering}
+\newcommand{\justifying}{}
+
+\newenvironment{FlushLeft}{\flushleft}{\endflushleft}
+\newenvironment{FlushRight}{\flushright}{\endflushright}
+\newenvironment{Center}{\center}{\endcenter}
+
+\endinput

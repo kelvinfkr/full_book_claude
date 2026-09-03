@@ -1,0 +1,15 @@
+%% booktabs.sty - Publication quality tables
+%% Minimal implementation
+%%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{booktabs}[2023/01/01 Booktabs]
+
+\newcommand{\toprule}[1][]{\hline}
+\newcommand{\midrule}[1][]{\hline}
+\newcommand{\bottomrule}[1][]{\hline}
+\newcommand{\cmidrule}[2][]{\cline{#2}}
+\newcommand{\addlinespace}[1][]{\noalign{\vskip 3pt}}
+\newcommand{\morecmidrules}{}
+\newcommand{\specialrule}[3]{\hline}
+
+\endinput

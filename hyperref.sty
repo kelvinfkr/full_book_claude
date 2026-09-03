@@ -1,0 +1,38 @@
+%% hyperref.sty - Hyperlinks
+%% Minimal implementation
+%%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{hyperref}[2023/01/01 Hyperref]
+
+% Options
+\DeclareOption*{}
+\ProcessOptions\relax
+
+% hypersetup
+\newcommand{\hypersetup}[1]{}
+
+% href
+\newcommand{\href}[2]{#2}
+
+% url
+\newcommand{\url}[1]{\texttt{#1}}
+
+% hyperref
+\newcommand{\hyperref}[2][]{#2}
+
+% autoref
+\newcommand{\autoref}[1]{\ref{#1}}
+
+% nameref
+\newcommand{\nameref}[1]{\ref{#1}}
+
+% pdfbookmark
+\newcommand{\pdfbookmark}[3][]{}
+
+% texorpdfstring
+\newcommand{\texorpdfstring}[2]{#1}
+
+% phantomsection
+\newcommand{\phantomsection}{}
+
+\endinput

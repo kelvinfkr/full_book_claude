@@ -1,0 +1,30 @@
+%% pgfplots.sty - Plotting in TikZ
+%% Minimal stub - requires tikz
+%%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{pgfplots}[2023/01/01 PGFPlots]
+
+\RequirePackage{tikz}
+
+% Version compatibility
+\newcommand{\pgfplotsset}[1]{}
+
+% axis environment
+\newenvironment{axis}[1][]{%
+  \begin{tikzpicture}%
+}{%
+  \end{tikzpicture}%
+}
+
+% addplot command (stub)
+\newcommand{\addplot}[2][]{}
+\newcommand{\addplot+}[2][]{}
+
+% legend
+\newcommand{\legend}[1]{}
+\newcommand{\addlegendentry}[1]{}
+
+% pgfplotstable
+\newcommand{\pgfplotstableread}[2]{}
+
+\endinput
