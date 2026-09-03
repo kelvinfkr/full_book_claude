@@ -466,6 +466,8 @@
 % ==================== 正文开始 ====================
 % 盒子、代码清单与图较多，允许页底不齐，避免 flushbottom 在页中拉出大片空白
 \raggedbottom
+% 长的英文标识符（文件名、API 名）夹在中文里时，给断行留一点余量，避免整行溢出
+\setlength{\emergencystretch}{3em}
 
 \begin{document}
 
