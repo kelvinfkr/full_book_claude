@@ -96,6 +96,8 @@
 \tcbset{every box/.append style={before upper app={\global\advance\insideboxdepth\@ne}, after upper app={\global\advance\insideboxdepth\m@ne}}}
 % 盒子允许跨页，避免整页留白
 \tcbset{every box/.append style={breakable}}
+% 诊断：每章开头把盒子深度计数写入 .log，若不为 0 说明有盒子环境没有配对，页边栏会退化为 \marginnote 而互相重叠
+\AddToHook{cmd/chapter/before}{\typeout{INSIDEBOXDEPTH=\the\insideboxdepth}}
 \makeatother
 \tcbuselibrary{theorems,skins,breakable,hooks}
 
