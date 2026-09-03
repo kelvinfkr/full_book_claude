@@ -1,6 +1,6 @@
 # 全书审读记录：问题清单与本次修订
 
-本文件记录一次对《大二开始的物理智能》全书的审读。目标是回答两个问题：
+本文件记录一次对《物理智能（Physical AI）的理论基础》（原名《大二开始的物理智能》）全书的审读。目标是回答两个问题：
 
 1. 后面各章在**写作逻辑**上与第 1–3 章差在哪里？
 2. 全书在**内容逻辑**上有哪些前后不一致、跨章引用错误、推导或数值错误？
@@ -43,24 +43,24 @@
 
 ### B. 跨章引用错误（已全部修正）
 
-- 第 4 章四处"第 4 章的 E-L 方程"（自引，应为第 3 章）；扩展阅读"第 4 章的约束力"应为"本章"。
-- 第 5 章"第 4 章的 Euler-Lagrange 方程"、"第 5 章力学中的约束力"（自引）、"第 1 章中消去部分变量得到约束力"。
+- 第 5 章四处"第 5 章的 E-L 方程"（自引，应为第 3 章）；扩展阅读"第 5 章的约束力"应为"本章"。
+- 第 6 章"第 5 章的 Euler-Lagrange 方程"、"第 6 章力学中的约束力"（自引）、"第 1 章中消去部分变量得到约束力"。
 - 第 10 章"第 2–3 章花大量篇幅讲线性代数和矩阵求导"（第 2 章是对偶、第 3 章是变分法）；扩展阅读"在第一章中我们推导出了贝尔曼方程"（应为本章）；"从第 3 章的梯度计算"。
-- 第 16 章两处"第一章……拉格朗日力学"（应为第 4 章）。
+- 第 16 章两处"第一章……拉格朗日力学"（应为第 5 章）。
 - 第 7 章三处"线性规划的互补松弛"未注明第 2 章。
 
 ### C. 重复与结构错误（已修正）
 
 - 第 8 章两个一模一样的 `\section{本章小结}`；第 10 章两个同名 `\section{用拉格朗日乘子法推导贝尔曼方程}`。
 - 第 9 章一个 110 行的小节（"Step 5：完整示例"）整段重复；优化器一节把"训练就是 $\min_\theta L(\theta)$"讲了三遍。
-- 第 5 章 FSI 扩展阅读末尾整块重复（两张图、两个 `\label`、两个参考文献块、一段引用不存在模型的"对比"）。
+- 第 6 章 FSI 扩展阅读末尾整块重复（两张图、两个 `\label`、两个参考文献块、一段引用不存在模型的"对比"）。
 - 第 16 章文件被破坏：每行之后插入了空行、原空行变成只含一个空格的行（已还原）。
-- 第 5 章 GIL / 向量化实验图放在正文小结前，实际属于 CPU 并行扩展阅读；第 9 章图注描述的函数与图中不符。
+- 第 6 章 GIL / 向量化实验图放在正文小结前，实际属于 CPU 并行扩展阅读；第 9 章图注描述的函数与图中不符。
 
 ### D. 推导、数值与史实错误（已修正）
 
-- 第 4 章"为什么是 $T-V$"的论证（"$T+V$ 守恒所以无法区分路径"）是经典误论；单摆两个例子坐标约定自相矛盾；"$\lambda$ 就是张力"与该章自己算出的 $T = 2|\lambda| l$ 矛盾。
-- 第 5 章热流守恒推导符号写反（得到 $-u'' = -f$）；"凹 / 凸"术语写反；热传导泛函表中 $\pm fu$ 符号错。
+- 第 5 章"为什么是 $T-V$"的论证（"$T+V$ 守恒所以无法区分路径"）是经典误论；单摆两个例子坐标约定自相矛盾；"$\lambda$ 就是张力"与该章自己算出的 $T = 2|\lambda| l$ 矛盾。
+- 第 6 章热流守恒推导符号写反（得到 $-u'' = -f$）；"凹 / 凸"术语写反；热传导泛函表中 $\pm fu$ 符号错。
 - 第 7 章牛顿迭代手算数值错误（书中 $\Delta q$ 代回 $J$ 得不到误差向量），已换初值重算；奇异位形下"伪逆"说法错误；零空间次级目标符号写反；"力放大"说反；综合案例质量模型前后矛盾。
 - 第 8 章 MPC 例题多出一项 "+20"，最优解 $(-7.34, 5.29)$ 应为 $(-6.45, 4.40)$，下游数值连锁更新；一个只写了一半就放弃的 $N=2$ 例子。
 - 第 10 章绳网例子里 $b \to c$ 边其实也绷直（对偶解不唯一），正文断言错误；对偶上升算法的初始化和更新公式与自己的约定矛盾。
@@ -74,7 +74,7 @@
 
 ### E. 承诺未兑现（已处理）
 
-- 第 5 章"用 Python 组装刚度矩阵并求解"：正文无代码 → 新增"十行代码：一维线性有限元"。
+- 第 6 章"用 Python 组装刚度矩阵并求解"：正文无代码 → 新增"十行代码：一维线性有限元"。
 - 第 8 章"用直接法数值求解"、"机器人案例"：→ 新增编程题（直接法、MPC），并明确"直接法"一词。
 - 第 7 章"用 D-H 参数建模"：正文只有页边栏一句 → 学习目标改为"齐次变换（D-H 是它的标准化写法）"。
 - 第 9 章"手推 3 层网络 / PyTorch 分类器"：正文是两层、无 PyTorch 代码 → 学习目标改写。
@@ -109,12 +109,12 @@
 
 ### 5.1 审图结论
 
-逐张看过全书 70 张被引用的图（PDF 用 PyMuPDF 渲染后查看）。保留不动的：第 1、3 章全部；第 4 章 `chap04_fig1`；第 5 章 `chap05_fig1/3` 与 Turek–Hron 四张（来自真实 Kratos 仿真）；第 8 章两张；第 13 章除 `lambda_effect` 外全部；第 14 章；第 15 章除 `mfg_solution` 外全部；第 16 章 `phase_space`、`free_energy`、`paradigm_comparison`。需要重绘的问题分四类：
+逐张看过全书 70 张被引用的图（PDF 用 PyMuPDF 渲染后查看）。保留不动的：第 1、3 章全部；第 5 章 `chap05_fig1`；第 6 章 `chap06_fig1/3` 与 Turek–Hron 四张（来自真实 Kratos 仿真）；第 8 章两张；第 13 章除 `lambda_effect` 外全部；第 14 章；第 15 章除 `mfg_solution` 外全部；第 16 章 `phase_space`、`free_energy`、`paradigm_comparison`。需要重绘的问题分四类：
 
-- **内容错误或"假数据"**：第 4 章 `chap04_fig2` 的周期误差面板算错（用首次过零时刻×2，实际测的是半周期，得出 −50%）；第 5 章 `chap05_fig2` 的"节点误差"是 $10^{-15}$（线性元节点超收敛），$O(h^2)$ 参考线没有意义；第 10 章 `cartpole_demo` 右图的训练曲线是随机数画的（标题写着 Simulated）；第 15 章 `mfg_solution` 是解析高斯与抛物线手绘的"示意解"；第 16 章 `cbf_controller`、`multi_obstacle` 由符号写反的旧代码生成（CBF 从未激活）；第 11 章注意力图的权重几乎均匀（没有信息量）。
-- **与正文不符**：第 10 章正文五处写 GridWorld 是 $5\times5$，图全是 $4\times4$；第 7 章 IK 图的起点与正文算例 $q^{(0)}=(0^\circ,90^\circ)$ 不一致；第 4 章 `chap04_fig1` 图注"约 6 秒"与图中 11.4 s 不符。
+- **内容错误或"假数据"**：第 5 章 `chap05_fig2` 的周期误差面板算错（用首次过零时刻×2，实际测的是半周期，得出 −50%）；第 6 章 `chap06_fig2` 的"节点误差"是 $10^{-15}$（线性元节点超收敛），$O(h^2)$ 参考线没有意义；第 10 章 `cartpole_demo` 右图的训练曲线是随机数画的（标题写着 Simulated）；第 15 章 `mfg_solution` 是解析高斯与抛物线手绘的"示意解"；第 16 章 `cbf_controller`、`multi_obstacle` 由符号写反的旧代码生成（CBF 从未激活）；第 11 章注意力图的权重几乎均匀（没有信息量）。
+- **与正文不符**：第 10 章正文五处写 GridWorld 是 $5\times5$，图全是 $4\times4$；第 7 章 IK 图的起点与正文算例 $q^{(0)}=(0^\circ,90^\circ)$ 不一致；第 5 章 `chap05_fig1` 图注"约 6 秒"与图中 11.4 s 不符。
 - **不是图**：第 9 章 `chap09_fig1` 第 4 面板是一段文字表格；第 11 章两张图里有大段文字框。
-- **风格**：第 2 章 4 张、第 9 章 5 张、第 10 章扩展阅读 4 张全是英文标签；各章字号、配色、标题风格各异；第 4 章 `long_time_comparison` 的 Verlet 振荡填满整幅、RK4 漂移看不见；第 10 章 `chap10_shortest_path` 文字重叠；`chap04_fig2` 有方框字。
+- **风格**：第 2 章 4 张、第 9 章 5 张、第 10 章扩展阅读 4 张全是英文标签；各章字号、配色、标题风格各异；第 5 章 `long_time_comparison` 的 Verlet 振荡填满整幅、RK4 漂移看不见；第 10 章 `chap10_shortest_path` 文字重叠；`chap05_fig2` 有方框字。
 
 ### 5.2 统一风格：`code/textbook_style.py`
 
@@ -133,9 +133,9 @@
 | 章 | 图 | 脚本 | 一句话思路 |
 |---|---|---|---|
 | 2 | `lp_performance`、`qp_performance`、`portfolio_weights`、`nonconvex_comparison` | `code_chap02/optimization_tools_demo.py` | 求解逻辑保留、全部中文化：LP 是最便宜的问题（1000 变量 0.3 s）；通用 QP 求解器代价 $\propto n^{3.2}$；最优组合只集中在 4 种资产上（收益约束不起作用，是预算与非负约束在塑造解）；Rosenbrock 上有梯度方法最省。LP 代码清单原来的"输出"是假的（$c\ge0$ 求最小，解应为 0），改为最大化利润并换成真实输出 $x=(2.2,1.8,1.6)$、利润 18.2。 |
-| 4 | `chap04_fig2` | `code/chap04_mechanics.py` | 线性化不是对错而是"误差多大"：过零事件实测周期偏差（30°→+1.7%，90°→+18.0%，与椭圆积分公式一致）；`chap04_fig1` 图注改为"约 11 秒"。 |
-| 4 | `long_time_comparison`、`harmonic_comparison`、`convergence_order` | `code_chap04/ode_numerical_methods.py` | RK4 能量误差每周期最大值在双对数下是斜率 0.96 的直线（无界），Verlet 是水平线（有界振荡，无漂移）；收敛阶图例直接给出拟合斜率。 |
-| 5 | `chap05_fig2` | `code/chap05_performance.py fem` | 有限元的误差要说清是哪种范数：节点精确（超收敛）、$L^2$ 与单元内最大误差 $O(h^2)$、$H^1$ 半范数 $O(h)$，并补上 caption 提到的三对角刚度矩阵面板。 |
+| 4 | `chap05_fig2` | `code/chap05_mechanics.py` | 线性化不是对错而是"误差多大"：过零事件实测周期偏差（30°→+1.7%，90°→+18.0%，与椭圆积分公式一致）；`chap05_fig1` 图注改为"约 11 秒"。 |
+| 4 | `long_time_comparison`、`harmonic_comparison`、`convergence_order` | `code_chap05/ode_numerical_methods.py` | RK4 能量误差每周期最大值在双对数下是斜率 0.96 的直线（无界），Verlet 是水平线（有界振荡，无漂移）；收敛阶图例直接给出拟合斜率。 |
+| 5 | `chap06_fig2` | `code/chap06_performance.py fem` | 有限元的误差要说清是哪种范数：节点精确（超收敛）、$L^2$ 与单元内最大误差 $O(h^2)$、$H^1$ 半范数 $O(h)$，并补上 caption 提到的三对角刚度矩阵面板。 |
 | 7 | `chap07_fig1` | `code/chap07_robotics.py` | 正文手算例（$L_1=L_2=1$、$x_d=(1.2,0.9)$、$q^{(0)}=(0^\circ,90^\circ)$）真正迭代：误差 $0.22\to0.021\to2\times10^{-4}\to2\times10^{-8}$ 的二次收敛，$|\det J|$ 热图解释为什么目标点远离奇异位形；图移到算例之后。 |
 | 9 | `activation_functions`、`gradient_flow`、`computation_graph`、`gradient_check`、`modern_activations` | `code_chap09/activation_functions.py` | 全部中文化；`gradient_flow` 的"梯度消失"与"死亡 ReLU"改为真实实验（20 层网络各层梯度范数比；3 层 MLP 训练中恒为 0 的单元比例，ReLU 大学习率 10%→57%，Leaky ReLU 可恢复）。 |
 | 9 | `chap09_fig1` | `code/chap09_autograd.py` | 第 4 面板改为真图：$N$ 层残差网络反向传播得到的 $\lambda_i=\delta_i$ 落在连续协态 $p(t)$ 上，偏差随 $h=T/N$ 一阶下降——反向传播就是伴随方程的离散形式。 |
@@ -148,7 +148,7 @@
 
 ### 5.4 遗留
 
-- 仍是旧风格但内容无误、未重绘的图：第 13 章其余 12 张（中文、清晰）、第 15 章其余 6 张、第 16 章 3 张、第 5 章 Turek–Hron 四张、第 4 章 `chap04_fig1`、第 14 章 `chap14_fig1`、第 1–3 章。
+- 仍是旧风格但内容无误、未重绘的图：第 13 章其余 12 张（中文、清晰）、第 15 章其余 6 张、第 16 章 3 张、第 6 章 Turek–Hron 四张、第 5 章 `chap05_fig1`、第 14 章 `chap14_fig1`、第 1–3 章。
 - 旧的重复脚本未删（`code/chap10_rl.py`、`code/chap12_transformer.py`、`code_chap07/chap07_robotics.py`、`code_chap12/chap12_transformer.py`、`code_chap16/chap16_world_model.py`），它们生成的是旧图或写到旧路径，建议清理；新图一律由 `figure_docs` 中标明的脚本生成。
 - 本环境没有 TeX，无法编译；对所有改动过的章节做了 `\begin/\end` 与花括号配对检查。
 - 计时类图（第 2 章）的绝对秒数依赖机器，caption 用了"约"。
@@ -158,10 +158,42 @@
 在容器里装了 TeX Live（`texlive-xetex`、`texlive-lang-chinese`、`texlive-latex-extra`、`texlive-science`、`texlive-pictures`、`texlive-fonts-extra`），用 `xelatex -output-directory=build book_outline.tex` 连跑多遍，最终 **0 个错误、0 个未定义引用，664 页**。为此做的修正：
 
 1. **仓库根目录下的 27 个 `.sty` 存根**（`tcolorbox.sty`、`hyperref.sty`、`listings.sty`……，早先没有 TeX 时写的"兼容实现"）会屏蔽 TeX Live 的真包，导致上百个错误；已全部移到 `latex_stubs/`（保留备查，编译时不再被找到）。
-2. `\newfontfamily\cyrillicfont{Times New Roman}` 在没有该字体的机器上直接报错，改为 `\IfFontExistsTF` 回退到 DejaVu Serif；第 6 章的生僻字"龘、靐"Fandol 字体没有，加了 `\rarecjkfont`（有 Noto Serif CJK 时用它兜底）。
-3. 第 5 章：`lstlisting` 的 caption 含 `=` 和 `$`，加花括号；`\begin{references}` 不存在，改为 `thebibliography`。
+2. `\newfontfamily\cyrillicfont{Times New Roman}` 在没有该字体的机器上直接报错，改为 `\IfFontExistsTF` 回退到 DejaVu Serif；第 4 章的生僻字"龘、靐"Fandol 字体没有，加了 `\rarecjkfont`（有 Noto Serif CJK 时用它兜底）。
+3. 第 6 章：`lstlisting` 的 caption 含 `=` 和 `$`，加花括号；`\begin{references}` 不存在，改为 `thebibliography`。
 4. `book_outline.tex` 结尾的 `\textit{...}` 内有空行，导致"Paragraph ended"错误；已合并。
 5. 缺字：文本模式的 ✓/✗/≈/∝ 改为 `\checkmark`、`$\times$`、`$\approx$`、`$\propto$`；数学下标里的中文与全角冒号（`d_{可行}`、`_{L_{\text{PDE}}：...}`）包进 `\text{}`；代码清单里的 α、λ、∇、²、· 通过 `literate` 映射为数学符号。
 6. `.gitignore` 增加 `build/`。
 
 剩余警告只有 hyperref 的"Token not allowed in a PDF string"（章节标题含公式，影响书签文字，不影响正文）和 fontspec 对 Fandol 字体缺少某些 OpenType 特性的提示，均无害。
+
+## 七、书名、板块结构与章节编号（按作者提供的版本）
+
+书名改为《物理智能（Physical AI）的理论基础》（副题"以约束优化为主线"）。按作者自己版本的目录，全书改为**四个部分**，并把"信息与编码：最大熵原理"从第 6 章提到第 4 章（数学部分），力学、有限元顺延为第 5、6 章：
+
+| 部分 | 章 | 回答的问题 | $\lambda$ 叫什么 |
+|---|---|---|---|
+| I 数学统一语言 | 1 约束优化、2 对偶、3 变分法、4 最大熵 | "有条件的最优"怎么写成方程；不确定性怎么写成约束 | 影子价格、对偶变量、逆温度 |
+| II 物理中的优化 | 5 最小作用量、6 有限元、7 机器人、8 轨迹优化 | 物理定律为什么长这样；怎样让物理系统按意愿运动 | 约束力、节点力、接触力、协态变量 |
+| III 学习中的优化 | 9 反向传播、10 强化学习、11 序列建模（含 VLM）、12 工程 | 模型与策略从哪里来 | 误差信号、值函数 |
+| IV 前沿交叉 | 13 PINN、14 神经算子、15 多智能体、16 世界模型与具身智能（含 VLA、真机 RL） | 物理、学习、决策怎样合到一起 | 物理约束权重、均衡价格、安全约束的价格 |
+
+**章节轮换的实现**（旧 → 新）：`chap06.tex`（信息）→ `chap04.tex`，`chap04.tex`（力学）→ `chap05.tex`，`chap05.tex`（有限元）→ `chap06.tex`；`figs_chap04/` → `figs_chap05/`，`figs_chap05/` → `figs_chap06/`；`code_chap04/` → `code_chap05/`，`code_chap05/` → `code_chap06/`；`code/chap04_mechanics.py` → `chap05_mechanics.py`，`code/chap05_performance.py` → `chap06_performance.py`；`figure_docs` 同步改名。全书正文、附录、图注、脚本里的"第 4/5/6 章"、`Ch4/5/6`、图与代码路径按同一映射（4→5，5→6，6→4）轮换；附录"主线总表"与"章节速查"的行重排；第 3 章结尾的过渡句改写。图的 `\label` 名（`fig:chap05_...`）随文件名轮换，只在本章内引用。
+
+**前言**：新增 `chapters/preface.tex`（当比特遇见原子——通往物理智能之路），采用作者版本的文字，"什么是物理智能"一节按批注补上人工智能视角的定义（让机器拥有物理知识：感知状态、预测行为、完成任务），并与数学视角（约束可行域内的优化与学习）对应起来；内含 TikZ 阅读导航图（四个部分、核心/选读章节、物理/AI 侧重、跨部分依赖）和两条推荐路径。原"全书核心思想"保留统一框架与模板表，改为四个部分的问题表。
+
+**实现细节**：`\part` 用 titlesec 改为 `top` 类（标题与导读同页），编号用 `\zhnum{part}`；新增 `partintro` 环境；全书总结改为"四次换约束"。
+
+## 八、页边栏重叠
+
+原来六种页边栏命令和裸 `\marginnote` 都用 marginnote 宏包的 `\marginnote`——它不浮动、不避让，密集处必然重叠。改为 `\smartmargin`：在正文里用 `\marginpar`（配合 marginfix 宏包自动堆叠、下移、放不下时顺延到下一页），在 tcolorbox / 浮动体 / minipage / 表格里（`\marginpar` 不可用）退回 `\marginnote`。检测方式：tcolorbox 的 `hooks` 库在每个盒子的上部前后计数、`\AddToHook{env/minipage/...}` 计数、`\ifinner` 与 `\@floatpenalty` 判断浮动体。裸 `\marginnote{...}`（88 处）统一为第 7 种样式 `\sidenoteplain{...}`（灰色"旁注"），与其余六种同一版式。
+
+## 九、新增内容：VLM、VLA、世界--动作模型与真机强化学习
+
+- **第 11 章新节"视觉--语言模型：把图像也变成 token"**（约 250 行，位于"输入输出：实际使用指南"之后）：为什么要把图像变成 token；ViT 的 patch 化与位置编码；视觉编码器的对比学习（CLIP/SigLIP），温度 $\tau$ 与第 4 章最大熵的联系（$1/\tau$ 是分布层面的乘子）；连接器与多模态序列（投影层、Perceiver Resampler/Q-Former 压缩、prefix-LM 掩码、高分辨率切块与 KV cache 的代价）；与 LLM 一起训练的三阶段配方（对齐预训练 → 指令微调 → 偏好/RL），用"语言能力是一条约束、数据混合比例/KL 系数是它的影子价格"解释为什么要分阶段、混纯文本；末尾预告第 16 章 VLA。含 TikZ 流程图 `fig:vlm_pipeline`、3 个 keyidea、1 个 keyformula（CLIP 损失）；本章小结与思考题各加一条。
+- **第 16 章新节"视觉--语言--动作模型：从看图说话到看图做事"**：策略作为约束优化；动作的三种表示（RT-2 文本 token、OpenVLA 离散 bin、动作块与 FAST 压缩）；$\pi_0$ 类框架（VLM 主干 + 动作专家 + 流匹配 + 跨本体预训练/后训练），流匹配讲成"训练是回归、推理是解 ODE"，与第 3、8 章呼应；代表性设计对比表（RT-2、OpenVLA、$\pi_0$/$\pi_0$-FAST/$\pi_{0.5}$、GR00T N1）；VLA 的三个未解之题。TikZ 结构图 `fig:vla_arch`。
+- **第 16 章新节"展望：世界--动作模型与真机强化学习"**：WAM（预测与行动共用隐状态；UWM、WorldVLA、V-JEPA 2-AC 作为例子，用"展望"口吻）；真机 RL 为什么难（样本、复位、安全、奖励）；五条路线（sim-to-real、离线起步在线微调、人在回路的 SERL/HIL-SERL、对 VLA 做 RL 后训练如 $\pi^*_{0.6}$/RECAP、拉格朗日约束 RL 与 CBF）；收束为"三条约束、三个 $\lambda$"。本章开头的路线图、"学完这章"盒子、"$\lambda$ 在本章的意义"盒子、小结与思考题同步补充。
+- **需要作者复核的事实**（写作时已用"例如/据论文描述"措辞）：$\pi_{0.5}$ 预训练用离散 token、后训练接流匹配；UWM 两种模态各有噪声进度；WorldVLA 自回归统一图像与动作；HIL-SERL"几小时、接近百分之百、动作快于示教者"；$\pi^*_{0.6}$/RECAP 的机制概述；Sergey Levine 2024 年共同创立 Physical Intelligence；CLIP 温度初值 0.07、Flamingo 64 个查询、BLIP-2 32 个查询、LLaVA 用 ViT-L/14 与 336px。
+
+## 十、本轮编译
+
+章节轮换、四部分重组、前言、页边栏机制、新增三节之后，XeLaTeX 三遍：0 错误、0 未定义引用、0 缺字，678 页。抽查的密集页边栏页（第 8、9、10、11 章各一页）均已整齐堆叠。

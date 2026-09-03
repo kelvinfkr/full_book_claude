@@ -25,9 +25,9 @@
 1 & 任意 $f(x)$ & $g(x)=0$，$h(x)\le 0$ & 影子价格 & KKT条件 \\
 2 & 利润 $c^\top x$ & 资源 $Ax\le b$ & 资源的影子价格 & 互补松弛 \\
 3 & 泛函 $\int F\,dx$ & $y_{k+1}-y_k=v_k\Delta x$ & 广义动量 $\partial F/\partial y'$ & E-L方程 \\
-4 & 作用量 $\int L\,dt$ & 几何约束 $g(q)=0$ & 约束力（张力、支持力） & 拉格朗日方程 \\
-5 & 总势能 $\frac12 U^\top KU-F^\top U$ & Dirichlet边界条件 & 边界反力 & $KU=F$ \\
-6 & 熵 $-\sum p\log p$ & 归一化、矩约束 & 特征权重 / 逆温度 & 指数族（softmax） \\
+4 & 熵 $-\sum p\log p$ & 归一化、矩约束 & 特征权重 / 逆温度 & 指数族（softmax） \\
+5 & 作用量 $\int L\,dt$ & 几何约束 $g(q)=0$ & 约束力（张力、支持力） & 拉格朗日方程 \\
+6 & 总势能 $\frac12 U^\top KU-F^\top U$ & Dirichlet边界条件 & 边界反力 & $KU=F$ \\
 7 & 任务误差、能耗 & 运动学 / 接触 $\phi\ge 0$ & 关节力矩、接触力 & $\tau=J^\top F$，$\lambda\phi=0$ \\
 8 & 代价 $\int \ell\,dt$ & 动力学 $\dot x=f(x,u)$ & 协态变量 $\lambda(t)$ & 伴随方程、PMP \\
 9 & 损失 $\ell(z_n)$ & 逐层 $z_{i}=f_i(z_{i-1})$ & 误差信号 $\delta_i$ & 反向传播 \\
@@ -58,9 +58,9 @@
 & \textbf{Ch1}: 约束的"影子价格" \newline
   \textbf{Ch2}: 对偶变量、资源的价格 \newline
   \textbf{Ch3}: 广义动量 $\partial F/\partial y'$ \newline
-  \textbf{Ch4}: 约束力（绳子张力、支持力） \newline
-  \textbf{Ch5}: 边界反力、节点力 \newline
-  \textbf{Ch6}: 最大熵分布的特征权重（逆温度） \newline
+  \textbf{Ch5}: 约束力（绳子张力、支持力） \newline
+  \textbf{Ch6}: 边界反力、节点力 \newline
+  \textbf{Ch4}: 最大熵分布的特征权重（逆温度） \newline
   \textbf{Ch7}: 关节力矩与接触力 \newline
   \textbf{Ch8}: 伴随变量（协态变量） \newline
   \textbf{Ch9}: 反向传播中的误差信号 \newline
@@ -82,7 +82,7 @@
 \textbf{对偶性}
 & 第2章
 & \textbf{Ch2}: 原问题与对偶问题，$\min\max\ge\max\min$ \newline
-  \textbf{Ch6}: 最大熵 = 最小KL散度 \newline
+  \textbf{Ch4}: 最大熵 = 最小KL散度 \newline
   \textbf{Ch10}: 对偶上升（Dijkstra）vs 原始改进（Bellman-Ford） \newline
   \textbf{Ch13}: 对偶上升自动调整损失权重 \\
 \midrule
@@ -90,15 +90,15 @@
 \textbf{罚函数}
 & 第1章
 & \textbf{Ch1}: 视角三——软约束，$\rho\to\infty$ 趋向硬约束 \newline
-  \textbf{Ch5}: 间断有限元的界面罚项（虚拟弹簧） \newline
+  \textbf{Ch6}: 间断有限元的界面罚项（虚拟弹簧） \newline
   \textbf{Ch13}: PINN 的软约束（损失加权） \\
 \midrule
 
 \textbf{变分 / E-L方程}
 & 第3章
 & \textbf{Ch3}: 离散化 + 乘子法 $\to$ E-L方程 \newline
-  \textbf{Ch4}: 最小作用量原理 $\to$ 拉格朗日方程 \newline
-  \textbf{Ch5}: 能量极小 $\to$ 弱形式 $\to$ $KU=F$ \newline
+  \textbf{Ch5}: 最小作用量原理 $\to$ 拉格朗日方程 \newline
+  \textbf{Ch6}: 能量极小 $\to$ 弱形式 $\to$ $KU=F$ \newline
   \textbf{Ch13}: Deep Ritz Method（最小化能量泛函） \\
 \midrule
 
@@ -111,16 +111,16 @@
 \midrule
 
 \textbf{熵}
-& 第6章
-& \textbf{Ch6}: Shannon熵，信息量的期望；KL散度 \newline
+& 第4章
+& \textbf{Ch4}: Shannon熵，信息量的期望；KL散度 \newline
   \textbf{Ch10}: 最大熵强化学习（SAC）的策略熵 \newline
   \textbf{Ch11}: 注意力 = 最大熵软检索 \newline
   \textbf{Ch16}: 自由能原理 \\
 \midrule
 
 \textbf{Softmax}
-& 第6章
-& \textbf{Ch6}: 最大熵分布的形式 \newline
+& 第4章
+& \textbf{Ch4}: 最大熵分布的形式 \newline
   \textbf{Ch9}: 分类器输出层 \newline
   \textbf{Ch11}: Attention的权重归一化 \\
 \midrule
@@ -134,7 +134,7 @@
 \textbf{动力学约束} $x_{t+1}=f(x_t,u_t)$
 & 第3章
 & \textbf{Ch3}: $y_{k+1}-y_k=v_k\Delta x$ \newline
-  \textbf{Ch4}: $\dot q = v$ \newline
+  \textbf{Ch5}: $\dot q = v$ \newline
   \textbf{Ch8}: $\dot x = f(x,u)$ \newline
   \textbf{Ch9}: $z_{i+1}=f_{i+1}(z_i)$ \newline
   \textbf{Ch10}: $s_{t+1}=f(s_t,a_t)$ \newline
@@ -178,7 +178,7 @@
     它是有限维乘子法在 $\Delta x \to 0$ 时的极限。
 \end{description}
 
-\subsection*{B. 物理（第4--5章）}
+\subsection*{B. 物理（第5--6章）}
 
 \begin{description}
     \item[最小作用量原理 (Principle of Least Action)]
@@ -191,7 +191,7 @@
     有限元把能量极小化离散为二次型 $\frac12 U^\top K U - F^\top U$，驻点条件即 $KU=F$。
 \end{description}
 
-\subsection*{C. 信息（第6章）}
+\subsection*{C. 信息（第4章）}
 
 \begin{description}
     \item[熵 (Entropy)]
@@ -351,12 +351,12 @@
 
 % 第二行：分支应用
 \node[concept, below=of lagrange] (adjoint) {伴随方程\\(Ch8)};
-\node[concept, below=of kkt] (entropy) {最大熵\\(Ch6)};
+\node[concept, below=of kkt] (entropy) {最大熵\\(Ch4)};
 \node[concept, below=of dual] (contact) {接触互补\\(Ch7)};
 
 % 第三行：现代应用
 \node[concept, below=of adjoint] (bp) {反向传播\\(Ch9)};
-\node[concept, below=of entropy] (softmax) {Softmax\\(Ch6,11)};
+\node[concept, below=of entropy] (softmax) {Softmax\\(Ch4,11)};
 \node[concept, below=of contact] (nash) {纳什均衡\\(Ch15)};
 
 % 第四行：前沿
@@ -433,9 +433,9 @@
 1 & 从高数到约束优化 & 拉格朗日乘子、KKT条件、影子价格、罚函数 \\
 2 & 对偶理论 & 弱/强对偶、互补松弛、矩阵"身材"、凸优化 \\
 3 & 变分法 & 泛函、Euler-Lagrange方程、守恒律、等周问题 \\
-4 & 经典力学 & 最小作用量、拉格朗日方程、约束力、双摆 \\
-5 & 有限元方法 & 弱形式、刚度矩阵、$KU=F$、间断有限元 \\
-6 & 信息与编码 & 熵、最大熵、KL散度、交叉熵、Softmax \\
+4 & 信息与编码 & 熵、最大熵、KL散度、交叉熵、Softmax \\
+5 & 经典力学 & 最小作用量、拉格朗日方程、约束力、双摆 \\
+6 & 有限元方法 & 弱形式、刚度矩阵、$KU=F$、间断有限元 \\
 7 & 机器人运动学与动力学 & 雅可比、$\tau=J^\top F$、逆运动学、接触力 \\
 8 & 轨迹优化与MPC & 协态变量、伴随方程、哈密顿函数、MPC \\
 9 & 深度学习与反向传播 & 计算图、伴随变量、自动微分、优化器 \\

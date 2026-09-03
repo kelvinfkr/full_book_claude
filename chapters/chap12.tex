@@ -4,7 +4,7 @@
 
 \section*{引言：从论文到实验室}
 
-\marginnote{本章内容是你在实验室跑实验必须具备的"工程直觉"。不懂这些，代码写对了也跑不起来。}
+\sidenoteplain{本章内容是你在实验室跑实验必须具备的"工程直觉"。不懂这些，代码写对了也跑不起来。}
 
 在前面的章节中，我们深入理解了Transformer的数学原理。但当你真正要在实验室训练或部署模型时，会遇到一系列非常实际的问题：
 
@@ -105,7 +105,7 @@ H100 SXM & 80 GB & 990 TFLOPS & 3350 GB/s & 700W & 最新旗舰 \\
 \caption{常见GPU参数对比（FP16/BF16算力，2024年数据）}
 \end{table}
 
-\marginnote{\textbf{TFLOPS}：每秒万亿次浮点运算。1 TFLOPS = $10^{12}$ FLOPS。这是衡量GPU计算能力的核心指标。}
+\sidenoteplain{\textbf{TFLOPS}：每秒万亿次浮点运算。1 TFLOPS = $10^{12}$ FLOPS。这是衡量GPU计算能力的核心指标。}
 
 \paragraph{几个关键概念}
 
@@ -472,7 +472,7 @@ KV Cache (FP16) & $4 \times L \times S \times H$ & 见上表 \\
 \end{keyformula}
 \review{第9章}{为什么反向约等于 2 倍前向？每个 $y = Wx$ 反向要算两个乘法：$\partial L/\partial x = W^\top \lambda$（伴随方程）和 $\partial L/\partial W = \lambda x^\top$（参数梯度）。第9章的伴随方程正是这两项。}
 
-\marginnote{这个公式假设模型以矩阵乘法为主，忽略了激活函数等开销。实际计算量可能略高。}
+\sidenoteplain{这个公式假设模型以矩阵乘法为主，忽略了激活函数等开销。实际计算量可能略高。}
 
 \begin{example}[训练计算量估算]
 \textbf{任务}：用100B tokens预训练一个7B模型
@@ -675,7 +675,7 @@ H100 & 150-200 t/s & 100-120 t/s & 40-50 t/s & 最新旗舰 \\
 \section{代码实现：手写Attention}
 % ====================================================================================
 
-\marginnote{\textbf{Transformer的诞生}：2017年，Google的Vaswani等人发表``Attention Is All You Need''，用纯注意力机制取代了RNN/CNN，成为现代大模型的基石。论文标题成为深度学习史上最经典的口号之一。}
+\sidenoteplain{\textbf{Transformer的诞生}：2017年，Google的Vaswani等人发表``Attention Is All You Need''，用纯注意力机制取代了RNN/CNN，成为现代大模型的基石。论文标题成为深度学习史上最经典的口号之一。}
 
 理解原理后，让我们动手实现核心组件。
 
@@ -683,7 +683,7 @@ H100 & 150-200 t/s & 100-120 t/s & 40-50 t/s & 最新旗舰 \\
 \subsection{Scaled Dot-Product Attention}
 % ------------------------------------------------------------------------------------
 
-\marginnote{\textbf{注意力机制溯源}：注意力机制最早由Bahdanau等人(2014)引入机器翻译，让模型``看向''输入的不同部分。Transformer将其推广为``自注意力''，让序列中的每个位置都能关注其他所有位置。}
+\sidenoteplain{\textbf{注意力机制溯源}：注意力机制最早由Bahdanau等人(2014)引入机器翻译，让模型``看向''输入的不同部分。Transformer将其推广为``自注意力''，让序列中的每个位置都能关注其他所有位置。}
 
 回顾公式：
 \begin{equation}
@@ -972,7 +972,7 @@ class MultiHeadAttention(nn.Module):
 \section{高效微调：LoRA简介}
 % ====================================================================================
 
-\marginnote{\textbf{LoRA的诞生}：2021年，微软的Hu等人提出LoRA，让普通研究者也能在消费级显卡上微调大模型。这篇论文引用量已超过5000次，催生了QLoRA、DoRA等一系列变体，成为开源社区微调LLM的标准方法。}
+\sidenoteplain{\textbf{LoRA的诞生}：2021年，微软的Hu等人提出LoRA，让普通研究者也能在消费级显卡上微调大模型。这篇论文引用量已超过5000次，催生了QLoRA、DoRA等一系列变体，成为开源社区微调LLM的标准方法。}
 
 全量微调大模型需要的显存太大。\textbf{LoRA}（Low-Rank Adaptation）是一种参数高效的替代方案。
 
@@ -1095,13 +1095,13 @@ merged_weight = base_weight + lora_B @ lora_A
 \section{高效计算：FlashAttention与MoE}
 % ====================================================================================
 
-\marginnote{本节介绍两个现代大模型的关键技术：FlashAttention加速注意力计算，MoE降低推理成本。}
+\sidenoteplain{本节介绍两个现代大模型的关键技术：FlashAttention加速注意力计算，MoE降低推理成本。}
 
 % ------------------------------------------------------------------------------------
 \subsection{FlashAttention：IO感知的注意力计算}
 % ------------------------------------------------------------------------------------
 
-\marginnote{\textbf{FlashAttention}：2022年，斯坦福的Tri Dao在博士期间提出，通过IO感知算法将长序列注意力速度提升2-4倍，并大幅降低显存。该工作发表于NeurIPS 2022，Dao随后创办Together AI公司，FlashAttention已成为几乎所有大模型训练的标配。}
+\sidenoteplain{\textbf{FlashAttention}：2022年，斯坦福的Tri Dao在博士期间提出，通过IO感知算法将长序列注意力速度提升2-4倍，并大幅降低显存。该工作发表于NeurIPS 2022，Dao随后创办Together AI公司，FlashAttention已成为几乎所有大模型训练的标配。}
 
 标准注意力计算有一个严重问题：需要存储完整的$N \times N$注意力矩阵。
 
@@ -1233,7 +1233,7 @@ FlashAttention的技巧：
 \subsection{Mixture of Experts (MoE)：稀疏激活}
 % ------------------------------------------------------------------------------------
 
-\marginnote{\textbf{MoE的复兴}：MoE思想源自1991年Jacobs等人，但真正在大模型中大放异彩是Google的Shazeer(2017)在机器翻译中的应用。2023年底，Mistral AI发布的Mixtral 8x7B证明了开源MoE模型的巨大潜力。据传GPT-4也是MoE架构。}
+\sidenoteplain{\textbf{MoE的复兴}：MoE思想源自1991年Jacobs等人，但真正在大模型中大放异彩是Google的Shazeer(2017)在机器翻译中的应用。2023年底，Mistral AI发布的Mixtral 8x7B证明了开源MoE模型的巨大潜力。据传GPT-4也是MoE架构。}
 
 MoE是另一种提升模型能力同时控制计算量的技术，被GPT-4、Mixtral等模型采用。
 

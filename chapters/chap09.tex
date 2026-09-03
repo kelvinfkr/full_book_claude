@@ -4,9 +4,9 @@
 
 \section*{引言：让机器学会"看"}
 
-\marginnote{\textbf{深度学习三巨头}：Geoffrey Hinton、Yann LeCun、Yoshua Bengio因``深度学习的突破性贡献''共同获得2018年图灵奖（计算机界的诺贝尔奖）。2012年Hinton学生的AlexNet在ImageNet竞赛中取得突破，标志着深度学习时代的开始。}
+\sidenoteplain{\textbf{深度学习三巨头}：Geoffrey Hinton、Yann LeCun、Yoshua Bengio因``深度学习的突破性贡献''共同获得2018年图灵奖（计算机界的诺贝尔奖）。2012年Hinton学生的AlexNet在ImageNet竞赛中取得突破，标志着深度学习时代的开始。}
 
-\marginnote{\textbf{图灵奖}以计算机科学之父Alan Turing命名，是计算机界最高荣誉。图灵(1912--1954)提出了图灵机概念，奠定了现代计算机理论基础。他在二战中破解了纳粹密码，却因同性恋被迫害，最终服毒自杀。2009年英国政府正式道歉，2013年英女王宣布对其赦免。}
+\sidenoteplain{\textbf{图灵奖}以计算机科学之父Alan Turing命名，是计算机界最高荣誉。图灵(1912--1954)提出了图灵机概念，奠定了现代计算机理论基础。他在二战中破解了纳粹密码，却因同性恋被迫害，最终服毒自杀。2009年英国政府正式道歉，2013年英女王宣布对其赦免。}
 
 想象一个问题：如何让计算机识别手写数字？
 
@@ -152,7 +152,7 @@ f_n \circ \cdots \circ f_1(x) = W_n W_{n-1} \cdots W_1 x = W' x
 \end{itemize}
 \end{definition}
 
-\marginnote{ReLU因其计算简单且能缓解``梯度消失''问题，成为现代深度学习中最常用的激活函数。它的导数在正半轴恒为1，使得梯度能够有效传播。}
+\sidenoteplain{ReLU因其计算简单且能缓解``梯度消失''问题，成为现代深度学习中最常用的激活函数。它的导数在正半轴恒为1，使得梯度能够有效传播。}
 
 % ------------------------------------------------------------------------------------
 \section{学习即优化}
@@ -172,7 +172,7 @@ L(\theta) = \frac{1}{N} \sum_{k=1}^N \ell\big(f(x^{(k)}; \theta), \, y^{(k)}\big
     \item \textbf{均方误差}（用于回归）：$\ell(\hat{y}, y) = \frac{1}{2}\|\hat{y} - y\|^2$
     \item \textbf{交叉熵}（用于分类）：$\ell(\hat{y}, y) = -\sum_c y_c \log \hat{y}_c$
 \end{itemize}
-\clarify{还记得第6章吗？交叉熵损失就是最小化预测分布和真实分布的KL散度。选择交叉熵不是拍脑袋决定的，而是信息论的必然结论！}
+\clarify{还记得第4章吗？交叉熵损失就是最小化预测分布和真实分布的KL散度。选择交叉熵不是拍脑袋决定的，而是信息论的必然结论！}
 
 \subsection{优化问题}
 
@@ -298,7 +298,7 @@ L &= \ell(z_3)
 其中 $\lambda_i \in \mathbb{R}^{d_i}$ 是约束 $z_i = f_i(z_{i-1}; \theta_i)$ 对应的拉格朗日乘子。约束写成 $f_i(z_{i-1};\theta_i) - z_i = 0$，与第8章把动力学写成 $f - \dot{x}$（离散版 $f - x_{k+1}$）是同一约定。
 \end{keyformula}
 
-\marginnote{注意：这里我们约定 $z_0 = x$（输入）。每个 $\lambda_i$ 的维度与 $z_i$ 相同。}
+\sidenoteplain{注意：这里我们约定 $z_0 = x$（输入）。每个 $\lambda_i$ 的维度与 $z_i$ 相同。}
 
 \subsection{驻点条件（KKT条件）}
 
@@ -430,7 +430,7 @@ $\lambda_i$ 的意义是什么？
 % ------------------------------------------------------------------------------------
 \section{反向传播算法}
 
-\marginnote{\textbf{反向传播的历史}：反向传播的数学思想可追溯到1960年代Bryson和Ho的控制理论工作。1974年，哈佛博士生Paul Werbos在博士论文中首次将其应用于神经网络。但直到1986年，Rumelhart、Hinton和Williams在Nature发表的论文才让反向传播广为人知，成为深度学习的基石。}
+\sidenoteplain{\textbf{反向传播的历史}：反向传播的数学思想可追溯到1960年代Bryson和Ho的控制理论工作。1974年，哈佛博士生Paul Werbos在博士论文中首次将其应用于神经网络。但直到1986年，Rumelhart、Hinton和Williams在Nature发表的论文才让反向传播广为人知，成为深度学习的基石。}
 
 现在我们可以写出完整的算法了。
 
@@ -477,7 +477,7 @@ L &\leftarrow \ell(z_n, y) \notag
 
 
 
-\marginnote{Neural ODE（神经常微分方程）是深度学习与控制理论交叉的热门方向。它把离散的神经网络层看作连续动力系统的离散化，用伴随方法计算梯度。}
+\sidenoteplain{Neural ODE（神经常微分方程）是深度学习与控制理论交叉的热门方向。它把离散的神经网络层看作连续动力系统的离散化，用伴随方法计算梯度。}
 
 回忆第8章的最优控制问题：
 \begin{equation}
@@ -570,7 +570,7 @@ L &= \frac{1}{2}\|z_2 - y\|^2 \quad \text{（均方误差损失）}
 % ------------------------------------------------------------------------------------
 \section{自动微分：从代码到内存中的计算图}
 
-\marginnote{\textbf{自动微分的历史}：自动微分（AD）的概念可追溯到1964年Robert Wengert的工作。芬兰学者Seppo Linnainmaa在1970年的硕士论文中提出了反向模式AD。现代框架如PyTorch（Facebook，2016）、TensorFlow（Google，2015）和JAX（Google，2018）都基于这些思想，但加入了动态/静态计算图、GPU加速等工程创新。}
+\sidenoteplain{\textbf{自动微分的历史}：自动微分（AD）的概念可追溯到1964年Robert Wengert的工作。芬兰学者Seppo Linnainmaa在1970年的硕士论文中提出了反向模式AD。现代框架如PyTorch（Facebook，2016）、TensorFlow（Google，2015）和JAX（Google，2018）都基于这些思想，但加入了动态/静态计算图、GPU加速等工程创新。}
 
 在实践中，我们不需要手动推导每个网络的反向传播公式。现代深度学习框架（PyTorch、TensorFlow、JAX）都实现了\textbf{自动微分}（Automatic Differentiation）。
 
@@ -626,7 +626,7 @@ class Variable:
 
 \subsection{Step 2：重载加法——记录``加法节点''}
 
-\marginnote{\footnotesize
+\sidenoteplain{\footnotesize
 \textbf{什么是重载？}\\[2pt]
 像 \texttt{+}、\texttt{*} 这些符号，
 Python 并不会强制规定它们怎么用。\\
@@ -830,7 +830,7 @@ print(f"dy/dx = {x.grad}")   # 8.0（理论值：2x + 2 = 8）
 
 每次调用 \texttt{\_\_mul\_\_} 或 \texttt{\_\_add\_\_} 时，我们不仅计算了数值，还\textbf{顺便}创建了一个新节点、记录了依赖关系、存下了反向传播规则。Python 解释器替我们完成了``表达式解析''的工作！
 
-\marginnote{这就是运算符重载的威力：用户写的是普通数学表达式，背后却自动构建了完整的计算图。PyTorch、TensorFlow 都是这个原理。}
+\sidenoteplain{这就是运算符重载的威力：用户写的是普通数学表达式，背后却自动构建了完整的计算图。PyTorch、TensorFlow 都是这个原理。}
 
 现在让我们看看每一步具体发生了什么：
 
@@ -956,7 +956,7 @@ $x$ & 叶子节点，无 \texttt{\_prev} & 反向传播结束 \\
 x.\text{grad} = 8 = 2x + 2 \big|_{x=3} = \frac{dy}{dx}
 \end{equation*}
 
-\marginnote{PyTorch的\texttt{autograd}和这个简化版本原理完全相同，只是添加了：GPU支持、更多运算符、内存优化、支持高阶导数等工程细节。理解了这50行代码，你就理解了现代深度学习框架的核心。}
+\sidenoteplain{PyTorch的\texttt{autograd}和这个简化版本原理完全相同，只是添加了：GPU支持、更多运算符、内存优化、支持高阶导数等工程细节。理解了这50行代码，你就理解了现代深度学习框架的核心。}
 
 \begin{physicalmeaning}
 这个极简引擎揭示了自动微分的本质：
@@ -1034,7 +1034,7 @@ x.\text{grad} = 8 = 2x + 2 \big|_{x=3} = \frac{dy}{dx}
 
 \subsection{随机梯度下降（SGD）}
 
-\marginnote{\textbf{SGD的起源}：随机梯度下降由Robbins和Monro在1951年提出（``A Stochastic Approximation Method''），最初用于统计估计问题。半个多世纪后，它成为训练深度神经网络的标准方法，每天在全球数百万GPU上运行。}
+\sidenoteplain{\textbf{SGD的起源}：随机梯度下降由Robbins和Monro在1951年提出（``A Stochastic Approximation Method''），最初用于统计估计问题。半个多世纪后，它成为训练深度神经网络的标准方法，每天在全球数百万GPU上运行。}
 
 当数据集很大时，计算全部样本的梯度太慢。\textbf{随机梯度下降}的想法是：每次只用一小批样本（mini-batch）来估计梯度。
 
@@ -1050,13 +1050,13 @@ x.\text{grad} = 8 = 2x + 2 \big|_{x=3} = \frac{dy}{dx}
 \end{enumerate}
 \end{keyformula}
 
-\marginnote{为什么随机梯度也能收敛？因为 $\E[g] = \nabla_\theta L$，即小批量梯度是真实梯度的无偏估计。虽然每一步有噪声，但平均方向是对的。}
+\sidenoteplain{为什么随机梯度也能收敛？因为 $\E[g] = \nabla_\theta L$，即小批量梯度是真实梯度的无偏估计。虽然每一步有噪声，但平均方向是对的。}
 
 典型的批量大小 $B$ 是 32、64、128 或 256。
 
 \subsection{动量法（Momentum）}
 
-\marginnote{\textbf{动量法的历史}：动量方法由苏联数学家Boris Polyak于1964年提出（``Some methods of speeding up the convergence of iteration methods''）。这个简单而优雅的想法——给梯度加上``惯性''——至今仍是训练大型视觉模型（如ResNet、ViT）的首选方法。}
+\sidenoteplain{\textbf{动量法的历史}：动量方法由苏联数学家Boris Polyak于1964年提出（``Some methods of speeding up the convergence of iteration methods''）。这个简单而优雅的想法——给梯度加上``惯性''——至今仍是训练大型视觉模型（如ResNet、ViT）的首选方法。}
 
 vanilla SGD 的问题：在``峡谷''地形中会来回震荡，收敛很慢。
 
@@ -1078,11 +1078,11 @@ v^{(t+1)} &= \beta \cdot v^{(t)} + \nabla_\theta L(\theta^{(t)}) \\
     \item 有动量：小球有惯性，能``冲过''小坑，沿着主方向加速
 \end{itemize}
 \end{physicalmeaning}
-\review{第4章}{"小球在损失曲面上滚"不只是比喻：把动量法写成连续时间，就是带阻尼的牛顿方程 $\ddot{\theta} + \gamma\dot{\theta} = -\nabla L(\theta)$——第4章的力学，势能就是损失函数，动量系数 $\beta$ 决定阻尼大小。}
+\review{第5章}{"小球在损失曲面上滚"不只是比喻：把动量法写成连续时间，就是带阻尼的牛顿方程 $\ddot{\theta} + \gamma\dot{\theta} = -\nabla L(\theta)$——第5章的力学，势能就是损失函数，动量系数 $\beta$ 决定阻尼大小。}
 
 \subsection{Adam：自适应学习率}
 
-\marginnote{\textbf{Adam的诞生}：Adam由阿姆斯特丹大学的Diederik Kingma和多伦多大学的Jimmy Ba于2014年提出，发表于ICLR 2015。它巧妙地结合了动量法和RMSprop（Hinton课程中提出）的思想。论文引用超过20万次，Adam成为深度学习中最广泛使用的优化器之一，尤其在NLP和Transformer训练中几乎是标配。}
+\sidenoteplain{\textbf{Adam的诞生}：Adam由阿姆斯特丹大学的Diederik Kingma和多伦多大学的Jimmy Ba于2014年提出，发表于ICLR 2015。它巧妙地结合了动量法和RMSprop（Hinton课程中提出）的思想。论文引用超过20万次，Adam成为深度学习中最广泛使用的优化器之一，尤其在NLP和Transformer训练中几乎是标配。}
 
 不同参数可能需要不同的学习率。\textbf{Adam}（Adaptive Moment Estimation）自动为每个参数调整学习率。
 
@@ -1120,7 +1120,7 @@ AdamW & 是 & 是 & Adam + 权重衰减，Transformer标配 \\
 \end{tabular}
 \end{center}
 
-\marginnote{实践中的经验：Adam 收敛快但泛化可能略差；SGD+Momentum 需要更多调参但最终效果常常更好。很多顶级模型用 SGD+Momentum 训练。}
+\sidenoteplain{实践中的经验：Adam 收敛快但泛化可能略差；SGD+Momentum 需要更多调参但最终效果常常更好。很多顶级模型用 SGD+Momentum 训练。}
 
 \subsection{完整训练循环}
 
@@ -1325,7 +1325,7 @@ def train(model, data_loader, optimizer, num_epochs):
 \end{equation}
 不需要转置。PyTorch、TensorFlow 都采用这个约定。
 
-\marginnote{\footnotesize
+\sidenoteplain{\footnotesize
 在深度学习框架里（PyTorch、TensorFlow、JAX），
 参数 \texttt{w} 本身就是一个 \textbf{n×1 的张量}。
 如果梯度也是 n×1，就可以直接做：
@@ -1502,7 +1502,7 @@ w_{\text{new}} = w - \eta \left( \frac{\partial L}{\partial w} \right)^{\top},
 \nabla_X (a^\top X b) &= ab^\top
 \end{align}
 
-\marginnote{这些公式看起来复杂，但都可以通过``展开成分量，求导，再组装回去''的方法推导。关键是保持布局一致。}
+\sidenoteplain{这些公式看起来复杂，但都可以通过``展开成分量，求导，再组装回去''的方法推导。关键是保持布局一致。}
 
 \subsection*{向量对向量求导（雅可比矩阵）}
 
@@ -1618,7 +1618,7 @@ J = \frac{\partial y}{\partial x} = \begin{pmatrix}
 \section*{扩展阅读：Python 如何理解 \texttt{x * x + x * 2 + 1}？}
 \addcontentsline{toc}{section}{扩展阅读：Python表达式求值}
 
-\marginnote{这一节解释 Python 解释器的工作原理。理解这个，你就明白了为什么我们只需要重载运算符，就能``免费''获得计算图构建的能力。}
+\sidenoteplain{这一节解释 Python 解释器的工作原理。理解这个，你就明白了为什么我们只需要重载运算符，就能``免费''获得计算图构建的能力。}
 
 当我们写下 \texttt{y = x * x + x * 2 + 1} 时，Python 解释器究竟做了什么？为什么它知道``先乘后加''？
 
@@ -1761,10 +1761,10 @@ dis.dis(f)
 
 这就是自动微分框架的设计哲学：\textbf{利用宿主语言的表达式求值机制，免费获得计算图构建能力}。PyTorch、JAX、TensorFlow Eager 都是这个思路。
 
-\section*{扩展阅读：深度学习与数值方法的深刻联系——第5章的后续}
+\section*{扩展阅读：深度学习与数值方法的深刻联系——第6章的后续}
 \addcontentsline{toc}{section}{扩展阅读：与数值方法的联系}
 
-\marginnote{这一节揭示深度学习与经典数值方法的内在联系。你会发现，很多``新''的深度学习技术，其实是老方法的新面孔。}
+\sidenoteplain{这一节揭示深度学习与经典数值方法的内在联系。你会发现，很多``新''的深度学习技术，其实是老方法的新面孔。}
 
 深度学习中的许多核心概念，与数值线性代数、有限元方法有着惊人的相似性。理解这些联系，能帮助你更深刻地理解两个领域。
 
@@ -2070,7 +2070,7 @@ U-Net 在医学图像分割等任务中非常成功——它继承了多重网�
 
 \subsection*{一个被认为“毫无意义”的实验}
 
-\marginnote{\textbf{Geoffrey Hinton}(1947--)：``深度学习教父''，2018年图灵奖得主。他在多伦多大学坚持神经网络研究三十年，在AI冬天时几乎是孤军奋战。2012年AlexNet的成功证明了他的坚持。2023年他辞去Google职位，公开警告AI的潜在危险。}
+\sidenoteplain{\textbf{Geoffrey Hinton}(1947--)：``深度学习教父''，2018年图灵奖得主。他在多伦多大学坚持神经网络研究三十年，在AI冬天时几乎是孤军奋战。2012年AlexNet的成功证明了他的坚持。2023年他辞去Google职位，公开警告AI的潜在危险。}
 
 2009 年，Montreal 的一间小实验室里，博士生 Ranzato、
 助手 Alex Krizhevsky，以及他们的导师 Hinton 正在做一个
@@ -2238,7 +2238,7 @@ L2 缓存 & $\sim$40 MB & $\sim$6 TB/s & $\sim$200 cycles \\
 \end{tabular}
 \end{center}
 
-\marginnote{SM = Streaming Multiprocessor，GPU 的计算单元。一个 GPU 有几十到上百个 SM。}
+\sidenoteplain{SM = Streaming Multiprocessor，GPU 的计算单元。一个 GPU 有几十到上百个 SM。}
 
 \textbf{性能优化的核心}：尽量让数据停留在快速的内存层次中！
 
@@ -2329,7 +2329,7 @@ print(B.is_contiguous())  # False
 \end{itemize}
 
 \textbf{矩阵乘法有多复杂？}
-\marginnote{一个优化良好的矩阵乘法实现可能有上万行代码，针对不同尺寸有几十个特化版本。}
+\sidenoteplain{一个优化良好的矩阵乘法实现可能有上万行代码，针对不同尺寸有几十个特化版本。}
 
 看似简单的 $C = AB$，cuBLAS 的实现考虑了：
 \begin{itemize}
@@ -2589,7 +2589,7 @@ Sigmoid的导数有一个优雅的形式：
 
 Sigmoid的最大梯度只有0.25（在$x=0$处）。经过$n$层网络后，梯度最多变成原来的$0.25^n$倍。这就是\textbf{梯度消失}（vanishing gradient）问题——深层网络的参数几乎无法更新。
 
-\marginnote{\textbf{历史注记}：梯度消失问题是神经网络在1990年代陷入低谷的重要原因。直到2006年Hinton等人提出逐层预训练，以及后来ReLU的流行，深度学习才迎来复兴。}
+\sidenoteplain{\textbf{历史注记}：梯度消失问题是神经网络在1990年代陷入低谷的重要原因。直到2006年Hinton等人提出逐层预训练，以及后来ReLU的流行，深度学习才迎来复兴。}
 
 ReLU的优势在于：正半轴的梯度恒为1，不会衰减。这使得梯度可以"无损"地流过任意多层。但ReLU也有代价：负输入的梯度为0，一旦某个神经元进入"死亡"状态，它将永远无法恢复。
 

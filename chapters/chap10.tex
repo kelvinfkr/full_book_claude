@@ -51,7 +51,7 @@
     \item 环境进入下一个状态 $s_{t+1}$
 \end{itemize}
 
-\marginnote{\textbf{有趣的历史}：在强化学习中，动作叫action，记作$a$；而在控制理论中，控制量却几乎总是记作$u(t)$。
+\sidenoteplain{\textbf{有趣的历史}：在强化学习中，动作叫action，记作$a$；而在控制理论中，控制量却几乎总是记作$u(t)$。
 
 原因来自前苏联控制论传统——"控制"在俄语中是«{\cyrillicfont управление}»（u-prav-lé-nie），首字母正是俄文字母«{\cyrillicfont У}»（对应拉丁字母U），因此控制量自然记为$u$。
 
@@ -89,7 +89,7 @@
 \end{keyformula}
 
 这和我们在前面章节学过的约束优化问题有着完全相同的结构！唯一的区别是这里有无穷多个时刻，因此有无穷多个约束。
-\clarify{对比一下：第3章变分法的约束是$y_{k+1} - y_k = v_k\Delta x$，第4章力学的约束是$\dot{q} = v$，这里的约束是$s_{t+1} = f(s_t, a_t)$。形式完全一样！只是变量名不同：位置/状态/state，速度/动作/action。}
+\clarify{对比一下：第3章变分法的约束是$y_{k+1} - y_k = v_k\Delta x$，第5章力学的约束是$\dot{q} = v$，这里的约束是$s_{t+1} = f(s_t, a_t)$。形式完全一样！只是变量名不同：位置/状态/state，速度/动作/action。}
 
 \begin{tcolorbox}[colback=yellow!10, colframe=orange!80, title=本章的核心观点]
 \textbf{强化学习不是什么新东西——它就是第1章的拉格朗日乘子法，只不过约束从一条变成了无穷多条（每个时刻一条动力学方程），而乘子有了一个新名字：值函数（的梯度）。}贝尔曼方程不是定义，而是这个约束优化问题的一阶条件。
@@ -457,7 +457,7 @@ r(s_t,a)+\gamma V(f(s_t,a))
 这就是最短路问题的\textbf{贝尔曼方程}！
 \tryit{用递归写 d(v) = min(w + d(u))，再给函数加上 @functools.lru\_cache——这一行就是"记忆化"，也就是动态规划。}
 
-\marginnote{对比强化学习的贝尔曼方程$V(s) = \max_a[r + \gamma V(s')]$：
+\sidenoteplain{对比强化学习的贝尔曼方程$V(s) = \max_a[r + \gamma V(s')]$：
 \begin{itemize}
     \item 最短路是最小化代价，RL是最大化奖励
     \item 最短路没有折扣（$\gamma = 1$）
@@ -1322,7 +1322,7 @@ On/Off-policy 和 Online/Offline 是两个不同的维度，容易混淆：
 % ------------------------------------------------------------------------------------
 
 现在我们有了四个维度，可以像GPS定位一样精确地描述任何强化学习算法。
-\marginnote{\textbf{为什么DeepSeek选择MC方法？}
+\sidenoteplain{\textbf{为什么DeepSeek选择MC方法？}
 
 传统RL中MC因高方差被避免，但大模型场景有特殊性：
 \begin{enumerate}
@@ -1645,7 +1645,7 @@ def value_iteration(env, gamma=1.0, threshold=1e-6):
 \subsection{Q-Learning：从试错中学习}
 % ------------------------------------------------------------------------------------
 
-\marginnote{\textbf{Q-Learning的诞生}：Q-Learning由剑桥大学博士生Christopher Watkins在1989年博士论文中提出，1992年与Peter Dayan合作发表于\textit{Machine Learning}期刊。论文证明了Q-Learning在一定条件下收敛到最优Q函数，这个简洁的算法成为后来深度强化学习的基石。}
+\sidenoteplain{\textbf{Q-Learning的诞生}：Q-Learning由剑桥大学博士生Christopher Watkins在1989年博士论文中提出，1992年与Peter Dayan合作发表于\textit{Machine Learning}期刊。论文证明了Q-Learning在一定条件下收敛到最优Q函数，这个简洁的算法成为后来深度强化学习的基石。}
 
 Q-Learning 是一种\textbf{无模型}方法。它不知道执行动作会发生什么，只能像小孩学走路一样——走一步、摔一跤、记住教训。
 
@@ -1991,7 +1991,7 @@ Q-Learning：训练了 2000 个回合
 \end{tcolorbox}
 % ------------------------------------------------------------------------------------
 
-\marginnote{\textbf{Sutton与Barto}：Richard Sutton和Andrew Barto是强化学习领域的``教父''。他们1998年合著的《Reinforcement Learning: An Introduction》是该领域的圣经，免费在线阅读。Sutton提出了TD学习、策略梯度等核心算法，2024年获图灵奖提名。}
+\sidenoteplain{\textbf{Sutton与Barto}：Richard Sutton和Andrew Barto是强化学习领域的``教父''。他们1998年合著的《Reinforcement Learning: An Introduction》是该领域的圣经，免费在线阅读。Sutton提出了TD学习、策略梯度等核心算法，2024年获图灵奖提名。}
 
 在前面的 GridWorld 例子中，我们用一个 $5 \times 5 \times 4$ 的数组来存储 $Q(s, a)$。这在状态空间很小的时候完全可行，但如果状态是一张 $84 \times 84$ 的游戏画面呢？
 
@@ -2094,9 +2094,9 @@ for _ in range(1000):
 \subsection{DQN：从 Q-Learning 到深度网络}
 % ------------------------------------------------------------------------------------
 
-\marginnote{\textbf{DeepMind与DQN}：2013年，伦敦创业公司DeepMind（由Demis Hassabis、Shane Legg等创立）在arXiv发布DQN论文，用神经网络玩Atari游戏达到人类水平。2014年Google以约6亿美元收购DeepMind。2015年DQN正式发表于Nature，开启深度强化学习时代。两年后AlphaGo击败世界围棋冠军，震惊世界。}
+\sidenoteplain{\textbf{DeepMind与DQN}：2013年，伦敦创业公司DeepMind（由Demis Hassabis、Shane Legg等创立）在arXiv发布DQN论文，用神经网络玩Atari游戏达到人类水平。2014年Google以约6亿美元收购DeepMind。2015年DQN正式发表于Nature，开启深度强化学习时代。两年后AlphaGo击败世界围棋冠军，震惊世界。}
 
-\marginnote{\textbf{Demis Hassabis}(1976--)：DeepMind联合创始人兼CEO，2024年诺贝尔化学奖得主（因AlphaFold蛋白质结构预测）。他是国际象棋神童，13岁时已是世界第二年轻的大师。他先后在剑桥和UCL获得学位，是少数同时在AI和神经科学两个领域做出重要贡献的人。}
+\sidenoteplain{\textbf{Demis Hassabis}(1976--)：DeepMind联合创始人兼CEO，2024年诺贝尔化学奖得主（因AlphaFold蛋白质结构预测）。他是国际象棋神童，13岁时已是世界第二年轻的大师。他先后在剑桥和UCL获得学位，是少数同时在AI和神经科学两个领域做出重要贡献的人。}
 
 DQN 是深度强化学习的开山之作（Mnih et al., 2015）。它的核心思想是用神经网络代替 Q 表格，但这带来了两个新问题：
 
@@ -2215,7 +2215,7 @@ class DQN:
 \subsection{PPO：稳健的策略梯度}
 % ------------------------------------------------------------------------------------
 
-\marginnote{\textbf{PPO与OpenAI}：PPO由OpenAI的John Schulman等人于2017年提出。Schulman此前还提出了TRPO（2015），但TRPO计算复杂。PPO通过简单的``裁剪''技巧获得类似效果，实现简单、调参容易，成为工业界标配。2022年ChatGPT的RLHF训练正是使用PPO，让AI学会遵循人类偏好。}
+\sidenoteplain{\textbf{PPO与OpenAI}：PPO由OpenAI的John Schulman等人于2017年提出。Schulman此前还提出了TRPO（2015），但TRPO计算复杂。PPO通过简单的``裁剪''技巧获得类似效果，实现简单、调参容易，成为工业界标配。2022年ChatGPT的RLHF训练正是使用PPO，让AI学会遵循人类偏好。}
 
 PPO（Proximal Policy Optimization）是目前工业界最常用的算法，ChatGPT 的 RLHF 训练就用的它。
 
@@ -2361,7 +2361,7 @@ class PPO:
 \subsection{SAC：最大熵强化学习}
 % ------------------------------------------------------------------------------------
 
-\marginnote{\textbf{SAC与Berkeley}：SAC由UC Berkeley的Tuomas Haarnoja等人于2018年提出，导师是Pieter Abbeel和Sergey Levine——两位机器人强化学习的领军人物。SAC的``最大熵''思想来自信息论，让策略保持适度随机性以增强探索和鲁棒性，在机器人操作任务中表现出色。}
+\sidenoteplain{\textbf{SAC与Berkeley}：SAC由UC Berkeley的Tuomas Haarnoja等人于2018年提出，导师是Pieter Abbeel和Sergey Levine——两位机器人强化学习的领军人物。SAC的``最大熵''思想来自信息论，让策略保持适度随机性以增强探索和鲁棒性，在机器人操作任务中表现出色。}
 
 SAC（Soft Actor-Critic）是连续控制任务的首选算法，在机器人控制领域表现优异。
 
@@ -3389,7 +3389,7 @@ class PPO_KL:
 % ------------------------------------------------------------------------------------
 \subsection{从一个简单问题开始：多臂老虎机}
 % ------------------------------------------------------------------------------------
-\marginnote{
+\sidenoteplain{
 \textbf{前置知识提醒}
 
 本节需要概率论基础，包括：期望、方差、概率不等式等概念。
@@ -3739,7 +3739,7 @@ UCB 算法的期望遗憾满足：
 \paragraph{多臂老虎机的 PAC 界}
 
 对于 $K$ 臂老虎机，要找到 $\epsilon$-最优臂，需要多少样本？
-\marginnote{
+\sidenoteplain{
 这和微积分里的 $\varepsilon\text{-}\delta$ / $\varepsilon\text{-}N$ 语言很像。数列存在极限的定义是：对每个 $\varepsilon>0$，存在 $N(\varepsilon)$，使得
 当 $n\ge N(\varepsilon)$ 时有 $|a_n - L| < \varepsilon$。\\[0.3em]
 PAC 学习也是：给定容忍误差 $\epsilon$ 和失败概率 $\delta$，

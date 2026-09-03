@@ -1,15 +1,15 @@
 """
-第4章：经典力学 - 可视化演示
+第5章：经典力学 - 可视化演示
 ==============================
 
 从仓库根目录运行::
 
-    python3 code/chap04_mechanics.py          # 只重绘 figs_chap04/chap04_fig2
-    python3 code/chap04_mechanics.py --all    # 同时重绘双摆混沌图 chap04_fig1
+    python3 code/chap05_mechanics.py          # 只重绘 figs_chap05/chap05_fig2
+    python3 code/chap05_mechanics.py --all    # 同时重绘双摆混沌图 chap05_fig1
 
 包含：
-1. 双摆混沌：初值敏感性演示（chap04_fig1）
-2. 单摆：小角度近似的有效范围（chap04_fig2）
+1. 双摆混沌：初值敏感性演示（chap05_fig1）
+2. 单摆：小角度近似的有效范围（chap05_fig2）
    - (a)(b) θ(t)：精确方程与线性化方程的数值解
    - (c) 周期误差：周期由数值积分的过零点事件测出，并与椭圆积分公式对照
    - (d) 相图：精确能量曲线 vs 线性化的椭圆
@@ -118,9 +118,9 @@ def create_double_pendulum_chaos():
     ax4.set_aspect('equal')
 
     plt.tight_layout()
-    fig.savefig('figs_chap04/chap04_fig1.png', dpi=150, bbox_inches='tight')
+    fig.savefig('figs_chap05/chap05_fig1.png', dpi=150, bbox_inches='tight')
     plt.close(fig)
-    print('已保存 figs_chap04/chap04_fig1.png')
+    print('已保存 figs_chap05/chap05_fig1.png')
 
 
 # ---------------------------------------------------------------------------
@@ -232,7 +232,7 @@ def create_simple_pendulum_comparison():
     panel_label(ax_d, '(d)')
 
     fig.tight_layout(w_pad=2.0, h_pad=1.6, rect=(0, 0, 1, 0.95))
-    save_figure(fig, 'figs_chap04/chap04_fig2')
+    save_figure(fig, 'figs_chap05/chap05_fig2')
 
     # 控制台输出：供 caption 引用的数值
     for d in (10, 30, 60, 90):
@@ -242,10 +242,10 @@ def create_simple_pendulum_comparison():
 
 
 if __name__ == '__main__':
-    print('=== 第4章：经典力学可视化 ===')
-    print('单摆小角度近似图 (chap04_fig2)...')
+    print('=== 第5章：经典力学可视化 ===')
+    print('单摆小角度近似图 (chap05_fig2)...')
     create_simple_pendulum_comparison()
     if '--all' in sys.argv:
-        print('双摆混沌图 (chap04_fig1)...')
+        print('双摆混沌图 (chap05_fig1)...')
         create_double_pendulum_chaos()
     print('完成。')

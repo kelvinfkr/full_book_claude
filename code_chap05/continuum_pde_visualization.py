@@ -1,5 +1,5 @@
 """
-第4章扩展：连续介质力学PDE可视化
+第5章扩展：连续介质力学PDE可视化
 展示波动方程、热传导方程、Poisson方程的输入输出和解的形态
 """
 
@@ -544,7 +544,7 @@ def plot_pde_comparison(save_path):
 # =============================================================================
 
 if __name__ == "__main__":
-    output_dir = "/home/user/full_book_claude/figs_chap04"
+    output_dir = "/home/user/full_book_claude/figs_chap05"
 
     print("=" * 60)
     print("Generating continuum mechanics PDE figures...")

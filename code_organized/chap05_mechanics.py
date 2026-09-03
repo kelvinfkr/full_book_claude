@@ -1,5 +1,5 @@
 """
-第4章：经典力学 - 可视化演示
+第5章：经典力学 - 可视化演示
 
 包含：
 1. 双摆混沌：初值敏感性演示
@@ -152,9 +152,9 @@ def create_double_pendulum_chaos():
     ax4.grid(True, alpha=0.3)
 
     plt.tight_layout()
-    plt.savefig('/home/user/full_book/figs/chap04_fig1.png', dpi=150, bbox_inches='tight')
+    plt.savefig('/home/user/full_book/figs/chap05_fig1.png', dpi=150, bbox_inches='tight')
     plt.close()
-    print("图像已保存到 figs/chap04_fig1.png")
+    print("图像已保存到 figs/chap05_fig1.png")
 
 
 def create_simple_pendulum_comparison():
@@ -268,9 +268,9 @@ def create_simple_pendulum_comparison():
     ax3.grid(True, alpha=0.3)
 
     plt.tight_layout()
-    plt.savefig('/home/user/full_book/figs/chap04_fig2.png', dpi=150, bbox_inches='tight')
+    plt.savefig('/home/user/full_book/figs/chap05_fig2.png', dpi=150, bbox_inches='tight')
     plt.close()
-    print("图像已保存到 figs/chap04_fig2.png")
+    print("图像已保存到 figs/chap05_fig2.png")
 
 
 def create_lagrangian_demo():
@@ -331,13 +331,13 @@ def create_lagrangian_demo():
                  fontsize=10, arrowprops=dict(arrowstyle='->', color='green'))
 
     plt.tight_layout()
-    plt.savefig('/home/user/full_book/figs/chap04_fig3.png', dpi=150, bbox_inches='tight')
+    plt.savefig('/home/user/full_book/figs/chap05_fig3.png', dpi=150, bbox_inches='tight')
     plt.close()
-    print("图像已保存到 figs/chap04_fig3.png")
+    print("图像已保存到 figs/chap05_fig3.png")
 
 
 if __name__ == "__main__":
-    print("=== 第4章：经典力学可视化 ===\n")
+    print("=== 第5章：经典力学可视化 ===\n")
 
     print("1. 生成双摆混沌图...")
     create_double_pendulum_chaos()

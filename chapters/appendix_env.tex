@@ -3,7 +3,7 @@
 \addcontentsline{toc}{chapter}{附录B：实验环境速成——服务器与环境配置}
 % ====================================================================================
 
-\marginnote{本附录原是第12章的扩展阅读，给完全没有服务器使用经验的同学准备。如果你已经熟悉 Linux 和 Git，可以跳过前面的基础部分。}
+\sidenoteplain{本附录原是第12章的扩展阅读，给完全没有服务器使用经验的同学准备。如果你已经熟悉 Linux 和 Git，可以跳过前面的基础部分。}
 
 \noindent\textit{本附录不讲数学。}它回答的是一个很实际的问题：当你的笔记本电脑跑不动第9--16章的实验时，怎样在实验室服务器或学校集群上把代码跑起来——连接服务器、配置环境、提交训练任务、把结果取回来。各节相互独立，随用随查。
 
@@ -352,7 +352,7 @@ python -c "import torch; print(torch.cuda.is_available())"
 \addcontentsline{toc}{section}{CUDA与PyTorch版本：公用服务器的大坑}
 % ------------------------------------------------------------------------------------
 
-\marginnote{这一节是很多新手踩的最大坑：不理解CUDA版本、PyTorch版本、驱动版本之间的关系，随意升级，结果把组里老代码全搞挂了。}
+\sidenoteplain{这一节是很多新手踩的最大坑：不理解CUDA版本、PyTorch版本、驱动版本之间的关系，随意升级，结果把组里老代码全搞挂了。}
 
 在公用服务器上，\textbf{版本管理}是一个非常重要但经常被忽视的问题。理解下面这些概念，能帮你避免"一改配置全组遭殃"的惨剧。
 
@@ -890,7 +890,7 @@ my_project/
 
 \subsection*{Hugging Face生态：Transformers + PEFT + Datasets}
 
-\marginnote{\textbf{Hugging Face}：由法国人Clément Delangue等于2016年创立，最初是一个聊天机器人。2019年开源Transformers库后爆发式增长，如今已成为AI开源社区的``GitHub''，托管超过50万个模型。公司估值超40亿美元。}
+\sidenoteplain{\textbf{Hugging Face}：由法国人Clément Delangue等于2016年创立，最初是一个聊天机器人。2019年开源Transformers库后爆发式增长，如今已成为AI开源社区的``GitHub''，托管超过50万个模型。公司估值超40亿美元。}
 
 Hugging Face是目前最流行的NLP/LLM工具生态，几乎是必学的。
 

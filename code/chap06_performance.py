@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
-第5章：有限元与性能实验演示
+第6章：有限元与性能实验演示
 ============================
 
 从仓库根目录运行::
 
-    python3 code/chap05_performance.py          # 跑全部实验（GIL / 缓存 / NumPy / 有限元 / 预条件子）
-    python3 code/chap05_performance.py fem      # 只重绘有限元收敛图 figs_chap05/chap05_fig2
+    python3 code/chap06_performance.py          # 跑全部实验（GIL / 缓存 / NumPy / 有限元 / 预条件子）
+    python3 code/chap06_performance.py fem      # 只重绘有限元收敛图 figs_chap06/chap06_fig2
 
 实验内容：
-1. Python GIL 对多线程的影响                  -> figs/chap05_fig1.png（旧图，未重绘）
+1. Python GIL 对多线程的影响                  -> figs/chap06_fig1.png（旧图，未重绘）
 2. 按行访问 vs 按列访问的速度差异
 3. NumPy vs 纯Python的性能对比
-4. 一维线性有限元：解、刚度矩阵、收敛阶       -> figs_chap05/chap05_fig2.{pdf,png}
-5. 预条件子对共轭梯度法收敛的影响             -> figs/chap05_fig3.png（旧图，未重绘）
+4. 一维线性有限元：解、刚度矩阵、收敛阶       -> figs_chap06/chap06_fig2.{pdf,png}
+5. 预条件子对共轭梯度法收敛的影响             -> figs/chap06_fig3.png（旧图，未重绘）
 """
 import sys
 import time
@@ -94,9 +94,9 @@ def run_performance_experiments():
         ax3.text(bar.get_x() + bar.get_width() / 2., bar.get_height(), f'{bar.get_height():.3f}s', ha='center', va='bottom')
     ax3.set_yscale('log')
     plt.tight_layout()
-    fig.savefig('figs/chap05_fig1.png', dpi=150, bbox_inches='tight')
+    fig.savefig('figs/chap06_fig1.png', dpi=150, bbox_inches='tight')
     plt.close(fig)
-    print("图像已保存到 figs/chap05_fig1.png")
+    print("图像已保存到 figs/chap06_fig1.png")
 
 
 # =============================================================================
@@ -217,7 +217,7 @@ def run_fem():
               transform=ax_c.transAxes, ha='left', va='top', fontsize=7)
     panel_label(ax_c, '(c)')
 
-    save_figure(fig, 'figs_chap05/chap05_fig2')
+    save_figure(fig, 'figs_chap06/chap06_fig2')
     print(f"  节点误差最大值（所有网格）: {E[:, 3].max():.2e}")
     print("\n刚度矩阵示例（4 个单元，内部 3×3）:")
     print(solve_1d_fem(4)[2])
@@ -314,9 +314,9 @@ def run_preconditioner():
     ax8.legend(loc='upper right', fontsize=10)
     ax8.set_xlabel('$x_1$', fontsize=12); ax8.set_ylabel('$x_2$', fontsize=12)
     plt.tight_layout()
-    fig3.savefig('figs/chap05_fig3.png', dpi=150, bbox_inches='tight')
+    fig3.savefig('figs/chap06_fig3.png', dpi=150, bbox_inches='tight')
     plt.close(fig3)
-    print("预条件子实验图像已保存到 figs/chap05_fig3.png")
+    print("预条件子实验图像已保存到 figs/chap06_fig3.png")
 
 
 if __name__ == '__main__':
@@ -327,4 +327,4 @@ if __name__ == '__main__':
         run_fem()
     if only in ('all', 'precond'):
         run_preconditioner()
-    print("\n第5章代码执行完成！")
+    print("\n第6章代码执行完成！")

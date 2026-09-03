@@ -6,7 +6,7 @@
 \section*{引言：一个新的求解思路}
 % ====================================================================================
 
-\marginnote{PINN由Raissi、Perdikaris和Karniadakis于2019年在Journal of Computational Physics发表，全称Physics-Informed Neural Networks。这篇论文引用量已超过15000次，开创了AI for Science的重要方向。}
+\sidenoteplain{PINN由Raissi、Perdikaris和Karniadakis于2019年在Journal of Computational Physics发表，全称Physics-Informed Neural Networks。这篇论文引用量已超过15000次，开创了AI for Science的重要方向。}
 
 \storynote{George Karniadakis}{1961--，布朗大学教授，美国工程院院士，PINN的主要推动者。他的研究横跨计算力学和机器学习，是``科学机器学习''(SciML)领域的奠基人之一。他培养了大量学生推动AI for Science的发展。}
 
@@ -223,7 +223,7 @@ PINN正是这个思路：$L_{\text{PDE}}$惩罚方程不被满足的程度，$L_
 \end{itemize}
 这个两难困境是PINN训练困难的核心原因之一，我们将在第\ref{sec:gradient_pathology}节详细讨论。
 \end{tcolorbox}
-\review{第5章}{有限元处理 Dirichlet 边界的"大数法"也是罚函数：把对角元改成 $10^{20}$ 强迫 $U_0 \approx g_0$，代价是刚度矩阵条件数变差。PINN 里 $\rho$ 太大导致训练变慢，是同一种病——见第5章扩展阅读"条件数"。}
+\review{第6章}{有限元处理 Dirichlet 边界的"大数法"也是罚函数：把对角元改成 $10^{20}$ 强迫 $U_0 \approx g_0$，代价是刚度矩阵条件数变差。PINN 里 $\rho$ 太大导致训练变慢，是同一种病——见第6章扩展阅读"条件数"。}
 
 \subsubsection{罚参数$\rho$的影响：实验验证}
 
@@ -257,7 +257,7 @@ $\rho$ & 0.1 & 1 & 10 & 100 & 1000 \\
 
     \item \textbf{$\rho = 10 \sim 100$ 前期最快}：边界条件和 PDE 残差的梯度量级相当，1000 轮内 MSE 就降到 $10^{-7}$。如果算力预算有限，这是最划算的区间。
 
-    \item \textbf{$\rho$太大，后期震荡}：$\rho = 100, 1000$ 时损失被边界项主导，等价于把问题的条件数放大了 $\rho$ 倍（第1章视角三、第5章"大数法"的同一种病）；Adam 的固定学习率在这样的损失面上反复过冲，图 (b) 后半段的锯齿就是证据，最终 MSE 和边界误差都比 $\rho = 1$ 差 2--3 个数量级——\textbf{罚得越狠，边界反而学得越差}。
+    \item \textbf{$\rho$太大，后期震荡}：$\rho = 100, 1000$ 时损失被边界项主导，等价于把问题的条件数放大了 $\rho$ 倍（第1章视角三、第6章"大数法"的同一种病）；Adam 的固定学习率在这样的损失面上反复过冲，图 (b) 后半段的锯齿就是证据，最终 MSE 和边界误差都比 $\rho = 1$ 差 2--3 个数量级——\textbf{罚得越狠，边界反而学得越差}。
 \end{enumerate}
 
 这个实验验证了前面"关键洞察"中的分析：$\rho$ 不是越大越好，它同时决定"约束多快被满足"和"优化问题有多病态"。想要既快又稳，就得让权重自己动起来——这正是后面自适应权重（对偶上升）要解决的问题。
@@ -1529,7 +1529,7 @@ loss = torch.mean(residual ** 2) + rho_ic * loss_ic + rho_bc * loss_bc
 \begin{theorem}[能量原理]
 $u$是泊松方程的解，当且仅当$u$是能量泛函$J[u]$的极小点。
 \end{theorem}
-\review{第5章}{"有限元 = 能量最小化"：第5章证明了 $KU = F$ 是 $\min_U \frac{1}{2}U^\top KU - F^\top U$ 的一阶条件，而这个二次型正是 $J[u]$ 在有限元基下的离散版本。Deep Ritz 只是把基函数换成了神经网络。}
+\review{第6章}{"有限元 = 能量最小化"：第6章证明了 $KU = F$ 是 $\min_U \frac{1}{2}U^\top KU - F^\top U$ 的一阶条件，而这个二次型正是 $J[u]$ 在有限元基下的离散版本。Deep Ritz 只是把基函数换成了神经网络。}
 
 \begin{proof}
 对$J[u]$求变分。设$v$是任意满足$v|_{\partial\Omega} = 0$的函数，考虑：
@@ -1621,7 +1621,7 @@ def compute_ritz_loss(model, x_interior, x_boundary, f_func, rho_bc=100.0):
 \begin{tcolorbox}[colback=blue!5, colframe=blue!50, title=Deep Ritz的优势]
 \begin{enumerate}
     \item \textbf{导数阶数降低}：只需要一阶导数，计算更稳定
-    \item \textbf{物理直觉}：对应最小势能原理（第3章的变分原理、第5章的"有限元 = 能量最小化"）——静态系统总是"选择"能量最低的状态
+    \item \textbf{物理直觉}：对应最小势能原理（第3章的变分原理、第6章的"有限元 = 能量最小化"）——静态系统总是"选择"能量最低的状态
     \item \textbf{高维友好}：蒙特卡洛积分在高维空间中效率较高
 \end{enumerate}
 \end{tcolorbox}
@@ -1926,8 +1926,8 @@ $(0.25, 0.75)$ & 0.5000000 & 0.4998247 & $1.8 \times 10^{-4}$ \\
 \textbf{$\lambda$ 在本章的意义}：$\lambda_j$ 是"在边界点 $x_j$ 把边界条件放松一点，PDE 残差能降多少"——边界条件的影子价格。它大，说明网络正被边界条件"卡住"，PDE 和边界在抢梯度；它趋于零，说明边界已不是瓶颈。固定权重 PINN 看不到这个价格，只能靠人猜一个 $\rho$；对偶上升让 $\lambda$ 自己涨到该有的大小；硬约束则用第1章"代入消元"的办法把边界约束干脆消掉，于是 $\lambda$ 不再需要。
 \begin{itemize}
     \item \textbf{第1章（拉格朗日乘子法）}：软约束就是视角三的罚函数法，硬约束就是代入消元
-    \item \textbf{第3章（变分法）与第5章（有限元）}：Deep Ritz 直接最小化能量泛函，只是把帐篷函数换成了神经网络
-    \item \textbf{第5章扩展阅读（条件数）}：PINN 的训练困难与优化问题的条件数密切相关
+    \item \textbf{第3章（变分法）与第6章（有限元）}：Deep Ritz 直接最小化能量泛函，只是把帐篷函数换成了神经网络
+    \item \textbf{第6章扩展阅读（条件数）}：PINN 的训练困难与优化问题的条件数密切相关
     \item \textbf{第9章}：PINN 把自动微分反过来用——对输入坐标而不是参数求导
     \item \textbf{往后看第14章}：把"对每一个点的方程约束放松一个单位"的影子价格整张表学出来，那就是格林函数
 \end{itemize}
@@ -1959,7 +1959,7 @@ $(0.25, 0.75)$ & 0.5000000 & 0.4998247 & $1.8 \times 10^{-4}$ \\
 \paragraph{思考题}
 \begin{enumerate}
     \setcounter{enumi}{2}
-    \item \textbf{条件数分析}：在第5章的有限元法中，刚度矩阵的条件数通常与$h^{-2}$成正比（$h$是网格步长）。你认为PINN的优化问题是否也存在类似的条件数问题？这与哪些因素有关？
+    \item \textbf{条件数分析}：在第6章的有限元法中，刚度矩阵的条件数通常与$h^{-2}$成正比（$h$是网格步长）。你认为PINN的优化问题是否也存在类似的条件数问题？这与哪些因素有关？
     
     
     \item \textbf{能量与残差}：对于非椭圆型方程（如对流方程$u_t + c u_x = 0$），是否存在相应的能量泛函？Deep Ritz Method是否适用？

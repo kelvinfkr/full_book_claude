@@ -3,6 +3,7 @@
 % ========== 中文支持 ==========
 \usepackage{fontspec}
 \usepackage[UTF8]{ctex}
+\usepackage{zhnumber}   % 部分编号用中文数字
 
 % 单独给西里尔字母指定一个字体
 \IfFontExistsTF{Times New Roman}{\newfontfamily\cyrillicfont{Times New Roman}}{\newfontfamily\cyrillicfont{DejaVu Serif}}
@@ -43,6 +44,30 @@
 
 % ========== 页边栏设置 ==========
 \usepackage{marginnote}
+\usepackage{marginfix}   % 让 \marginpar 自动堆叠、避免重叠、放不下时顺延到下一页
+
+% ---- 智能页边栏：正文里用 \marginpar（marginfix 会自动避让重叠），
+%      在 tcolorbox / 浮动体 / minipage / 表格里 \marginpar 不可用，退回 \marginnote ----
+\newcount\insideboxdepth
+\makeatletter
+\AddToHook{env/minipage/begin}{\global\advance\insideboxdepth\@ne}
+\AddToHook{env/minipage/end}{\global\advance\insideboxdepth\m@ne}
+% 注意：不能用 \@floatpenalty 判断是否在浮动体内——它在一次 \marginpar 之后会一直保持负值。
+% 浮动体一律用环境钩子计数。
+\AddToHook{env/figure/begin}{\global\advance\insideboxdepth\@ne}
+\AddToHook{env/figure/end}{\global\advance\insideboxdepth\m@ne}
+\AddToHook{env/table/begin}{\global\advance\insideboxdepth\@ne}
+\AddToHook{env/table/end}{\global\advance\insideboxdepth\m@ne}
+\AddToHook{env/algorithm/begin}{\global\advance\insideboxdepth\@ne}
+\AddToHook{env/algorithm/end}{\global\advance\insideboxdepth\m@ne}
+\AddToHook{env/longtable/begin}{\global\advance\insideboxdepth\@ne}
+\AddToHook{env/longtable/end}{\global\advance\insideboxdepth\m@ne}
+\newcommand{\smartmargin}[1]{%
+  \ifnum\insideboxdepth>\z@ \marginnote{#1}%
+  \else\ifinner \marginnote{#1}%
+  \else \marginpar{#1}%
+  \fi\fi}
+\makeatother
 \usepackage{mparhack}
 \usepackage{ragged2e}
 \usepackage{sidenotes}
@@ -55,7 +80,7 @@
 
 % ========== 图形 ==========
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta,shapes,positioning,calc,fit,decorations.pathreplacing,patterns}
+\usetikzlibrary{arrows.meta,shapes,positioning,calc,fit,backgrounds,decorations.pathreplacing,patterns}
 \usepackage{graphicx}
 
 \usepackage{pgfplots}
@@ -65,7 +90,10 @@
 \usepackage{xcolor}
 \usepackage{framed}
 \usepackage{tcolorbox}
-\tcbuselibrary{theorems,skins,breakable}
+\makeatletter
+\tcbset{every box/.append style={before upper app={\global\advance\insideboxdepth\@ne}, after upper app={\global\advance\insideboxdepth\m@ne}}}
+\makeatother
+\tcbuselibrary{theorems,skins,breakable,hooks}
 
 % ========== 代码环境 ==========
 \usepackage{listings}
@@ -306,6 +334,17 @@
 \titleformat{\chapter}[display]
 {\normalfont\huge\bfseries}{\chaptertitlename\ \thechapter}{20pt}{\Huge}
 
+% 部分（\part）改为"top"类：标题占页首，同一页紧接"本部分导读"，而不是一页只印一个标题
+\titleclass{\part}{top}
+\titleformat{\part}[display]
+{\centering\normalfont\bfseries}{\Large 第\zhnum{part}部分}{1.2em}{\Huge}[\vspace{0.8em}\rule{\textwidth}{0.6pt}]
+\titlespacing*{\part}{0pt}{40pt}{30pt}
+
+% 每个部分开头的导读盒子
+\newenvironment{partintro}
+{\begin{tcolorbox}[colback=gray!5, colframe=gray!50, boxrule=0.6pt, arc=2mm, left=8pt, right=8pt, top=6pt, bottom=6pt, title=本部分导读, fonttitle=\bfseries]}
+{\end{tcolorbox}}
+
 % ========== 超链接 ==========
 \usepackage{hyperref}
 \hypersetup{
@@ -331,61 +370,71 @@
 
 % 类型1：科学家小故事
 \newcommand{\storynote}[2]{%
-    \marginnote{\small\raggedright
-        \textcolor{blue!70!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
-        \textbf{{\color{blue!70!black}人物} #1}\\[3pt]
-        \textit{#2}\\[-2pt]
-        \textcolor{blue!70!black}{\rule{\marginparwidth}{1pt}}
+    \smartmargin{\small\raggedright
+        \textcolor{blue!70!black}{\rule{\marginparwidth}{1pt}}\par\vspace{2pt}
+        \textbf{{\color{blue!70!black}人物} #1}\par\vspace{3pt}
+        \textit{#2}\par\vspace{-2pt}
+        \noindent\textcolor{blue!70!black}{\rule{\marginparwidth}{1pt}}
     }%
 }
 
 % 类型2：概念澄清
 \newcommand{\clarify}[1]{%
-    \marginnote{\small\raggedright
-        \textcolor{orange!80!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
-        \textbf{{\color{orange!80!black}澄清}}\\[3pt]
-        #1\\[-2pt]
-        \textcolor{orange!80!black}{\rule{\marginparwidth}{1pt}}
+    \smartmargin{\small\raggedright
+        \textcolor{orange!80!black}{\rule{\marginparwidth}{1pt}}\par\vspace{2pt}
+        \textbf{{\color{orange!80!black}澄清}}\par\vspace{3pt}
+        #1\par\vspace{-2pt}
+        \noindent\textcolor{orange!80!black}{\rule{\marginparwidth}{1pt}}
     }%
 }
 
 % 类型3：前方预告
 \newcommand{\preview}[1]{%
-    \marginnote{\small\raggedright
-        \textcolor{purple!70!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
-        \textbf{{\color{purple!70!black}预告}}\\[3pt]
-        #1\\[-2pt]
-        \textcolor{purple!70!black}{\rule{\marginparwidth}{1pt}}
+    \smartmargin{\small\raggedright
+        \textcolor{purple!70!black}{\rule{\marginparwidth}{1pt}}\par\vspace{2pt}
+        \textbf{{\color{purple!70!black}预告}}\par\vspace{3pt}
+        #1\par\vspace{-2pt}
+        \noindent\textcolor{purple!70!black}{\rule{\marginparwidth}{1pt}}
     }%
 }
 
 % 类型4：动手试试
 \newcommand{\tryit}[1]{%
-    \marginnote{\small\raggedright
-        \textcolor{green!60!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
-        \textbf{{\color{green!60!black}动手试试}}\\[3pt]
-        \ttfamily\small #1\\[-2pt]
-        \textcolor{green!60!black}{\rule{\marginparwidth}{1pt}}
+    \smartmargin{\small\raggedright
+        \textcolor{green!60!black}{\rule{\marginparwidth}{1pt}}\par\vspace{2pt}
+        \textbf{{\color{green!60!black}动手试试}}\par\vspace{3pt}
+        \ttfamily\small #1\par\vspace{-2pt}
+        \noindent\textcolor{green!60!black}{\rule{\marginparwidth}{1pt}}
     }%
 }
 
 % 类型5：思考题
 \newcommand{\think}[1]{%
-    \marginnote{\small\raggedright
-        \textcolor{red!70!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
-        \textbf{{\color{red!70!black}想一想}}\\[3pt]
-        #1\\[-2pt]
-        \textcolor{red!70!black}{\rule{\marginparwidth}{1pt}}
+    \smartmargin{\small\raggedright
+        \textcolor{red!70!black}{\rule{\marginparwidth}{1pt}}\par\vspace{2pt}
+        \textbf{{\color{red!70!black}想一想}}\par\vspace{3pt}
+        #1\par\vspace{-2pt}
+        \noindent\textcolor{red!70!black}{\rule{\marginparwidth}{1pt}}
+    }%
+}
+
+% 类型7：普通旁注（正文里原先直接写 \marginnote 的地方统一成这个样式）
+\newcommand{\sidenoteplain}[1]{%
+    \smartmargin{\small\raggedright
+        \textcolor{gray!70!black}{\rule{\marginparwidth}{1pt}}\par\vspace{2pt}
+        \textbf{{\color{gray!70!black}旁注}}\par\vspace{3pt}
+        #1\par\vspace{-2pt}
+        \noindent\textcolor{gray!70!black}{\rule{\marginparwidth}{1pt}}
     }%
 }
 
 % 类型6：回顾前置知识
 \newcommand{\review}[2]{%
-    \marginnote{\small\raggedright
-        \textcolor{teal!80!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
-        \textbf{{\color{teal!80!black}回顾} #1}\\[3pt]
-        #2\\[-2pt]
-        \textcolor{teal!80!black}{\rule{\marginparwidth}{1pt}}
+    \smartmargin{\small\raggedright
+        \textcolor{teal!80!black}{\rule{\marginparwidth}{1pt}}\par\vspace{2pt}
+        \textbf{{\color{teal!80!black}回顾} #1}\par\vspace{3pt}
+        #2\par\vspace{-2pt}
+        \noindent\textcolor{teal!80!black}{\rule{\marginparwidth}{1pt}}
     }%
 }
 
@@ -398,7 +447,8 @@
 % ========== 文档信息 ==========
 \title{
     \vspace{-2cm}
-    {\Huge\bfseries 大二开始的物理智能} \\[1cm]
+    {\Huge\bfseries 物理智能（Physical AI）的理论基础} \\[0.8cm]
+    {\Large 以约束优化为主线} \\[1cm]
 }
 \author{冯恺睿，何斌}
 \date{\today}
@@ -408,7 +458,12 @@
 
 \maketitle
 
-% ========== 全书核心 ==========
+% ========== 前言（含阅读导航图）==========
+\input{chapters/preface}
+
+\tableofcontents
+
+% ========== 导论：全书核心思想 ==========
 \chapter*{全书核心思想}
 \addcontentsline{toc}{chapter}{全书核心思想}
 
@@ -445,42 +500,92 @@ PINN & 数据拟合 + PDE约束 & 物理信息损失 \\
 \end{center}
 \end{unification}
 
-\tableofcontents
+\section*{四个部分，一条主线}
+
+全书分四个部分，每个部分回答一个问题，而所有答案都长成同一个样子——$\Lag = f + \lambda^\top g$。阅读导航图见前言的图~\ref{fig:reading_map}。
+
+\begin{center}
+\small
+\begin{tabular}{@{}p{2.4cm}p{4.6cm}p{3.6cm}p{1.8cm}@{}}
+\toprule
+\textbf{部分} & \textbf{回答的问题} & \textbf{$\lambda$ 在这里叫什么} & \textbf{章} \\
+\midrule
+I 数学统一语言 & "有条件的最优"怎么写成方程？不确定性怎么写成约束？ & 影子价格、对偶变量、逆温度 & 1--4 \\
+II 物理中的优化 & 物理定律为什么长这样？怎样让物理系统按我们的意愿运动？ & 约束力、节点力、接触力、协态变量 & 5--8 \\
+III 学习中的优化 & 模型与策略从哪里来？ & 误差信号、值函数 & 9--12 \\
+IV 前沿交叉 & 物理、学习、决策怎样合到一起成为物理智能？ & 物理约束权重、均衡价格、安全约束的价格 & 13--16 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent\textbf{怎么读}：第一部分是所有后续内容的语言；第二部分从静态的变分原理走到随时间演化的动力学与控制；第三部分把"物理"换成"数据"，结构不变；两条路在第四部分汇合。第 8 章是全书的枢纽——它的"前向算状态、后向算 $\lambda$"在第 9、10、16 章各出现一次。
+
 
 % ####################################################################################
-%                              第一部分：数学基础
+%                              第一部分：数学统一语言
 % ####################################################################################
 
-\part{数学基础与统一语言}
+\part{数学统一语言：约束优化、对偶、变分与最大熵}
+
+\begin{partintro}
+\textbf{本部分回答的问题}：一个"有条件的最优"问题，怎样写成方程？方程里多出来的那个 $\lambda$ 是什么？不确定性也能写成约束吗？
+
+四章的关系是"由小到大、由确定到随机"：
+\begin{itemize}
+    \item \textbf{第1章}在有限维里建立全书的语言：$\Lag = f + \lambda^\top g$、KKT 条件、$\lambda$ 是约束的\textbf{影子价格}；
+    \item \textbf{第2章}换一个角度看同一个问题——把 $\lambda$ 当主角，得到对偶问题，并由此得到第一批算法（对偶上升、增广拉格朗日）；
+    \item \textbf{第3章}把"点"换成"函数"，KKT 条件变成欧拉--拉格朗日方程，为第二部分的物理原理准备语言；
+    \item \textbf{第4章}把"点"换成"概率分布"：熵取极大、矩约束给定，$\lambda$ 变成\textbf{逆温度}和\textbf{每比特的代价}，softmax、交叉熵、KL 散度全部从这里长出来——这是第三部分学习方法的语言。
+\end{itemize}
+\textbf{往后看}：全书后面 12 章没有一章离得开这四章。第二部分（第 5--8 章）直接用第 3 章的变分法；第三部分的反向传播、强化学习是第 1 章 KKT 条件在"时间/层"上的重复，它们的损失函数与熵正则来自第 4 章；第四部分的多智能体是第 2 章对偶的多方版本。
+\end{partintro}
 
 \input{chapters/chap01}  % 第1章：从高数到约束优化
 \input{chapters/chap02}  % 第2章：对偶理论
 \input{chapters/chap03}  % 第3章：变分法
+\input{chapters/chap04}  % 第4章：信息与编码：最大熵原理
 
 % ####################################################################################
-%                              第二部分：物理应用
+%                              第二部分：物理中的优化
 % ####################################################################################
 
-\part{物理世界中的约束优化}
+\part{物理中的优化：从最小作用量到最优控制}
 
-\input{chapters/chap04}  % 第4章：经典力学
-\input{chapters/chap05}  % 第5章：有限元方法
+\begin{partintro}
+\textbf{本部分回答的问题}：物理定律为什么长成那样？知道了物理定律之后，怎样让一个物理系统按我们的意愿运动？
 
-% ####################################################################################
-%                              第三部分：控制与信息
-% ####################################################################################
+前两章讲"自然自己在做约束优化"，后两章讲"工程师怎样在物理约束下做优化"：
+\begin{itemize}
+    \item \textbf{第5章 最小作用量}：作用量取极值 $\Rightarrow$ 牛顿方程、哈密顿方程；$\lambda$ 是\textbf{约束力}和\textbf{广义动量}；
+    \item \textbf{第6章 能量极小与有限元}：势能取极小 $\Rightarrow$ $KU = F$；$\lambda$ 是\textbf{节点力}和\textbf{边界反力}，这一章也是全书数值方法的起点；
+    \item \textbf{第7章 机器人运动学与动力学}：把"物理系统"具体化成机械臂——几何约束（运动学）、接触约束（动力学）；$\lambda$ 是\textbf{接触力}和\textbf{关节力矩}；
+    \item \textbf{第8章 轨迹优化与 MPC}：约束不再是一条静态方程，而是随时间演化的动力学 $\dot x = f(x,u)$；$\lambda(t)$ 变成\textbf{协态变量}，一阶条件变成\textbf{伴随方程}（Pontryagin 原理）；MPC 则是"边走边重解"。
+\end{itemize}
+\textbf{为什么第8章是全书的枢纽}：它的"前向算状态、后向算 $\lambda$"这一对方程，在第9章叫反向传播，在第10章叫贝尔曼方程，在第16章叫可微物理。读懂第8章，后面三章的核心公式都可以自己推出来。
+\end{partintro}
 
-\part{控制、信息与机器人}
-
-\input{chapters/chap06}  % 第6章：信息与编码
+\input{chapters/chap05}  % 第5章：经典力学
+\input{chapters/chap06}  % 第6章：有限元方法
 \input{chapters/chap07}  % 第7章：机器人运动学与动力学
 \input{chapters/chap08}  % 第8章：轨迹优化与MPC
 
 % ####################################################################################
-%                              第四部分：机器学习
+%                              第三部分：学习中的优化
 % ####################################################################################
 
-\part{机器学习中的约束优化}
+\part{学习中的优化：把物理换成数据}
+
+\begin{partintro}
+\textbf{本部分回答的问题}：当物理模型不完整、或者根本写不出来时，模型和策略从哪里来？答案是从数据里学——而"学习"仍然是约束优化，只是约束从"物理定律"换成了"计算图"和"经验数据"。
+
+\begin{itemize}
+    \item \textbf{第9章 反向传播}：每一层网络是一条等式约束，$\lambda_i$ 是\textbf{误差信号}，反向传播就是第8章的伴随方程；
+    \item \textbf{第10章 强化学习}：把第8章的终点推到无穷远，$\lambda$ 变成\textbf{值函数的梯度}，伴随方程变成贝尔曼方程；控制里"在线解 $\lambda$"，学习里"离线学 $V$"；
+    \item \textbf{第11章 序列建模}：把时间放进网络（RNN 的时间反传）再放进注意力（Transformer），并把图像也变成 token（视觉--语言模型）；
+    \item \textbf{第12章 工程实现}：显存、算力、通信是另一种约束——资源约束下的优化，没有它前面的模型跑不起来。
+\end{itemize}
+\textbf{往后看}：第9章的"可微"是第13、14、16章的前提；第10章的值函数在第15章变成每个智能体各自的 $V$；第11、12章的 Transformer 是第16章视觉--语言--动作模型和世界模型的骨架。
+\end{partintro}
 
 \input{chapters/chap09}  % 第9章：深度学习与反向传播
 \input{chapters/chap10}  % 第10章：强化学习
@@ -488,15 +593,26 @@ PINN & 数据拟合 + PDE约束 & 物理信息损失 \\
 \input{chapters/chap12}  % 第12章：Transformer实战：显存、算力与工程实现
 
 % ####################################################################################
-%                              第五部分：前沿交叉
+%                              第四部分：前沿交叉
 % ####################################################################################
 
-\part{前沿交叉}
+\part{前沿交叉：走向物理智能}
+
+\begin{partintro}
+\textbf{本部分回答的问题}：物理（第二部分）和学习（第三部分）怎样合到一起，成为能在物理世界里感知、预测、行动的智能？四章是四种"合法"：
+\begin{itemize}
+    \item \textbf{第13章 物理信息神经网络}：把 PDE 当约束加进损失——第6章的方程 + 第9章的网络；$\rho$ 是罚系数，$\lambda$ 是\textbf{边界条件的影子价格}；
+    \item \textbf{第14章 神经算子}：不学一个解，学"方程到解"的整个映射——第6章的离散化换成可学习的算子；
+    \item \textbf{第15章 多智能体}：很多个第10章的智能体互为约束，$\lambda$ 变成\textbf{均衡价格}和\textbf{拥挤费}，纳什均衡是联立的 KKT 条件，平均场是它的连续极限；
+    \item \textbf{第16章 世界模型与具身智能}：把第8章的动力学换成学出来的模型（可微物理、隐空间动力学），用第1章的不等式约束保证安全（控制屏障函数），再把第11章的 VLM 接上动作变成 VLA；$\lambda$ 是\textbf{安全约束的价格}。
+\end{itemize}
+\textbf{回到起点}：第16章最后把全书 16 章排成一张表——目标 $f$ 是什么、约束 $g$ 是什么、$\lambda$ 代表什么。物理智能的理论基础，就是这张表。
+\end{partintro}
 
 \input{chapters/chap13}  % 第13章：PINN
 \input{chapters/chap14}  % 第14章：算子学习
 \input{chapters/chap15}  % 第15章：多智能体与博弈
-\input{chapters/chap16}  % 第16章：展望
+\input{chapters/chap16}  % 第16章：世界模型与具身智能
 
 % ####################################################################################
 %                              全书总结
@@ -534,6 +650,8 @@ L(x, \lambda) = f(x) + \lambda^T g(x)
 \end{center}
 
 \vspace{1em}
+
+回头看全书的四个部分，它们其实是同一个框架的四次"换约束"：第一部分把约束写成方程（包括把不确定性写成矩约束）；第二部分的约束是物理定律——先是自然自己在解，再是随时间演化、$\lambda$ 变成协态；第三部分把约束换成计算图和数据，$\lambda$ 变成误差信号和值函数；第四部分把物理约束重新加回学习，得到物理智能。
 
 \textbf{核心信息}：当你在任何领域遇到"有条件的优化"问题时，都可以用约束优化的框架来思考。
 $\lambda$不只是数学上的"技巧"，它有深刻的物理/经济/信息含义——它度量了约束的"价格"。

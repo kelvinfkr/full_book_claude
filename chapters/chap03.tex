@@ -69,7 +69,7 @@
 \caption{最速降线问题：直线不是最快路径}
 \end{figure}
 
-\marginnote{这就像开车去机场：高速公路虽然绑了一圈，但因为速度快，总时间可能比走市区直线更短。}
+\sidenoteplain{这就像开车去机场：高速公路虽然绑了一圈，但因为速度快，总时间可能比走市区直线更短。}
 
 \begin{tcolorbox}[colback=green!5, colframe=green!60!black, title=学完这章，你将能够...]
 \begin{itemize}
@@ -295,7 +295,7 @@ y_k \approx y(x_k), \quad k = 0, 1, \ldots, N
 v_k \approx y'(x_k) \approx \frac{y_{k+1} - y_k}{\Delta x}
 \]
 
-\marginnote{差分是导数的离散版本。当 $\Delta x \to 0$ 时，$\frac{y_{k+1} - y_k}{\Delta x} \to y'(x_k)$。}
+\sidenoteplain{差分是导数的离散版本。当 $\Delta x \to 0$ 时，$\frac{y_{k+1} - y_k}{\Delta x} \to y'(x_k)$。}
 
 \paragraph{泛函变成求和}
 
@@ -620,7 +620,7 @@ y(x) = ax^3 + bx^2 + cx + d
 \paragraph{物理分析}
 
 链条会达到势能最小的状态。设链条的线密度为 $\rho$，则每小段 $ds$ 的质量是 $\rho \, ds$，高度为 $y$，势能为 $\rho g y \, ds$。
-\marginnote{悬链线和抛物线看起来很像，但数学形式完全不同。抛物线是 $y = x^2$，悬链线是 $y = \cosh x$。圣路易斯的大拱门就是一条倒置的悬链线。}
+\sidenoteplain{悬链线和抛物线看起来很像，但数学形式完全不同。抛物线是 $y = x^2$，悬链线是 $y = \cosh x$。圣路易斯的大拱门就是一条倒置的悬链线。}
 总势能：
 \[
 V = \int \rho g y \, ds = \rho g \int_a^b y \sqrt{1 + (y')^2} \, dx
@@ -808,7 +808,7 @@ E-L 方程：
 \lambda \cdot \frac{y''}{(1+(y')^2)^{3/2}} = -1
 \]
 
-\marginnote{平面曲线 $y = y(x)$ 在点 $x$ 处的曲率定义为
+\sidenoteplain{平面曲线 $y = y(x)$ 在点 $x$ 处的曲率定义为
 \[
 \kappa = \frac{y''}{(1+(y')^2)^{3/2}}
 \]
@@ -1020,7 +1020,7 @@ J[y_\epsilon] = J[y^* + \epsilon\eta] = \int_a^b F(x, y^* + \epsilon\eta, y^{*\p
 
 \textbf{核心洞察}：E-L 方程不是"新发明"，而是有限维乘子法的自然极限。
 
-从下一章开始，我们将用这套语言重新理解物理世界——牛顿力学、热力学、电磁学，都可以看作变分问题！
+从下一章开始，我们将用这套语言重新理解自然界：先是"不确定性"（第4章的最大熵），再是牛顿力学与连续介质（第5、6章）——它们都可以看作变分问题！
 \end{unification}
 
 % ------------------------------------------------------------------------------------

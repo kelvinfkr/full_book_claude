@@ -1,5 +1,5 @@
 """
-第5章扩展：流固耦合有限元示例
+第6章扩展：流固耦合有限元示例
 模拟高速流体吹动悬臂梁的振动响应
 
 物理模型：
@@ -590,7 +590,7 @@ def plot_fem_matrices(save_path):
 # 主程序
 # =============================================================================
 if __name__ == "__main__":
-    output_dir = "/home/user/full_book_claude/figs_chap05"
+    output_dir = "/home/user/full_book_claude/figs_chap06"
 
     print("=" * 60)
     print("FSI Cantilever Beam Simulation")

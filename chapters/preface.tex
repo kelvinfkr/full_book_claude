@@ -1,0 +1,164 @@
+% ====================================================================================
+\chapter*{前言：当比特遇见原子——通往物理智能之路}
+\addcontentsline{toc}{chapter}{前言：当比特遇见原子——通往物理智能之路}
+\markboth{前言}{前言}
+% ====================================================================================
+
+\section*{写作缘起：跨越两座大山的鸿沟}
+
+近年来，"人工智能"已然成为当前时代的显学。我们目睹了以大模型为代表的数据驱动方法在语言生成、图像识别等领域创造的奇迹。然而，当我们将目光从比特构成的虚拟世界投向原子构成的物理世界时，情况变得复杂起来。
+
+在屏幕之后，ChatGPT 可以允许偶尔的"幻觉"；但在现实之中，机器人、自动驾驶汽车、能源网络和基础设施必须在严苛的物理法则下运行。重力不会因为损失函数的下降而消失，机械臂的惯性也不接受数据的妥协。
+
+本书的写作动机，源于一个在学术界与工业界反复出现的现实矛盾：纯粹的数据驱动方法往往缺乏可解释性与安全性，而传统的物理建模方法又难以应对极端复杂的非线性环境。
+
+我们需要回答一个核心问题：
+\begin{quote}
+当智能真正走出屏幕、进入物理世界时，我们如何构建一个既尊重物理定律（Structure），又具备自适应能力（Learning）的系统？
+\end{quote}
+
+这使得"理解结构"与"尊重物理"不再是锦上添花的选项，而是智能系统得以成立的基石。
+
+\section*{什么是"物理智能"？}
+
+从人工智能的角度看，\textbf{物理智能（Physical AI）}指的是让机器人、无人系统或任何一台计算机\textbf{拥有物理世界的知识}：当它与物理世界交互时，能够\textbf{感知}物理系统的状态，\textbf{预测}物理系统接下来的行为，并据此\textbf{行动}，在物理世界中成功完成任务。感知、预测、行动，三件事缺一不可——不会预测的系统只能被动反应，不会行动的系统只是一台传感器。
+
+从数学的角度看，本书所说的"物理智能"并非指代某一个特定的神经网络架构，而是一种看待世界的统一视角：
+\begin{quote}
+\textbf{智能，即在物理约束的可行域内，通过优化与学习寻找最优解的过程。}
+\end{quote}
+
+两种说法其实是一回事。"知道物理"意味着知道约束在哪里（动力学方程、守恒律、安全边界）；"感知与预测"意味着能算出系统在这些约束下会去哪里；"行动"意味着在可行域内挑出最好的那条路。一旦戴上这副眼镜，你会惊讶地发现，那些看似割裂的学科——经典力学、数值计算、最优控制、深度学习与强化学习——实际上是在回答同一个问题的不同侧面：
+\begin{itemize}
+    \item \textbf{力学}：大自然如何通过"最小作用量原理"规划粒子的运动轨迹？
+    \item \textbf{控制}：工程师如何通过"贝尔曼方程"在不确定性中寻找最优策略？
+    \item \textbf{学习}：AI 如何通过"反向传播"在参数空间中逼近目标函数？
+\end{itemize}
+
+它们并非毫无关联的孤岛，而是由"约束优化"这一数学骨架串联起来的群岛。本书试图用一套统一的语言，重构这些知识的连接。
+
+\section*{本书的组织逻辑}
+
+传统教学往往将数学、力学、控制与 AI 分割在不同的学期与课程中。学生们常常在掌握了各种复杂的工具后，却难以拼凑出全景图。
+
+本书选择了一条"第一性原理"的叙事线索：不以算法清单为目录，而是以数学结构的演化为主轴。全书分四个部分：
+\begin{enumerate}
+    \item \textbf{数学统一语言}（第 1--4 章）：约束优化与拉格朗日乘子、对偶、变分法、最大熵——后面所有内容的语言。
+    \item \textbf{物理中的优化}（第 5--8 章）：最小作用量、能量极小与有限元、机器人动力学、轨迹优化——自然与工程如何"解"约束优化。
+    \item \textbf{学习中的优化}（第 9--12 章）：反向传播、强化学习、序列建模与 Transformer、大模型工程——把"物理"换成"数据"之后，同样的结构。
+    \item \textbf{前沿交叉}（第 13--16 章）：物理信息神经网络、神经算子、多智能体、世界模型与具身智能——物理与学习在此汇合成物理智能。
+\end{enumerate}
+
+你将在书中看到同一思想的反复回响：
+\begin{itemize}
+    \item \textbf{拉格朗日乘子}（Lagrange Multiplier）如何从微积分走向力学，再化身为神经网络中的对偶变量？
+    \item \textbf{变分法}（Calculus of Variations）如何推导出欧拉--拉格朗日方程，又如何演变为最优控制中的伴随方程？
+    \item \textbf{梯度下降}（Gradient Descent）如何在能量极小化问题中找到物理原型？
+\end{itemize}
+
+理解了这些深层的同构性，你就不再是仅仅学会了使用工具，而是理解了工具被创造的原因。
+
+\section*{读者对象与先修知识}
+
+本书不要求读者具备深厚的机器学习或机器人学先验经验。我们假设你是一位完成了本科基础数学课程的读者，具备以下基础：
+\begin{itemize}
+    \item \textbf{微积分}：理解多元函数的导数、梯度与积分。
+    \item \textbf{线性代数}：熟悉向量、矩阵运算及特征值的几何意义。
+\end{itemize}
+
+这就足够了。所有关于概率论、泛函分析或深度学习的高级概念，我们都将从最直观的物理背景出发，现场引入，现场推导。
+
+\section*{如何使用本书：阅读导航图}
+
+本书的章节并非线性堆叠，而是网状交织。为了帮助不同背景的读者找到最适合自己的路径，我们绘制了章节依赖与阅读建议图（图~\ref{fig:reading_map}）。
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    x=1cm, y=1cm,
+    chap/.style={draw, line width=0.8pt, rounded corners=2pt, text width=2.45cm, minimum height=0.95cm, align=center, font=\scriptsize, inner sep=2pt},
+    core/.style={line width=1.2pt},
+    opt/.style={dashed},
+    math/.style={fill=gray!12},
+    phys/.style={fill=blue!12},
+    ml/.style={fill=orange!18},
+    partlab/.style={text width=2.2cm, align=center, font=\small\bfseries},
+    partbox/.style={draw=gray!60, rounded corners=4pt, fill=gray!4, inner sep=5pt},
+    main/.style={-{Stealth[length=2mm]}, thick, gray!70!black},
+    link/.style={-{Stealth[length=1.6mm]}, blue!60!black, thin, dashed},
+]
+    \def\rowA{0}\def\rowB{-1.75}\def\rowC{-3.5}\def\rowD{-5.25}
+    \def\xa{3.1}\def\xb{5.85}\def\xc{8.6}\def\xd{11.35}
+    % ---- I ----
+    \node[partlab] (pA) at (0.85,\rowA) {I 数学统一语言\\[-2pt]{\scriptsize\mdseries 第 1--4 章}};
+    \node[chap, core, math] (c1) at (\xa,\rowA) {第1章\\约束优化与乘子法};
+    \node[chap, core, math] (c2) at (\xb,\rowA) {第2章\\对偶理论与几何};
+    \node[chap, core, math] (c3) at (\xc,\rowA) {第3章\\变分法基础};
+    \node[chap, opt, ml]    (c4) at (\xd,\rowA) {第4章\\最大熵原理};
+    % ---- II ----
+    \node[partlab] (pB) at (0.85,\rowB) {II 物理中的优化\\[-2pt]{\scriptsize\mdseries 第 5--8 章}};
+    \node[chap, core, phys] (c5) at (\xa,\rowB) {第5章\\最小作用量原理};
+    \node[chap, opt, phys]  (c6) at (\xb,\rowB) {第6章\\能量与有限元};
+    \node[chap, opt, phys]  (c7) at (\xc,\rowB) {第7章\\机器人动力学};
+    \node[chap, core, phys] (c8) at (\xd,\rowB) {第8章\\轨迹优化};
+    % ---- III ----
+    \node[partlab] (pC) at (0.85,\rowC) {III 学习中的优化\\[-2pt]{\scriptsize\mdseries 第 9--12 章}};
+    \node[chap, core, ml] (c9)  at (\xa,\rowC) {第9章\\深度学习的优化视角};
+    \node[chap, core, ml] (c10) at (\xb,\rowC) {第10章\\强化学习与控制};
+    \node[chap, opt, ml]  (c11) at (\xc,\rowC) {第11章\\序列建模（RNN/Transformer）};
+    \node[chap, opt, ml]  (c12) at (\xd,\rowC) {第12章\\大模型工程实战};
+    % ---- IV ----
+    \node[partlab] (pD) at (0.85,\rowD) {IV 前沿交叉\\[-2pt]{\scriptsize\mdseries 第 13--16 章}};
+    \node[chap, core, phys] (c13) at (\xa,\rowD) {第13章\\PINN 物理信息网络};
+    \node[chap, opt, phys]  (c14) at (\xb,\rowD) {第14章\\神经算子};
+    \node[chap, opt, ml]    (c15) at (\xc,\rowD) {第15章\\多智能体与博弈};
+    \node[chap, core, ml]   (c16) at (\xd,\rowD) {第16章\\世界模型与具身智能};
+    % ---- 部分背景 ----
+    \begin{scope}[on background layer]
+        \node[partbox, fit=(pA)(c1)(c4)] {};
+        \node[partbox, fit=(pB)(c5)(c8)] {};
+        \node[partbox, fit=(pC)(c9)(c12)] {};
+        \node[partbox, fit=(pD)(c13)(c16)] {};
+    \end{scope}
+    % ---- 部分内顺序 ----
+    \draw[main] (c1) -- (c2); \draw[main] (c2) -- (c3); \draw[main] (c3) -- (c4);
+    \draw[main] (c5) -- (c6); \draw[main] (c6) -- (c7); \draw[main] (c7) -- (c8);
+    \draw[main] (c9) -- (c10); \draw[main] (c10) -- (c11); \draw[main] (c11) -- (c12);
+    \draw[main] (c13) -- (c14); \draw[main] (c14) -- (c15); \draw[main] (c15) -- (c16);
+    % ---- 跨部分依赖 ----
+    \draw[link] (c3) -- node[left, font=\tiny, black, pos=0.5] {变分原理} (c5.north east);
+    \draw[link] (c8) -- node[right, font=\tiny, black, pos=0.4] {伴随方程} (c9.north east);
+    \draw[link] (c8) -- node[right, font=\tiny, black, pos=0.6] {贝尔曼} (c10);
+    \draw[link] (c4) to[bend left=18] node[right, font=\tiny, black, pos=0.35] {softmax、熵正则} (c10.north east);
+    \draw[link] (c6) to[bend right=20] node[left, font=\tiny, black, pos=0.75] {PDE 离散化} (c13.north west);
+    \draw[link] (c9) -- node[right, font=\tiny, black, pos=0.5] {可微} (c13);
+    \draw[link] (c10) -- node[right, font=\tiny, black, pos=0.5] {多个智能体} (c15);
+    \draw[link] (c12) -- node[right, font=\tiny, black, pos=0.5] {模型与安全} (c16);
+    % ---- 图例 ----
+    \node[chap, core, fill=white, text width=1.6cm, minimum height=0.55cm] (lg1) at (2.0,-7.0) {核心章节};
+    \node[chap, opt,  fill=white, text width=1.6cm, minimum height=0.55cm] (lg2) at (4.1,-7.0) {选读章节};
+    \node[chap, phys, text width=1.9cm, minimum height=0.55cm] (lg3) at (6.4,-7.0) {物理/控制侧重};
+    \node[chap, ml,   text width=1.7cm, minimum height=0.55cm] (lg4) at (8.6,-7.0) {AI/ML 侧重};
+    \draw[link] (9.8,-7.0) -- node[above, font=\tiny, black] {知识依赖} (11.6,-7.0);
+\end{tikzpicture}
+\caption{本书阅读导航图：实线是各部分内部的顺序，虚线是跨部分的知识依赖；粗框为核心章节，虚框为选读章节；蓝色偏物理/控制，橙色偏 AI/ML。读者可以根据背景选择不同的穿越路径。}
+\label{fig:reading_map}
+\end{figure}
+
+两条推荐路径：
+\begin{itemize}
+    \item \textbf{物理建模路径}（偏物理、力学、机器人背景）：第 1、2、3 章 $\to$ 第 5、6、7、8 章 $\to$ 第 13、14 章 $\to$ 第 16 章；需要用到学习方法时再回头补第 9、10 章。
+    \item \textbf{ML 速成路径}（偏计算机、AI 背景）：第 1、2 章 $\to$ 第 4 章 $\to$ 第 9、10、11、12 章 $\to$ 第 15、16 章；想弄懂 PINN 与神经算子时再补第 3、5、6 章。
+\end{itemize}
+无论走哪条路，第 1、2 章是所有人的起点，第 8 章是全书的枢纽——它的"前向算状态、后向算乘子"在第 9、10、16 章各出现一次，读懂它，后面三章的核心公式都可以自己推出来。
+
+\section*{写在最后}
+
+这本书不是一本详尽的技术手册，它更像是一张连接不同领域的"地图"。我们希望它能完成一件基础而长期被忽视的事情：
+\begin{quote}
+为那些渴望理解"智能如何在物理世界中涌现"的读者，提供一条清晰、连续、不迷失方向的逻辑链条。
+\end{quote}
+
+如果在阅读某一个公式时，你突然意识到它与几十页前力学章节中的某个原理遥相呼应，并因此感到一种智力上的愉悦与豁然开朗，那么这本书的目的就已经达到了。
+
+让我们开始吧。

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-第5章：有限元与性能实验演示
+第6章：有限元与性能实验演示
 
 这里演示书中提到的几个关键实验：
 1. Python GIL 对多线程的影响
@@ -20,7 +20,7 @@ from plot_utils import setup_chinese_font
 setup_chinese_font()
 
 print("="*60)
-print("第5章：性能实验演示")
+print("第6章：性能实验演示")
 print("="*60)
 
 # ==================== 实验1：GIL的影响 ====================
@@ -159,8 +159,8 @@ ax3.set_yscale('log')
 ax3.grid(axis='y', linestyle='--', alpha=0.7)
 
 plt.tight_layout()
-plt.savefig('figs/chap05_fig1.png', dpi=150, bbox_inches='tight')
-print("\n图像已保存到 figs/chap05_fig1.png")
+plt.savefig('figs/chap06_fig1.png', dpi=150, bbox_inches='tight')
+print("\n图像已保存到 figs/chap06_fig1.png")
 
 # ==================== 有限元1D热传导求解演示 ====================
 print("\n" + "="*60)
@@ -263,8 +263,8 @@ ax5.legend()
 ax5.grid(True, which='both', alpha=0.3)
 
 plt.tight_layout()
-plt.savefig('figs/chap05_fig2.png', dpi=150, bbox_inches='tight')
-print("图像已保存到 figs/chap05_fig2.png")
+plt.savefig('figs/chap06_fig2.png', dpi=150, bbox_inches='tight')
+print("图像已保存到 figs/chap06_fig2.png")
 
 # 打印刚度矩阵结构（小规模）
 print("\n有限元刚度矩阵示例（4个单元）：")
@@ -483,8 +483,8 @@ ax8.set_xlabel('$x_1$', fontsize=12)
 ax8.set_ylabel('$x_2$', fontsize=12)
 
 plt.tight_layout()
-plt.savefig('figs/chap05_fig3.png', dpi=150, bbox_inches='tight')
-print("\n预条件子实验图像已保存到 figs/chap05_fig3.png")
+plt.savefig('figs/chap06_fig3.png', dpi=150, bbox_inches='tight')
+print("\n预条件子实验图像已保存到 figs/chap06_fig3.png")
 
 # 打印总结
 print("\n" + "="*60)
@@ -513,4 +513,4 @@ print(f"""
 """)
 
 plt.show()
-print("\n第5章代码执行完成！")
+print("\n第6章代码执行完成！")

@@ -1,18 +1,18 @@
 """
-第4章扩展：ODE数值方法与保能量积分器
+第5章扩展：ODE数值方法与保能量积分器
 =====================================
 
 比较 Euler、RK4、辛积分器（辛 Euler、Störmer-Verlet）在简谐振子上的表现。
 
 从仓库根目录运行::
 
-    python3 code_chap04/ode_numerical_methods.py
+    python3 code_chap05/ode_numerical_methods.py
 
 输出（同时给出 pdf 与 png）：
-- figs_chap04/harmonic_comparison   简谐振子：轨迹 / 能量 / 相空间 / 相对能量误差
-- figs_chap04/long_time_comparison  长时间积分：RK4 能量线性漂移 vs Verlet 有界振荡
-- figs_chap04/convergence_order     收敛阶验证（误差 vs 步长，双对数坐标 + 拟合斜率）
-- figs_chap04/pendulum_comparison   单摆（非线性）三种积分器对比（正文未引用，保留）
+- figs_chap05/harmonic_comparison   简谐振子：轨迹 / 能量 / 相空间 / 相对能量误差
+- figs_chap05/long_time_comparison  长时间积分：RK4 能量线性漂移 vs Verlet 有界振荡
+- figs_chap05/convergence_order     收敛阶验证（误差 vs 步长，双对数坐标 + 拟合斜率）
+- figs_chap05/pendulum_comparison   单摆（非线性）三种积分器对比（正文未引用，保留）
 """
 
 import sys
@@ -341,7 +341,7 @@ def plot_convergence_order(save_path):
 
 # =============================================================================
 if __name__ == '__main__':
-    out = 'figs_chap04'
+    out = 'figs_chap05'
     print('[1] 简谐振子对比');       plot_harmonic_comparison(f'{out}/harmonic_comparison')
     print('[2] 单摆对比');           plot_pendulum_comparison(f'{out}/pendulum_comparison')
     print('[3] 长时间积分');         plot_long_time_comparison(f'{out}/long_time_comparison')

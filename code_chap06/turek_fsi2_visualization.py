@@ -583,7 +583,7 @@ def plot_fsi2_vortex_street(save_path):
 # =============================================================================
 
 if __name__ == "__main__":
-    output_dir = "/home/user/full_book_claude/figs_chap05"
+    output_dir = "/home/user/full_book_claude/figs_chap06"
     os.makedirs(output_dir, exist_ok=True)
 
     print("=" * 60)
