@@ -3,9 +3,12 @@
 % ========== 中文支持 ==========
 \usepackage{fontspec}
 \usepackage[UTF8]{ctex}
+\usepackage{zhnumber}   % 部分编号用中文数字
 
 % 单独给西里尔字母指定一个字体
-\newfontfamily\cyrillicfont{Times New Roman}
+\IfFontExistsTF{Times New Roman}{\newfontfamily\cyrillicfont{Times New Roman}}{\newfontfamily\cyrillicfont{DejaVu Serif}}
+% 生僻字（第13章的"龘、靐"）Fandol 字体没有，若装了 Noto CJK 就用它兜底
+\IfFontExistsTF{Noto Serif CJK SC}{\newCJKfontfamily\rarecjkfont{Noto Serif CJK SC}}{\newcommand{\rarecjkfont}{}}
 
 % ========== 数学 ==========
 \usepackage{amsmath,amssymb,amsthm}
@@ -41,6 +44,31 @@
 
 % ========== 页边栏设置 ==========
 \usepackage{marginnote}
+\usepackage{marginfix}   % 让 \marginpar 自动堆叠、避免重叠、放不下时顺延到下一页
+
+% ---- 智能页边栏：正文里用 \marginpar（marginfix 会自动避让重叠），
+%      在 tcolorbox / 浮动体 / minipage / 表格里 \marginpar 不可用，退回 \marginnote ----
+\newcount\insideboxdepth
+\makeatletter
+\AddToHook{env/minipage/begin}{\global\advance\insideboxdepth\@ne}
+\AddToHook{env/minipage/end}{\global\advance\insideboxdepth\m@ne}
+% 注意：不能用 \@floatpenalty 判断是否在浮动体内——它在一次 \marginpar 之后会一直保持负值。
+% 浮动体一律用环境钩子计数。
+\AddToHook{env/figure/begin}{\global\advance\insideboxdepth\@ne}
+\AddToHook{env/figure/end}{\global\advance\insideboxdepth\m@ne}
+\AddToHook{env/table/begin}{\global\advance\insideboxdepth\@ne}
+\AddToHook{env/table/end}{\global\advance\insideboxdepth\m@ne}
+\AddToHook{env/algorithm/begin}{\global\advance\insideboxdepth\@ne}
+\AddToHook{env/algorithm/end}{\global\advance\insideboxdepth\m@ne}
+\AddToHook{env/longtable/begin}{\global\advance\insideboxdepth\@ne}
+\AddToHook{env/longtable/end}{\global\advance\insideboxdepth\m@ne}
+% 页边栏正文显式置黑：断页处的盒子会把"白色"留在颜色栈顶，使下一页页首的页边栏正文变白（不可见）
+\newcommand{\smartmargin}[1]{%
+  \ifnum\insideboxdepth>\z@ \marginnote{\color{black}#1}%
+  \else\ifinner \marginnote{\color{black}#1}%
+  \else \marginpar{\color{black}#1}%
+  \fi\fi}
+\makeatother
 \usepackage{mparhack}
 \usepackage{ragged2e}
 \usepackage{sidenotes}
@@ -48,12 +76,14 @@
 \usepackage{enumitem}
 \usepackage{booktabs}
 \usepackage{array}
+\usepackage{tabularx}   % 宽表格：X 列自动换行，防止超出版心
+\usepackage{float}      % [H]：段落小标题之后紧跟的表/图就地放置，避免标题与内容分离
 \usepackage{multirow}
 \usepackage{longtable}
 
 % ========== 图形 ==========
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta,shapes,positioning,calc,fit,decorations.pathreplacing,patterns}
+\usetikzlibrary{arrows.meta,shapes,positioning,calc,fit,backgrounds,decorations.pathreplacing,patterns}
 \usepackage{graphicx}
 
 \usepackage{pgfplots}
@@ -63,7 +93,14 @@
 \usepackage{xcolor}
 \usepackage{framed}
 \usepackage{tcolorbox}
-\tcbuselibrary{theorems,skins,breakable}
+\makeatletter
+\tcbset{every box/.append style={before upper app={\global\advance\insideboxdepth\@ne}, after upper app={\global\advance\insideboxdepth\m@ne}}}
+% 盒子允许跨页，避免整页留白
+\tcbset{every box/.append style={breakable}}
+% 诊断：每章开头把盒子深度计数写入 .log，若不为 0 说明有盒子环境没有配对，页边栏会退化为 \marginnote 而互相重叠
+\AddToHook{cmd/chapter/before}{\typeout{INSIDEBOXDEPTH=\the\insideboxdepth}}
+\makeatother
+\tcbuselibrary{theorems,skins,breakable,hooks}
 
 % ========== 代码环境 ==========
 \usepackage{listings}
@@ -88,6 +125,10 @@
     framesep=5pt,
     breaklines=true,
     breakatwhitespace=true,
+    % 中文注释：fixed 列宽会把每个汉字塞进 0.6em 的等宽格子里，字与字之间被撑开；
+    % 改为弹性列宽并保留空格（缩进）
+    columns=fullflexible,
+    keepspaces=true,
     tabsize=4,
     showstringspaces=false,
     backgroundcolor=\color{gray!5},
@@ -97,6 +138,8 @@
     belowskip=10pt,
     captionpos=b,
     escapeinside={(*@}{@*)},
+    % 代码注释里偶尔出现的希腊字母与数学符号，等宽字体没有，映射为数学模式
+    literate={α}{{$\alpha$}}1 {λ}{{$\lambda$}}1 {∇}{{$\nabla$}}1 {²}{{$^{2}$}}1 {·}{{$\cdot$}}1 {←}{$\leftarrow$}2,
 }
 
 \lstdefinestyle{teaching}{
@@ -138,7 +181,7 @@
     keepspaces=true,
     tabsize=4,
     showstringspaces=false,
-    literate={->}{$\rightarrow$}2 {←}{$\leftarrow$}2,
+    literate={->}{$\rightarrow$}2 {←}{$\leftarrow$}2 {α}{{$\alpha$}}1 {λ}{{$\lambda$}}1 {∇}{{$\nabla$}}1 {²}{{$^{2}$}}1 {·}{{$\cdot$}}1,
 }
 
 % 行内代码命令
@@ -299,8 +342,37 @@
 
 % ========== 章节格式 ==========
 \usepackage{titlesec}
+% 章标题与页眉用中文"第 N 章"（ctex 宏包默认 scheme=plain，保留英文 Chapter，这里显式改掉）
+\renewcommand{\chaptername}{第\thechapter 章}
+
+% 附录章：\chapter* 不推进章计数器，导致附录里的表/图/代码编号仍是"17.x"。
+% 这里显式推进计数器并清零，配合 \appendix 后 \thechapter 为字母，编号变为 A.1、B.2……
+\newcommand{\appendixchapter}[2]{%
+  \stepcounter{chapter}\setcounter{section}{0}\setcounter{table}{0}\setcounter{figure}{0}%
+  \setcounter{equation}{0}\setcounter{lstlisting}{0}%
+  \ifcsname c@algorithm\endcsname\setcounter{algorithm}{0}\fi
+  \chapter*{附录\thechapter：#1}%
+  \addcontentsline{toc}{chapter}{附录\thechapter：#1}%
+  \markboth{附录\thechapter\quad #2}{附录\thechapter\quad #2}}
+\renewcommand{\lstlistingname}{代码}
+
 \titleformat{\chapter}[display]
-{\normalfont\huge\bfseries}{\chaptertitlename\ \thechapter}{20pt}{\Huge}
+{\normalfont\huge\bfseries}{\chaptername}{20pt}{\Huge}
+\makeatletter
+\renewcommand{\chaptermark}[1]{\markboth{第\thechapter 章\quad #1}{}}
+\renewcommand{\sectionmark}[1]{\markright{\thesection\quad #1}}
+\makeatother
+
+% 部分（\part）改为"top"类：标题占页首，同一页紧接"本部分导读"，而不是一页只印一个标题
+\titleclass{\part}{top}
+\titleformat{\part}[display]
+{\centering\normalfont\bfseries}{\Large 第\zhnum{part}部分}{1.2em}{\Huge}[\vspace{0.8em}\rule{\textwidth}{0.6pt}]
+\titlespacing*{\part}{0pt}{40pt}{30pt}
+
+% 每个部分开头的导读盒子
+\newenvironment{partintro}
+{\begin{tcolorbox}[colback=gray!5, colframe=gray!50, boxrule=0.6pt, arc=2mm, left=8pt, right=8pt, top=6pt, bottom=6pt, title=本部分导读, fonttitle=\bfseries]}
+{\end{tcolorbox}}
 
 % ========== 超链接 ==========
 \usepackage{hyperref}
@@ -327,61 +399,71 @@
 
 % 类型1：科学家小故事
 \newcommand{\storynote}[2]{%
-    \marginnote{\small\raggedright
-        \textcolor{blue!70!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
-        \textbf{{\color{blue!70!black}人物} #1}\\[3pt]
-        \textit{#2}\\[-2pt]
-        \textcolor{blue!70!black}{\rule{\marginparwidth}{1pt}}
+    \smartmargin{\small\raggedright
+        \textcolor{blue!70!black}{\rule{\marginparwidth}{1pt}}\par\vspace{2pt}
+        \textbf{{\color{blue!70!black}人物} #1}\par\vspace{3pt}
+        \textit{#2}\par\vspace{-2pt}
+        \noindent\textcolor{blue!70!black}{\rule{\marginparwidth}{1pt}}
     }%
 }
 
 % 类型2：概念澄清
 \newcommand{\clarify}[1]{%
-    \marginnote{\small\raggedright
-        \textcolor{orange!80!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
-        \textbf{{\color{orange!80!black}澄清}}\\[3pt]
-        #1\\[-2pt]
-        \textcolor{orange!80!black}{\rule{\marginparwidth}{1pt}}
+    \smartmargin{\small\raggedright
+        \textcolor{orange!80!black}{\rule{\marginparwidth}{1pt}}\par\vspace{2pt}
+        \textbf{{\color{orange!80!black}澄清}}\par\vspace{3pt}
+        #1\par\vspace{-2pt}
+        \noindent\textcolor{orange!80!black}{\rule{\marginparwidth}{1pt}}
     }%
 }
 
 % 类型3：前方预告
 \newcommand{\preview}[1]{%
-    \marginnote{\small\raggedright
-        \textcolor{purple!70!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
-        \textbf{{\color{purple!70!black}预告}}\\[3pt]
-        #1\\[-2pt]
-        \textcolor{purple!70!black}{\rule{\marginparwidth}{1pt}}
+    \smartmargin{\small\raggedright
+        \textcolor{purple!70!black}{\rule{\marginparwidth}{1pt}}\par\vspace{2pt}
+        \textbf{{\color{purple!70!black}预告}}\par\vspace{3pt}
+        #1\par\vspace{-2pt}
+        \noindent\textcolor{purple!70!black}{\rule{\marginparwidth}{1pt}}
     }%
 }
 
 % 类型4：动手试试
 \newcommand{\tryit}[1]{%
-    \marginnote{\small\raggedright
-        \textcolor{green!60!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
-        \textbf{{\color{green!60!black}动手试试}}\\[3pt]
-        \ttfamily\small #1\\[-2pt]
-        \textcolor{green!60!black}{\rule{\marginparwidth}{1pt}}
+    \smartmargin{\small\raggedright
+        \textcolor{green!60!black}{\rule{\marginparwidth}{1pt}}\par\vspace{2pt}
+        \textbf{{\color{green!60!black}动手试试}}\par\vspace{3pt}
+        \ttfamily\small #1\par\vspace{-2pt}
+        \noindent\textcolor{green!60!black}{\rule{\marginparwidth}{1pt}}
     }%
 }
 
 % 类型5：思考题
 \newcommand{\think}[1]{%
-    \marginnote{\small\raggedright
-        \textcolor{red!70!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
-        \textbf{{\color{red!70!black}想一想}}\\[3pt]
-        #1\\[-2pt]
-        \textcolor{red!70!black}{\rule{\marginparwidth}{1pt}}
+    \smartmargin{\small\raggedright
+        \textcolor{red!70!black}{\rule{\marginparwidth}{1pt}}\par\vspace{2pt}
+        \textbf{{\color{red!70!black}想一想}}\par\vspace{3pt}
+        #1\par\vspace{-2pt}
+        \noindent\textcolor{red!70!black}{\rule{\marginparwidth}{1pt}}
+    }%
+}
+
+% 类型7：普通旁注（正文里原先直接写 \marginnote 的地方统一成这个样式）
+\newcommand{\sidenoteplain}[1]{%
+    \smartmargin{\small\raggedright
+        \textcolor{gray!70!black}{\rule{\marginparwidth}{1pt}}\par\vspace{2pt}
+        \textbf{{\color{gray!70!black}旁注}}\par\vspace{3pt}
+        #1\par\vspace{-2pt}
+        \noindent\textcolor{gray!70!black}{\rule{\marginparwidth}{1pt}}
     }%
 }
 
 % 类型6：回顾前置知识
 \newcommand{\review}[2]{%
-    \marginnote{\small\raggedright
-        \textcolor{teal!80!black}{\rule{\marginparwidth}{1pt}}\\[2pt]
-        \textbf{{\color{teal!80!black}回顾} #1}\\[3pt]
-        #2\\[-2pt]
-        \textcolor{teal!80!black}{\rule{\marginparwidth}{1pt}}
+    \smartmargin{\small\raggedright
+        \textcolor{teal!80!black}{\rule{\marginparwidth}{1pt}}\par\vspace{2pt}
+        \textbf{{\color{teal!80!black}回顾} #1}\par\vspace{3pt}
+        #2\par\vspace{-2pt}
+        \noindent\textcolor{teal!80!black}{\rule{\marginparwidth}{1pt}}
     }%
 }
 
@@ -394,19 +476,32 @@
 % ========== 文档信息 ==========
 \title{
     \vspace{-2cm}
-    {\Huge\bfseries 大二开始的物理智能} \\[1cm]
+    {\Huge\bfseries 物理智能（Physical AI）的理论基础} \\[0.8cm]
+    {\Large 以约束优化为主线} \\[1cm]
 }
 \author{冯恺睿，何斌}
 \date{\today}
 
 % ==================== 正文开始 ====================
+% 盒子、代码清单与图较多，允许页底不齐，避免 flushbottom 在页中拉出大片空白
+\raggedbottom
+% 长的英文标识符（文件名、API 名）夹在中文里时，给断行留一点余量，避免整行溢出
+\setlength{\emergencystretch}{3em}
+
 \begin{document}
 
 \maketitle
 
-% ========== 全书核心 ==========
+% ========== 前言（含阅读导航图）==========
+\input{chapters/preface}
+
+\setcounter{tocdepth}{1}   % 目录只列到节：列到小节时目录长达 18 页
+\tableofcontents
+
+% ========== 导论：全书核心思想 ==========
 \chapter*{全书核心思想}
 \addcontentsline{toc}{chapter}{全书核心思想}
+\markboth{全书核心思想}{全书核心思想}
 
 \begin{keyformula}[title=统一框架]
 \begin{equation}
@@ -425,6 +520,7 @@
 \]
 
 \begin{center}
+\small
 \begin{tabular}{lll}
 \toprule
 \textbf{领域} & \textbf{目标+约束} & \textbf{结果} \\
@@ -441,59 +537,97 @@ PINN & 数据拟合 + PDE约束 & 物理信息损失 \\
 \end{center}
 \end{unification}
 
-\tableofcontents
+\section*{四个部分，一条主线}
+
+全书分四个部分，每个部分回答一个问题，而所有答案都长成同一个样子——$\Lag = f + \lambda^\top g$。阅读导航图见前言的图~\ref{fig:reading_map}。
+
+\begin{center}
+\small
+\begin{tabular}{@{}p{2.1cm}p{4.2cm}p{3.3cm}p{1.3cm}@{}}
+\toprule
+\textbf{部分} & \textbf{回答的问题} & \textbf{$\lambda$ 在这里叫什么} & \textbf{章} \\
+\midrule
+I 数学统一语言 & “有条件的最优”怎么写成方程？不确定性怎么写成约束？ & 影子价格、对偶变量、逆温度 & 1--4 \\
+II 物理与运动 & 物理定律为什么长这样？怎样让物理系统按我们的意愿运动？ & 约束力、接触力、协态变量 & 5--7 \\
+III 学习与决策 & 模型与策略从哪里来？数据从哪里来？ & 误差信号、值函数、均衡价格、RLHF 的 $\beta$ & 8--12 \\
+IV 物理智能 & 物理、学习、决策怎样合到一起成为物理智能？ & 节点力、物理约束权重、安全约束的价格 & 13--17 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent\textbf{怎么读}：第一部分是所有后续内容的语言；第二部分是一条拉格朗日力学的线，从定律走到机构再到控制；第三部分把“物理”换成“数据”，结构不变；第四部分从解方程走到嵌入物理再到具身，两条路在这里汇合。第 7 章是全书的枢纽——它的“前向算状态、后向算 $\lambda$”在第 8、9、16 章各出现一次。
+
 
 % ####################################################################################
-%                              第一部分：数学基础
+%                              第一部分：数学统一语言
 % ####################################################################################
 
-\part{数学基础与统一语言}
+\part{数学统一语言：约束优化、对偶、变分与最大熵}
+
+\begin{partintro}
+\textbf{本部分回答的问题}：一个“有条件的最优”问题，怎样写成方程？方程里多出来的那个 $\lambda$ 是什么？不确定性也能写成约束吗？
+
+四章的关系是“由数到函数到分布”。第1章在有限维里建立全书的语言：把问题写成 $\Lag = f + \lambda^\top g$，一阶条件是 KKT 条件，而 $\lambda$ 是约束的\textbf{影子价格}。第2章换一个角度看同一个问题，把 $\lambda$ 当主角，得到对偶问题，并由此得到第一批算法——对偶上升与增广拉格朗日法。第3章把“点”换成“函数”，KKT 条件于是变成欧拉--拉格朗日方程，这是第二部分物理原理所需的语言。第4章再把“点”换成“概率分布”：熵取极大、矩约束给定，$\lambda$ 变成\textbf{逆温度}和\textbf{每比特的代价}，softmax、交叉熵、KL 散度全部从这里长出来，它们是第三部分学习方法的语言。
+
+\textbf{往后看}：全书后面 13 章没有一章离得开这四章。第二部分直接用第 3 章的变分法；第三部分的反向传播、强化学习是第 1 章 KKT 条件在“时间/层”上的重复，它们的损失函数、熵正则和 RLHF 的玻尔兹曼策略都来自第 4 章；第四部分的有限元与 PINN 是第 3 章变分法的数值化，多智能体是第 2 章对偶的多方版本。
+\end{partintro}
 
 \input{chapters/chap01}  % 第1章：从高数到约束优化
 \input{chapters/chap02}  % 第2章：对偶理论
 \input{chapters/chap03}  % 第3章：变分法
+\input{chapters/chap04}  % 第4章：信息与编码：最大熵原理
 
 % ####################################################################################
-%                              第二部分：物理应用
+%                              第二部分：物理与运动
 % ####################################################################################
 
-\part{物理世界中的约束优化}
+\part{物理与运动：从最小作用量到最优控制}
 
-\input{chapters/chap04}  % 第4章：经典力学
-\input{chapters/chap05}  % 第5章：有限元方法
+\begin{partintro}
+\textbf{本部分回答的问题}：物理定律为什么长成那样？知道了物理定律之后，怎样让一个物理系统按我们的意愿运动？三章是同一条拉格朗日力学的线：定律 $\to$ 机构 $\to$ 控制。第5章讲最小作用量：作用量取极值就给出牛顿方程与哈密顿方程，$\lambda$ 是\textbf{约束力}和\textbf{广义动量}——自然自己在做约束优化。第6章把“物理系统”具体化成机械臂，几何约束给出运动学，接触约束给出动力学，$\lambda$ 相应地是\textbf{接触力}和\textbf{关节力矩}。第7章讲轨迹优化与 MPC：约束不再是一条静态方程，而是随时间演化的动力学 $\dot x = f(x,u)$，于是 $\lambda(t)$ 变成\textbf{协态变量}，一阶条件变成\textbf{伴随方程}（Pontryagin 原理），MPC 则是“边走边重解”。
 
-% ####################################################################################
-%                              第三部分：控制与信息
-% ####################################################################################
+\textbf{为什么第7章是全书的枢纽}：它的“前向算状态、后向算 $\lambda$”这一对方程，在第8章叫反向传播，在第9章叫贝尔曼方程，在第16章叫可微物理。读懂第7章，后面三章的核心公式都可以自己推出来。连续介质与场（有限元）放到第四部分，紧挨着它的下游 PINN 与神经算子。
+\end{partintro}
 
-\part{控制、信息与机器人}
-
-\input{chapters/chap06}  % 第6章：信息与编码
-\input{chapters/chap07}  % 第7章：机器人运动学与动力学
-\input{chapters/chap08}  % 第8章：轨迹优化与MPC
+\input{chapters/chap05}  % 第5章：经典力学
+\input{chapters/chap06}  % 第6章：机器人运动学与动力学
+\input{chapters/chap07}  % 第7章：轨迹优化与MPC
 
 % ####################################################################################
-%                              第四部分：机器学习
+%                              第三部分：学习与决策
 % ####################################################################################
 
-\part{机器学习中的约束优化}
+\part{学习与决策：把物理换成数据}
 
-\input{chapters/chap09}  % 第9章：反向传播
-\input{chapters/chap10}  % 第10章：强化学习
-\input{chapters/chap11}  % 第11章：图神经网络
-\input{chapters/chap12}  % 第12章：序列建模
-%\input{chapters/chap12-5}  % 第12章：序列建模
+\begin{partintro}
+\textbf{本部分回答的问题}：当物理模型不完整、或者根本写不出来时，模型和策略从哪里来？答案是从数据里学——而“学习”仍然是约束优化，只是约束从“物理定律”换成了“计算图”、“经验数据”和“别人的行为”。五章的顺序是：一个网络 $\to$ 一个智能体 $\to$ 很多个智能体 $\to$ 多模态 $\to$ 后训练与数据。第8章讲反向传播：每一层网络是一条等式约束，$\lambda_i$ 是\textbf{误差信号}，反向传播就是第7章的伴随方程。第9章讲强化学习：把第7章的终点推到无穷远，$\lambda$ 变成\textbf{值函数的梯度}，伴随方程变成贝尔曼方程。第10章讲多智能体：很多个第9章的智能体互为约束，$\lambda$ 变成\textbf{均衡价格}和\textbf{拥挤费}，纳什均衡是联立的 KKT 条件，平均场是它的连续极限。第11章讲序列建模与视觉--语言模型：先把时间放进网络（RNN 的时间反传），再放进注意力（Transformer），最后把图像也变成 token。第12章讲智能体的后训练与数据流水线：RLHF 的 $\beta$ 就是 $\lambda$，最优策略是第4章的玻尔兹曼分布；造数据的流水线是从约束分布采样——验证器是约束，过滤是 $\lambda\to\infty$。
+
+\textbf{往后看}：第8章的“可微”是第14、15、16章的前提；第11、12章的多模态模型与后训练方法是第17章 VLA 和真机学习的骨架；显存、算力这些“资源约束”放在附录C。
+\end{partintro}
+
+\input{chapters/chap08}  % 第8章：深度学习与反向传播
+\input{chapters/chap09}  % 第9章：强化学习
+\input{chapters/chap10}  % 第10章：多智能体与博弈
+\input{chapters/chap11}  % 第11章：序列建模与视觉--语言模型
+\input{chapters/chap12}  % 第12章：智能体的后训练与数据流水线
 
 % ####################################################################################
-%                              第五部分：前沿交叉
+%                              第四部分：物理智能
 % ####################################################################################
 
-\part{前沿交叉}
+\part{物理智能：从解方程到嵌入物理到具身}
 
-\input{chapters/chap13}  % 第13章：PINN
-\input{chapters/chap14}  % 第14章：算子学习
-\input{chapters/chap15}  % 第15章：多智能体与博弈
-\input{chapters/chap16}  % 第16章：展望
+\begin{partintro}
+\textbf{本部分回答的问题}：物理（第二部分）和学习（第三部分）怎样合到一起，成为能在物理世界里感知、预测、行动的智能？五章从“场”走到“身体”。第13章讲有限元：势能取极小给出 $KU = F$，$\lambda$ 是\textbf{节点力}和\textbf{边界反力}——要把物理嵌进学习，先得知道物理是怎么被算出来的。第14章讲物理信息神经网络：把 PDE 当约束加进损失，也就是第13章的方程加上第8章的网络，$\rho$ 是罚系数，$\lambda$ 是\textbf{边界条件的影子价格}。第15章讲神经算子：不学一个解，而学“方程到解”的整个映射，把第13章的 $K^{-1}$ 换成可学习的算子。第16章讲世界模型与安全控制：把第7章的动力学换成学出来的模型（潜空间动力学、可微物理），用第1章的不等式约束保证安全（控制屏障函数），$\lambda$ 是\textbf{安全约束的价格}。第17章讲 VLA、真机强化学习与展望：把第11章的 VLM 接上动作，用第12章的方法在真机上继续学；动力学、安全集、数据预算三条约束同时在场，三个 $\lambda$ 同时在算。
+
+\textbf{回到起点}：全书总结把 17 章排成一张表——目标 $f$ 是什么、约束 $g$ 是什么、$\lambda$ 代表什么。物理智能的理论基础，就是这张表。
+\end{partintro}
+
+\input{chapters/chap13}  % 第13章：有限元方法
+\input{chapters/chap14}  % 第14章：PINN
+\input{chapters/chap15}  % 第15章：神经算子
+\input{chapters/chap16}  % 第16章：世界模型与安全控制
+\input{chapters/chap17}  % 第17章：VLA、真机强化学习与展望
 
 % ####################################################################################
 %                              全书总结
@@ -501,13 +635,14 @@ PINN & 数据拟合 + PDE约束 & 物理信息损失 \\
 
 \chapter*{全书总结：约束优化的统一视角}
 \addcontentsline{toc}{chapter}{全书总结}
+\markboth{全书总结}{全书总结}
 
 我们从一个简单的问题开始：
 \begin{quote}
 \textit{如何在满足约束的条件下，最大化（或最小化）一个目标？}
 \end{quote}
 
-拉格朗日的天才在于：引入乘子$\lambda$，把约束"吸收"进目标函数：
+拉格朗日的天才在于：引入乘子$\lambda$，把约束“吸收”进目标函数：
 \begin{equation}
 L(x, \lambda) = f(x) + \lambda^T g(x)
 \end{equation}
@@ -532,8 +667,10 @@ L(x, \lambda) = f(x) + \lambda^T g(x)
 
 \vspace{1em}
 
-\textbf{核心信息}：当你在任何领域遇到"有条件的优化"问题时，都可以用约束优化的框架来思考。
-$\lambda$不只是数学上的"技巧"，它有深刻的物理/经济/信息含义——它度量了约束的"价格"。
+回头看全书的四个部分，它们其实是同一个框架的四次“换约束”：第一部分把约束写成方程（包括把不确定性写成矩约束）；第二部分的约束是物理定律——先是自然自己在解，再是随时间演化、$\lambda$ 变成协态；第三部分把约束换成计算图、数据、别人的行为和参考策略，$\lambda$ 变成误差信号、值函数、均衡价格和 RLHF 的 $\beta$；第四部分把物理约束重新加回学习——从解方程到嵌入物理到具身——得到物理智能。
+
+\textbf{核心信息}：当你在任何领域遇到“有条件的优化”问题时，都可以用约束优化的框架来思考。
+$\lambda$不只是数学上的“技巧”，它有深刻的物理/经济/信息含义——它度量了约束的“价格”。
 
 希望这本书能帮助你建立这种统一的思维方式。当你下次看到一个复杂的问题时，
 不妨问自己：\textbf{这里的约束是什么？$\lambda$代表什么？}
@@ -613,7 +750,7 @@ $\lambda$不只是数学上的"技巧"，它有深刻的物理/经济/信息含�
 
  
 
-香农在1948年创立信息论时，可能没有想到"惊奇最小化"会成为理解大脑的钥匙。
+香农在1948年创立信息论时，可能没有想到“惊奇最小化”会成为理解大脑的钥匙。
 
  
 
@@ -628,9 +765,7 @@ $\lambda$不只是数学上的"技巧"，它有深刻的物理/经济/信息含�
 \begin{center}
 
 \textit{希望这本书能让你在未来的AI研究中，\\
-
 透过复杂的代码和架构，\\
-
 看到那贯穿始终的数学本质。}
 
 \end{center}
@@ -639,329 +774,12 @@ $\lambda$不只是数学上的"技巧"，它有深刻的物理/经济/信息含�
 
 \vspace{2cm}
 
-% ====================================================================================
-\chapter*{附录：核心概念索引}
-\addcontentsline{toc}{chapter}{附录：核心概念索引}
-% ====================================================================================
+\input{chapters/epilogue}        % 后记：Bitter Lesson 与持续学习
 
-本附录提供全书核心概念的快速索引，帮助读者：
-\begin{itemize}
-    \item 查找概念的首次出现位置和完整定义
-    \item 理解同一概念在不同章节中的不同形态
-    \item 复习时快速定位关键内容
-\end{itemize}
-
-% ------------------------------------------------------------------------------------
-\section*{核心概念跨章对照表}
-
-\begin{center}
-\renewcommand{\arraystretch}{1.6}
-\small
-\begin{tabular}{p{2.8cm}|p{2.2cm}|p{8cm}}
-\toprule
-\textbf{概念} & \textbf{首次出现} & \textbf{各章节中的形态} \\
-\midrule
-
-\textbf{拉格朗日乘子} $\lambda$
-& 第1章
-& \textbf{Ch1}: 约束的"影子价格" \newline
-  \textbf{Ch5}: 对偶问题的变量 \newline
-  \textbf{Ch6}: 最大熵分布的特征权重 \newline
-  \textbf{Ch8}: 伴随变量（协态变量） \newline
-  \textbf{Ch9}: 反向传播中的误差信号 \newline
-  \textbf{Ch15}: 博弈论中的边际价值 \\
-\midrule
-
-\textbf{KKT条件}
-& 第1章
-& \textbf{Ch1}: 约束优化的必要条件 \newline
-  \textbf{Ch5}: 强对偶性的充分条件 \newline
-  \textbf{Ch7}: SVM的支持向量条件 \newline
-  \textbf{Ch15}: 纳什均衡的刻画 \\
-\midrule
-
-\textbf{对偶性}
-& 第5章
-& \textbf{Ch5}: 原问题与对偶问题的关系 \newline
-  \textbf{Ch6}: 最大熵 = 最小KL散度 \newline
-  \textbf{Ch7}: SVM原问题与对偶问题 \\
-\midrule
-
-\textbf{梯度/导数}
-& 第3章
-& \textbf{Ch3}: 矩阵求导规则 \newline
-  \textbf{Ch4}: 正则化项的梯度 \newline
-  \textbf{Ch9}: 反向传播计算梯度 \newline
-  \textbf{Ch16}: 可微物理中的梯度 \\
-\midrule
-
-\textbf{伴随方程/变量}
-& 第8章
-& \textbf{Ch8}: 最优控制中的协态方程 \newline
-  \textbf{Ch9}: 神经网络的反向传播 \newline
-  \textbf{Ch16}: 可微仿真中的梯度计算 \\
-\midrule
-
-\textbf{熵}
-& 第6章
-& \textbf{Ch6}: Shannon熵，信息量的期望 \newline
-  \textbf{Ch6}: KL散度中的负熵项 \newline
-  \textbf{Ch12-5}: 注意力中的熵惩罚 \\
-\midrule
-
-\textbf{Softmax}
-& 第6章
-& \textbf{Ch6}: 最大熵分布的形式 \newline
-  \textbf{Ch9}: 分类器输出层 \newline
-  \textbf{Ch12}: Attention的权重归一化 \\
-\midrule
-
-\textbf{注意力机制}
-& 第12章
-& \textbf{Ch12}: Query-Key-Value结构 \newline
-  \textbf{Ch12-5}: FlashAttention优化 \newline
-  \textbf{Ch12-5}: 多头注意力 \\
-\midrule
-
-\textbf{正则化}
-& 第4章
-& \textbf{Ch4}: L1/L2范数惩罚 \newline
-  \textbf{Ch7}: SVM的间隔最大化 \newline
-  \textbf{Ch12-5}: MoE的负载均衡损失 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-% ------------------------------------------------------------------------------------
-\section*{核心概念快速定义}
-
-\subsection*{A. 优化基础（第1-5章）}
-
-\begin{description}
-    \item[拉格朗日乘子 (Lagrange Multiplier)]
-    约束优化中引入的辅助变量，表示约束放松一个单位时目标函数的改进量（"影子价格"）。
-    \[
-    \mathcal{L}(x, \lambda) = f(x) + \lambda g(x)
-    \]
-
-    \item[KKT条件 (Karush-Kuhn-Tucker Conditions)]
-    约束优化问题最优解的必要条件，包括：
-    \begin{enumerate}
-        \item 梯度条件：$\nabla f + \sum \lambda_i \nabla g_i = 0$
-        \item 可行性：$g_i(x) \leq 0$（或 $= 0$）
-        \item 互补松弛：$\lambda_i g_i(x) = 0$
-        \item 对偶可行：$\lambda_i \geq 0$（不等式约束）
-    \end{enumerate}
-
-    \item[对偶问题 (Dual Problem)]
-    通过拉格朗日函数构造的另一个优化问题，提供原问题最优值的下界。强对偶性成立时，两者最优值相等。
-
-    \item[凸优化 (Convex Optimization)]
-    目标函数和可行域都是凸的优化问题。局部最优 = 全局最优，KKT条件是充分必要条件。
-\end{description}
-
-\subsection*{B. 信息与学习（第6-7章）}
-
-\begin{description}
-    \item[熵 (Entropy)]
-    分布不确定性的度量，也是平均信息量：
-    \[
-    H(p) = -\sum_i p_i \log p_i
-    \]
-
-    \item[KL散度 (Kullback-Leibler Divergence)]
-    两个分布之间的"差异"（非对称）：
-    \[
-    D_{KL}(P \| Q) = \sum_i p_i \log \frac{p_i}{q_i}
-    \]
-
-    \item[交叉熵 (Cross Entropy)]
-    用分布 $Q$ 编码分布 $P$ 的平均比特数：
-    \[
-    H(P, Q) = -\sum_i p_i \log q_i = H(P) + D_{KL}(P \| Q)
-    \]
-
-    \item[Softmax函数]
-    将实数向量转换为概率分布的函数，是最大熵分布的形式：
-    \[
-    p_i = \frac{e^{z_i}}{\sum_j e^{z_j}}
-    \]
-
-    \item[支持向量机 (SVM)]
-    间隔最大化的分类器，对偶问题只依赖于支持向量。
-\end{description}
-
-\subsection*{C. 控制与动态（第8章、第16章）}
-
-\begin{description}
-    \item[最优控制 (Optimal Control)]
-    选择控制输入 $u(t)$ 使得系统轨迹最优化某个目标泛函。
-
-    \item[伴随方程 (Adjoint Equation)]
-    描述"未来代价对当前状态的敏感度"的微分方程，从终点向起点反向求解：
-    \[
-    \dot{\lambda} = -\frac{\partial H}{\partial x}
-    \]
-
-    \item[哈密顿函数 (Hamiltonian)]
-    综合目标函数和约束的函数：
-    \[
-    H(x, u, \lambda) = L(x, u) + \lambda^\top f(x, u)
-    \]
-
-    \item[可微仿真 (Differentiable Simulation)]
-    物理仿真的可微分版本，允许通过反向传播计算控制输入的梯度。
-\end{description}
-
-\subsection*{D. 神经网络（第9章、第12章）}
-
-\begin{description}
-    \item[反向传播 (Backpropagation)]
-    高效计算神经网络梯度的算法，本质是伴随方程的离散版本。
-
-    \item[计算图 (Computational Graph)]
-    表示计算过程的有向无环图，前向传播计算值，反向传播计算梯度。
-
-    \item[Transformer]
-    基于自注意力机制的神经网络架构，不使用循环或卷积。
-
-    \item[注意力机制 (Attention)]
-    根据Query和Key的相似度对Value加权求和：
-    \[
-    \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^\top}{\sqrt{d_k}}\right) V
-    \]
-
-    \item[FlashAttention]
-    IO感知的注意力算法，通过分块计算减少内存访问。
-
-    \item[MoE (Mixture of Experts)]
-    稀疏激活的架构，每个输入只激活部分专家网络。
-\end{description}
-
-\subsection*{E. 多智能体（第15章）}
-
-\begin{description}
-    \item[纳什均衡 (Nash Equilibrium)]
-    每个玩家都采用最优响应的策略组合，没有人有动机单方面偏离。
-
-    \item[最优响应 (Best Response)]
-    给定其他玩家策略时，最大化自己收益的策略。
-
-    \item[Cournot竞争]
-    企业同时选择产量的寡头竞争模型，纳什均衡通过KKT条件求解。
-\end{description}
-
-% ------------------------------------------------------------------------------------
-\section*{概念演化图谱}
-
-\begin{center}
-\begin{tikzpicture}[
-    node distance=1.8cm,
-    concept/.style={rectangle, rounded corners, draw=blue!50, fill=blue!10,
-                    text width=2.5cm, align=center, minimum height=1cm},
-    arrow/.style={->, >=stealth, thick, blue!60}
-]
-
-% 第一行：基础
-\node[concept] (lagrange) {拉格朗日乘子\\(Ch1)};
-\node[concept, right=of lagrange] (kkt) {KKT条件\\(Ch1)};
-\node[concept, right=of kkt] (dual) {对偶性\\(Ch5)};
-
-% 第二行：分支应用
-\node[concept, below=of lagrange] (adjoint) {伴随方程\\(Ch8)};
-\node[concept, below=of kkt] (entropy) {最大熵\\(Ch6)};
-\node[concept, below=of dual] (svm) {SVM\\(Ch7)};
-
-% 第三行：现代应用
-\node[concept, below=of adjoint] (bp) {反向传播\\(Ch9)};
-\node[concept, below=of entropy] (softmax) {Softmax\\(Ch6,12)};
-\node[concept, below=of svm] (nash) {纳什均衡\\(Ch15)};
-
-% 第四行：前沿
-\node[concept, below=of bp] (diffsim) {可微仿真\\(Ch16)};
-\node[concept, below=of softmax] (attention) {注意力\\(Ch12)};
-
-% 箭头
-\draw[arrow] (lagrange) -- (kkt);
-\draw[arrow] (kkt) -- (dual);
-\draw[arrow] (lagrange) -- (adjoint);
-\draw[arrow] (lagrange) -- (entropy);
-\draw[arrow] (dual) -- (svm);
-\draw[arrow] (adjoint) -- (bp);
-\draw[arrow] (entropy) -- (softmax);
-\draw[arrow] (kkt) -- (nash);
-\draw[arrow] (bp) -- (diffsim);
-\draw[arrow] (softmax) -- (attention);
-
-% 虚线连接（表示概念联系）
-\draw[dashed, gray] (adjoint) -- (bp);
-\draw[dashed, gray] (bp) to[bend right=20] (diffsim);
-
-\end{tikzpicture}
-\end{center}
-
-\vspace{0.5cm}
-\begin{center}
-\textit{箭头表示概念的继承/发展关系，虚线表示本质相同的不同表述。}
-\end{center}
-
-% ------------------------------------------------------------------------------------
-\section*{本书的核心信息}
-
-\begin{unification}[title=一个公式，多个化身]
-拉格朗日函数的梯度条件
-\[
-\nabla_x \mathcal{L} = \nabla f + \lambda \nabla g = 0
-\]
-在不同领域有不同的名字：
-
-\begin{center}
-\renewcommand{\arraystretch}{1.4}
-\begin{tabular}{l|l}
-\toprule
-\textbf{领域} & \textbf{名字} \\
-\midrule
-微积分 & 拉格朗日乘子法 \\
-运筹学 & KKT条件 \\
-物理学 & 哈密顿原理 \\
-控制论 & 伴随方程 \\
-机器学习 & 反向传播 \\
-信息论 & 最大熵分布 \\
-博弈论 & 纳什均衡条件 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-\textbf{理解了拉格朗日乘子的本质，就等于理解了它们的共同根源。}
-\end{unification}
-
-% ------------------------------------------------------------------------------------
-\section*{章节速查}
-
-\begin{center}
-\renewcommand{\arraystretch}{1.3}
-\begin{tabular}{c|l|l}
-\toprule
-\textbf{章} & \textbf{标题} & \textbf{核心关键词} \\
-\midrule
-1 & 从高数到约束优化 & 拉格朗日乘子、KKT条件、影子价格 \\
-2 & 线性代数回顾 & 特征值、SVD、正定矩阵 \\
-3 & 矩阵求导 & 链式法则、Jacobian、Hessian \\
-4 & 范数与正则化 & L1/L2范数、稀疏性、过拟合 \\
-5 & 凸优化与对偶 & 对偶问题、强对偶、凸集 \\
-6 & 信息与编码 & 熵、KL散度、交叉熵、Softmax \\
-7 & 支持向量机 & 间隔、核技巧、对偶形式 \\
-8 & 最优控制 & 伴随方程、Pontryagin原理 \\
-9 & 神经网络 & 反向传播、计算图、自动微分 \\
-10 & 动态规划 & Bellman方程、值函数 \\
-12 & Transformer & 自注意力、多头注意力 \\
-12-5 & 高效计算 & FlashAttention、MoE \\
-14 & 强化学习 & 策略梯度、Actor-Critic \\
-15 & 多智能体 & 纳什均衡、博弈论 \\
-16 & 世界模型 & 可微仿真、模型预测控制 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
+\appendix   % 章计数器归零、\thechapter 改为字母
+\input{chapters/appendix_index}  % 附录A：核心概念索引
+\input{chapters/appendix_env}    % 附录B：实验环境速成——服务器与环境配置
+\input{chapters/appendix_llm}    % 附录C：大模型工程速成——显存、算力与实现（原第12章）
+\input{chapters/appendix_eng}    % 附录D：工程专题（各章移出的工程类扩展阅读）
 
 \end{document}

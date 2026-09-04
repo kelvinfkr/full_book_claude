@@ -1,0 +1,49 @@
+% ====================================================================================
+\chapter*{后记：Bitter Lesson 与持续学习}
+\addcontentsline{toc}{chapter}{后记：Bitter Lesson 与持续学习}
+\markboth{后记}{后记}
+% ====================================================================================
+\storynote{Richard Sutton}{强化学习之父，与 Andrew Barto 共获 2024 年图灵奖（2025 年公布）。他在1998年合著的教科书《Reinforcement Learning: An Introduction》是该领域的圣经。他的``Bitter Lesson''文章在AI社区引发了深远的讨论。}
+在结束这本书之前，我们想和你分享一篇 2019 年震动 AI 界的短文——Richard Sutton 的\textbf{``The Bitter Lesson''}（苦涩的教训）。
+\section*{苦涩的教训}
+Sutton观察了70年AI发展史，得出一个反直觉的结论：
+\begin{quote}
+\textit{``过去70年AI研究最重要的教训是：利用计算力的通用方法最终会战胜利用人类知识的方法。''}
+\end{quote}
+他举的例子横跨三个领域。第一个是\textbf{国际象棋}：1997 年 Deep Blue 击败卡斯帕罗夫，靠的是暴力搜索（每秒 2 亿步）加上少量人类知识；研究者最初试图编码大师的``策略''和``模式''，但这些努力最终被纯粹的搜索力量击败。第二个是\textbf{围棋}：它曾被认为需要``直觉''和``模式识别''，纯搜索不可能解决，可 2016 年 AlphaGo 用深度学习加蒙特卡洛树搜索击败了李世石，2017 年 AlphaGo Zero 更是完全不用人类棋谱，从零自我对弈，变得更强。第三个是\textbf{语言理解}：几十年来 NLP 研究者手工设计语法规则、词性标注、语义分析，而 GPT-3/4 用千亿到万亿参数的 Transformer 加海量数据，``什么都不教''，效果碾压一切。
+\begin{tcolorbox}[colback=red!5, colframe=red!60!black, title=Bitter Lesson的核心]
+\textbf{苦涩之处}：研究者花费多年心血设计的``聪明''方法，往往被简单粗暴的``大力出奇迹''方法击败。
+
+\textbf{教训}：计算力会持续增长（摩尔定律），而人类知识的编码很难扩展；通用的学习和搜索方法（如梯度下降、蒙特卡洛搜索）最终会赢；因此我们应该设计能\textbf{利用更多计算}的算法，而不是\textbf{绕过计算}的捷径。
+\end{tcolorbox}
+\section*{这对你意味着什么？}
+作为一个刚学完这本书的学生，你可能会问：``既然大力出奇迹，我学这些数学有什么用？''
+答案是：\textbf{你学的恰恰是``大力''的基础}。\textbf{梯度下降}（第8章）是深度学习的引擎，\textbf{贝尔曼方程}（第9章）是 AlphaGo 的核心，\textbf{变分法}（第3章）是物理信息神经网络的理论基础，\textbf{KKT 条件}（第1章）是约束优化的通用语言。Bitter Lesson 并不是说``数学没用''，而是说``\textbf{通用的数学方法+计算力} > 特定领域的手工设计''。
+\section*{持续学习：你的旅程才刚开始}
+这本书只是一个起点。以下是继续学习的建议：
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{如果你想深入...} & \textbf{推荐资源} \\
+\midrule
+凸优化 & Boyd \& Vandenberghe《Convex Optimization》（免费在线） \\
+深度学习 & Goodfellow等《Deep Learning》（花书） \\
+强化学习 & Sutton \& Barto《Reinforcement Learning》（免费在线） \\
+物理信息ML & Karniadakis等《Physics-Informed Machine Learning》 \\
+最优控制 & Bertsekas《Dynamic Programming and Optimal Control》 \\
+博弈论 & Fudenberg \& Tirole《Game Theory》 \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\textbf{最重要的建议}：\textbf{动手做项目}。理论再多，不如实际解决一个问题：用 PINN 解一个你感兴趣的 PDE，用强化学习训练一个玩游戏的 agent，用有限元分析一个简单的结构，或者复现一篇你喜欢的论文。
+\vspace{0.8cm}
+\begin{center}
+\Large
+\textit{愿你在约束中找到自由，在优化中发现智慧。}
+\vspace{0.3cm}
+\textit{愿你在Bitter Lesson中学会谦逊，在持续学习中不断成长。}
+\vspace{0.5cm}
+\normalsize
+\textbf{全书完}
+\end{center}

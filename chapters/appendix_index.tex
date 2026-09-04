@@ -1,14 +1,41 @@
 % ====================================================================================
-\chapter*{附录：核心概念索引}
-\addcontentsline{toc}{chapter}{附录：核心概念索引}
+\appendixchapter{核心概念索引}{核心概念索引}
 % ====================================================================================
 
-本附录提供全书核心概念的快速索引，帮助读者：
-\begin{itemize}
-    \item 查找概念的首次出现位置和完整定义
-    \item 理解同一概念在不同章节中的不同形态
-    \item 复习时快速定位关键内容
-\end{itemize}
+本附录是全书核心概念的快速索引：它告诉你一个概念在哪一章首次出现、完整定义在哪里，同一个概念在不同章节里换成了什么形态，以便复习时能直接定位。
+
+全书只有一条主线。每一章都在回答同样的三个问题：\textbf{目标是什么？约束是什么？$\lambda$代表什么？}下面的表格就是按这条主线整理的。
+
+% ------------------------------------------------------------------------------------
+\section*{一条主线：各章的“目标 / 约束 / $\lambda$”}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\footnotesize
+\begin{tabular}{@{}c@{\hspace{4pt}}p{2.6cm}p{2.9cm}p{3.2cm}p{2.3cm}@{}}
+\toprule
+\textbf{章} & \textbf{目标函数} & \textbf{约束} & \textbf{$\lambda$ 的身份} & \textbf{一阶条件} \\
+\midrule
+1 & 任意 $f(x)$ & $g(x)=0$，$h(x)\le 0$ & 影子价格 & KKT条件 \\
+2 & 利润 $c^\top x$ & 资源 $Ax\le b$ & 资源的影子价格 & 互补松弛 \\
+3 & 泛函 $\int F\,dx$ & $y_{k+1}-y_k=v_k\Delta x$ & 广义动量 $\partial F/\partial y'$ & E-L方程 \\
+4 & 熵 $-\sum p\log p$ & 归一化、矩约束 & 特征权重 / 逆温度 & 指数族（softmax） \\
+5 & 作用量 $\int L\,dt$ & 几何约束 $g(q)=0$ & 约束力（张力、支持力） & 拉格朗日方程 \\
+6 & 任务误差、能耗 & 运动学 / 接触 $\phi\ge 0$ & 关节力矩、接触力 & $\tau=J^\top F$，$\lambda\phi=0$ \\
+7 & 代价 $\int \ell\,dt$ & 动力学 $\dot x=f(x,u)$ & 协态变量 $\lambda(t)$ & 伴随方程、PMP \\
+8 & 损失 $\ell(z_n)$ & 逐层 $z_{i}=f_i(z_{i-1})$ & 误差信号 $\delta_i$ & 反向传播 \\
+9 & 累积奖励 & 状态转移 $s_{t+1}=f(s_t,a_t)$ & 值函数 $V(s)$ & 贝尔曼方程 \\
+10 & 每个玩家各自的代价 & 共享资源 / 流量守恒 & 均衡价格、拥堵费 & 联立KKT = 纳什 / Wardrop \\
+11 & 序列损失 $\sum_t \ell_t$ & 隐状态递推 $h_{t+1}=F(h_t,x_t)$ & 隐状态的伴随（BPTT） & 沿时间反传 \\
+12 & 奖励 $E[r]$、数据可行率 & 参考策略 $\mathrm{KL}(\pi\|\pi_{\rm ref})$、验证器 $g(x)$ & $\beta$ = 偏离参考策略的价格；验证器的乘子 & 玻尔兹曼策略、DPO、过滤/加权 \\
+13 & 总势能 $\frac12 U^\top KU-F^\top U$ & Dirichlet边界条件 & 边界反力 & $KU=F$ \\
+14 & 数据拟合 & PDE残差 $=0$ & 损失权重（罚系数 $\to$ 乘子） & 物理信息损失 \\
+15 & 算子拟合 & 离散化无关性 & 格林函数 = 解对源项的敏感度 & 积分算子 \\
+16 & 任务代价 & 安全 $h(x)\ge 0$（CBF） & 安全约束的价格 & CBF-QP \\
+17 & 模仿误差 / 真机回报 & 动力学、安全集 $h\ge0$、数据预算 & 安全的价格、模型误差的价格、样本的价格 & 流匹配、CBF-QP、约束 RL \\
+\bottomrule
+\end{tabular}
+\end{center}
 
 % ------------------------------------------------------------------------------------
 \section*{核心概念跨章对照表}
@@ -16,77 +43,98 @@
 \begin{center}
 \renewcommand{\arraystretch}{1.6}
 \small
-\begin{tabular}{p{2.8cm}|p{2.2cm}|p{8cm}}
+\small
+\begin{tabular}{@{}p{2.5cm}p{1.9cm}p{7.8cm}@{}}
 \toprule
 \textbf{概念} & \textbf{首次出现} & \textbf{各章节中的形态} \\
 \midrule
 
 \textbf{拉格朗日乘子} $\lambda$
 & 第1章
-& \textbf{Ch1}: 约束的"影子价格" \newline
-  \textbf{Ch5}: 对偶问题的变量 \newline
-  \textbf{Ch6}: 最大熵分布的特征权重 \newline
-  \textbf{Ch8}: 伴随变量（协态变量） \newline
-  \textbf{Ch9}: 反向传播中的误差信号 \newline
-  \textbf{Ch15}: 博弈论中的边际价值 \\
+& \textbf{Ch1}: 约束的“影子价格” \newline
+  \textbf{Ch2}: 对偶变量、资源的价格 \newline
+  \textbf{Ch3}: 广义动量 $\partial F/\partial y'$ \newline
+  \textbf{Ch5}: 约束力（绳子张力、支持力） \newline
+  \textbf{Ch13}: 边界反力、节点力 \newline
+  \textbf{Ch4}: 最大熵分布的特征权重（逆温度） \newline
+  \textbf{Ch6}: 关节力矩与接触力 \newline
+  \textbf{Ch7}: 伴随变量（协态变量） \newline
+  \textbf{Ch8}: 反向传播中的误差信号 \newline
+  \textbf{Ch9}: 值函数 $V(s)$ \newline
+  \textbf{Ch14}: PDE约束的自适应权重 \newline
+  \textbf{Ch10}: 均衡价格、拥堵费 \newline
+  \textbf{Ch16}: 安全约束（CBF）的乘子 \\
 \midrule
 
 \textbf{KKT条件}
 & 第1章
 & \textbf{Ch1}: 约束优化的必要条件 \newline
-  \textbf{Ch5}: 强对偶性的充分条件 \newline
-  \textbf{Ch7}: SVM的支持向量条件 \newline
-  \textbf{Ch15}: 纳什均衡的刻画 \\
+  \textbf{Ch2}: 强对偶下的充要条件、互补松弛 \newline
+  \textbf{Ch6}: 接触的互补条件 $\lambda\phi=0$ \newline
+  \textbf{Ch9}: 贝尔曼方程 = 约束优化的KKT条件 \newline
+  \textbf{Ch10}: 纳什均衡与Wardrop均衡的刻画 \\
 \midrule
 
 \textbf{对偶性}
-& 第5章
-& \textbf{Ch5}: 原问题与对偶问题的关系 \newline
-  \textbf{Ch6}: 最大熵 = 最小KL散度 \newline
-  \textbf{Ch7}: SVM原问题与对偶问题 \\
+& 第2章
+& \textbf{Ch2}: 原问题与对偶问题，$\min\max\ge\max\min$ \newline
+  \textbf{Ch4}: 最大熵 = 最小KL散度 \newline
+  \textbf{Ch9}: 对偶上升（Dijkstra）vs 原始改进（Bellman-Ford） \newline
+  \textbf{Ch14}: 对偶上升自动调整损失权重 \\
 \midrule
 
-\textbf{梯度/导数}
+\textbf{罚函数}
+& 第1章
+& \textbf{Ch1}: 视角三——软约束，$\rho\to\infty$ 趋向硬约束 \newline
+  \textbf{Ch13}: 间断有限元的界面罚项（虚拟弹簧） \newline
+  \textbf{Ch14}: PINN 的软约束（损失加权） \\
+\midrule
+
+\textbf{变分 / E-L方程}
 & 第3章
-& \textbf{Ch3}: 矩阵求导规则 \newline
-  \textbf{Ch4}: 正则化项的梯度 \newline
-  \textbf{Ch9}: 反向传播计算梯度 \newline
-  \textbf{Ch16}: 可微物理中的梯度 \\
+& \textbf{Ch3}: 离散化 + 乘子法 $\to$ E-L方程 \newline
+  \textbf{Ch5}: 最小作用量原理 $\to$ 拉格朗日方程 \newline
+  \textbf{Ch13}: 能量极小 $\to$ 弱形式 $\to$ $KU=F$ \newline
+  \textbf{Ch14}: Deep Ritz Method（最小化能量泛函） \\
 \midrule
 
 \textbf{伴随方程/变量}
-& 第8章
-& \textbf{Ch8}: 最优控制中的协态方程 \newline
-  \textbf{Ch9}: 神经网络的反向传播 \newline
+& 第7章
+& \textbf{Ch7}: 最优控制中的协态方程 \newline
+  \textbf{Ch8}: 神经网络的反向传播 \newline
+  \textbf{Ch11}: 沿时间反向传播（BPTT） \newline
   \textbf{Ch16}: 可微仿真中的梯度计算 \\
 \midrule
 
 \textbf{熵}
-& 第6章
-& \textbf{Ch6}: Shannon熵，信息量的期望 \newline
-  \textbf{Ch6}: KL散度中的负熵项 \newline
-  \textbf{Ch12-5}: 注意力中的熵惩罚 \\
+& 第4章
+& \textbf{Ch4}: Shannon熵，信息量的期望；KL散度 \newline
+  \textbf{Ch9}: 最大熵强化学习（SAC）的策略熵 \newline
+  \textbf{Ch11}: 注意力 = 最大熵软检索 \newline
+  \textbf{Ch16}: 自由能原理 \\
 \midrule
 
 \textbf{Softmax}
-& 第6章
-& \textbf{Ch6}: 最大熵分布的形式 \newline
-  \textbf{Ch9}: 分类器输出层 \newline
-  \textbf{Ch12}: Attention的权重归一化 \\
+& 第4章
+& \textbf{Ch4}: 最大熵分布的形式 \newline
+  \textbf{Ch8}: 分类器输出层 \newline
+  \textbf{Ch11}: Attention的权重归一化 \\
 \midrule
 
 \textbf{注意力机制}
-& 第12章
-& \textbf{Ch12}: Query-Key-Value结构 \newline
-  \textbf{Ch12-5}: FlashAttention优化 \newline
-  \textbf{Ch12-5}: 多头注意力 \\
+& 第11章
+& \textbf{Ch11}: Query-Key-Value结构、多头注意力 \newline
+  \textbf{ChC}: 手写实现、KV Cache、FlashAttention \\
 \midrule
 
-\textbf{正则化}
-& 第4章
-& \textbf{Ch4}: L1/L2范数惩罚 \newline
-  \textbf{Ch7}: SVM的间隔最大化 \newline
-  \textbf{Ch12-5}: MoE的负载均衡损失 \\
+\textbf{动力学约束} $x_{t+1}=f(x_t,u_t)$
+& 第3章
+& \textbf{Ch3}: $y_{k+1}-y_k=v_k\Delta x$ \newline
+  \textbf{Ch5}: $\dot q = v$ \newline
+  \textbf{Ch7}: $\dot x = f(x,u)$ \newline
+  \textbf{Ch8}: $z_{i+1}=f_{i+1}(z_i)$ \newline
+  \textbf{Ch9}: $s_{t+1}=f(s_t,a_t)$ \newline
+  \textbf{Ch11}: $h_{t+1}=F(h_t,x_t)$ \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -94,11 +142,11 @@
 % ------------------------------------------------------------------------------------
 \section*{核心概念快速定义}
 
-\subsection*{A. 优化基础（第1-5章）}
+\subsection*{A. 优化基础（第1--3章）}
 
 \begin{description}
     \item[拉格朗日乘子 (Lagrange Multiplier)]
-    约束优化中引入的辅助变量，表示约束放松一个单位时目标函数的改进量（"影子价格"）。
+    约束优化中引入的辅助变量，表示约束放松一个单位时目标函数的改进量（“影子价格”）。
     \[
     \mathcal{L}(x, \lambda) = f(x) + \lambda g(x)
     \]
@@ -106,20 +154,40 @@
     \item[KKT条件 (Karush-Kuhn-Tucker Conditions)]
     约束优化问题最优解的必要条件，包括：
     \begin{enumerate}
-        \item 梯度条件：$\nabla f + \sum \lambda_i \nabla g_i = 0$
-        \item 可行性：$g_i(x) \leq 0$（或 $= 0$）
-        \item 互补松弛：$\lambda_i g_i(x) = 0$
-        \item 对偶可行：$\lambda_i \geq 0$（不等式约束）
+        \item 驻点条件：$\nabla f + \sum \lambda_i \nabla g_i + \sum \mu_j \nabla h_j = 0$
+        \item 原始可行：$g_i(x) = 0$，$h_j(x) \leq 0$
+        \item 对偶可行：$\mu_j \geq 0$（不等式约束）
+        \item 互补松弛：$\mu_j h_j(x) = 0$
     \end{enumerate}
 
     \item[对偶问题 (Dual Problem)]
-    通过拉格朗日函数构造的另一个优化问题，提供原问题最优值的下界。强对偶性成立时，两者最优值相等。
+    通过拉格朗日函数构造的另一个优化问题，提供原问题最优值的下界（弱对偶）。强对偶性成立时，两者最优值相等。
 
     \item[凸优化 (Convex Optimization)]
     目标函数和可行域都是凸的优化问题。局部最优 = 全局最优，KKT条件是充分必要条件。
+
+    \item[泛函与Euler-Lagrange方程]
+    泛函 $J[y]=\int F(x,y,y')\,dx$ 以函数为输入。极值的必要条件是
+    \[
+    \frac{\partial F}{\partial y} - \frac{d}{dx}\frac{\partial F}{\partial y'} = 0
+    \]
+    它是有限维乘子法在 $\Delta x \to 0$ 时的极限。
 \end{description}
 
-\subsection*{B. 信息与学习（第6-7章）}
+\subsection*{B. 物理与数值（第5、13章）}
+
+\begin{description}
+    \item[最小作用量原理 (Principle of Least Action)]
+    真实运动使作用量 $S=\int L\,dt$ 取极值，$L=T-V$。牛顿定律是它的E-L方程。
+
+    \item[约束力]
+    带几何约束 $g(q)=0$ 的力学系统中，拉格朗日乘子 $\lambda$ 恰好等于约束力（张力、支持力）。
+
+    \item[刚度矩阵 (Stiffness Matrix)]
+    有限元把能量极小化离散为二次型 $\frac12 U^\top K U - F^\top U$，驻点条件即 $KU=F$。
+\end{description}
+
+\subsection*{C. 信息（第4章）}
 
 \begin{description}
     \item[熵 (Entropy)]
@@ -128,8 +196,12 @@
     H(p) = -\sum_i p_i \log p_i
     \]
 
+    \item[最大熵原理]
+    在已知约束下选择熵最大的分布。乘子法给出指数族
+    \[ p_i \propto \exp\Big(\sum\nolimits_j \beta_j g_j(x_i)\Big). \]
+
     \item[KL散度 (Kullback-Leibler Divergence)]
-    两个分布之间的"差异"（非对称）：
+    两个分布之间的“差异”（非对称）：
     \[
     D_{KL}(P \| Q) = \sum_i p_i \log \frac{p_i}{q_i}
     \]
@@ -145,19 +217,22 @@
     \[
     p_i = \frac{e^{z_i}}{\sum_j e^{z_j}}
     \]
-
-    \item[支持向量机 (SVM)]
-    间隔最大化的分类器，对偶问题只依赖于支持向量。
 \end{description}
 
-\subsection*{C. 控制与动态（第8章、第16章）}
+\subsection*{D. 控制与机器人（第6--7章）}
 
 \begin{description}
+    \item[雅可比转置定理]
+    末端速度 $\dot x = J\dot q$，则关节力矩与末端力满足 $\tau = J^\top F$（虚功原理）。
+
+    \item[接触互补条件]
+    间隙 $\phi \ge 0$，接触力 $\lambda \ge 0$，$\lambda\phi = 0$：“只有接触才有力”。
+
     \item[最优控制 (Optimal Control)]
     选择控制输入 $u(t)$ 使得系统轨迹最优化某个目标泛函。
 
     \item[伴随方程 (Adjoint Equation)]
-    描述"未来代价对当前状态的敏感度"的微分方程，从终点向起点反向求解：
+    描述“未来代价对当前状态的敏感度”的微分方程，从终点向起点反向求解：
     \[
     \dot{\lambda} = -\frac{\partial H}{\partial x}
     \]
@@ -168,18 +243,18 @@
     H(x, u, \lambda) = L(x, u) + \lambda^\top f(x, u)
     \]
 
-    \item[可微仿真 (Differentiable Simulation)]
-    物理仿真的可微分版本，允许通过反向传播计算控制输入的梯度。
+    \item[模型预测控制 (MPC)]
+    规划多步、执行一步、用反馈修正：把优化问题嵌入反馈回路。
 \end{description}
 
-\subsection*{D. 神经网络（第9章、第12章）}
+\subsection*{E. 神经网络（第8、11章，附录C）}
 
 \begin{description}
     \item[反向传播 (Backpropagation)]
     高效计算神经网络梯度的算法，本质是伴随方程的离散版本。
 
     \item[计算图 (Computational Graph)]
-    表示计算过程的有向无环图，前向传播计算值，反向传播计算梯度。
+    表示计算过程的有向无环图，前向传播计算值，反向传播计算梯度。每条边是一个等式约束。
 
     \item[Transformer]
     基于自注意力机制的神经网络架构，不使用循环或卷积。
@@ -197,17 +272,88 @@
     稀疏激活的架构，每个输入只激活部分专家网络。
 \end{description}
 
-\subsection*{E. 多智能体（第15章）}
+\subsection*{F. 强化学习（第9章）}
+
+\begin{description}
+    \item[贝尔曼方程 (Bellman Equation)]
+    $V(s) = \max_a [r(s,a) + \gamma V(f(s,a))]$。它不是定义，而是序贯决策约束优化问题的KKT条件。
+
+    \item[值函数 (Value Function)]
+    状态转移约束的拉格朗日乘子：“处在状态 $s$ 值多少分”。
+
+    \item[对偶上升 vs 原始改进]
+    Dijkstra维护最优性（对偶上升），Bellman-Ford维护可行性（原始改进）；现代RL算法都是这两种思路的变体。
+\end{description}
+
+\subsection*{G. 科学机器学习（第14--15章）}
+
+\begin{description}
+    \item[物理信息神经网络 (PINN)]
+    用神经网络逼近PDE的解，把PDE残差作为约束写进损失函数（罚函数法），或用架构强制满足（硬约束）。
+
+    \item[神经算子 (Neural Operator)]
+    学习从“条件函数”到“解函数”的映射 $v(x)=\int \kappa(x,y)u(y)\,dy$，一次训练、任意条件。
+
+    \item[格林函数 (Green's Function)]
+    线性PDE的解算子的积分核，
+    \[ u(x)=\int G(x,\xi) f(\xi)\,d\xi, \]
+    它是解对源项的敏感度。
+\end{description}
+
+\subsection*{H. 多智能体（第10章）}
 
 \begin{description}
     \item[纳什均衡 (Nash Equilibrium)]
-    每个玩家都采用最优响应的策略组合，没有人有动机单方面偏离。
+    每个玩家都采用最优响应的策略组合，没有人有动机单方面偏离。所有玩家的KKT条件同时成立。
 
     \item[最优响应 (Best Response)]
     给定其他玩家策略时，最大化自己收益的策略。
 
-    \item[Cournot竞争]
-    企业同时选择产量的寡头竞争模型，纳什均衡通过KKT条件求解。
+    \item[Wardrop均衡]
+    交通网络中，所有被使用的路径旅行时间相同且最小。可写成凸优化问题，其KKT条件即均衡条件。
+
+    \item[平均场博弈 (Mean Field Game)]
+    智能体数量趋于无穷时，多体博弈变成个体与密度场的交互：HJB（后向）+ FP（前向）耦合方程组。
+\end{description}
+
+\subsection*{I. 世界模型与具身智能（第16--17章）}
+
+\begin{description}
+    \item[世界模型 (World Model)]
+    智能体对环境的内部表示：学习结构而非拟合像素。
+
+    \item[控制障碍函数 (CBF)]
+    安全约束 $h(x)\ge 0$ 的可微形式化：$\dot h \ge -\alpha h$。安全控制器是一个QP，其乘子是安全约束的“价格”。
+
+    \item[可微仿真 (Differentiable Simulation)]
+    物理仿真的可微分版本，允许通过反向传播（伴随方法）计算控制输入的梯度。
+
+    \item[自由能原理 (Free Energy Principle)]
+    感知、学习与行动都在最小化“惊奇”（变分自由能）的猜想。
+\end{description}
+
+    \begin{description}
+    \item[视觉--语言--动作模型 (VLA)]
+    以视觉--语言模型为骨干、输出动作（离散 token 或连续动作块）的机器人策略；流匹配把“生成一段动作”变成解一个 ODE。
+
+    \item[真机强化学习 (Real-world RL)]
+    直接在物理系统上学习：三条约束（动力学、安全集、数据预算）同时在场，三个乘子同时在算。
+\end{description}
+
+\subsection*{J. 智能体的后训练与数据（第12章）}
+
+\begin{description}
+    \item[RLHF 目标 (KL-regularized RL)]
+    $\max_\pi \mathbb{E}_\pi[r] - \beta\,\mathrm{KL}(\pi\|\pi_{\rm ref})$：奖励是目标，“别离参考策略太远”是约束，$\beta$ 是它的价格；闭式解 $\pi^*\propto \pi_{\rm ref}\,e^{r/\beta}$ 是第4章的玻尔兹曼分布。
+
+    \item[DPO (Direct Preference Optimization)]
+    把奖励用闭式解反解并代入偏好模型，配分函数消掉，直接在策略上做回归——对偶消元。
+
+    \item[GRPO / 可验证奖励]
+    同一题采样一组回答，用组内均值作基线；奖励来自程序验证器（可行 / 不可行）。
+
+    \item[数据流水线 (Data Pipeline)]
+    生成器提议、验证器约束、过滤器执行：从约束分布采样。硬过滤对应 $\lambda\to\infty$，按 $e^{-\lambda\cdot\text{违约量}}$ 加权对应软约束。
 \end{description}
 
 % ------------------------------------------------------------------------------------
@@ -224,36 +370,38 @@
 % 第一行：基础
 \node[concept] (lagrange) {拉格朗日乘子\\(Ch1)};
 \node[concept, right=of lagrange] (kkt) {KKT条件\\(Ch1)};
-\node[concept, right=of kkt] (dual) {对偶性\\(Ch5)};
+\node[concept, right=of kkt] (dual) {对偶性\\(Ch2)};
 
 % 第二行：分支应用
-\node[concept, below=of lagrange] (adjoint) {伴随方程\\(Ch8)};
-\node[concept, below=of kkt] (entropy) {最大熵\\(Ch6)};
-\node[concept, below=of dual] (svm) {SVM\\(Ch7)};
+\node[concept, below=of lagrange] (adjoint) {伴随方程\\(Ch7)};
+\node[concept, below=of kkt] (entropy) {最大熵\\(Ch4)};
+\node[concept, below=of dual] (contact) {接触互补\\(Ch6)};
 
 % 第三行：现代应用
-\node[concept, below=of adjoint] (bp) {反向传播\\(Ch9)};
-\node[concept, below=of entropy] (softmax) {Softmax\\(Ch6,12)};
-\node[concept, below=of svm] (nash) {纳什均衡\\(Ch15)};
+\node[concept, below=of adjoint] (bp) {反向传播\\(Ch8)};
+\node[concept, below=of entropy] (softmax) {Softmax\\(Ch4,11,12)};
+\node[concept, below=of contact] (nash) {纳什均衡\\(Ch10)};
 
 % 第四行：前沿
 \node[concept, below=of bp] (diffsim) {可微仿真\\(Ch16)};
-\node[concept, below=of softmax] (attention) {注意力\\(Ch12)};
+\node[concept, below=of softmax] (attention) {注意力\\(Ch11)};
+\node[concept, below=of nash] (cbf) {安全约束CBF\\(Ch16)};
 
 % 箭头
 \draw[arrow] (lagrange) -- (kkt);
 \draw[arrow] (kkt) -- (dual);
 \draw[arrow] (lagrange) -- (adjoint);
 \draw[arrow] (lagrange) -- (entropy);
-\draw[arrow] (dual) -- (svm);
+\draw[arrow] (dual) -- (contact);
 \draw[arrow] (adjoint) -- (bp);
 \draw[arrow] (entropy) -- (softmax);
 \draw[arrow] (kkt) -- (nash);
 \draw[arrow] (bp) -- (diffsim);
 \draw[arrow] (softmax) -- (attention);
+\draw[arrow] (nash) -- (cbf);
 
 % 虚线连接（表示概念联系）
-\draw[dashed, gray] (adjoint) -- (bp);
+\draw[dashed, gray] (contact) -- (nash);
 \draw[dashed, gray] (bp) to[bend right=20] (diffsim);
 
 \end{tikzpicture}
@@ -282,10 +430,12 @@
 \midrule
 微积分 & 拉格朗日乘子法 \\
 运筹学 & KKT条件 \\
-物理学 & 哈密顿原理 \\
+物理学 & 哈密顿原理 / 拉格朗日方程 \\
+有限元 & $KU=F$ \\
 控制论 & 伴随方程 \\
 机器学习 & 反向传播 \\
 信息论 & 最大熵分布 \\
+强化学习 & 贝尔曼方程 \\
 博弈论 & 纳什均衡条件 \\
 \bottomrule
 \end{tabular}
@@ -299,25 +449,28 @@
 
 \begin{center}
 \renewcommand{\arraystretch}{1.3}
-\begin{tabular}{c|l|l}
+\small
+\begin{tabular}{@{}c@{\hspace{5pt}}p{4.3cm}p{7.6cm}@{}}
 \toprule
 \textbf{章} & \textbf{标题} & \textbf{核心关键词} \\
 \midrule
-1 & 从高数到约束优化 & 拉格朗日乘子、KKT条件、影子价格 \\
-2 & 线性代数回顾 & 特征值、SVD、正定矩阵 \\
-3 & 矩阵求导 & 链式法则、Jacobian、Hessian \\
-4 & 范数与正则化 & L1/L2范数、稀疏性、过拟合 \\
-5 & 凸优化与对偶 & 对偶问题、强对偶、凸集 \\
-6 & 信息与编码 & 熵、KL散度、交叉熵、Softmax \\
-7 & 支持向量机 & 间隔、核技巧、对偶形式 \\
-8 & 最优控制 & 伴随方程、Pontryagin原理 \\
-9 & 神经网络 & 反向传播、计算图、自动微分 \\
-10 & 动态规划 & Bellman方程、值函数 \\
-12 & Transformer & 自注意力、多头注意力 \\
-12-5 & 高效计算 & FlashAttention、MoE \\
-14 & 强化学习 & 策略梯度、Actor-Critic \\
-15 & 多智能体 & 纳什均衡、博弈论 \\
-16 & 世界模型 & 可微仿真、模型预测控制 \\
+1 & 从高数到约束优化 & 拉格朗日乘子、KKT条件、影子价格、罚函数 \\
+2 & 对偶理论 & 弱/强对偶、互补松弛、矩阵“身材”、凸优化 \\
+3 & 变分法 & 泛函、Euler-Lagrange方程、守恒律、等周问题 \\
+4 & 信息与编码 & 熵、最大熵、KL散度、交叉熵、Softmax \\
+5 & 经典力学 & 最小作用量、拉格朗日方程、约束力、双摆 \\
+6 & 机器人运动学与动力学 & 雅可比、$\tau=J^\top F$、逆运动学、接触力 \\
+7 & 轨迹优化与MPC & 协态变量、伴随方程、哈密顿函数、MPC \\
+8 & 深度学习与反向传播 & 计算图、伴随变量、自动微分、优化器 \\
+9 & 强化学习 & 贝尔曼方程、值函数、对偶上升、Q-learning \\
+10 & 多智能体与博弈 & 纳什均衡、Wardrop均衡、QMIX、平均场博弈 \\
+11 & 序列建模与视觉--语言模型 & RNN、梯度消失、Transformer、注意力、视觉 token \\
+12 & 智能体的后训练与数据流水线 & RLHF 与 $\beta$、DPO、GRPO、可验证奖励、生成器/验证器/过滤器 \\
+13 & 有限元方法 & 弱形式、刚度矩阵、$KU=F$、间断有限元 \\
+14 & 物理信息神经网络 & PINN、软/硬约束、自适应权重、Deep Ritz \\
+15 & 神经算子 & DeepONet、FNO、格林函数、离散化无关性 \\
+16 & 世界模型与安全控制 & 世界模型、潜空间动力学、CBF、可微仿真 \\
+17 & VLA、真机强化学习与展望 & 动作块、流匹配、世界--动作模型、真机 RL、约束 RL \\
 \bottomrule
 \end{tabular}
 \end{center}

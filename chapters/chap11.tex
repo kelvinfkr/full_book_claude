@@ -4,27 +4,17 @@
 
 \section*{Attention Is All You Need}
 
-\marginnote{2017年Google团队发表"Attention Is All You Need"，提出Transformer，彻底改变了NLP。论文标题模仿Beatles的歌"All You Need Is Love"。这个架构成为GPT、BERT、ChatGPT的基础。}
+\sidenoteplain{2017年Google团队发表“Attention Is All You Need”，提出Transformer，彻底改变了NLP。论文标题模仿Beatles的歌“All You Need Is Love”。这个架构成为GPT、BERT、ChatGPT的基础。}
 
 ChatGPT、GPT-4、Claude——这些震惊世界的AI系统都基于同一个架构：\textbf{Transformer}。为什么它能取代统治自然语言处理（NLP）十年的循环神经网络（RNN）？
 
-本章我们将从两个视角回答这个问题：
-\begin{itemize}
-    \item \textbf{优化视角}：为什么RNN的梯度会消失或爆炸？
-    \item \textbf{信息论视角}：为什么RNN会"遗忘"长距离信息？
-\end{itemize}
+本章我们将从两个视角回答这个问题。优化视角问的是：为什么RNN的梯度会消失或爆炸？信息论视角问的是：为什么RNN会“遗忘”长距离信息？两个问题的答案指向同一个根源。然后，我们将从零开始构建Transformer，理解它的每一个组件。
 
-然后，我们将从零开始构建Transformer，理解它的每一个组件。
+\vspace{0.3cm}
+\noindent\textit{为什么一个只有几百万参数的 RNN 记不住 50 个词之前的信息？为什么“注意力”这个看似工程化的技巧，会和第4章的最大熵原理长得一模一样？为什么 Transformer 要给残差连接留一条“高速公路”？}
 
 \begin{quote}
-\textbf{本章目标}：读完这一章，你应该能够：
-\begin{enumerate}
-    \item 从动力系统角度解释RNN的梯度问题
-    \item 理解文本如何被转换成模型可处理的向量
-    \item 解释Q、K、V分别是什么，从哪里来
-    \item 说明多头注意力和位置编码的作用
-    \item 理解Transformer的完整前向传播流程
-\end{enumerate}
+\textbf{本章目标}：把序列建模看成“序列损失 + 隐状态递推约束”的拉格朗日问题。你会发现 RNN 的梯度消失就是乘子 $\lambda_t$（隐状态的影子价格）沿时间指数折损，LSTM 的门控和 Transformer 的残差流都是在保护这个影子价格；而注意力的 softmax 则是第4章最大熵原理的直接产物。读完本章，Q、K、V、缩放、多头、位置编码、残差——都不再是“设计出来的”，而是从约束里自然涌现的。
 \end{quote}
 
 \begin{tcolorbox}[colback=green!5, colframe=green!60!black, title=学完这章，你将能够...]
@@ -42,12 +32,13 @@ ChatGPT、GPT-4、Claude——这些震惊世界的AI系统都基于同一个架
 % ====================================================================================
 
 在理解Transformer之前，我们需要先理解它的前辈——循环神经网络（Recurrent Neural Network, RNN）。
+\storynote{Sepp Hochreiter}{1991年，慕尼黑工大的硕士生 Hochreiter 在 Schmidhuber 指导下写出一篇德文论文，第一次从数学上解释了 RNN 的梯度消失；六年后两人提出 LSTM。这篇论文直到 2000 年代才被英语世界广泛引用——“Attention Is All You Need”其实是在回答他 26 年前提出的问题。}
 
 % ------------------------------------------------------------------------------------
 \subsection{序列建模作为约束优化问题}
 % ------------------------------------------------------------------------------------
 
-让我们用熟悉的约束优化框架来理解序列建模。
+序列数据的特点是每一步都依赖于之前的历史。我们要回答的第一个问题是：这种依赖应该怎样写进优化问题？让我们用熟悉的约束优化框架来理解序列建模——答案是把“依赖历史”写成一条约束。
 
 \begin{keyidea}[序列模型的统一形式]
 所有序列模型都可以写成以下约束优化问题：
@@ -57,23 +48,15 @@ ChatGPT、GPT-4、Claude——这些震惊世界的AI系统都基于同一个架
         \text{s.t.} \quad & h_{t+1} = F(h_t, x_t; \theta) \quad \text{（动力学/机器学习模型约束）}
     \end{aligned}
 \end{equation}
-其中：
-\begin{itemize}
-    \item $h_t$ 是第 $t$ 步的\textbf{隐状态}（Hidden State），压缩了历史信息
-    \item $x_t$ 是第 $t$ 步的\textbf{输入}（如当前单词）
-    \item $y_t$ 是第 $t$ 步的\textbf{目标}（如下一个单词）
-    \item $\theta$ 是\textbf{模型参数}
-    \item $F$ 是\textbf{状态转移函数}
-\end{itemize}
+其中 $h_t$ 是第 $t$ 步的\textbf{隐状态}（Hidden State），压缩了历史信息；$x_t$ 是第 $t$ 步的\textbf{输入}（如当前单词）；$y_t$ 是第 $t$ 步的\textbf{目标}（如下一个单词）；$\theta$ 是\textbf{模型参数}；$F$ 是\textbf{状态转移函数}。
 \end{keyidea}
 
-这和我们在强化学习中看到的结构是一样的！隐状态 $h_t$ 就像MDP中的状态，状态转移函数 $F$ 就像环境的动力学方程。
-\think{回顾一下：第3章变分法、第4章力学、第9章神经网络、第10章强化学习，都有同样的约束结构$x_{t+1} = f(x_t, u_t)$。这不是巧合——它们都是同一个数学框架的不同实例！}
+这和第9章强化学习中看到的结构是一样的！隐状态 $h_t$ 就像MDP中的状态，状态转移函数 $F$ 就像环境的动力学方程。
+\think{回顾一下：第3章变分法、第5章力学、第7章轨迹优化、第8章神经网络、第9章强化学习，都有同样的约束结构$x_{t+1} = f(x_t, u_t)$。这不是巧合——它们都是同一个数学框架的不同实例！}
 
 % ------------------------------------------------------------------------------------
 \subsection{RNN的动力学方程}
 % ------------------------------------------------------------------------------------
-\review{第9章}{激活函数$\sigma$是什么？它是神经网络的"非线性调味料"——没有它，多层网络就退化成单层线性变换。常用的有ReLU、tanh、sigmoid，第9章详细讨论了它们的性质。}
 
 RNN选择了最简单的状态转移函数——线性变换加非线性激活：
 
@@ -83,8 +66,9 @@ RNN选择了最简单的状态转移函数——线性变换加非线性激活�
 \end{equation}
 其中 $\sigma$ 是激活函数（如tanh），$W_h, W_x, b$ 是可学习参数。
 \end{keyformula}
+\review{第8章}{激活函数$\sigma$是什么？它是神经网络的“非线性调味料”——没有它，多层网络就退化成单层线性变换。常用的有ReLU、tanh、sigmoid，第8章详细讨论了它们的性质。}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.9]
     % 展开的RNN
@@ -115,15 +99,34 @@ RNN选择了最简单的状态转移函数——线性变换加非线性激活�
 
 \paragraph{关键特点：参数共享}
 
-注意到 $W_h, W_x, b$ 在所有时间步都是\textbf{相同的}。这个设计有深刻的物理原因：
+注意到 $W_h, W_x, b$ 在所有时间步都是\textbf{相同的}。这个设计有深刻的物理原因。第一是\textbf{时间平移对称性}：物理定律不随时间改变，牛顿定律昨天适用，今天也适用；类似地，语言的语法规则在句首和句尾应该是一致的。第二是\textbf{处理任意长度}的需要：参数数量与序列长度无关，所以可以处理任意长的输入。
 
-\begin{itemize}
-    \item \textbf{时间平移对称性}：物理定律不随时间改变。牛顿定律昨天适用，今天也适用。类似地，语言的语法规则在句首和句尾应该是一致的。
-    
-    \item \textbf{处理任意长度}：参数数量与序列长度无关，所以可以处理任意长的输入。
-\end{itemize}
+\begin{tcolorbox}[colback=yellow!10, colframe=orange!80, title=本章的核心观点]
+\textbf{序列建模不是什么新东西——它就是第1章的拉格朗日乘子法，只不过约束变成了一条长度为 $T$ 的递推链 $h_{t+1} = F(h_t, x_t; \theta)$，乘子 $\lambda_t$ 变成了“沿时间往回传的梯度”。}
+
+本章的问题就是第1章的问题，只是变量多了 $T$ 组隐状态、约束多了 $T$ 条递推方程，于是乘子也多了 $T$ 个。RNN、LSTM、Transformer 的区别，只在于这 $T$ 条约束的\textbf{拓扑}——一条长链，还是一张短而宽的图。
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabularx}{\linewidth}{lXX}
+\toprule
+ & \textbf{第1章（有限维）} & \textbf{本章（序列模型）} \\
+\midrule
+变量 & $x \in \R^n$ & 隐状态 $h_1, \ldots, h_T$ 与参数 $\theta$ \\
+目标 & $f(x)$ & $J = \sum_t \ell(h_t, y_t)$ \\
+约束 & $g(x) = 0$ & $F(h_t, x_t; \theta) - h_{t+1} = 0$（$T$ 条） \\
+乘子 & $\lambda$ & $\lambda_t = \partial J/\partial h_t$（伴随变量） \\
+一阶条件 & $\nabla f + \lambda^\top \nabla g = 0$ & 伴随方程 $\lambda_t = J_t^\top \lambda_{t+1} + \partial \ell/\partial h_t$ \\
+影子价格 & $\partial f^*/\partial c$ & 扰动 $h_t$ 一单位，总损失变化多少 \\
+病态 & 约束雅可比奇异 & $\prod_t J_t$ 指数消失 / 爆炸 \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\end{tcolorbox}
 
 但这个设计也带来了严重的问题——让我们用拉格朗日乘子法来分析。
+\review{第7章}{把 $h_t$ 看成状态、$x_t$ 看成外部输入，$h_{t+1} = F(h_t, x_t; \theta)$ 就是第7章轨迹优化里的离散动力学约束。那里对每个时刻引入一个乘子 $\lambda_t$，这里也一样。}
 
 % ------------------------------------------------------------------------------------
 % ------------------------------------------------------------------------------------
@@ -134,7 +137,7 @@ RNN选择了最简单的状态转移函数——线性变换加非线性激活�
 
 构造拉格朗日函数：
 \begin{equation}
-    \mathcal{L} = \sum_{t=1}^{T} \ell(h_t, y_t) + \sum_{t=1}^{T} \lambda_{t}^\top \left( h_t - F(h_{t-1}, x_t; \theta) \right)
+    \mathcal{L} = \sum_{t=1}^{T} \ell(h_t, y_t) + \sum_{t=0}^{T-1} \lambda_{t+1}^\top \left( F(h_t, x_t; \theta) - h_{t+1} \right)
 \end{equation}
 
 其中 $\lambda_t$ 是拉格朗日乘子。根据KKT条件，对 $h_t$ 求偏导为零，得到\textbf{伴随方程}（也就是反向传播的数学本质）：
@@ -144,12 +147,13 @@ RNN选择了最简单的状态转移函数——线性变换加非线性激活�
 \end{equation}
 
 这里的 $\lambda_t$ 正是梯度 $\frac{\partial J}{\partial h_t}$。
+\clarify{按全书的说法，$\lambda_t$ 是“约束 $h_{t+1} = F(h_t, x_t)$ 的影子价格”：把第 $t$ 步的隐状态推开 $\delta$，总损失变化 $\lambda_t^\top \delta$。第8章里它叫“误差信号”，第7章里叫“协态”，是同一个东西。（约束写成 $F - h_{t+1}$ 而不是 $h_{t+1} - F$，是为了让 $\lambda_t$ 恰好等于 $+\partial J/\partial h_t$，与第7章连续部分一致。）}
 
 \paragraph{各个量的形状}
 
 让我们明确每个量的维度。假设隐状态 $h_t \in \mathbb{R}^n$（$n$ 是隐藏层大小），则：
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \renewcommand{\arraystretch}{1.3}
 \begin{tabular}{lll}
@@ -179,19 +183,13 @@ RNN的状态转移是：
     \frac{\partial h_{t+1}}{\partial h_t} = \frac{\partial \sigma(z_t)}{\partial z_t} \cdot \frac{\partial z_t}{\partial h_t}
 \end{equation}
 
-\begin{itemize}
-    \item $\frac{\partial z_t}{\partial h_t} = W_h$，形状是 $n \times n$
-    
-    \item $\frac{\partial \sigma(z_t)}{\partial z_t} = \text{diag}(\sigma'(z_t))$，形状是 $n \times n$ 的\textbf{对角矩阵}
-    
-    这是因为 $\sigma$ 是逐元素操作：$[\sigma(z)]_i = \sigma(z_i)$，所以
-    \begin{equation}
-        \frac{\partial [\sigma(z)]_i}{\partial z_j} = \begin{cases}
-            \sigma'(z_i) & \text{if } i = j \\
-            0 & \text{if } i \neq j
-        \end{cases}
-    \end{equation}
-\end{itemize}
+第二个因子最简单：$\frac{\partial z_t}{\partial h_t} = W_h$，形状是 $n \times n$。第一个因子 $\frac{\partial \sigma(z_t)}{\partial z_t} = \text{diag}(\sigma'(z_t))$ 是一个 $n \times n$ 的\textbf{对角矩阵}，这是因为 $\sigma$ 是逐元素操作：$[\sigma(z)]_i = \sigma(z_i)$，所以
+\begin{equation}
+    \frac{\partial [\sigma(z)]_i}{\partial z_j} = \begin{cases}
+        \sigma'(z_i) & \text{if } i = j \\
+        0 & \text{if } i \neq j
+    \end{cases}
+\end{equation}
 
 因此，雅可比矩阵是：
 
@@ -202,11 +200,11 @@ RNN的状态转移是：
 其中 $\text{diag}(\sigma'(z_t))$ 是对角线上放置 $\sigma'(z_{t,1}), \sigma'(z_{t,2}), \ldots, \sigma'(z_{t,n})$ 的对角矩阵。
 \end{keyformula}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
-\begin{tikzpicture}[scale=0.7]
+\begin{tikzpicture}[scale=0.62]
     % 对角矩阵
-    \node at (-3, 2) {$\text{diag}(\sigma'(z_t))$};
+    \node at (2, 4.5) {$\text{diag}(\sigma'(z_t))$};
     \draw[thick] (0, 0) rectangle (4, 4);
     \fill[blue!30] (0, 3) rectangle (1, 4);
     \fill[blue!30] (1, 2) rectangle (2, 3);
@@ -254,7 +252,7 @@ RNN的状态转移是：
     \frac{\partial J}{\partial h_0} = \frac{\partial J}{\partial h_T} \cdot \prod_{t=0}^{T-1} W_h^\top \cdot \text{diag}(\sigma'(z_t))
 \end{equation}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.8]
     % 梯度向量
@@ -299,19 +297,14 @@ RNN的状态转移是：
 
 \paragraph{特征值分析}
 
-设 $W_h$ 的特征分解为 $W_h = P \Lambda P^{-1}$，其中 $\Lambda = \text{diag}(\lambda_1, \ldots, \lambda_n)$ 是特征值对角矩阵。则：
+设 $W_h$ 的特征分解为 $W_h = P \Lambda P^{-1}$，其中 $\Lambda = \text{diag}(\mu_1, \ldots, \mu_n)$ 是特征值对角矩阵（这里用 $\mu$ 记特征值，把 $\lambda$ 留给乘子）。则：
 
 \begin{equation}
-    W_h^T = P \Lambda^T P^{-1} = P \cdot \text{diag}(\lambda_1^T, \ldots, \lambda_n^T) \cdot P^{-1}
+    W_h^T = P \Lambda^T P^{-1} = P \cdot \text{diag}(\mu_1^T, \ldots, \mu_n^T) \cdot P^{-1}
 \end{equation}
 
-设最大特征值的模为 $\rho = \max_i |\lambda_i|$：
-
-\begin{itemize}
-    \item 若 $\rho < 1$：$|\lambda_i|^T \to 0$，梯度\textbf{指数衰减}
-    \item 若 $\rho > 1$：$|\lambda_i|^T \to \infty$，梯度\textbf{指数爆炸}
-    \item 若 $\rho = 1$：理论上稳定，但实际中难以精确控制
-\end{itemize}
+设最大特征值的模为 $\rho = \max_i |\mu_i|$。若 $\rho < 1$，则 $|\mu_i|^T \to 0$，梯度\textbf{指数衰减}；若 $\rho > 1$，则 $|\mu_i|^T \to \infty$，梯度\textbf{指数爆炸}；只有 $\rho = 1$ 时理论上稳定，但实际中难以精确控制。
+\think{把 $W_h$ 换成正交矩阵（所有特征值模为 1），连乘还会爆炸或消失吗？非线性 $\sigma'$ 又会把这个结论破坏到什么程度？（提示：这就是“酉 RNN”的出发点。）}
 
 \begin{example}[梯度消失的数值演示]
 假设隐状态维度 $n = 256$，$W_h$ 的最大特征值 $\rho = 0.9$，序列长度 $T = 100$。
@@ -331,16 +324,16 @@ RNN的状态转移是：
 梯度会爆炸到上万倍，训练变得极不稳定，loss可能变成NaN。
 \end{example}
 
-\marginnote{对于tanh激活函数，$|\sigma'(z)| \leq 1$，这进一步加剧了梯度消失。因为每一步都要乘以一个 $\leq 1$ 的因子。}
+\sidenoteplain{对于tanh激活函数，$|\sigma'(z)| \leq 1$，这进一步加剧了梯度消失。因为每一步都要乘以一个 $\leq 1$ 的因子。}
 
 
 % ------------------------------------------------------------------------------------
 \subsection{信息论视角：数据处理不等式}
 % ------------------------------------------------------------------------------------
 
-除了梯度问题，RNN还有一个更根本的信息论限制。
+除了梯度问题，RNN还有一个更根本的信息论限制。即使我们想办法把梯度传回去，前向传播时信息是不是已经丢了？
 
-\begin{keyidea}[title=RNN的信息瓶颈]
+\begin{keyidea}[RNN的信息瓶颈]
 RNN的状态更新具有马尔可夫性：
 \begin{equation}
     X_{<t} \to h_{t-1} \to h_t \to X_{t+1}
@@ -351,10 +344,11 @@ RNN的状态更新具有马尔可夫性：
 根据\textbf{数据处理不等式}（Data Processing Inequality）：
 
 \begin{equation}
-    I(X_{t+k}; X_{<t}) \leq I(X_{t+k}; h_t) \leq I(X_{t+k}; h_{t-1}) \leq \cdots
+    I(X_{<t}; h_{t+k}) \leq I(X_{<t}; h_{t+k-1}) \leq \cdots \leq I(X_{<t}; h_t)
 \end{equation}
+（固定“过去” $X_{<t}$，让隐状态往后走：每走一步，隐状态里关于过去的信息只会减少。）
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.9]
     % 信息流
@@ -378,17 +372,12 @@ RNN的状态更新具有马尔可夫性：
     \node[below, red, font=\small] at (4.5, -1) {继续损失};
     
     % 瓶颈标注
-    \node[below, font=\small, gray] at (6, -2) {固定大小的"瓶颈"不断压缩信息};
+    \node[below, font=\small, gray] at (6, -2) {固定大小的“瓶颈”不断压缩信息};
 \end{tikzpicture}
 \caption{RNN的信息瓶颈：历史信息被强制压缩进固定大小的隐状态}
 \end{figure}
 
-这意味着：
-\begin{itemize}
-    \item 信息只能\textbf{减少}，不能增加
-    \item 距离越远，能保留的信息越少
-    \item 这是\textbf{有损压缩}，信息随距离指数衰减
-\end{itemize}
+这意味着信息只能\textbf{减少}，不能增加，而且距离越远，能保留的信息越少。这是\textbf{有损压缩}，信息随距离单调衰减（有限容量的隐状态下通常是指数式的）。
 
 \begin{remark}
 长距离依赖的丢失不仅是梯度问题，更是\textbf{信息论的必然}。即使梯度完美传播，信息也已经在前向传播中丢失了。
@@ -398,17 +387,15 @@ RNN的状态更新具有马尔可夫性：
 \section{LSTM：门控的缓解尝试}
 % ====================================================================================
 
-\marginnote{\textbf{LSTM的历史}：LSTM由德国学者Sepp Hochreiter和Jürgen Schmidhuber于1997年提出。Hochreiter在博士论文中分析了RNN梯度消失问题，LSTM的门控设计正是为了解决这个问题。2010年代LSTM在语音识别（Google Voice）和机器翻译中大放异彩，直到2017年被Transformer取代。}
+\sidenoteplain{\textbf{LSTM的历史}：LSTM由德国学者Sepp Hochreiter和Jürgen Schmidhuber于1997年提出。Hochreiter在博士论文中分析了RNN梯度消失问题，LSTM的门控设计正是为了解决这个问题。2010年代LSTM在语音识别（Google Voice）和机器翻译中大放异彩，直到2017年被Transformer取代。}
 
-\marginnote{\textbf{Yoshua Bengio}(1964--)：2018年图灵奖得主，蒙特利尔大学教授，被称为``深度学习三巨头''之一。他对序列模型贡献巨大：他和学生提出了神经机器翻译、注意力机制的早期版本，以及GAN的改进。他创立的MILA是全球最大的AI研究机构之一。}
-
-长短期记忆网络（LSTM）试图通过\textbf{门控机制}来缓解梯度问题。
+上一节的诊断是：同一个雅可比连乘 $T$ 次。既然如此，能不能让某条通路上的雅可比接近单位阵？长短期记忆网络（LSTM）试图通过\textbf{门控机制}来缓解梯度问题。
 
 % ------------------------------------------------------------------------------------
 \subsection{LSTM的核心设计}
 % ------------------------------------------------------------------------------------
 
-LSTM引入了一个新的状态——\textbf{细胞状态}（Cell State）$c_t$，以及三个"门"来控制信息流：
+LSTM引入了一个新的状态——\textbf{细胞状态}（Cell State）$c_t$，以及三个“门”来控制信息流：
 
 \begin{keyformula}[title=LSTM方程]
 \begin{align}
@@ -421,10 +408,11 @@ LSTM引入了一个新的状态——\textbf{细胞状态}（Cell State）$c_t$�
 \end{align}
 其中 $\odot$ 表示逐元素乘法，$\sigma$ 是sigmoid函数（输出在0到1之间）。
 \end{keyformula}
+\storynote{Yoshua Bengio}{1964--，2018年图灵奖得主，蒙特利尔大学教授，被称为``深度学习三巨头''之一。他对序列模型贡献巨大：他和学生提出了神经机器翻译、注意力机制的早期版本，以及GAN的改进。他创立的MILA是全球最大的AI研究机构之一。}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
-\begin{tikzpicture}[>=stealth, scale=0.85, font=\small]
+\begin{tikzpicture}[>=stealth, scale=0.7, font=\small]
 
 \tikzstyle{layer} = [draw, thick, fill=yellow!20, minimum width=1cm, minimum height=0.6cm]
 \tikzstyle{op} = [draw, thick, circle, fill=green!10, inner sep=0pt, minimum size=0.6cm]
@@ -449,8 +437,8 @@ LSTM引入了一个新的状态——\textbf{细胞状态}（Cell State）$c_t$�
 \node[op] (mul_h) at (10.5, 2.8) {$\times$};
 
 % --- Cell State 顶部高速通道
-\coordinate (c_in) at (-1.5, 5);
-\coordinate (c_out) at (14.5, 5);
+\coordinate (c_in) at (-1.2, 5);
+\coordinate (c_out) at (14.2, 5);
 
 \draw[->, very thick, blue!70!black] (c_in) -- (mul_f);
 \draw[->, very thick, blue!70!black] (mul_f) -- (add_c);
@@ -486,7 +474,7 @@ LSTM引入了一个新的状态——\textbf{细胞状态}（Cell State）$c_t$�
 \draw[->, thick] (tanh_out.south) -- (mul_h.north);
 \draw[->, thick] (ot.north) -- (mul_h.south);
 
-\draw[->, very thick] (mul_h.east) -- (14.5, 2.8) node[right] {$h_t$};
+\draw[->, very thick] (mul_h.east) -- (14.2, 2.8) node[right] {$h_t$};
 
 \end{tikzpicture}
 \caption{LSTM 内部详细数据流向图}
@@ -505,20 +493,15 @@ LSTM引入了一个新的状态——\textbf{细胞状态}（Cell State）$c_t$�
     \frac{\partial c_t}{\partial c_{t-1}} = \text{diag}(f_t)
 \end{equation}
 
-当遗忘门 $f_t \approx 1$ 时，梯度可以近乎无损地传播！这就像在动力系统中加入了一条"梯度高速公路"。
+当遗忘门 $f_t \approx 1$ 时，梯度可以近乎无损地传播！这就像在动力系统中加入了一条“梯度高速公路”。
+\preview{“梯度高速公路”在本章后面的残差流、第14章 PINN 的深层网络里都会再出现：让主干通路的雅可比接近单位阵，影子价格就不会折损。}
 
 \paragraph{LSTM的局限}
 
-尽管LSTM缓解了梯度消失，它仍然有根本性的限制：
-
-\begin{itemize}
-    \item \textbf{仍是串行计算}：$h_t$ 依赖 $h_{t-1}$，无法并行
-    \item \textbf{路径长度仍是 $O(T)$}：信息必须经过 $T$ 步才能从开头传到结尾
-    \item \textbf{信息瓶颈依然存在}：所有历史仍被压缩进固定大小的状态
-\end{itemize}
+尽管LSTM缓解了梯度消失，它仍然有根本性的限制。它仍是串行计算，$h_t$ 依赖 $h_{t-1}$，无法并行；路径长度仍是 $O(T)$，信息必须经过 $T$ 步才能从开头传到结尾；信息瓶颈也依然存在，所有历史仍被压缩进固定大小的状态。
 
 \begin{remark}
-LSTM把"结构性的梯度消失问题"转化为了"可学习的优化问题"——让模型自己决定遗忘什么、记住什么。但这只是缓解，不是根治。在 $T \to \infty$ 的极限下，重复应用同一个算子必然导致信息退化。
+LSTM把“结构性的梯度消失问题”转化为了“可学习的优化问题”——让模型自己决定遗忘什么、记住什么。但这只是缓解，不是根治。在 $T \to \infty$ 的极限下，重复应用同一个算子必然导致信息退化。
 \end{remark}
 
 % ====================================================================================
@@ -527,23 +510,17 @@ LSTM把"结构性的梯度消失问题"转化为了"可学习的优化问题"—
 
 在继续之前，让我们思考一个深刻的问题：为什么RNN/LSTM要坚持参数共享？如果每个时间步用不同的参数，不就没有连乘问题了吗？
 
-\marginnote{ResNet每层参数不同，可以做到上千层。为什么RNN做不到？}
+\think{ResNet每层参数不同，可以做到上千层。为什么RNN做不到？}
 
 % ------------------------------------------------------------------------------------
 \subsection{物理约束：时间平移对称性}
 % ------------------------------------------------------------------------------------
 
-参数共享源于两个基本假设：
+参数共享源于两个基本假设。
 
 \paragraph{1. 时间平移对称性}
 
-物理定律不随时间改变。牛顿定律 $F = ma$ 昨天成立，今天也成立，明天还成立。
-
-类似地，语言的规则也应该是时间无关的：
-\begin{itemize}
-    \item "主语 + 谓语 + 宾语"的结构在句首和句尾都适用
-    \item "I love you"和"You love me"遵循相同的语法规则
-\end{itemize}
+物理定律不随时间改变。牛顿定律 $F = ma$ 昨天成立，今天也成立，明天还成立。类似地，语言的规则也应该是时间无关的：“主语 + 谓语 + 宾语”的结构在句首和句尾都适用，“I love you”和“You love me”遵循相同的语法规则。
 
 \textbf{数学推论}：状态转移函数 $F$ 的参数 $\theta$ 不能依赖于时间 $t$。
 
@@ -556,35 +533,28 @@ LSTM把"结构性的梯度消失问题"转化为了"可学习的优化问题"—
 
 \paragraph{代价}
 
-这两个"物理正确"的假设，强行锁定了优化的拓扑结构：
-
-\begin{itemize}
-    \item 参数共享 $\Rightarrow$ 同一矩阵连乘 $\Rightarrow$ 梯度指数行为
-    \item 因果性 $\Rightarrow$ 串行计算 $\Rightarrow$ 无法并行
-\end{itemize}
+这两个“物理正确”的假设，强行锁定了优化的拓扑结构：参数共享意味着同一矩阵连乘，于是梯度呈指数行为；因果性意味着串行计算，于是无法并行。
 
 \begin{center}
-\textit{RNN的悲剧在于：它为了遵守"时间对称性"和"因果性"，牺牲了"优化的稳定性"。}
+\textit{RNN的悲剧在于：它为了遵守“时间对称性”和“因果性”，牺牲了“优化的稳定性”。}
 \end{center}
 
 % ------------------------------------------------------------------------------------
 \subsection{对比：为什么ResNet能做深？}
 % ------------------------------------------------------------------------------------
 
-\begin{marginnote}
-\textbf{何恺明与ResNet}：ResNet（Deep Residual Learning for Image Recognition, 2016）由微软亚洲研究院的何恺明等人提出，获得CVPR 2016最佳论文奖。这篇论文引用量超过20万次，是深度学习领域被引用最多的论文之一。残差连接的思想看似简单，却彻底改变了深度网络的设计范式。
-\end{marginnote}
+\storynote{何恺明}{ResNet（Deep Residual Learning for Image Recognition, 2016）由微软亚洲研究院的何恺明等人提出，获得CVPR 2016最佳论文奖。这篇论文引用量超过20万次，是深度学习领域被引用最多的论文之一。残差连接的思想看似简单，却彻底改变了深度网络的设计范式。}
 
 ResNet和LSTM看起来都有残差结构，为什么表现天差地别？
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \renewcommand{\arraystretch}{1.4}
-\begin{tabular}{p{3cm}|p{5cm}|p{5cm}}
+\begin{tabularx}{\textwidth}{p{2.4cm}|X|X}
 \toprule
 & \textbf{ResNet（空间深度）} & \textbf{RNN/LSTM（时间深度）} \\
 \midrule
-\textbf{递推方程} & $x_{\ell+1} = x_\ell + F(x_\ell; \theta_\ell)$ & $h_{t+1} = h_t + F(h_t; \theta)$ \\
+\textbf{递推方程} & $x_{\ell+1} = x_\ell + F(x_\ell; \theta_\ell)$ & $h_{t+1} = F(h_t; \theta)$（LSTM 的细胞态才有 $c_{t+1} = c_t + \cdots$） \\
 \midrule
 \textbf{参数} & 每层不同 $\theta_\ell$ & 所有时间步共享 $\theta$ \\
 \midrule
@@ -594,25 +564,26 @@ ResNet和LSTM看起来都有残差结构，为什么表现天差地别？
 \midrule
 \textbf{可行深度} & 1000+层 & 几百步就困难 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \caption{ResNet vs RNN：参数共享的代价}
 \end{table}
 
 \textbf{核心结论}：LSTM的门控只能缓解，无法根治。因为在长序列极限下，重复应用同一个算子必然导致动力学行为的退化。
 
+
 % ====================================================================================
 \section{Transformer：打破串行的束缚}
 % ====================================================================================
 
-\marginnote{\textbf{Transformer的诞生}：2017年Google团队（Vaswani等8人）发表``Attention Is All You Need''。Ashish Vaswani是第一作者，但这是典型的团队合作成果。这篇论文的引用量已超20万次，是AI史上最具影响力的论文之一。有趣的是，论文的8位作者后来大多离开Google创业。}
+\sidenoteplain{\textbf{Transformer的诞生}：2017年Google团队（Vaswani等8人）发表``Attention Is All You Need''。Ashish Vaswani是第一作者，但这是典型的团队合作成果。这篇论文的引用量已超20万次，是AI史上最具影响力的论文之一。有趣的是，论文的8位作者后来大多离开Google创业。}
 
-Transformer的核心洞察是：\textbf{放弃因果性的串行约束，让所有位置直接相连}。
+上一节的结论是：只要坚持参数共享和串行递推，连乘就无法避免。那么，哪一条假设可以放弃？Transformer的核心洞察是：\textbf{放弃因果性的串行约束，让所有位置直接相连}。
 
 % ------------------------------------------------------------------------------------
 \subsection{从时间深度到空间深度}
 % ------------------------------------------------------------------------------------
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.9, auto]
     % 通用样式
@@ -677,17 +648,12 @@ Transformer的核心洞察是：\textbf{放弃因果性的串行约束，让所�
 \caption{序列建模的两种范式对比：RNN必须按时间步“接力”传递信息，而Transformer允许任意两个位置通过注意力机制“直接对话”。}
 \end{figure}
 
-Transformer的关键变化：
-
-\begin{enumerate}
-    \item \textbf{每层参数不同}：第 $\ell$ 层有自己的参数 $\theta^{(\ell)}$，避免连乘同一矩阵
-    \item \textbf{注意力机制}：任意两个位置可以直接交互，路径长度 $O(1)$
-    \item \textbf{可并行计算}：所有位置可以同时处理
-\end{enumerate}
+Transformer的关键变化有三点。第一，\textbf{每层参数不同}：第 $\ell$ 层有自己的参数 $\theta^{(\ell)}$，避免连乘同一矩阵。第二，\textbf{注意力机制}：任意两个位置可以直接交互，路径长度 $O(1)$。第三，\textbf{可并行计算}：所有位置可以同时处理。
 
 \paragraph{代价}
 
 Transformer用 $O(T^2)$ 的计算复杂度换取了优化的稳定性。这在现代GPU上是可接受的。
+\preview{$O(T^2)$ 到底费多少显存、多少算力？附录C会给出可以直接套用的估算公式（KV Cache、FLOPs $\approx 6ND$）。}
 
 % ------------------------------------------------------------------------------------
 % ------------------------------------------------------------------------------------
@@ -703,25 +669,18 @@ Transformer用 $O(T^2)$ 的计算复杂度换取了优化的稳定性。这在�
 
 即先对输入做 LayerNorm，然后过 Attention/MLP，最后与原输入相加。这保证了主干通路 $H$ 上没有任何非线性操作，梯度可以无阻碍地流动。
 
-\begin{marginnote}
-\textbf{Pre-Norm vs. Post-Norm}:
-最早的 Transformer（2017）将 Norm 放在残差相加之后（Post-Norm）：$H \leftarrow \text{Norm}(H + \text{Attn}(H))$。现代大模型为了训练稳定性，普遍改用 Pre-Norm：先 Norm 再过子层。Pre-Norm 让残差主干成为一条"高速公路"，是训练超深 Transformer 的关键。
-\end{marginnote}
+\sidenoteplain{\textbf{Pre-Norm vs. Post-Norm}:
+最早的 Transformer（2017）将 Norm 放在残差相加之后（Post-Norm）：$H \leftarrow \text{Norm}(H + \text{Attn}(H))$。现代大模型为了训练稳定性，普遍改用 Pre-Norm：先 Norm 再过子层。Pre-Norm 让残差主干成为一条“高速公路”，是训练超深 Transformer 的关键。}
 
-这意味着，信息和梯度可以沿着 $H$ 通路无损地向前或向后传播，不被非线性层阻断。这也是 Transformer 能够堆叠到上百层（如 GPT-4）而不发生梯度消失的根本数学原因。
+这意味着，信息和梯度可以沿着 $H$ 通路无损地向前或向后传播，不被非线性层阻断。这也是 Transformer 能够堆叠到近百层（如 GPT-3 的 96 层）而不发生梯度消失的根本数学原因。
 
 \paragraph{现代变体 (SOTA Tricks)}
-在实际工程中，为了进一步提升稳定性与效率，还会采用以下改进：
-\begin{itemize}
-    \item \textbf{RMSNorm}：简化的 LayerNorm，去除了均值中心化，被 DeepSeek/LLaMA 采用。
-    \item \textbf{SwiGLU}：更高效的激活函数，替代了传统的 ReLU。
-    \item \textbf{RoPE}：旋转位置编码，通过复数旋转引入位置信息。
-\end{itemize}
+在实际工程中，为了进一步提升稳定性与效率，还会采用一些改进：RMSNorm 是简化的 LayerNorm，去除了均值中心化，被 DeepSeek/LLaMA 采用；SwiGLU 是更高效的激活函数，替代了传统的 ReLU；RoPE（旋转位置编码）则通过复数旋转引入位置信息。
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \renewcommand{\arraystretch}{1.4}
-\begin{tabular}{p{3cm}|p{5cm}|p{5cm}}
+\begin{tabularx}{\textwidth}{p{2.4cm}|X|X}
 \toprule
 & \textbf{RNN/LSTM} & \textbf{Transformer} \\
 \midrule
@@ -733,13 +692,13 @@ Transformer用 $O(T^2)$ 的计算复杂度换取了优化的稳定性。这在�
 \midrule
 \textbf{资源交换} & 省显存，费优化 & 费显存（$O(T^2)$），易优化 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \caption{RNN与Transformer的优化特性对比}
 \end{table}
 
 % ------------------------------------------------------------------------------------
 % ------------------------------------------------------------------------------------
-\subsection{信息论视角：为什么Transformer能保留更多信息？}
+\subsection{信息论视角：Transformer 为何不丢信息}
 % ------------------------------------------------------------------------------------
 
 除了优化视角，我们还可以从\textbf{信息论}角度理解为什么Transformer优于RNN。
@@ -764,15 +723,16 @@ Transformer用 $O(T^2)$ 的计算复杂度换取了优化的稳定性。这在�
 
 应用到RNN：
 \begin{equation}
-    I(X_{t+k}; X_{<t}) \leq I(X_{t+k}; h_t) \leq I(X_{t+k}; h_{t-1}) \leq \cdots \leq I(X_{t+k}; h_1)
+    I(X_{<t}; h_{T}) \leq I(X_{<t}; h_{T-1}) \leq \cdots \leq I(X_{<t}; h_t)
 \end{equation}
+（马尔可夫链 $X_{<t} \to h_t \to h_{t+1} \to \cdots$：越往后的隐状态，关于过去的信息越少。）
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
-\begin{tikzpicture}[>=stealth, scale=0.85]
+\begin{tikzpicture}[>=stealth, scale=0.8]
     % 信息量的衰减
     \draw[->] (0, 0) -- (12, 0) node[right] {时间步};
-    \draw[->] (0, 0) -- (0, 4) node[above] {互信息 $I(X_T; h_t)$};
+    \draw[->] (0, 0) -- (0, 4) node[above] {互信息 $I(X_1; h_t)$};
     
     % RNN曲线
     \draw[thick, red, domain=0:10, samples=50] plot (\x, {3.5*exp(-0.3*\x)});
@@ -792,12 +752,7 @@ Transformer用 $O(T^2)$ 的计算复杂度换取了优化的稳定性。这在�
 \caption{RNN vs Transformer的信息保持能力。RNN中远距离token的互信息指数衰减，Transformer保持恒定。}
 \end{figure}
 
-这意味着：
-\begin{itemize}
-    \item 距离越远的信息，能保留的越少
-    \item 固定大小的 $h_t$ 形成"信息瓶颈"
-    \item 长距离依赖的丢失是\textbf{信息论的必然}，不仅仅是梯度问题
-\end{itemize}
+这意味着距离越远的信息，能保留的越少；固定大小的 $h_t$ 形成“信息瓶颈”；长距离依赖的丢失是\textbf{信息论的必然}，不仅仅是梯度问题。
 
 \paragraph{Transformer：直接信息通道}
 
@@ -807,18 +762,11 @@ Transformer的注意力机制彻底打破了这种链式结构：
     h_t = \sum_{i=1}^{T} \alpha_{ti} \cdot v_i, \quad \alpha_{ti} = \text{softmax}\left(\frac{q_t \cdot k_i}{\sqrt{d}}\right)
 \end{equation}
 
-关键区别：
-
-\begin{enumerate}
-    \item \textbf{直接信息通道}：任意token $x_i$ 和 $x_t$ 之间存在直接连接，不需要经过中间节点
-    
-    \item \textbf{互信息不衰减}：
-    \begin{equation}
-        I(X_t; X_i)_{\text{Transformer}} \approx \text{const} \quad \text{（不随距离 $|t-i|$ 衰减）}
-    \end{equation}
-    
-    \item \textbf{绕过数据处理不等式}：信息不再需要经过多次处理，所以不会累积损失
-\end{enumerate}
+关键区别有三点。第一，\textbf{直接信息通道}：任意token $x_i$ 和 $x_t$ 之间存在直接连接，不需要经过中间节点。第二，\textbf{互信息不衰减}：
+\begin{equation}
+    I(X_i; h_t^{(1)}) \ \text{与距离 $|t-i|$ 无关} \quad \text{（每个 $x_i$ 到 $h_t$ 都只经过一次处理）}
+\end{equation}
+第三，\textbf{只用一次数据处理不等式}：信息从 $x_i$ 到 $h_t$ 只经过一次处理，损失不会随距离累积。
 
 \paragraph{从最大熵原理推导Attention}
 
@@ -826,12 +774,12 @@ Transformer的注意力机制彻底打破了这种链式结构：
 
 答案是后者。我们可以从\textbf{第一性原理}推导出Attention的形式。
 
-\begin{keyidea}[title=从第一性原理推导Attention]
+\begin{keyidea}[从第一性原理推导Attention]
 引入三个基本假设：
 
 \textbf{假设1：相似性由内积定义（希尔伯特空间）}
 
-在向量空间中，两个向量的"相关性"最自然的度量是内积：
+在向量空间中，两个向量的“相关性”最自然的度量是内积：
 \begin{equation}
     \text{Score}(q, k_i) = q^\top k_i
 \end{equation}
@@ -844,7 +792,7 @@ Transformer的注意力机制彻底打破了这种链式结构：
 \begin{equation}
     p(i|q) \propto \exp\left(\frac{q^\top k_i}{\tau}\right)
 \end{equation}
-其中 $\tau$ 是"温度"参数（在Attention中是 $\sqrt{d}$）。
+其中 $\tau$ 是“温度”参数（在Attention中是 $\sqrt{d}$）。
 
 这个分布在所有满足期望约束的分布中，熵最大，即：
 \begin{equation}
@@ -858,6 +806,7 @@ Transformer的注意力机制彻底打破了这种链式结构：
     \hat{v} = \mathbb{E}_{p(i|q)}[v_i] = \sum_i p(i|q) \cdot v_i
 \end{equation}
 \end{keyidea}
+\review{第4章}{“最大熵 + 期望约束 $\Rightarrow$ 玻尔兹曼分布”正是第4章的推导：$p_i \propto \exp(\beta g_i)$，$\beta$ 是期望约束的拉格朗日乘子。注意力里的 $1/\sqrt{d_k}$ 就是这个 $\beta$。}
 
 把三个假设组合起来：
 \begin{equation}
@@ -867,15 +816,9 @@ Transformer的注意力机制彻底打破了这种链式结构：
 这正是Attention公式！
 
 \begin{remark}
-Attention不是凭空设计的，它是在希尔伯特空间中进行\textbf{最大熵信息检索}的\textbf{最优估计器}。
+Attention不是凭空设计的，它是在希尔伯特空间中进行\textbf{最大熵信息检索}的\textbf{最优估计器}：用内积度量相似性来自几何假设，Softmax归一化来自最大熵原理（玻尔兹曼分布），对Value加权求和则是核回归（Nadaraya-Watson估计器）。
 
-\begin{itemize}
-    \item 内积度量相似性 $\leftarrow$ 几何假设
-    \item Softmax归一化 $\leftarrow$ 最大熵原理（玻尔兹曼分布）
-    \item 加权求和Value $\leftarrow$ 核回归（Nadaraya-Watson估计器）
-\end{itemize}
-
-温度参数 $\sqrt{d}$ 控制分布的"尖锐程度"：温度越低，分布越集中在最相关的位置；温度越高，分布越均匀。
+温度参数 $\sqrt{d}$ 控制分布的“尖锐程度”：温度越低，分布越集中在最相关的位置；温度越高，分布越均匀。
 \end{remark}
 
 
@@ -887,7 +830,7 @@ Attention不是凭空设计的，它是在希尔伯特空间中进行\textbf{最
 
 \paragraph{单层Attention的局限}
 
-\marginnote{核回归（Kernel Regression）可追溯至 1950–60 年代，是最早的非参数学习方法之一。它以核函数为权重，对邻域样本做加权平均，从统计界到机器学习界都曾是主力技术。}
+\sidenoteplain{核回归（Kernel Regression）可追溯至 1950–60 年代，是最早的非参数学习方法之一。它以核函数为权重，对邻域样本做加权平均，从统计界到机器学习界都曾是主力技术。}
 
 单层Attention在数学上等价于\textbf{核回归}：
 
@@ -895,33 +838,19 @@ Attention不是凭空设计的，它是在希尔伯特空间中进行\textbf{最
     \hat{v}_t = \sum_i \underbrace{\text{softmax}(q_t^\top k_i)}_{\text{核函数}} v_i
 \end{equation}
 
-这本质上是在做\textbf{加权平均}。它有三个根本性的局限：
-
-\begin{enumerate}
-    \item \textbf{只能拟合平滑函数}：核回归是一种平滑器，无法表示尖锐的决策边界
-    
-    \item \textbf{无组合性}：只能检索现有的 $v_i$，无法生成新的概念
-    
-    \item \textbf{固定核函数}：核 $K(q, k) = \exp(q^\top k)$ 是固定的，无法适应复杂的高阶相关性
-\end{enumerate}
+这本质上是在做\textbf{加权平均}。它有三个根本性的局限。首先，它只能拟合平滑函数：核回归是一种平滑器，无法表示尖锐的决策边界。其次，它没有组合性：只能检索现有的 $v_i$，无法生成新的概念。最后，它的核函数是固定的：$K(q, k) = \exp(q^\top k)$ 无法适应复杂的高阶相关性。
 
 \paragraph{语言学实例：组合结构}
 
 考虑句子：
 
 \begin{center}
-\textit{"The book that I bought yesterday is blue."}
+\textit{“The book that I bought yesterday is blue.”}
 \end{center}
 
-问题：什么是蓝色的？
+问题：什么是蓝色的？答案不是单纯的“book”（世界上有很多书），也不是“I”、“bought”或“yesterday”，而是\textbf{复合整体}：“The book that I bought yesterday”。
 
-\begin{itemize}
-    \item 不是单纯的"book"（世界上有很多书）
-    \item 不是"I"，不是"bought"，也不是"yesterday"
-    \item 答案是\textbf{复合整体}："The book that I bought yesterday"
-\end{itemize}
-
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.8]
     % 单层
@@ -936,7 +865,7 @@ Attention不是凭空设计的，它是在希尔伯特空间中进行\textbf{最
         
         \draw[->, thick, red] (blue) -- node[left, font=\scriptsize] {?} (book);
         
-        \node[below, font=\small, gray, align=center] at (0, -1) {只能看到单词级别\\可能错误学到"书=蓝"};
+        \node[below, font=\small, gray, align=center] at (0, -1) {只能看到单词级别\\可能错误学到“书=蓝”};
     \end{scope}
     
     % 多层
@@ -969,10 +898,10 @@ Attention不是凭空设计的，它是在希尔伯特空间中进行\textbf{最
 
 研究表明，Transformer的不同层学习不同类型的表示：
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \renewcommand{\arraystretch}{1.4}
-\begin{tabular}{l|l|l}
+\begin{tabularx}{\textwidth}{l|l|X}
 \toprule
 层级 & 功能 & 数学描述 \\
 \midrule
@@ -984,7 +913,7 @@ Layer 7-10 & \textbf{长程推理} & 多跳依赖，指代消解（he $\to$ the 
 \midrule
 Layer 11-L & \textbf{语义压缩} & 提取预测所需的核心语义变量 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \caption{Transformer层级的功能分工}
 \end{table}
 
@@ -1000,7 +929,7 @@ Layer 11-L & \textbf{语义压缩} & 提取预测所需的核心语义变量 \\
 \end{align}
 
 每一层都在\textbf{动态改变核函数的形状}。通过 $L$ 次复合，简单的线性Attention被转化为\textbf{极高维、极非线性}的流形变换，从而能表达任意复杂的语义组合。
-\marginnote{KL 展开是把随机过程分解成一组最优正交模式的办法，相当于连续版本的 PCA。}
+\sidenoteplain{KL 展开是把随机过程分解成一组最优正交模式的办法，相当于连续版本的 PCA。}
 
 \begin{remark}[物理视角：Transformer的谱分析诠释]
     从信号处理的角度看，多头注意力机制（Multi-Head Attention）本质上是在高维空间中寻找一组\textbf{特征基（Feature Basis）}。
@@ -1027,12 +956,7 @@ Attention本质是一个\textbf{两两内积核}：
     \alpha_{ij} \propto \exp(q_i^\top k_j)
 \end{equation}
 
-\begin{itemize}
-    \item \textbf{能表达}：线性模态、两两相关性（Pairwise Correlation）
-    \item \textbf{不能直接表达}：高阶依赖（三元组、环路）、群论对称性、拓扑结构
-\end{itemize}
-
-当然，多层Attention可以隐式地学习高阶关系，但这需要更多的层数和参数。
+它能表达的是线性模态和两两相关性（Pairwise Correlation）；不能直接表达的是高阶依赖（三元组、环路）、群论对称性和拓扑结构。当然，多层Attention可以隐式地学习高阶关系，但这需要更多的层数和参数。
 
 \paragraph{2. 结构健忘症}
 
@@ -1041,21 +965,16 @@ Attention本质是一个\textbf{两两内积核}：
     A^{(\ell)} = \text{softmax}(Q^{(\ell)} K^{(\ell)\top})
 \end{equation}
 
-Transformer没有显式的结构存储。物理系统和语言都有\textbf{持久结构}（如PDE的边界条件、句法树），但Transformer必须靠梯度下降"隐式死记硬背"，信息效率较低。
+Transformer没有显式的结构存储。物理系统和语言都有\textbf{持久结构}（如PDE的边界条件、句法树），但Transformer必须靠梯度下降“隐式死记硬背”，信息效率较低。
 
 \paragraph{3. 复杂度的诅咒}
 
-$O(T^2)$ 的复杂度限制了处理超长序列的能力：
+$O(T^2)$ 的复杂度限制了处理超长序列的能力：对于稀疏事件和长距离依赖，全连接图造成算力浪费。这催生了各种改进：稀疏Attention、线性Attention、状态空间模型等。
 
-\begin{itemize}
-    \item 对于稀疏事件和长距离依赖，全连接图造成算力浪费
-    \item 这催生了各种改进：稀疏Attention、线性Attention、状态空间模型等
-\end{itemize}
-
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \renewcommand{\arraystretch}{1.4}
-\begin{tabular}{l|c|c|l}
+\begin{tabularx}{\textwidth}{l|c|c|X}
 \toprule
 方法 & 时间复杂度 & 长序列能力 & 代表模型 \\
 \midrule
@@ -1064,7 +983,7 @@ $O(T^2)$ 的复杂度限制了处理超长序列的能力：
 线性Attention & $O(T)$ & 优秀 & Performer, Linear Transformer \\
 状态空间模型 & $O(T)$ & 优秀 & Mamba, S4 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \caption{不同方法的复杂度与长序列处理能力}
 \end{table}
 
@@ -1072,16 +991,12 @@ $O(T^2)$ 的复杂度限制了处理超长序列的能力：
 
 \begin{center}
 \fbox{\parbox{0.9\textwidth}{
-\textbf{Transformer是在给定 $O(T^2)$ 算力预算下的最优结构：}
-\begin{itemize}
-    \item 优化视角：残差连接使梯度稳定传播
-    \item 信息论视角：全连接实现互信息最大化
-    \item 代价：$O(T^2)$ 复杂度，无显式结构存储
-\end{itemize}
+\textbf{Transformer是在给定 $O(T^2)$ 算力预算下的一种合理折中：}从优化视角看，残差连接使梯度稳定传播；从信息论视角看，全连接实现互信息最大化；代价则是 $O(T^2)$ 的复杂度，以及没有显式的结构存储。
 
 当算力和显存充足时，Transformer战胜RNN是数学上的必然。但对于超长序列或需要显式结构的任务，新的架构仍在探索中。
 }}
 \end{center}
+
 
 % ====================================================================================
 \section{文本到数字：预处理流程}
@@ -1097,22 +1012,15 @@ $O(T^2)$ 的复杂度限制了处理超长序列的能力：
 把一段文本切分成一系列\textbf{token}（词元）。Token是模型处理的基本单位，每个token对应一个整数ID。
 \end{keyidea}
 
-分词看起来简单，但有很多设计选择。现代大模型普遍使用\textbf{子词分词}（Subword Tokenization）。
+分词看起来简单，但有很多设计选择。现代大模型普遍使用\textbf{子词分词}（Subword Tokenization）。要理解为什么，先看两种最直接的方案各有什么问题。
 
 \paragraph{为什么不直接按单词分词？}
 
-\begin{itemize}
-    \item 词表太大：英语有几十万单词，中文词汇量更大
-    \item 无法处理新词：如"ChatGPT"第一次出现时不在词表中
-    \item 无法处理拼写错误：如"teh"（the的错误拼写）
-\end{itemize}
+因为词表太大——英语有几十万单词，中文词汇量更大；而且无法处理新词，如“ChatGPT”第一次出现时不在词表中；也无法处理拼写错误，如“teh”（the的错误拼写）。
 
 \paragraph{为什么不按字符分词？}
 
-\begin{itemize}
-    \item 序列太长："artificial"变成10个token
-    \item 丢失单词级语义：模型需要从字符重新学习单词
-\end{itemize}
+因为序列太长——“artificial”变成10个token；而且丢失了单词级语义，模型需要从字符重新学习单词。
 
 \paragraph{子词分词：折中方案}
 
@@ -1123,22 +1031,22 @@ $O(T^2)$ 的复杂度限制了处理超长序列的能力：
 \toprule
 输入 & 分词结果 \\
 \midrule
-"hello" & ["hello"]（常见词，保留） \\
-"unhappiness" & ["un", "happiness"]（拆成词根+后缀） \\
-"ChatGPT" & ["Chat", "G", "PT"]（新词被拆开） \\
-"你好世界" & ["你好", "世界"]（中文按词分） \\
+“hello” & [“hello”]（常见词，保留） \\
+“unhappiness” & [“un”, “happiness”]（拆成词根+后缀） \\
+“ChatGPT” & [“Chat”, “G”, “PT”]（新词被拆开） \\
+“你好世界” & [“你好”, “世界”]（中文按词分） \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\marginnote{GPT-4的词表大小约为100,000。一个中文字符通常对应1-2个token，而一个英文单词通常对应1-3个token。}
+\sidenoteplain{GPT-4的词表大小约为100,000。一个中文字符通常对应1-2个token，而一个英文单词通常对应1-3个token。}
 
 \paragraph{分词的结果}
 
 分词器输出的是\textbf{整数序列}，每个整数是token在词表中的索引：
 
 \begin{equation}
-    \text{"I love AI"} \xrightarrow{\text{分词}} [40, 765, 2735] \xrightarrow{\text{查词表}} \text{["I", "love", "AI"]}
+    \text{“I love AI”} \xrightarrow{\text{分词}} [40, 765, 2735] \xrightarrow{\text{查词表}} \text{[“I”, “love”, “AI”]}
 \end{equation}
 
 % ------------------------------------------------------------------------------------
@@ -1147,7 +1055,7 @@ $O(T^2)$ 的复杂度限制了处理超长序列的能力：
 
 神经网络不能直接处理整数，需要把每个token转换成一个\textbf{向量}。
 
-\marginnote{词嵌入是需要训练的。
+\sidenoteplain{词嵌入是需要训练的。
 训练方式是：把它当成普通神经网络参数，让反向传播自动调整嵌入矩阵的每一行，使相似词在高维空间里更接近，不相似的词更远。}
 
 \begin{keyidea}[词嵌入（Word Embedding）]
@@ -1158,7 +1066,7 @@ $O(T^2)$ 的复杂度限制了处理超长序列的能力：
 其中 $E \in \mathbb{R}^{V \times d}$ 是词嵌入矩阵，$V$ 是词表大小，$d$ 是嵌入维度。
 \end{keyidea}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.9]
     % Token IDs
@@ -1196,12 +1104,7 @@ $O(T^2)$ 的复杂度限制了处理超长序列的能力：
 
 \paragraph{嵌入向量的含义}
 
-词嵌入不是随机的，它编码了\textbf{语义信息}：
-
-\begin{itemize}
-    \item 语义相近的词，嵌入向量也相近："king"和"queen"的向量接近
-    \item 可以做向量运算：$\vec{king} - \vec{man} + \vec{woman} \approx \vec{queen}$
-\end{itemize}
+词嵌入不是随机的，它编码了\textbf{语义信息}：语义相近的词，嵌入向量也相近，“king”和“queen”的向量接近；甚至可以做向量运算，$\vec{king} - \vec{man} + \vec{woman} \approx \vec{queen}$。
 
 \paragraph{嵌入维度}
 
@@ -1223,16 +1126,16 @@ LLaMA-7B & 32,000 & 4,096 \\
 \subsection{位置编码：告诉模型顺序}
 % ------------------------------------------------------------------------------------
 
-注意力机制本身是\textbf{位置无关}的——它只看token之间的相似度，不知道谁在前谁在后。但语言显然是有顺序的："狗咬人"和"人咬狗"意思完全不同！
+注意力机制本身是\textbf{位置无关}的——它只看token之间的相似度，不知道谁在前谁在后。但语言显然是有顺序的：“狗咬人”和“人咬狗”意思完全不同！
 
-\begin{keyidea}[title=位置编码（Positional Encoding）]
-位置编码给每个位置加上一个独特的"标记"，让模型能够区分不同位置：
+\begin{keyidea}[位置编码（Positional Encoding）]
+位置编码给每个位置加上一个独特的“标记”，让模型能够区分不同位置：
 \begin{equation}
     \text{输入} = \text{词嵌入} + \text{位置编码}
 \end{equation}
 \end{keyidea}
 
-\marginnote{现代模型通常使用\textbf{可学习的位置编码}——把位置编码当作参数来训练，或者使用\textbf{旋转位置编码}（RoPE）等更高级的方法。}
+\sidenoteplain{现代模型通常使用\textbf{可学习的位置编码}——把位置编码当作参数来训练，或者使用\textbf{旋转位置编码}（RoPE）等更高级的方法。}
 
 \paragraph{正弦位置编码（原始Transformer）}
 
@@ -1245,7 +1148,7 @@ LLaMA-7B & 32,000 & 4,096 \\
 
 其中 $pos$ 是位置，$i$ 是维度索引。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.7]
     % 热力图示意
@@ -1268,27 +1171,21 @@ LLaMA-7B & 32,000 & 4,096 \\
 
 \paragraph{为什么用正弦函数？}
 
-这个设计看似神秘，其实有深刻的数学动机：
-
-\begin{itemize}
-    \item \textbf{可以处理任意长度}：不需要学习，直接计算
-    \item \textbf{相对位置可表示}：$PE_{pos+k}$ 可以表示为 $PE_{pos}$ 的线性变换。具体来说，由三角恒等式：
-    \[
-    \begin{pmatrix} \sin(\omega \cdot (pos+k)) \\ \cos(\omega \cdot (pos+k)) \end{pmatrix}
-    = \begin{pmatrix} \cos(\omega k) & \sin(\omega k) \\ -\sin(\omega k) & \cos(\omega k) \end{pmatrix}
-    \begin{pmatrix} \sin(\omega \cdot pos) \\ \cos(\omega \cdot pos) \end{pmatrix}
-    \]
-    这意味着模型可以通过学习一个\textbf{固定的线性变换}来推断相对位置！这正是设计者的精妙之处：让 Attention 能够"看到"相对距离。
-    \item \textbf{不同维度捕捉不同尺度}：低频维度捕捉远距离关系，高频维度捕捉近距离关系
-\end{itemize}
+这个设计看似神秘，其实有深刻的数学动机。首先，它可以处理任意长度：不需要学习，直接计算。其次，相对位置可表示：$PE_{pos+k}$ 可以表示为 $PE_{pos}$ 的线性变换。具体来说，由三角恒等式：
+\[
+\begin{pmatrix} \sin(\omega \cdot (pos+k)) \\ \cos(\omega \cdot (pos+k)) \end{pmatrix}
+= \begin{pmatrix} \cos(\omega k) & \sin(\omega k) \\ -\sin(\omega k) & \cos(\omega k) \end{pmatrix}
+\begin{pmatrix} \sin(\omega \cdot pos) \\ \cos(\omega \cdot pos) \end{pmatrix}
+\]
+这意味着模型可以通过学习一个\textbf{固定的线性变换}来推断相对位置！这正是设计者的精妙之处：让 Attention 能够“看到”相对距离。最后，不同维度捕捉不同尺度：低频维度捕捉远距离关系，高频维度捕捉近距离关系。
 
 
 % ------------------------------------------------------------------------------------
 \subsection{完整的输入处理流程}
 % ------------------------------------------------------------------------------------
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
-\begin{tikzpicture}[>=stealth, scale=0.8,
+\begin{tikzpicture}[>=stealth, scale=0.72, every node/.style={transform shape},
     block/.style={draw, rounded corners, minimum width=2.0cm, minimum height=0.8cm, align=center}]
     
     % 原始文本
@@ -1296,11 +1193,11 @@ LLaMA-7B & 32,000 & 4,096 \\
         {原始文本\\\texttt{I love AI}};
     
     % Token IDs
-    \node[block, fill=orange!20, right=2.3cm of text] (token)
+    \node[block, fill=orange!20, right=1.5cm of text] (token)
         {Token IDs\\$[40, 765, 2735]$};
     
     % 词嵌入矩阵 Z
-    \node[block, fill=green!20, right=2.5cm of token] (embed)
+    \node[block, fill=green!20, right=1.5cm of token] (embed)
         {词嵌入 $Z$\\$\in \mathbb{R}^{3\times d}$};
     
     % 位置编码矩阵 P（下方）
@@ -1309,10 +1206,10 @@ LLaMA-7B & 32,000 & 4,096 \\
     
     % 加号
     \node[draw, circle, thick, minimum size=0.7cm,
-        right=1.8cm of embed] (plus) {$+$};
+        right=1.2cm of embed] (plus) {$+$};
     
     % 最终输入 X
-    \node[block, fill=red!20, right=1.8cm of plus] (input)
+    \node[block, fill=red!20, right=1.2cm of plus] (input)
         {模型输入 $X$\\$= Z + P$};
     
     % 箭头
@@ -1326,13 +1223,7 @@ LLaMA-7B & 32,000 & 4,096 \\
 \caption{从原始文本到 Transformer 输入矩阵 $X$ 的流程示意。}
 \end{figure}
 
-总结：
-\begin{enumerate}
-    \item \textbf{分词}：文本 $\to$ Token ID序列
-    \item \textbf{词嵌入}：Token ID $\to$ 向量（查表）
-    \item \textbf{位置编码}：加上位置信息
-    \item 最终得到：$X \in \mathbb{R}^{T \times d}$，其中 $T$ 是序列长度，$d$ 是嵌入维度
-\end{enumerate}
+总结一下这条流水线：分词把文本变成Token ID序列；词嵌入把Token ID查表成向量；位置编码再加上位置信息；最终得到 $X \in \mathbb{R}^{T \times d}$，其中 $T$ 是序列长度，$d$ 是嵌入维度。
 
 % ====================================================================================
 \section{注意力机制：Q、K、V从何而来}
@@ -1347,12 +1238,12 @@ LLaMA-7B & 32,000 & 4,096 \\
 想象你在读一个句子：
 
 \begin{center}
-\textit{"The animal didn't cross the street because \textbf{it} was too tired."}
+\textit{“The animal didn't cross the street because \textbf{it} was too tired.”}
 \end{center}
 
-当你读到"it"时，你的大脑会自动回溯，确定"it"指的是"animal"而不是"street"。这就是\textbf{注意力}——根据当前需求，有选择地关注历史信息的不同部分。
+当你读到“it”时，你的大脑会自动回溯，确定“it”指的是“animal”而不是“street”。这就是\textbf{注意力}——根据当前需求，有选择地关注历史信息的不同部分。把这种“回头看”写进神经网络的想法，最早并不是为了取代RNN：2014年，Bahdanau等人在机器翻译中引入了注意力机制，让模型在翻译时有选择地关注源句的不同部分；三年后的Transformer则把它变成了唯一的机制。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.9]
     % 句子
@@ -1371,35 +1262,24 @@ LLaMA-7B & 32,000 & 4,096 \\
     \draw[->, thick, blue!30, bend left=20] (it) to node[above, font=\scriptsize] {0.1} (street);
     \draw[->, thick, blue!10, bend left=15] (it) to (the);
     
-    \node[below, gray, font=\small] at (5.5, -1) {"it"强烈关注"animal"，轻微关注"street"};
+    \node[below, gray, font=\small] at (5.5, -1) {“it”强烈关注“animal”，轻微关注“street”};
 \end{tikzpicture}
-\caption{注意力机制：每个词有选择地"关注"其他词}
+\caption{注意力机制：每个词有选择地“关注”其他词}
 \end{figure}
 
 % ------------------------------------------------------------------------------------
 \subsection{Q、K、V的来源与含义}
 % ------------------------------------------------------------------------------------
 
-注意力机制用三个向量来实现这种"选择性关注"：
+注意力机制用三个向量来实现这种“选择性关注”：
 
-\begin{keyidea}[title=Q、K、V的含义]
-\begin{itemize}
-    \item \textbf{Query（查询）}$Q$：我在找什么？（当前token的"问题"）
-    \item \textbf{Key（键）}$K$：我有什么？（每个token的"标签"）
-    \item \textbf{Value（值）}$V$：我能提供什么？（每个token的"内容"）
-\end{itemize}
+\begin{keyidea}[Q、K、V的含义]
+\textbf{Query（查询）}$Q$ 回答“我在找什么”，是当前token的“问题”；\textbf{Key（键）}$K$ 回答“我有什么”，是每个token的“标签”；\textbf{Value（值）}$V$ 回答“我能提供什么”，是每个token的“内容”。
 \end{keyidea}
 
 \paragraph{类比：图书馆检索}
 
-想象你去图书馆找书：
-\begin{itemize}
-    \item 你带着一个\textbf{查询}（Query）："我想找关于机器学习的书"
-    \item 每本书有一个\textbf{标签}（Key）：书名、关键词
-    \item 每本书有\textbf{内容}（Value）：实际的知识
-\end{itemize}
-
-你通过比较Query和每本书的Key，找到最相关的书，然后获取它们的Value。
+想象你去图书馆找书：你带着一个\textbf{查询}（Query）——“我想找关于机器学习的书”；每本书有一个\textbf{标签}（Key）——书名、关键词；每本书还有\textbf{内容}（Value）——实际的知识。你通过比较Query和每本书的Key，找到最相关的书，然后获取它们的Value。
 
 \paragraph{Q、K、V是怎么算出来的？}
 
@@ -1414,7 +1294,7 @@ LLaMA-7B & 32,000 & 4,096 \\
 其中 $X \in \mathbb{R}^{T \times d}$ 是输入序列，$W_Q, W_K, W_V \in \mathbb{R}^{d \times d_k}$ 是\textbf{可学习的}投影矩阵。
 \end{keyformula}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.85,
     block/.style={draw, rounded corners, minimum width=1.5cm, minimum height=0.7cm}]
@@ -1452,21 +1332,13 @@ LLaMA-7B & 32,000 & 4,096 \\
 
 一个自然的问题：为什么不直接用 $X$ 本身作为Q、K、V？
 
-原因是：\textbf{不同的角色需要不同的表示}。
-
-\begin{itemize}
-    \item "它"作为Query时，应该编码"我在找一个名词性的先行词"
-    \item "动物"作为Key时，应该编码"我是一个可以被代词指代的名词"
-    \item "动物"作为Value时，应该编码"动物的语义信息"
-\end{itemize}
-
-通过学习不同的投影矩阵，模型可以让同一个词在不同角色下有不同的表示。
+原因是：\textbf{不同的角色需要不同的表示}。“它”作为Query时，应该编码“我在找一个名词性的先行词”；“动物”作为Key时，应该编码“我是一个可以被代词指代的名词”；而“动物”作为Value时，应该编码“动物的语义信息”。通过学习不同的投影矩阵，模型可以让同一个词在不同角色下有不同的表示。
 
 % ------------------------------------------------------------------------------------
 \subsection{注意力分数的计算}
 % ------------------------------------------------------------------------------------
 
-有了Q和K，我们就可以计算每对token之间的"相关性"。
+有了Q和K，我们就可以计算每对token之间的“相关性”。
 
 \begin{keyformula}[title=缩放点积注意力]
 \begin{equation}
@@ -1484,9 +1356,9 @@ $Q$ 的每一行是一个token的Query向量，$K$ 的每一行是一个token的
     (QK^\top)_{ij} = q_i \cdot k_j = \sum_{m=1}^{d_k} q_{im} k_{jm}
 \end{equation}
 
-这是token $i$ 的Query和token $j$ 的Key的\textbf{点积}，衡量它们有多"匹配"。
+这是token $i$ 的Query和token $j$ 的Key的\textbf{点积}，衡量它们有多“匹配”。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.8]
     % Q矩阵
@@ -1530,7 +1402,7 @@ $Q$ 的每一行是一个token的Query向量，$K$ 的每一行是一个token的
 
 这会导致softmax的输入过大，使得输出接近one-hot（几乎所有概率集中在一个位置），梯度接近零。
 
-\marginnote{这就像softmax的"温度"调节：除以 $\sqrt{d_k}$ 相当于提高温度，让分布更平滑。}
+\sidenoteplain{这就像softmax的“温度”调节：除以 $\sqrt{d_k}$ 相当于提高温度，让分布更平滑。}
 
 除以 $\sqrt{d_k}$ 后，点积的方差变成1，softmax的行为更稳定。
 
@@ -1544,7 +1416,7 @@ $Q$ 的每一行是一个token的Query向量，$K$ 的每一行是一个token的
 
 其中 $s_{ij} = \frac{q_i \cdot k_j}{\sqrt{d_k}}$。
 
-$\alpha_{ij}$ 就是\textbf{注意力权重}：token $i$ 对 token $j$ 的"关注程度"。
+$\alpha_{ij}$ 就是\textbf{注意力权重}：token $i$ 对 token $j$ 的“关注程度”。
 
 \paragraph{第四步：加权求和 Value}
 
@@ -1555,6 +1427,7 @@ $\alpha_{ij}$ 就是\textbf{注意力权重}：token $i$ 对 token $j$ 的"关�
 \end{equation}
 
 每个token的输出是所有token的Value的加权组合，权重由Query-Key匹配程度决定。
+\tryit{用 NumPy 生成 $d_k = 64$ 的随机 $q, k \sim \mathcal{N}(0, 1)$，画出除以 $\sqrt{d_k}$ 前后 softmax 输出最大值的直方图，看看“接近 one-hot”有多严重。}
 
 % ------------------------------------------------------------------------------------
 \subsection{注意力的数学本质}
@@ -1562,7 +1435,7 @@ $\alpha_{ij}$ 就是\textbf{注意力权重}：token $i$ 对 token $j$ 的"关�
 
 从数学角度看，注意力机制其实是一个\textbf{可微的软检索}。
 
-\begin{keyidea}[title=注意力 = 核回归]
+\begin{keyidea}[注意力 = 核回归]
 经典的Nadaraya-Watson核回归：
 \begin{equation}
     f(x) = \sum_i \frac{K(x, x_i)}{\sum_j K(x, x_j)} y_i
@@ -1576,7 +1449,7 @@ $\alpha_{ij}$ 就是\textbf{注意力权重}：token $i$ 对 token $j$ 的"关�
 注意力是用\textbf{softmax核}的核回归！
 \end{keyidea}
 
-这个视角揭示了注意力的本质：它是在用Query去"检索"最相关的Key，然后返回对应的Value。
+这个视角揭示了注意力的本质：它是在用Query去“检索”最相关的Key，然后返回对应的Value。
 
 \paragraph{从物理第一性原理推导}
 
@@ -1621,7 +1494,7 @@ $\alpha_{ij}$ 就是\textbf{注意力权重}：token $i$ 对 token $j$ 的"关�
 其中 $h$ 是头的数量，$W_Q^i, W_K^i, W_V^i \in \mathbb{R}^{d \times d_k}$，$W_O \in \mathbb{R}^{hd_v \times d}$。
 \end{keyformula}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.75,
     block/.style={draw, rounded corners, minimum width=1.8cm, minimum height=0.6cm, font=\small}]
@@ -1661,26 +1534,13 @@ $\alpha_{ij}$ 就是\textbf{注意力权重}：token $i$ 对 token $j$ 的"关�
 
 \paragraph{维度安排}
 
-为了保持计算量不变，通常让每个头的维度是总维度的 $1/h$：
+为了保持计算量不变，通常让每个头的维度是总维度的 $1/h$：例如总维度 $d = 512$、头数 $h = 8$ 时，每个头的维度是 $d_k = d_v = d/h = 64$。
 
-\begin{itemize}
-    \item 总维度：$d = 512$
-    \item 头数：$h = 8$
-    \item 每个头的维度：$d_k = d_v = d/h = 64$
-\end{itemize}
-
-\marginnote{这种"分工"是自动学到的，不是人为设计的。这体现了神经网络的"涌现"能力。}
+\sidenoteplain{这种“分工”是自动学到的，不是人为设计的。这体现了神经网络的“涌现”能力。}
 
 \paragraph{不同头学到什么？}
 
-研究发现，不同的头会自动学到关注不同类型的关系：
-
-\begin{itemize}
-    \item 某些头关注\textbf{相邻词}（局部语法）
-    \item 某些头关注\textbf{句子主语}（全局依赖）
-    \item 某些头关注\textbf{标点符号}（句子边界）
-    \item 某些头关注\textbf{代词的先行词}（指代消解）
-\end{itemize}
+研究发现，不同的头会自动学到关注不同类型的关系：某些头关注\textbf{相邻词}（局部语法），某些头关注\textbf{句子主语}（全局依赖），某些头关注\textbf{标点符号}（句子边界），还有些头关注\textbf{代词的先行词}（指代消解）。
 
 
 % ====================================================================================
@@ -1695,7 +1555,7 @@ $\alpha_{ij}$ 就是\textbf{注意力权重}：token $i$ 对 token $j$ 的"关�
 
 原始Transformer用于机器翻译，采用\textbf{Encoder-Decoder}结构：
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.8,
     % 定义通用方块样式
@@ -1781,18 +1641,10 @@ $\alpha_{ij}$ 就是\textbf{注意力权重}：token $i$ 对 token $j$ 的"关�
 \end{figure}
 
 \paragraph{Encoder}
-\begin{itemize}
-    \item 输入：源语言句子（如英语）
-    \item 结构：多层自注意力 + 前馈网络
-    \item 输出：源句子的表示
-\end{itemize}
+Encoder的输入是源语言句子（如英语），结构是多层自注意力 + 前馈网络，输出是源句子的表示。
 
 \paragraph{Decoder}
-\begin{itemize}
-    \item 输入：目标语言的已生成部分（如法语）
-    \item 结构：掩码自注意力 + 交叉注意力 + 前馈网络
-    \item 输出：下一个词的概率分布
-\end{itemize}
+Decoder的输入是目标语言的已生成部分（如法语），结构是掩码自注意力 + 交叉注意力 + 前馈网络，输出是下一个词的概率分布。
 
 % ------------------------------------------------------------------------------------
 \subsection{只用Decoder：GPT的选择}
@@ -1800,7 +1652,7 @@ $\alpha_{ij}$ 就是\textbf{注意力权重}：token $i$ 对 token $j$ 的"关�
 
 GPT系列模型简化了结构，\textbf{只用Decoder}：
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.8,
     block/.style={draw, rounded corners, minimum width=3cm, minimum height=0.7cm, font=\small}]
@@ -1850,7 +1702,7 @@ GPT是\textbf{自回归}模型：生成第 $t$ 个词时，只能看到前 $t-1$
     \end{cases}
 \end{equation}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.6]
     % 掩码矩阵
@@ -1923,6 +1775,7 @@ GPT是\textbf{自回归}模型：生成第 $t$ 个词时，只能看到前 $t-1$
     
     \item \textbf{输出}：$X_2 \in \mathbb{R}^{T \times d}$
 \end{enumerate}
+\tryit{按这八步用 PyTorch 写一个 \texttt{TransformerBlock} 类（约 40 行），用 \texttt{torch.autograd.gradcheck} 检查；附录C“代码实现”一节给出了其中注意力部分的参考实现。}
 
 % ====================================================================================
 \section{输入输出：实际使用指南}
@@ -1941,7 +1794,7 @@ GPT是\textbf{自回归}模型：生成第 $t$ 个词时，只能看到前 $t-1$
 \toprule
 格式 & 说明 \\
 \midrule
-原始文本 & "What is the capital of France?" \\
+原始文本 & “What is the capital of France?” \\
 Token IDs & $[2061, 318, 262, 3139, 286, 4881, 30]$ \\
 嵌入向量 & $X \in \mathbb{R}^{7 \times d}$ \\
 \bottomrule
@@ -1950,14 +1803,7 @@ Token IDs & $[2061, 318, 262, 3139, 286, 4881, 30]$ \\
 
 \paragraph{特殊Token}
 
-大多数模型使用一些特殊token：
-
-\begin{itemize}
-    \item \texttt{<BOS>} 或 \texttt{<s>}：句子开始
-    \item \texttt{<EOS>} 或 \texttt{</s>}：句子结束
-    \item \texttt{<PAD>}：填充（让不同长度的序列对齐）
-    \item \texttt{<UNK>}：未知词（不在词表中）
-\end{itemize}
+大多数模型使用一些特殊token：\texttt{<BOS>} 或 \texttt{<s>} 标记句子开始，\texttt{<EOS>} 或 \texttt{</s>} 标记句子结束，\texttt{<PAD>} 用于填充（让不同长度的序列对齐），\texttt{<UNK>} 表示未知词（不在词表中）。
 
 \paragraph{批处理}
 
@@ -1993,7 +1839,7 @@ $P_{t,v}$ 表示在位置 $t$ 生成词 $v$ 的概率。
 
 生成文本时，模型一次只生成一个token，然后把新token加入输入，继续生成：
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.8]
     % 步骤1
@@ -2022,7 +1868,7 @@ $P_{t,v}$ 表示在位置 $t$ 生成词 $v$ 的概率。
 
 
 
-\marginnote{KV Cache是企业进行大模型部署的关键步骤，理解它对优化推理速度很重要。}
+\sidenoteplain{KV Cache是企业进行大模型部署的关键步骤，理解它对优化推理速度很重要。}
 \subsection{KV Cache：为什么能大幅加速推理？}
 % ------------------------------------------------------------------------------------
 
@@ -2046,24 +1892,19 @@ K_i = W_K h_i, \quad V_i = W_V h_i
 \]
 一旦算出来，就\textbf{永远不会再被修改}。但我们在后续每一步里，会一遍又一遍地用到这些 K/V。
 
-\textbf{KV Cache 的想法就很简单：}
-
-\begin{itemize}
-    \item 第一次看到某个 token 时，把它的 $K_i, V_i$ 算出来；
-    \item 以后再生成新 token 时，\textbf{不再重新算}前面的 $K_1,\dots,K_{t-1}$，直接\textbf{从缓存里读出来用}。
-\end{itemize}
+\textbf{KV Cache 的想法就很简单}：第一次看到某个 token 时，把它的 $K_i, V_i$ 算出来；以后再生成新 token 时，\textbf{不再重新算}前面的 $K_1,\dots,K_{t-1}$，直接\textbf{从缓存里读出来用}。
 
 这样，生成每个新 token 时，只需要：
 \[
 \text{计算新的 } K_t, V_t,\quad \text{然后与缓存中的 } K_{1:t-1}, V_{1:t-1} \text{ 做 Attention。}
 \]
-复杂度从“每次重算 $1\sim t$ 个”变成“只算第 $t$ 个”，总量从 $O(T^2)$ 降到接近 $O(T)$。
+复杂度从“每次重算 $1\sim t$ 个”变成“只算第 $t$ 个”：省掉的是历史 K/V 的重复投影（$O(T^2 d) \to O(T d)$）；注意力本身每步仍要算 $q_t$ 与全部历史的点积，总量仍是 $O(T^2)$。
 
-\marginnote{直观地说：本来每写一个字都要把全文再读一遍，现在改成“以前读过的都用笔记查”，当然快很多。}
+\sidenoteplain{直观地说：本来每写一个字都要把全文再读一遍，现在改成“以前读过的都用笔记查”，当然快很多。}
 
-\paragraph{图示理解}
+\paragraph{图示理解}\mbox{}\par\nopagebreak
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \begin{tikzpicture}[>=stealth, scale=0.8, font=\scriptsize]
 
@@ -2149,12 +1990,7 @@ K_i = W_K h_i, \quad V_i = W_V h_i
 \text{Attention}(q_t,\; K_{1:t},\; V_{1:t}).
 \]
 
-\begin{itemize}
-    \item $q_t$ 只依赖当前这个 token（以及当前位置），\textbf{每次都不一样}，不能提前算，也没必要缓存；
-    \item $K_{1:t-1}, V_{1:t-1}$ 来自历史 token，\textbf{一旦算完就不再改变}，非常适合缓存。
-\end{itemize}
-
-因此只缓存 K 和 V 就足够了，这也是名词叫 \emph{KV Cache} 的原因。
+$q_t$ 只依赖当前这个 token（以及当前位置），\textbf{每次都不一样}，不能提前算，也没必要缓存；而 $K_{1:t-1}, V_{1:t-1}$ 来自历史 token，\textbf{一旦算完就不再改变}，非常适合缓存。因此只缓存 K 和 V 就足够了，这也是名词叫 \emph{KV Cache} 的原因。
 
 % -------------------------------------------------------
 \paragraph{KV Cache 的显存开销从哪里来？}
@@ -2178,28 +2014,23 @@ K_i = W_K h_i, \quad V_i = W_V h_i
 
 \begin{example}[一个简单的数量级估算]
 假设：
-\[
+\begin{gather*}
 L = 32,\quad
 T = 2048,\quad
-d = 4096,\quad
+d = 4096,\\
 \text{batch\_size}=1,\quad
 \text{precision} = 2\ \text{bytes (FP16)}.
-\]
+\end{gather*}
 则 KV Cache 需要的显存大约为
 \[
 2 \times 32 \times 2048 \times 4096 \times 2
-\;\approx\; 2.1\times 10^9\ \text{bytes} \;\approx\; 2\ \text{GB}.
+\;\approx\; 1.07\times 10^9\ \text{bytes} \;\approx\; 1\ \text{GB}.
 \]
 这只是\textbf{缓存}占掉的显存，还不包括模型参数本身！
 \end{example}
 
-这也是为什么：
-
-\begin{itemize}
-    \item 上下文越长（$T$ 越大），显存越吃紧；
-    \item 工程上要对 KV Cache 做\textbf{量化}（比如用 \texttt{int8}、\texttt{int4} 存储），来减小显存开销；
-    \item 企业部署大模型时，KV Cache 是\textbf{必须精细优化}的一环。
-\end{itemize}
+这也是为什么上下文越长（$T$ 越大），显存越吃紧；工程上要对 KV Cache 做\textbf{量化}（比如用 \texttt{int8}、\texttt{int4} 存储）来减小显存开销；企业部署大模型时，KV Cache 是\textbf{必须精细优化}的一环。
+\preview{附录C会把这个公式扩展成完整的显存预算表：权重、梯度、优化器状态、激活值、KV Cache，并讨论“显存的影子价格”。}
 
 
 
@@ -2208,74 +2039,292 @@ d = 4096,\quad
 \subsection{上下文长度限制}
 % ------------------------------------------------------------------------------------
 
-Transformer有一个重要限制：\textbf{最大上下文长度}。
-
-\begin{itemize}
-    \item GPT-3：2048 tokens
-    \item GPT-4：8192 / 32768 tokens
-    \item Claude：100K+ tokens
-\end{itemize}
+Transformer有一个重要限制：\textbf{最大上下文长度}。GPT-3是2048 tokens，GPT-4是8192 / 32768 tokens，Claude则达到100K+ tokens。
 
 \paragraph{为什么有长度限制？}
 
-\begin{enumerate}
-    \item \textbf{注意力复杂度}：$O(T^2)$，长序列计算量巨大
-    \item \textbf{位置编码}：某些位置编码方式限制了最大长度
-    \item \textbf{显存限制}：KV Cache随长度线性增长
-\end{enumerate}
+原因有三：注意力复杂度是 $O(T^2)$，长序列计算量巨大；某些位置编码方式限制了最大长度；KV Cache随长度线性增长，受显存限制。
 
 \paragraph{超长文本怎么办？}
 
-\begin{itemize}
-    \item \textbf{分块处理}：把长文档切成多个块，分别处理
-    \item \textbf{滑动窗口}：只保留最近的 $T$ 个token
-    \item \textbf{长度外推}：用特殊的位置编码支持更长序列
-\end{itemize}
+常见做法有三种：分块处理，把长文档切成多个块，分别处理；滑动窗口，只保留最近的 $T$ 个token；长度外推，用特殊的位置编码支持更长序列。
 
 % ====================================================================================
 % 代码演示结果
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.98\textwidth]{figs_chap11/chap12_fig1.png}
-\caption{自注意力机制完整计算过程。左上：输入嵌入矩阵$X$（3个词$\times$4维）；中上：Q、K、V矩阵（通过线性变换$W_Q$、$W_K$、$W_V$得到）；右上：注意力权重热图$\text{softmax}(QK^T/\sqrt{d_k})$；左下：计算流程的五个步骤；中下：单词"love"的注意力分布（它对三个词的关注程度）；右下：多头注意力的并行结构示意。}
-\label{fig:chap12_attention}
+\includegraphics[width=0.98\textwidth]{figs_chap11/chap11_fig1.png}
+\caption{一个真实训练出来的单头自注意力（\texttt{code\_chap11/chap11\_figures.py}）：输入是含噪的正弦序列 $x_t=\sin(2\pi t/16+\phi)+\varepsilon_t$（$T=48$，三个周期），$Q,K,V$ 由最近 4 个采样值线性映射得到，训练目标是还原无噪声的信号。（a）含噪输入（灰点）、真实信号（黑线）与注意力输出（蓝线）：输出的均方误差约为输入噪声的一半。（b）注意力矩阵 $\alpha_{ij}=\mathrm{softmax}_j(q_i\cdot k_j/\sqrt{d_k})$：平行于对角线、间距为 16 的条纹说明模型学会了``关注相位相同的时刻''。（c）查询位置 $t=24$ 的注意力分布：权重集中在 $j\approx 8,24,40$ 三簇（合计约 0.95），其余位置几乎为零——注意力就是按相似度加权的平均，即正文所说的 softmax 核回归。}
+\label{fig:chap11_attention}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap11/chap12_fig2.png}
-\caption{位置编码可视化。左上：正弦位置编码热图——低频维度变化慢，高频维度变化快；右上：不同维度的正弦波形——体现位置编码的频率分解；左下：位置相似度——相邻位置的点积相似度更高，体现局部性先验；右下：RoPE（旋转位置编码）示意——在复平面上，不同位置对应不同的旋转角度。}
-\label{fig:chap12_positional_encoding}
+\includegraphics[width=0.95\textwidth]{figs_chap11/chap11_fig2.png}
+\caption{正弦位置编码（$d_{\text{model}}=16$，位置 $0\sim 63$）。（a）编码矩阵 $PE_{(pos,d)}$：低维度变化快（高频），高维度变化慢（低频），最右几列在 64 个位置内几乎不变。（b）维度 $0,2,4,6$ 的正弦分量，波长分别为 $6.3,20,63,199$：一个位置的编码就是一组不同频率的``时钟指针''。（c）位置之间的归一化点积 $PE_{pos}\cdot PE_{pos'}/(d/2)$：矩阵沿对角线平移不变，只依赖相对位置 $pos-pos'$，相邻位置最相似——这正是``$PE_{pos+k}$ 是 $PE_{pos}$ 的线性变换''的体现。}
+\label{fig:chap11_positional_encoding}
 \end{figure}
+
+
+% ====================================================================================
+\section{视觉--语言模型：把图像也变成 token}
+% ====================================================================================
+
+到目前为止，本章的 Transformer 只吃一种东西：文本 token。可是物理智能要面对的世界不是一串字，而是一张张图像、一段段视频。让语言模型“睁开眼睛”的办法，出人意料地简单：\textbf{不改 Transformer，改输入}——把图像也变成一串 token，和文本 token 拼在同一条序列里，剩下的交给注意力。本节沿着这条思路走一遍：图像怎么切成 token，视觉编码器怎么训，怎么接到语言模型上，以及整套系统按什么配方训练。每一步我们照例问同样的三个问题：目标是什么、约束是什么、$\lambda$ 代表什么。
+
+% ------------------------------------------------------------------------------------
+\subsection{为什么要把图像变成 token}
+% ------------------------------------------------------------------------------------
+
+回顾本章“注意力机制”一节：注意力只做一件事——对一组向量按相似度做加权平均。它不关心这些向量从哪里来，是一个词、一个像素块，还是一段声音。这意味着 Transformer 天然是一个\textbf{与模态无关}的机器：只要你能把任何信号表示成“一串 $d$ 维向量”，它就能处理。
+
+\begin{keyidea}[感知的统一接口]
+Transformer 只认一种输入：形状为 $T \times d$ 的向量序列。因此，让模型“看见”的问题，就被转化为一个\textbf{接口问题}：
+\begin{equation}
+    \text{图像} \;\xrightarrow{\;\text{某种编码器}\;}\; X_{\text{img}} \in \mathbb{R}^{N \times d}, \qquad
+    \text{文本} \;\xrightarrow{\;\text{分词 + 嵌入}\;}\; X_{\text{txt}} \in \mathbb{R}^{T \times d},
+\end{equation}
+然后把两者拼成一条长度为 $N + T$ 的序列送进同一个 Transformer。文本、图像、音频、机器人的关节角度，在这个接口之后都是一样的东西——token。
+\end{keyidea}
+
+这个想法之所以重要，是因为它把“多模态”从一个架构问题变成了一个\textbf{表示问题}：我们不需要为每种感官设计一套新的网络，只需要为每种感官设计一个“翻译成 token”的前端。
+
+% ------------------------------------------------------------------------------------
+\subsection{ViT：把图片切成 patch}
+% ------------------------------------------------------------------------------------
+
+一张 $224 \times 224$ 的彩色图像有 $224 \times 224 \times 3 \approx 150{,}000$ 个数。如果把每个像素当一个 token，序列长度 $T = 50{,}176$，注意力的 $O(T^2)$ 代价会立刻把我们压垮。视觉 Transformer（Vision Transformer, ViT，2020）的解法是：不看像素，看\textbf{小块}（patch）。
+\storynote{Alexey Dosovitskiy}{2020 年，Google 的 Dosovitskiy 等人发表《An Image Is Worth 16x16 Words》。标题就是全部思想：一张图等于 196 个“单词”。当时很多人认为卷积的归纳偏置不可替代，而这篇论文表明，只要数据够多，一个几乎没改动的文本 Transformer 也能在图像分类上追平甚至超过卷积网络。}
+
+\paragraph{patch 化}
+
+把图像切成互不重叠的 $P \times P$ 小块。对 $224 \times 224$ 的图，取 $P = 16$ 时每边 $224/16 = 14$ 块，共 $14^2 = 196$ 个 patch；取 $P = 14$ 时每边 $224/14 = 16$ 块，共 $16^2 = 256$ 个 patch。每个 patch 展平后是一个 $P^2 \cdot 3$ 维的向量（$P = 16$ 时是 768 维）。于是一张图从“$150{,}000$ 个像素”变成了“196 个 768 维向量”——序列长度降到了和一段文本差不多的量级。
+
+\paragraph{线性嵌入与位置编码}
+
+接下来的步骤和本章“文本到数字”一节完全平行：
+\begin{equation}
+    z_i = W_{\text{patch}}\, \mathrm{vec}(\text{patch}_i) + p_i, \qquad i = 1, \dots, N,
+\end{equation}
+其中 $W_{\text{patch}} \in \mathbb{R}^{d \times 3P^2}$ 是一个线性层（相当于文本的“查词表”，只不过这里是乘一个矩阵而不是查一行），$p_i$ 是位置编码。位置编码在这里更加不可或缺：注意力本身不知道两个 patch 谁在左谁在右、谁在上谁在下，把 196 个 patch 打乱顺序它也看不出来。ViT 用的是可学习的位置编码，把二维网格按行展开成一维序号即可；也有工作显式地用二维坐标构造编码。
+
+\paragraph{汇聚：[CLS] 还是均值}
+
+经过 $L$ 层 Transformer 后，我们得到 $N$ 个输出向量。如果任务需要“整张图的一个向量”（例如分类或者和一句话做对比），有两种常见做法：在序列前面多加一个可学习的特殊 token \texttt{[CLS]}，让它通过注意力从所有 patch 里“收集”信息，取它的输出；或者干脆对 $N$ 个输出向量取平均（均值池化）。两者效果通常相近。
+
+\paragraph{和文本 token 的三点不同}
+
+第一是\textbf{连续与离散}之别：文本 token 是词表里的整数 ID，图像 patch 是连续向量。这意味着图像 token 没有“词表”，也就没法像文本那样用 softmax 交叉熵去“预测下一个 patch”——这一点在后面讨论训练损失时会再回来。第二是\textbf{序列长度}：一句话通常几十个 token，而一张 $224 \times 224$ 的图是 196 或 256 个；分辨率翻倍，patch 数翻四倍。图像是“话多”的模态。第三是\textbf{信息密度}：一个词几乎每个都有意义，而相邻的 patch 高度冗余（一片蓝天切出的几十个 patch 几乎一样）。这为后面的“压缩”留下了空间。
+
+% ------------------------------------------------------------------------------------
+\subsection{视觉编码器怎么训：对比学习}
+% ------------------------------------------------------------------------------------
+
+ViT 只是一个架构，它输出的向量有没有“意义”，取决于用什么目标去训它。最早的 ViT 用图像分类标签训练——这条路线的数据基础是李飞飞团队 2009 年发布的 ImageNet，它的标注是靠亚马逊 Mechanical Turk 众包完成的。而今天视觉--语言模型里的视觉编码器，几乎都用\textbf{图文对比学习}（contrastive learning）训练，代表是 CLIP（2021）和 SigLIP（2023）。
+
+想法很直接：互联网上有海量“图片 + 文字说明”的配对——Radford 等人 2021 年发布的 CLIP 就用了 4 亿对。我们训练一个图像编码器 $f$ 和一个文本编码器 $g$，让配对的图和文在同一个向量空间里靠近，不配对的远离。取一个批次的 $B$ 个图文对，把编码后的向量归一化到单位球面上：$u_i = f(\text{img}_i)/\|f(\text{img}_i)\|$，$v_j = g(\text{txt}_j)/\|g(\text{txt}_j)\|$，相似度就是内积 $s_{ij} = u_i^\top v_j \in [-1, 1]$。
+
+\begin{keyformula}[title=CLIP 的对比损失]
+对第 $i$ 张图，在 $B$ 段文本里“选出”它的配文，这是一个 $B$ 类分类问题：
+\begin{equation}
+    p_{ij} = \frac{\exp(s_{ij}/\tau)}{\sum_{k=1}^{B} \exp(s_{ik}/\tau)}, \qquad
+    \ell_{\text{img}\to\text{txt}} = -\frac{1}{B}\sum_{i=1}^{B} \log p_{ii}.
+    \label{eq:clip_loss}
+\end{equation}
+对称地再做一遍“文找图”，两者取平均就是 CLIP 的损失。$\tau$ 是温度。把 $-\log p_{ii}$ 展开，每一项都可以拆成两部分：
+\begin{equation}
+    -\log p_{ii} = -\frac{s_{ii}}{\tau} + \log \sum_{k=1}^{B} e^{s_{ik}/\tau}.
+    \label{eq:clip_split}
+\end{equation}
+\end{keyformula}
+
+式~\eqref{eq:clip_split} 的拆分值得多看一眼：第一项把匹配对的相似度\textbf{往上拉}，第二项是配分函数的对数，把所有对的相似度\textbf{往下压}。这正是第4章的结构——$p_{ij}$ 是一个玻尔兹曼分布，$\log\sum_k e^{s_{ik}/\tau}$ 就是 $\log Z$。
+\review{第4章}{在给定“期望相似度”约束下最大化熵，解是 $p_{ij} \propto \exp(\beta s_{ij})$，$\beta$ 是这条约束的拉格朗日乘子。对比学习里的 $1/\tau$ 就是这个 $\beta$：温度是乘子的倒数。这和本章注意力里的 $1/\sqrt{d_k}$ 是同一个角色。}
+
+\begin{keyidea}[对比学习的目标 / 约束 / $\lambda$]
+\textbf{目标}是最大化匹配对的对数似然 $\sum_i \log p_{ii}$，等价于让 $u_i$ 和 $v_i$ 的内积在所有候选中脱颖而出。\textbf{约束}有两条。第一条是 $u_i, v_j$ 落在单位球面上，$\|u_i\| = \|v_j\| = 1$：没有它，模型只要把向量的模长放大就能让 $\log Z$ 项随意变化，“相似”就失去了意义；归一化是这条约束的硬性实现。第二条是每张图对 $B$ 段文本的“注意力” $p_{i\cdot}$ 必须是一个概率分布——归一化约束，它的乘子给出 $\log Z$，也就是式~\eqref{eq:clip_split} 的第二项。而 \textbf{$\lambda$} 就是 $1/\tau$，即“期望相似度”约束的乘子：$\tau$ 越小，分布越尖，模型越“确信”；$\tau$ 越大，分布越平，匹配与不匹配的差别被抹平。CLIP 干脆把 $\tau$ 也设成可学习参数（初始值 $0.07$）——让模型自己决定这条约束的价格。
+\end{keyidea}
+
+SigLIP 做了一个小而重要的改动：不再要求 $p_{i\cdot}$ 在整个批次上归一化，而是对每一对 $(i, j)$ 独立地做一个二分类——“这一对是不是配对的”——用 sigmoid 损失。这去掉了上面的第二条约束，于是不再需要全批次的 $\log Z$，损失可以按对拆开计算，对 batch 大小的依赖也小得多。在本书的语言里，这是把一条全局归一化约束换成了 $B^2$ 条相互独立的局部约束。
+
+训练好之后，我们只保留图像编码器 $f$（通常连 \texttt{[CLS]} 之前的 $N$ 个 patch 输出一起保留），它的输出向量已经“知道”哪些视觉特征对应哪些词——这是把它接到语言模型上的最好起点。
+
+% ------------------------------------------------------------------------------------
+\subsection{接到语言模型上：连接器与多模态序列}
+% ------------------------------------------------------------------------------------
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[>=stealth, scale=0.88, every node/.style={transform shape},
+    block/.style={draw, rounded corners, minimum width=2.5cm, minimum height=0.95cm, align=center, font=\small}]
+    % 第一行：图像通路
+    \node[block, fill=blue!20] (img) at (0, 2.4) {图像\\$H \times W \times 3$};
+    \node[block, fill=blue!20] (patch) at (3.4, 2.4) {切成 patch\\$N$ 个 $P \times P$ 小块};
+    \node[block, fill=green!20] (vit) at (6.8, 2.4) {视觉编码器\\(ViT)};
+    \node[block, fill=orange!20] (conn) at (10.2, 2.4) {连接器\\投影 / 重采样};
+    % 第二行：文本通路与拼接
+    \node[block, fill=blue!20] (txt) at (0, 0) {文本提示\\``图里是什么''};
+    \node[block, fill=green!20] (emb) at (3.4, 0) {分词 + 嵌入\\$T$ 个文本 token};
+    \node[block, fill=purple!20] (cat) at (6.8, 0) {拼接成一条序列\\$N' + T$ 个 token};
+    % 第三行：语言模型与输出
+    \node[block, fill=red!20] (llm) at (6.8, -2.4) {语言模型\\(Transformer 解码器)};
+    \node[block, fill=green!20] (out) at (10.2, -2.4) {输出文本\\逐 token 生成};
+    % 箭头
+    \draw[->, thick] (img) -- (patch);
+    \draw[->, thick] (patch) -- (vit);
+    \draw[->, thick] (vit) -- node[above, font=\scriptsize] {$N$ 个向量} (conn);
+    \draw[->, thick] (conn.south) |- node[pos=0.75, above, font=\scriptsize] {$N'$ 个视觉 token} (cat.east);
+    \draw[->, thick] (txt) -- (emb);
+    \draw[->, thick] (emb) -- (cat);
+    \draw[->, thick] (cat) -- (llm);
+    \draw[->, thick] (llm) -- (out);
+    % 标注
+    \node[below, font=\scriptsize, gray, align=center] at (3.4, -2.4) {损失只算输出文本的\\下一词预测};
+\end{tikzpicture}
+\caption{视觉--语言模型的数据流：图像切成 patch，经视觉编码器得到 $N$ 个向量，再由连接器变成 $N'$ 个和文本嵌入同维度的视觉 token（$N' \le N$），与文本 token 拼成一条序列送进语言模型。语言模型本身不需要为图像做任何改动。}
+\label{fig:vlm_pipeline}
+\end{figure}
+
+视觉编码器输出的向量维度（例如 1024）一般和语言模型的嵌入维度（例如 4096）不一样，“语义坐标系”也不一样。中间需要一个\textbf{连接器}（connector），把视觉向量翻译成语言模型能读的 token。连接器有两种主流设计。
+
+\paragraph{投影层：一个 patch 一个 token}
+
+最简单的做法是一个线性层或两层 MLP：
+\begin{equation}
+    X_{\text{img}} = \mathrm{MLP}(Z_{\text{ViT}}) \in \mathbb{R}^{N \times d_{\text{LLM}}}.
+\end{equation}
+LLaVA（2023）就是这么做的：CLIP 的 ViT-L/14 编码器，接一个投影层，直接把每个 patch 变成一个 token。在 $336 \times 336$ 分辨率、$P = 14$ 下，一张图就是 $24^2 = 576$ 个 token。它的优点是不丢信息、不引入新的注意力模块；缺点是 token 多。
+
+\paragraph{重采样：把几百个压成几十个}
+
+另一种做法利用前面提到的冗余：用 $K$ 个\textbf{可学习的查询向量}（$K$ 远小于 $N$）对 $N$ 个 patch 做交叉注意力，把信息“吸”进 $K$ 个 token 里。Flamingo（2022）的 Perceiver Resampler 用 64 个查询，BLIP-2（2023）的 Q-Former 用 32 个。这正是本章注意力的另一种用法：查询 $Q$ 不再来自输入本身，而是一组学出来的“提问”，$K, V$ 来自 patch。序列从几百压到几十，代价是压缩必然有损，细小的文字、远处的物体可能被“平均掉”。
+
+也有人干脆跳过视觉编码器，把 patch 线性投影后直接喂进语言模型（Fuyu，2023）。这把“感知的统一接口”贯彻到了极致，代价是语言模型必须从零学会看图，需要多得多的图像数据。
+
+\paragraph{图文交错序列}
+
+连接器输出的视觉 token 和文本 token 处于同一个空间，于是可以像文字一样自由排布：
+\begin{center}
+\texttt{<image>}$\;\underbrace{x_1 \cdots x_{N'}}_{\text{视觉 token}}\;$\texttt{</image>} 这张图里有几只猫？\texttt{<assistant>} 两只。
+\end{center}
+一段对话里可以有多张图、图和文交替出现，模型统统当成一条序列来处理。图像的“位置”就是它在序列中的位置——位置编码对视觉 token 照常生效。
+
+\paragraph{注意力掩码：文本因果，图像双向}
+
+本章“只用 Decoder”一节里，GPT 用因果掩码禁止每个 token 看到未来。对视觉 token，这个限制没有道理：一张图的左上角 patch 完全可以“看”右下角，图像内部没有先后。PaliGemma（2024）采用的 \textbf{prefix-LM} 掩码把这一点写得很清楚：把图像 token 和用户提示当作“前缀”，前缀内部\textbf{双向}注意力，只有模型要生成的“后缀”才用因果掩码。用 $\mathcal{P}$ 记前缀的位置集合，掩码可以写成
+\begin{equation}
+    M_{ij} =
+    \begin{cases}
+        1, & j \le i \quad \text{（因果：可以看过去）} \\
+        1, & i \in \mathcal{P} \text{ 且 } j \in \mathcal{P} \quad \text{（前缀内部：可以互看）} \\
+        0, & \text{其他}
+    \end{cases}
+\end{equation}
+$M_{ij} = 0$ 的位置在 softmax 之前被置为 $-\infty$。这个掩码和本章 Encoder-Decoder 结构的精神一致：前缀相当于一个“编码器”，只不过它和解码器共用同一套参数。
+
+\paragraph{高分辨率的代价：token 数暴涨}
+
+$224 \times 224$ 看不清发票上的小字。提高分辨率最直接的办法是\textbf{切块}：把一张大图切成若干个 $336 \times 336$ 的子块，每块单独过一遍编码器，再加上一张缩小的全局缩略图。四个子块加一张缩略图，就是 $5 \times 576 = 2{,}880$ 个 token——一张图的 token 数已经超过一篇短文。视频更甚：每秒抽几帧，每帧几百个 token，一分钟视频轻松上万。
+\preview{视觉 token 直接进入 KV Cache：每层每个 token 都要存一份 $K$ 和 $V$。一张高分辨率图的 2{,}880 个 token 占的显存，和 2{,}880 个文字 token 一模一样。附录C会给出可以直接套用的估算公式，并讨论显存作为一条硬约束时，它的影子价格如何决定“该不该压缩视觉 token”。}
+
+这就是为什么“重采样压缩”和“按需分辨率”成了工程上的核心问题：视觉 token 不是免费的，它们和文本 token 一样要占 $O(T^2)$ 的注意力算力与线性增长的 KV Cache。
+
+% ------------------------------------------------------------------------------------
+\subsection{和 LLM 一起训练的三阶段配方}
+% ------------------------------------------------------------------------------------
+
+现在三个部件齐了：预训练好的视觉编码器、随机初始化的连接器、预训练好的语言模型。怎么把它们训成一个整体？当前主流配方分三个阶段。
+
+\paragraph{阶段一：对齐预训练}
+
+冻结视觉编码器和语言模型，\textbf{只训连接器}。数据是大量简单的图文对（一张图、一句描述），任务是“看图写说明”。这一阶段的目的很单纯：让连接器学会把视觉向量翻译成语言模型“听得懂”的 token。
+
+\paragraph{阶段二：指令微调}
+
+解冻语言模型（有些配方也解冻视觉编码器，但用小得多的学习率），在高质量的多模态指令数据上训练：看图问答、看图推理、多轮对话、读图表、识别文档。同时\textbf{混入一定比例的纯文本指令数据}。这一阶段模型才真正学会“按要求看图做事”。
+
+\paragraph{阶段三：偏好对齐}
+
+和纯文本大模型一样，最后用人类偏好数据做强化学习或直接偏好优化，重点压制多模态特有的问题——例如“幻觉”：描述图里根本不存在的物体。本书不展开这一阶段，其原理见第9章。
+
+\paragraph{损失函数：只算文本}
+
+三个阶段用的都是本章的下一词预测损失，但有一个关键细节：\textbf{图像 token 不预测}。设序列为 $x_1, \dots, x_{N'+T}$，用掩码 $m_t \in \{0, 1\}$ 标出需要预测的位置（只有模型应当生成的文本 token 为 1），
+\begin{equation}
+    \ell(\theta) = -\sum_{t} m_t \log p_\theta(x_t \mid x_{<t}).
+\end{equation}
+原因有两个：一是视觉 token 是连续向量，没有词表可供分类；二是在 prefix-LM 掩码下前缀内部可以互看，“预测”前缀里的 token 等于作弊。图像在这里只是\textbf{条件}，不是\textbf{目标}。
+\clarify{“冻结”一个模块的意思是不更新它的参数，而\textbf{不是}不经过它反向传播。阶段一里语言模型虽然被冻结，伴随变量 $\lambda$（第8章的误差信号）仍然要从损失出发穿过整个语言模型，才能到达连接器。冻结省的是优化器状态和参数更新，不省反向传播的算力。}
+
+\paragraph{为什么要分阶段？为什么要混纯文本？}
+
+用本书的框架来看，这两条经验都不是“技巧”，而是一条约束的两种处理方式。
+
+\begin{keyidea}[多模态训练的目标 / 约束 / $\lambda$]
+\textbf{目标}是多模态数据上的下一词预测损失 $\ell_{\text{mm}}(\theta)$——学会看图。\textbf{约束}是语言模型原有的语言能力不能退化，写成不等式就是 $\ell_{\text{txt}}(\theta) \le \ell_{\text{txt}}(\theta_0) + \epsilon$，其中 $\theta_0$ 是预训练语言模型的参数，$\ell_{\text{txt}}$ 是纯文本数据上的损失；或者写成 $\mathrm{KL}\big(p_\theta \,\|\, p_{\theta_0}\big) \le \epsilon$。于是\textbf{拉格朗日函数}为
+\begin{equation}
+    \mathcal{L}(\theta, \lambda) = \ell_{\text{mm}}(\theta) + \lambda \big[\ell_{\text{txt}}(\theta) - \ell_{\text{txt}}(\theta_0) - \epsilon\big].
+\end{equation}
+这里的 \textbf{$\lambda$} 就是训练数据里\textbf{纯文本数据的混合比例}（或 KL 正则项的系数）。它是“不遗忘”这条约束的影子价格：把语言能力的门槛 $\epsilon$ 放松一点，多模态损失能降多少。
+\end{keyidea}
+
+有了这个视角，三阶段配方就顺理成章了。\textbf{阶段一是把约束当硬约束}：$\theta_{\text{LLM}} \equiv \theta_0$，语言能力\textbf{不可能}退化。此时连接器是随机初始化的，它送进语言模型的是一堆噪声；如果这时就放开语言模型的参数，梯度会为了“迁就噪声”把语言能力冲垮——这条约束的影子价格在此刻极高，硬约束是最便宜的处理方式。
+
+\textbf{阶段二把硬约束换成软约束}：连接器对齐之后，视觉 token 已经“像话”了，进一步提升需要语言模型本身配合，约束的影子价格降下来，于是可以解冻。混入纯文本数据就是显式地把 $\lambda\,\ell_{\text{txt}}$ 这一项加进损失；给编码器一个更小的学习率，则是对“不要偏离 $\theta_0$”这条约束的另一种软化——每一步只允许在原参数附近的一个小邻域里移动。
+
+\textbf{混合比例不是拍脑袋定的}：按第1章互补松弛的读法，$\lambda$ 应当由约束是否被激活来决定。实际操作中人们会监控纯文本基准的分数：分数掉了，说明约束被违反，就该调高纯文本比例——这正是“按影子价格调乘子”的手工版本。
+
+\begin{physicalmeaning}[title=$\lambda$ 在视觉--语言模型里的两种身份]
+本节出现了两个 $\lambda$，它们在同一个框架里扮演不同角色。对比学习里的 $1/\tau$ 是一个“分布层面”的乘子，决定图文匹配分布的尖锐程度，与第4章的逆温度、本章注意力的 $1/\sqrt{d_k}$ 同源；它对应的约束是“期望相似度”，是关于\textbf{单个样本内部}的约束。训练配方里的混合比例则是一个“参数层面”的乘子，决定新能力（看图）与旧能力（说话）之间的交换率；它对应的约束是“不遗忘”，是关于\textbf{整个模型}的约束。两者都回答同一个问题：把约束松一点，目标能好多少。
+\end{physicalmeaning}
+
+% ------------------------------------------------------------------------------------
+\subsection{从看图说话到看图做事}
+% ------------------------------------------------------------------------------------
+
+到这里，语言模型已经能看图、答题、描述场景。但物理智能要的不止于此：机器人看到桌上的杯子，需要的不是一句“桌上有个杯子”，而是一串关节角度。
+
+沿着本节的思路，答案几乎是自动的。既然图像可以变成 token 拼进序列，动作为什么不能？把机器人的动作离散化成词表里的整数，让语言模型像生成文字一样生成动作 token，这是一条路；保留语言模型不动，在旁边接一个专门输出连续动作的“动作专家”，用视觉--语言模型的隐状态作为它的条件，这是另一条路。两条路都建立在同一个基础上：一个已经对齐了视觉和语言的骨干网络。
+\preview{第17章讨论具身智能时会回到这里：视觉--语言--动作模型（VLA）把本节的视觉--语言模型当作骨干，再加上动作输出——例如 $\pi_0$（2024）就以 PaliGemma 为骨干，外接一个用流匹配训练的动作专家。到那时你会看到，“动作也是 token”这句话背后，仍然是同一个 $\mathcal{L} = f + \lambda^\top g$：目标是任务成功，约束是物理可行与安全，$\lambda$ 是安全的价格。}
+
+\begin{insightbox}[title=统一接口，再看一次]
+本章的故事绕了一个圈又回到起点：Transformer 之所以能成为物理智能的骨干，不是因为它“懂语言”，而是因为它提供了一个统一的接口——任何能被写成 token 序列的东西，它都能建模。视觉--语言模型没有给 Transformer 增加任何新机制，只是在接口前面多加了一个“图像到 token”的翻译器，再用一条“不遗忘”约束把新旧能力捆在一起。任何能被写成 $\mathcal{L} = f + \lambda^\top g$ 的东西，我们都能用同一套语言读懂它的设计。
+\end{insightbox}
 
 % ====================================================================================
 \section{本章小结}
 % ====================================================================================
 
 \subsection{核心要点}
+\preview{会看、会说之后怎么变成会做事？第12章讲后训练：奖励是目标、参考模型是约束、RLHF 的 $\beta$ 就是 $\lambda$；第17章再把本章的 VLM 接上动作。}
 
 \begin{enumerate}
     \item \textbf{RNN的问题}：参数共享导致梯度连乘，信息瓶颈导致长距离依赖丢失
     
-    \item \textbf{LSTM的缓解}：门控机制让梯度可以"直通"，但仍是串行计算
+    \item \textbf{LSTM的缓解}：门控机制让梯度可以“直通”，但仍是串行计算
     
-    \item \textbf{Transformer的解决}：
-    \begin{itemize}
-        \item 用注意力实现全连接，路径长度 $O(1)$
-        \item 每层参数不同，避免连乘同一矩阵
-        \item 可并行计算，换取 $O(T^2)$ 复杂度
-    \end{itemize}
+    \item \textbf{Transformer的解决}：用注意力实现全连接，路径长度 $O(1)$；每层参数不同，避免连乘同一矩阵；可并行计算，代价是 $O(T^2)$ 复杂度
     
     \item \textbf{Q、K、V的来源}：同一输入通过三个不同的线性变换得到
     
     \item \textbf{多头注意力}：让模型从多个角度关注序列
+    
+    \item \textbf{视觉--语言模型}：把图像切成 patch、编码成向量、经连接器变成 token，与文本 token 拼成一条序列送进同一个 Transformer；对比学习的温度 $1/\tau$ 与训练配方里的纯文本混合比例，是“期望相似度”与“不遗忘”两条约束的乘子
 \end{enumerate}
 
+\begin{physicalmeaning}[title=$\lambda_t$ 在本章的意义]
+$\lambda_t$ 是第 $t$ 步隐状态的\textbf{影子价格}：把递推约束 $h_{t+1} = F(h_t, x_t)$ 松开一点、让 $h_t$ 多偏 $\delta$，总损失变化 $\lambda_t^\top \delta$。本章的几个主角都可以用它来读。\textbf{梯度消失}就是早期状态的影子价格趋于零：$\lambda_0 \approx (\prod_t J_t)^\top \lambda_T \to 0$，优化器“看不见”早期信息的价值。\textbf{LSTM 的遗忘门} $f_t \approx 1$ 让 $\partial c_t/\partial c_{t-1} \approx I$，影子价格不折价地往回传。\textbf{Transformer 的残差流} $H^{(\ell+1)} = H^{(\ell)} + f_\ell(H^{(\ell)})$ 给出伴随 $\lambda^{(\ell)} = (I + \partial f_\ell)^\top \lambda^{(\ell+1)} \approx \lambda^{(\ell+1)}$，而且只有 $L$ 层而不是 $T$ 步。本章还有\textbf{第二个 $\lambda$}：注意力权重 $\mathrm{softmax}(q^\top k/\sqrt{d_k})$ 是第4章最大熵问题的解，$1/\sqrt{d_k}$ 就是“期望相似度”约束的乘子——温度的倒数。
+\end{physicalmeaning}
 
-\begin{table}[h]
+\begin{unification}[title=统一视角]
+第7章的协态、第8章的误差信号 $\lambda_i$、第9章的伴随变量 $\lambda_t$、本章的 BPTT 梯度 $\partial J/\partial h_t$，是同一个对象：动力学约束的拉格朗日乘子。附录C会问一个更工程的问题：当这 $T$ 条约束占用的显存与算力本身成为约束时，它们的影子价格是多少？
+\end{unification}
+
+
+\begin{table}[htbp]
 \centering
 \renewcommand{\arraystretch}{1.4}
-\begin{tabular}{p{2.5cm}|p{3.5cm}|p{3.5cm}|p{3.5cm}}
+\begin{tabularx}{\textwidth}{p{2.2cm}|X|X|X}
 \toprule
 & \textbf{RNN} & \textbf{LSTM} & \textbf{Transformer} \\
 \midrule
@@ -2285,7 +2334,7 @@ Transformer有一个重要限制：\textbf{最大上下文长度}。
 \textbf{复杂度} & $O(T)$ & $O(T)$ & $O(T^2)$ \\
 \textbf{长距离依赖} & 困难 & 较好 & 优秀 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \caption{三种序列模型的对比}
 \end{table}
 
@@ -2293,9 +2342,28 @@ Transformer有一个重要限制：\textbf{最大上下文长度}。
 \section{习题}
 % ====================================================================================
 
-\paragraph{概念题}
-
+\paragraph{计算题}
 \begin{enumerate}
+    \item 设RNN的权重矩阵 $W_h$ 的特征值为 $\mu_1 = 0.95, \mu_2 = 0.85$。计算经过 $T = 50$ 步后，沿最大特征向量方向的梯度衰减倍数。
+    
+    \item 在一个注意力头中，$d_k = 64$。假设Q和K的每个元素独立服从 $\mathcal{N}(0, 1)$，计算点积 $q \cdot k$ 的标准差。解释为什么要除以 $\sqrt{d_k}$。
+    
+    \item 计算自注意力的时间和空间复杂度。设序列长度为 $T$，嵌入维度为 $d$，头数为 $h$。
+    
+    \item 一个Transformer模型有 $L = 32$ 层，$d = 4096$，$h = 32$ 头。计算KV Cache在处理长度 $T = 8192$ 的序列时占用的显存（假设使用float16）。
+\end{enumerate}
+
+\paragraph{编程题}
+\begin{enumerate}
+    \setcounter{enumi}{4}
+    \item 用 NumPy 手算一个 3 个 token、$d_k = 2$ 的自注意力：自己给定 $Q, K, V$，算出注意力权重矩阵和输出，再用 PyTorch 的 \texttt{torch.nn.functional.}\allowbreak\texttt{scaled\_dot\_product\_attention} 验证。
+    
+    \item 用 PyTorch 实现一个简化版 \texttt{TransformerBlock}（Pre-Norm：多头注意力 + 前馈网络 + 残差 + LayerNorm，约 40 行）；用 \texttt{torch.autograd.}\allowbreak\texttt{gradcheck} 检查梯度，并在一个字符级语言建模玩具任务上训练几百步。
+\end{enumerate}
+
+\paragraph{思考题}
+\begin{enumerate}
+    \setcounter{enumi}{6}
     \item 解释为什么RNN的梯度会消失或爆炸。用特征值的语言描述。
     
     \item 数据处理不等式如何限制了RNN的长距离建模能力？
@@ -2305,26 +2373,6 @@ Transformer有一个重要限制：\textbf{最大上下文长度}。
     \item 解释Q、K、V的含义，以及为什么需要三个不同的投影矩阵。
     
     \item 多头注意力相比单头注意力有什么优势？为什么每个头的维度要缩小？
-\end{enumerate}
-
-\paragraph{计算题}
-
-\begin{enumerate}
-    \setcounter{enumi}{5}
-    
-    \item 设RNN的权重矩阵 $W_h$ 的特征值为 $\lambda_1 = 0.95, \lambda_2 = 0.85$。计算经过 $T = 50$ 步后，沿最大特征向量方向的梯度衰减倍数。
-    
-    \item 在一个注意力头中，$d_k = 64$。假设Q和K的每个元素独立服从 $\mathcal{N}(0, 1)$，计算点积 $q \cdot k$ 的标准差。解释为什么要除以 $\sqrt{d_k}$。
-    
-    \item 计算自注意力的时间和空间复杂度。设序列长度为 $T$，嵌入维度为 $d$，头数为 $h$。
-    
-    \item 一个Transformer模型有 $L = 32$ 层，$d = 4096$，$h = 32$ 头。计算KV Cache在处理长度 $T = 8192$ 的序列时占用的显存（假设使用float16）。
-\end{enumerate}
-
-\paragraph{思考题}
-
-\begin{enumerate}
-    \setcounter{enumi}{9}
     
     \item LSTM的遗忘门 $f_t$ 接近1时可以缓解梯度消失，但为什么不能完全解决长距离依赖问题？从信息论角度思考。
     
@@ -2333,5 +2381,6 @@ Transformer有一个重要限制：\textbf{最大上下文长度}。
     \item 为什么GPT只用Decoder而BERT只用Encoder？它们的训练目标有什么不同？
     
     \item 从第一性原理角度，注意力机制可以看作是基于最大熵原则的软检索。这与传统的硬检索（如数据库查询）有什么本质区别？
+    
+    \item 一个视觉--语言模型在阶段二解冻了语言模型，训练后看图能力提升，但纯文本基准分数明显下降。用本章“目标 / 约束 / $\lambda$”的语言描述发生了什么：哪条约束被违反了？对应的乘子是训练配方里的哪个量？给出两种把这个乘子“调高”的具体做法，并说明各自的代价（提示：一种改数据，一种改损失函数；再想想它们对显存和训练时间的影响）。
 \end{enumerate}
-

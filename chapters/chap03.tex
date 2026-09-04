@@ -11,36 +11,26 @@
 \textit{给定两点 A 和 B，A 不在 B 的正上方。求一条连接它们的曲线，使得一个小球仅在重力作用下，从 A 滑到 B 所需时间最短。}
 \end{quote}
 
-这就是著名的\textbf{最速降线问题}（Brachistochrone，来自希腊语"最短"和"时间"）。
+这就是著名的\textbf{最速降线问题}（Brachistochrone，来自希腊语“最短”和“时间”）。
 
 \subsection*{直觉的失败}
 
-乍一看，答案似乎显而易见——直线不就是两点之间最短的路径吗？但 Johann 狡黠地补充道："虽然直线路程最短，但它不是时间最快的路径。"
+乍一看，答案似乎显而易见——直线不就是两点之间最短的路径吗？但 Johann 狡黠地补充道：“虽然直线路程最短，但它不是时间最快的路径。”
 
 让我们用一个简单的计算来理解为什么。
 
 \begin{example}[直线 vs 折线]
 假设 A 在原点，B 在 $(4, -3)$（向右 4 米，向下 3 米）。小球从静止开始下滑。
 
-\textbf{方案1：走直线}
-\begin{itemize}
-    \item 路径长度：$\sqrt{4^2 + 3^2} = 5$ 米
-    \item 平均加速度：重力在斜面方向的分量 $g \sin\theta = g \cdot \frac{3}{5} = 0.6g$
-    \item 用 $s = \frac{1}{2}at^2$ 估算：$t_1 \approx \sqrt{\frac{2 \times 5}{0.6g}} \approx 1.31$ 秒
-\end{itemize}
+先看方案1，走直线。路径长度是 $\sqrt{4^2 + 3^2} = 5$ 米，重力在斜面方向的分量给出加速度 $g \sin\theta = g \cdot \frac{3}{5} = 0.6g$，用 $s = \frac{1}{2}at^2$ 估算，$t_1 \approx \sqrt{\frac{2 \times 5}{0.6g}} \approx 1.31$ 秒。
 
-\textbf{方案2：先陡后缓}（先垂直下降 2 米，再沿斜面到 B）
-\begin{itemize}
-    \item 第一段：垂直下降 2 米，加速度是完整的 $g$
-    \item 到达第一段底部时，速度 $v = \sqrt{2g \times 2} = \sqrt{4g} \approx 6.3$ m/s
-    \item 第二段：已经有了初速度，虽然路程长了，但跑得快！
-    \item 粗略估算：$t_2 \approx 1.15$ 秒
-\end{itemize}
+再看方案2，先陡后缓：先垂直下降 2 米，再沿斜面到 B。第一段垂直下降时加速度是完整的 $g$，到达底部时速度已经达到 $v = \sqrt{2g \times 2} = \sqrt{4g} \approx 6.3$ m/s；第二段虽然路程长了，但因为有了初速度，跑得快。粗略估算，$t_2 \approx 1.15$ 秒。
 
 \textbf{结论}：绕远路反而更快！
 \end{example}
+\sidenoteplain{这就像开车去机场：高速公路虽然绕了一圈，但因为速度快，总时间可能比走市区直线更短。}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.9]
     % 坐标轴
@@ -69,13 +59,11 @@
 \caption{最速降线问题：直线不是最快路径}
 \end{figure}
 
-\marginnote{这就像开车去机场：高速公路虽然绑了一圈，但因为速度快，总时间可能比走市区直线更短。}
-
 \begin{tcolorbox}[colback=green!5, colframe=green!60!black, title=学完这章，你将能够...]
 \begin{itemize}
     \item 写出给定泛函的Euler-Lagrange方程
     \item 求解最速降线、测地线、最小曲面等经典变分问题
-    \item 把"连续曲线优化"离散化为"有限维向量优化"
+    \item 把“连续曲线优化”离散化为“有限维向量优化”
     \item 处理带端点约束、等周约束的变分问题
     \item 理解变分法与有限元方法的深刻联系
 \end{itemize}
@@ -87,12 +75,12 @@
 
 最戏剧性的一幕发生在英国。问题被转交给了已经退休的 Isaac Newton。据说牛顿收到问题时已是下午四点，但他整个晚上都在工作，到凌晨四点就解决了。
 
-牛顿选择匿名发表解答。但当 Johann 看到那个优雅的证明时，他立刻认出了作者："我从爪子认出了狮子（Tanquam ex ungue leonem）。"
-\storynote{Isaac Newton}{牛顿当时53岁，已从剑桥退休，正担任皇家铸币厂厂长。据说他对这个"挑衅"非常恼火，一晚上就解决了问题。有人问他为何匿名发表，他说："我不喜欢被外国人用数学题来戏弄。"}
+牛顿选择匿名发表解答。但当 Johann 看到那个优雅的证明时，他立刻认出了作者：“我从爪子认出了狮子（Tanquam ex ungue leonem）。”
+\storynote{Isaac Newton}{牛顿当时53岁，已从剑桥退休，正担任皇家铸币厂厂长。据说他对这个“挑衅”非常恼火，一晚上就解决了问题。有人问他为何匿名发表，他说：“我不喜欢被外国人用数学题来戏弄。”}
 
 \textbf{答案}：最速降线是一条\textbf{摆线}（cycloid）——圆在直线上滚动时，圆周上一点的轨迹。
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.8]
     % 地面
@@ -120,13 +108,13 @@
 \begin{insightbox}
 最速降线问题揭示了一个深刻的原理：\textbf{最优不等于最短}。
 
-在有约束的系统中，"走捷径"往往不是最好的策略。这个思想贯穿整个优化理论。
+在有约束的系统中，“走捷径”往往不是最好的策略。这个思想贯穿整个优化理论。
 \end{insightbox}
 
 % ------------------------------------------------------------------------------------
 \section{核心问题：优化的对象是什么？}
 
-\subsection{从"找最优数"到"找最优曲线"}
+\subsection{从“找最优数”到“找最优曲线”}
 
 让我们先回顾一下不同类型的优化问题：
 
@@ -152,10 +140,10 @@
 普通函数把数变成数：$f: \mathbb{R} \to \mathbb{R}$，比如 $f(x) = x^2$。
 
 \textbf{泛函}（functional）把函数变成数：$J: \{\text{函数}\} \to \mathbb{R}$。
-\clarify{泛函的"泛"字表示"广泛"——它比普通函数更一般。普通函数吃数字吐数字，泛函吃函数吐数字。你可以把泛函想象成一个"评分系统"：给它一条曲线，它告诉你这条曲线"有多好"。}
+\clarify{泛函的“泛”字表示“广泛”——它比普通函数更一般。普通函数吃数字吐数字，泛函吃函数吐数字。你可以把泛函想象成一个“评分系统”：给它一条曲线，它告诉你这条曲线“有多好”。}
 
 \begin{definition}[泛函]
-泛函是"以函数为输入，以数字为输出"的映射。给定一条曲线 $y(x)$，泛函算出一个数 $J[y]$。
+泛函是“以函数为输入，以数字为输出”的映射。给定一条曲线 $y(x)$，泛函算出一个数 $J[y]$。
 \end{definition}
 
 最常见的泛函形式是积分：
@@ -190,12 +178,7 @@ J[y] = \int_a^b F(x, y(x), y'(x)) \, dx
 \textbf{边界条件}：$y(a) = y_a$，$y(b) = y_b$（两端点固定）
 \end{keyformula}
 
-这里 $F(x, y, y')$ 叫做\textbf{被积函数}（或拉格朗日密度），它依赖于：
-\begin{itemize}
-    \item $x$：自变量（位置）
-    \item $y$：函数值（曲线在 $x$ 处的高度）
-    \item $y'$：导数（曲线在 $x$ 处的斜率）
-\end{itemize}
+这里 $F(x, y, y')$ 叫做\textbf{被积函数}（或拉格朗日密度），它依赖于三样东西：自变量 $x$（位置）、函数值 $y$（曲线在 $x$ 处的高度）和导数 $y'$（曲线在 $x$ 处的斜率）。
 
 % ------------------------------------------------------------------------------------
 \section{本章的核心观点}
@@ -209,7 +192,7 @@ J[y] = \int_a^b F(x, y(x), y'(x)) \, dx
 \end{tcolorbox}
 
 我们将通过以下步骤证明这一点：
-\preview{这种"离散化→用有限维方法→取极限"的思路会反复出现。第9章的神经网络反向传播、第10章的强化学习，本质上都是这个套路的变体。}
+\preview{这种“离散化→用有限维方法→取极限”的思路会反复出现。第8章的神经网络反向传播、第9章的强化学习，本质上都是这个套路的变体。}
 
 \begin{enumerate}
     \item \textbf{离散化}：把连续曲线 $y(x)$ 变成离散的点 $y_0, y_1, \ldots, y_N$
@@ -250,7 +233,7 @@ J[y] = \int_a^b F(x, y, y') \, dx
 x_k = a + k \Delta x, \quad k = 0, 1, 2, \ldots, N
 \]
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=1.0]
     % 坐标轴
@@ -295,7 +278,7 @@ y_k \approx y(x_k), \quad k = 0, 1, \ldots, N
 v_k \approx y'(x_k) \approx \frac{y_{k+1} - y_k}{\Delta x}
 \]
 
-\marginnote{差分是导数的离散版本。当 $\Delta x \to 0$ 时，$\frac{y_{k+1} - y_k}{\Delta x} \to y'(x_k)$。}
+\sidenoteplain{差分是导数的离散版本。当 $\Delta x \to 0$ 时，$\frac{y_{k+1} - y_k}{\Delta x} \to y'(x_k)$。}
 
 \paragraph{泛函变成求和}
 
@@ -321,7 +304,7 @@ J[y] = \int_a^b F(x, y, y') \, dx \approx \sum_{k=0}^{N-1} F(x_k, y_k, v_k) \cdo
 
 这里有一个关键观察：\textbf{$y_k$ 和 $v_k$ 不是独立的！}
 
-斜率 $v_k$ 的定义就是"下一个位置减当前位置，除以步长"：
+斜率 $v_k$ 的定义就是“下一个位置减当前位置，除以步长”：
 \[
 v_k = \frac{y_{k+1} - y_k}{\Delta x}
 \]
@@ -380,14 +363,14 @@ v_k = \frac{y_{k+1} - y_k}{\Delta x}
 \end{equation}
 
 \begin{keytheorem}[title=乘子的物理意义]
-拉格朗日乘子 $\lambda_k$ 恰好等于 $\frac{\partial F}{\partial v_k}$——目标函数对"斜率"的偏导数。
+拉格朗日乘子 $\lambda_k$ 恰好等于 $\frac{\partial F}{\partial v_k}$——目标函数对“斜率”的偏导数。
 
 在物理中，如果 $F = L$ 是拉格朗日量（动能减势能），那么 $\frac{\partial L}{\partial \dot{q}}$ 正是\textbf{广义动量} $p$。
 
 因此：\textbf{拉格朗日乘子 = 广义动量}！
 \end{keytheorem}
 
-这个结果完全来自数学推导，没有用到任何物理直觉。动量的定义\textbf{自动涌现}了！
+这个结果完全来自数学推导，没有用到任何物理直觉。动量的定义\textbf{自动涌现}了！这并不是巧合：乘子法最初就是Lagrange为处理力学中的约束而发明的（第1章提到过他1788年的《分析力学》）。
 
 \begin{example}[自由粒子的动量]
 对于质量为 $m$ 的自由粒子，拉格朗日量是 $L = \frac{1}{2}m\dot{q}^2$（纯动能）。
@@ -422,7 +405,7 @@ $y_k$ 出现在哪些项里？仔细看拉格朗日函数的结构：
 \begin{physicalmeaning}
 左边是乘子（动量）的\textbf{差分导数}，右边是目标函数对位置的偏导数。
 
-这个方程说：\textbf{动量的变化率 = 位置的"力"}。
+这个方程说：\textbf{动量的变化率 = 位置的“力”}。
 
 这不就是牛顿第二定律 $\dot{p} = F$ 的离散版本吗？！
 \end{physicalmeaning}
@@ -434,14 +417,11 @@ $y_k$ 出现在哪些项里？仔细看拉格朗日函数的结构：
 \frac{1}{\Delta x} \left( \frac{\partial F}{\partial v_k} - \frac{\partial F}{\partial v_{k-1}} \right) = \frac{\partial F}{\partial y_k}
 \]
 
-当 $\Delta x \to 0$（$N \to \infty$）时：
-\begin{itemize}
-    \item $v_k \to y'(x)$
-    \item 左边的差分变成导数：$\frac{\partial F / \partial v_k - \partial F / \partial v_{k-1}}{\Delta x} \to \frac{d}{dx} \frac{\partial F}{\partial y'}$
-    \item 右边：$\frac{\partial F}{\partial y_k} \to \frac{\partial F}{\partial y}$
-\end{itemize}
-
-于是得到：
+当 $\Delta x \to 0$（$N \to \infty$）时，$v_k \to y'(x)$，左边的差分变成导数，
+\[
+\frac{\partial F / \partial v_k - \partial F / \partial v_{k-1}}{\Delta x} \to \frac{d}{dx} \frac{\partial F}{\partial y'},
+\]
+而右边的 $\frac{\partial F}{\partial y_k}$ 变成 $\frac{\partial F}{\partial y}$。于是得到：
 \[
 \frac{d}{dx} \frac{\partial F}{\partial y'} = \frac{\partial F}{\partial y}
 \]
@@ -501,7 +481,7 @@ E-L 方程\textbf{不是凭空发明的}，而是从有限维乘子法\textbf{�
 让我们仔细理解 E-L 方程的结构：
 
 \[
-\underbrace{\frac{\partial F}{\partial y}}_{\text{对"位置"的偏导}} - \underbrace{\frac{d}{dx}\frac{\partial F}{\partial y'}}_{\text{对"斜率偏导"再求导}} = 0
+\underbrace{\frac{\partial F}{\partial y}}_{\text{对“位置”的偏导}} - \underbrace{\frac{d}{dx}\frac{\partial F}{\partial y'}}_{\text{对“斜率偏导”再求导}} = 0
 \]
 
 \paragraph{计算步骤}
@@ -522,7 +502,7 @@ E-L 方程\textbf{不是凭空发明的}，而是从有限维乘子法\textbf{�
 
 \subsection{例1：两点之间直线最短}
 
-用 E-L 方程证明一个"显然"的结论：两点之间，直线最短。
+用 E-L 方程证明一个“显然”的结论：两点之间，直线最短。
 
 \paragraph{问题设置}
 
@@ -574,7 +554,7 @@ $y' = \text{常数}$ 意味着 $y$ 是 $x$ 的\textbf{线性函数}——即\tex
 
 \subsection{例2：最小曲率能量（样条曲线）}
 
-在计算机图形学中，我们经常需要画一条"光滑"的曲线通过给定的点。什么样的曲线最"光滑"？
+在计算机图形学中，我们经常需要画一条“光滑”的曲线通过给定的点。什么样的曲线最“光滑”？
 
 一种定义是：曲率的平方积分最小。对于小曲率的曲线，这近似于：
 \[
@@ -590,14 +570,7 @@ J[y] = \int_a^b (y'')^2 \, dx
 
 \paragraph{计算}
 
-对于 $F = (y'')^2$：
-\begin{itemize}
-    \item $\frac{\partial F}{\partial y} = 0$
-    \item $\frac{\partial F}{\partial y'} = 0$
-    \item $\frac{\partial F}{\partial y''} = 2y''$
-\end{itemize}
-
-E-L 方程：$\frac{d^2}{dx^2}(2y'') = 0$，即 $y'''' = 0$
+对于 $F = (y'')^2$，有 $\frac{\partial F}{\partial y} = 0$，$\frac{\partial F}{\partial y'} = 0$，$\frac{\partial F}{\partial y''} = 2y''$。于是 E-L 方程变成 $\frac{d^2}{dx^2}(2y'') = 0$，即 $y'''' = 0$。
 
 \paragraph{解}
 
@@ -607,10 +580,10 @@ y(x) = ax^3 + bx^2 + cx + d
 \]
 
 这就是著名的\textbf{三次样条}（cubic spline）！
-\tryit{在Python中用\texttt{scipy.interpolate.CubicSpline}画几条样条曲线，观察它们通过控制点时有多"光滑"。}
+\tryit{在Python中用\texttt{scipy.interpolate.}\allowbreak\texttt{CubicSpline}画几条样条曲线，观察它们通过控制点时有多“光滑”。}
 
 \begin{insightbox}
-计算机图形学中的样条曲线不是凭空设计的，而是"最小曲率能量"变分问题的解。
+计算机图形学中的样条曲线不是凭空设计的，而是“最小曲率能量”变分问题的解。
 \end{insightbox}
 
 \subsection{例3：悬链线（自然中的优化）}
@@ -619,9 +592,7 @@ y(x) = ax^3 + bx^2 + cx + d
 
 \paragraph{物理分析}
 
-链条会达到势能最小的状态。设链条的线密度为 $\rho$，则每小段 $ds$ 的质量是 $\rho \, ds$，高度为 $y$，势能为 $\rho g y \, ds$。
-\marginnote{悬链线和抛物线看起来很像，但数学形式完全不同。抛物线是 $y = x^2$，悬链线是 $y = \cosh x$。圣路易斯的大拱门就是一条倒置的悬链线。}
-总势能：
+链条会达到势能最小的状态。设链条的线密度为 $\rho$，则每小段 $ds$ 的质量是 $\rho \, ds$，高度为 $y$，势能为 $\rho g y \, ds$。总势能：
 \[
 V = \int \rho g y \, ds = \rho g \int_a^b y \sqrt{1 + (y')^2} \, dx
 \]
@@ -635,13 +606,12 @@ J[y] = \int_a^b y \sqrt{1 + (y')^2} \, dx
 
 这里 $F = y \sqrt{1 + (y')^2}$。
 
-计算偏导数：
-\begin{itemize}
-    \item $\frac{\partial F}{\partial y} = \sqrt{1 + (y')^2}$
-    \item $\frac{\partial F}{\partial y'} = \frac{y \cdot y'}{\sqrt{1 + (y')^2}}$
-\end{itemize}
-
-E-L 方程的计算比较复杂。但有一个技巧：当 $F$ 不显含 $x$ 时，有一个\textbf{首次积分}（见后面的守恒律部分）。
+计算偏导数得
+\[
+\frac{\partial F}{\partial y} = \sqrt{1 + (y')^2}, \qquad
+\frac{\partial F}{\partial y'} = \frac{y \cdot y'}{\sqrt{1 + (y')^2}}.
+\]
+直接代入 E-L 方程的计算比较复杂。但有一个技巧：当 $F$ 不显含 $x$ 时，有一个\textbf{首次积分}（见后面的守恒律部分）。
 
 \paragraph{结果}
 
@@ -651,8 +621,9 @@ y(x) = a \cosh\left(\frac{x - x_0}{a}\right) = \frac{a}{2}\left(e^{(x-x_0)/a} + 
 \]
 
 这就是著名的\textbf{悬链线}（catenary）！
+\sidenoteplain{悬链线和抛物线看起来很像，但数学形式完全不同。抛物线是 $y = x^2$，悬链线是 $y = \cosh x$。圣路易斯的大拱门就是一条倒置的悬链线。}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.8]
     % 悬链线
@@ -676,6 +647,8 @@ y(x) = a \cosh\left(\frac{x - x_0}{a}\right) = \frac{a}{2}\left(e^{(x-x_0)/a} + 
 
 % ------------------------------------------------------------------------------------
 \section{重要技巧：守恒律}
+
+E-L 方程一般是二阶常微分方程，直接求解往往很麻烦。好在当被积函数 $F$ 缺少某个变量时，方程可以先积分一次，降为一阶——这就是变分问题里的守恒律。我们分两种情况来看。
 
 \subsection{当 $F$ 不显含 $y$ 时}
 
@@ -703,7 +676,7 @@ y(x) = a \cosh\left(\frac{x - x_0}{a}\right) = \frac{a}{2}\left(e^{(x-x_0)/a} + 
 \boxed{F - y' \frac{\partial F}{\partial y'} = C \quad \text{（常数）}}
 \end{equation}
 \end{keytheorem}
-\think{为什么"不显含$x$"会导致守恒量？提示：想想物理中的"时间平移对称性"和能量守恒的关系。这是诺特定理的一个特例！}
+\think{为什么“不显含$x$”会导致守恒量？提示：想想物理中的“时间平移对称性”和能量守恒的关系。这是诺特定理的一个特例！}
 
 \begin{proof}
 计算 $\frac{d}{dx}\left(F - y' \frac{\partial F}{\partial y'}\right)$：
@@ -746,7 +719,7 @@ F - y' \frac{\partial F}{\partial y'} = y\sqrt{1+(y')^2} - y' \cdot \frac{yy'}{\
 \subsection{等周问题}
 
 古希腊人思考过这样一个问题：用一条长度固定的绳子围成一块地，怎样围才能使面积最大？
-\storynote{狄多公主}{传说腓尼基公主狄多（Dido）逃到北非，当地国王答应给她"一张牛皮能围起来的土地"。狄多把牛皮切成细条，围成一个半圆（另一边靠海），建立了迦太基城。这是历史上最早的"等周问题"！}
+\storynote{狄多公主}{传说腓尼基公主狄多（Dido）逃到北非，当地国王答应给她“一张牛皮能围起来的土地”。狄多把牛皮切成细条，围成一个半圆（另一边靠海），建立了迦太基城。这是历史上最早的“等周问题”！}
 
 这就是著名的\textbf{等周问题}（isoperimetric problem）。
 
@@ -808,11 +781,11 @@ E-L 方程：
 \lambda \cdot \frac{y''}{(1+(y')^2)^{3/2}} = -1
 \]
 
-\marginnote{平面曲线 $y = y(x)$ 在点 $x$ 处的曲率定义为
+\sidenoteplain{平面曲线 $y = y(x)$ 在点 $x$ 处的曲率定义为
 \[
 \kappa = \frac{y''}{(1+(y')^2)^{3/2}}
 \]
-曲率的几何意义是曲线"弯曲"的程度。}
+曲率的几何意义是曲线“弯曲”的程度。}
 
 注意到左边恰好是曲线的\textbf{曲率} $\kappa$！
 
@@ -825,7 +798,7 @@ E-L 方程：
 \begin{insightbox}
 \textbf{等周问题的答案}：在所有周长相同的闭合曲线中，\textbf{圆}围成的面积最大。
 
-这验证了我们的直觉：圆是"最圆满"的形状。
+这验证了我们的直觉：圆是“最圆满”的形状。
 \end{insightbox}
 
 \subsection{$\lambda$ 的影子价格解释}
@@ -834,20 +807,14 @@ E-L 方程：
 
 $\lambda = \frac{dA^*}{dL}$：如果周长增加一点点，最大面积能增加多少？
 
-对于半径为 $r$ 的圆：
-\begin{itemize}
-    \item 周长：$L = 2\pi r$
-    \item 面积：$A = \pi r^2$
-\end{itemize}
-
-所以：
+对于半径为 $r$ 的圆，周长 $L = 2\pi r$，面积 $A = \pi r^2$，所以：
 \[
 \lambda = \frac{dA}{dL} = \frac{dA/dr}{dL/dr} = \frac{2\pi r}{2\pi} = r
 \]
 
 \textbf{$\lambda$ 就是圆的半径！}
 
-这再次验证了影子价格的含义：它衡量约束的"紧张程度"。周长越长，能围成的圆越大，$\lambda$ 就越大。
+这再次验证了影子价格的含义：它衡量约束的“紧张程度”。周长越长，能围成的圆越大，$\lambda$ 就越大。
 
 % ------------------------------------------------------------------------------------
 \section{传统变分法推导（另一种视角）}
@@ -856,12 +823,12 @@ $\lambda = \frac{dA^*}{dL}$：如果周长增加一点点，最大面积能增�
 
 \subsection{变分的定义}
 
-设 $y^*(x)$ 是最优曲线，我们把它"扰动"一下：
+设 $y^*(x)$ 是最优曲线，我们把它“扰动”一下：
 \[
 y_\epsilon(x) = y^*(x) + \epsilon \eta(x)
 \]
 
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[scale=0.9]
     % 坐标轴
@@ -889,12 +856,7 @@ y_\epsilon(x) = y^*(x) + \epsilon \eta(x)
 \caption{变分的几何意义：在最优曲线附近做小扰动}
 \end{figure}
 
-这里：
-\begin{itemize}
-    \item $\eta(x)$ 是扰动的\textbf{方向}（也是一个函数）
-    \item $\epsilon$ 是扰动的\textbf{幅度}（一个小数）
-    \item 边界条件要求 $\eta(a) = \eta(b) = 0$（两端点不动）
-\end{itemize}
+这里 $\eta(x)$ 是扰动的\textbf{方向}（它本身也是一个函数），$\epsilon$ 是扰动的\textbf{幅度}（一个小数），而边界条件要求 $\eta(a) = \eta(b) = 0$，即两端点不动。
 
 \subsection{一阶变分}
 
@@ -909,7 +871,7 @@ J[y_\epsilon] = J[y^* + \epsilon\eta] = \int_a^b F(x, y^* + \epsilon\eta, y^{*\p
 \delta J := \left. \frac{d}{d\epsilon} J[y_\epsilon] \right|_{\epsilon=0}
 \]
 
-这叫做泛函的\textbf{一阶变分}。
+这叫做泛函的\textbf{一阶变分}。这个 $\delta$ 记号正是第1章开头那封信的内容：1755年，19岁的Lagrange写信给Euler，提出用 $\delta$ 记号的纯分析方法推导变分问题；Euler极为赞赏，并采用了“变分法”这个名字。
 
 \subsection{计算变分}
 
@@ -968,7 +930,7 @@ J[y_\epsilon] = J[y^* + \epsilon\eta] = \int_a^b F(x, y^* + \epsilon\eta, y^{*\p
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.95\textwidth]{figs_chap03/catenary.pdf}
-\caption{悬链线问题演示。左图对比悬链线$y = a\cosh(x/a)$与抛物线近似（$a=1$时）——两者在中心区域接近，边缘处差异明显；中图展示不同$a$值对悬链线形状的影响——$a$越小，曲线越"尖"；右图显示抛物线近似的相对误差，说明在$|x|$较大时近似失效。}
+\caption{悬链线问题演示。左图对比悬链线$y = a\cosh(x/a)$与抛物线近似（$a=1$时）——两者在中心区域接近，边缘处差异明显；中图展示不同$a$值对悬链线形状的影响——$a$越小，曲线越“尖”；右图显示抛物线近似的相对误差，说明在$|x|$较大时近似失效。}
 \label{fig:chap03_catenary}
 \end{figure}
 
@@ -985,20 +947,11 @@ J[y_\epsilon] = J[y^* + \epsilon\eta] = \int_a^b F(x, y^* + \epsilon\eta, y^{*\p
     \frac{\partial F}{\partial y} - \frac{d}{dx}\frac{\partial F}{\partial y'} = 0
     \]
     
-    \item \textbf{守恒律}：
-    \begin{itemize}
-        \item $F$ 不含 $y$ $\Rightarrow$ $\frac{\partial F}{\partial y'}$ 守恒
-        \item $F$ 不含 $x$ $\Rightarrow$ $F - y'\frac{\partial F}{\partial y'}$ 守恒（能量守恒）
-    \end{itemize}
-    
+    \item \textbf{守恒律}：若 $F$ 不含 $y$，则 $\frac{\partial F}{\partial y'}$ 守恒；若 $F$ 不含 $x$，则 $F - y'\frac{\partial F}{\partial y'}$ 守恒（能量守恒）。
+
     \item \textbf{带约束的变分}：用拉格朗日乘子处理积分约束，和第1章方法完全一致。
-    
-    \item \textbf{经典例子}：
-    \begin{itemize}
-        \item 测地线（最短路径）→ 直线
-        \item 悬链线（最小势能）→ $y = a\cosh(x/a)$
-        \item 等周问题（最大面积）→ 圆
-    \end{itemize}
+
+    \item \textbf{经典例子}：测地线（最短路径）的解是直线，悬链线（最小势能）的解是 $y = a\cosh(x/a)$，等周问题（最大面积）的解是圆。
 \end{enumerate}
 
 \begin{unification}[title=统一视角]
@@ -1018,9 +971,9 @@ J[y_\epsilon] = J[y^* + \epsilon\eta] = \int_a^b F(x, y^* + \epsilon\eta, y^{*\p
 \end{tabular}
 \end{center}
 
-\textbf{核心洞察}：E-L 方程不是"新发明"，而是有限维乘子法的自然极限。
+\textbf{核心洞察}：E-L 方程不是“新发明”，而是有限维乘子法的自然极限。
 
-从下一章开始，我们将用这套语言重新理解物理世界——牛顿力学、热力学、电磁学，都可以看作变分问题！
+从下一章开始，我们将用这套语言重新理解自然界：先是“不确定性”（第4章的最大熵），再是牛顿力学与连续介质（第5、13章）——它们都可以看作变分问题！
 \end{unification}
 
 % ------------------------------------------------------------------------------------
@@ -1084,9 +1037,9 @@ J[y_\epsilon] = J[y^* + \epsilon\eta] = \int_a^b F(x, y^* + \epsilon\eta, y^{*\p
     \setcounter{enumi}{11}
     \item 为什么物理学家喜欢用变分原理（最小作用量）而不是直接用牛顿定律？
     
-    \item 本章用"离散化 → 乘子法 → 取极限"推导 E-L 方程。这个思路能否推广到偏微分方程（如波动方程、热传导方程）？
+    \item 本章用“离散化 → 乘子法 → 取极限”推导 E-L 方程。这个思路能否推广到偏微分方程（如波动方程、热传导方程）？
     
     \item 神经网络可以看作是泛函的离散化吗？从这个角度理解物理信息神经网络（PINN）。
     
-    \item 机器学习中的"正则化"（如 $L_2$ 正则化）和变分问题中的"光滑性泛函"有什么联系？
+    \item 机器学习中的“正则化”（如 $L_2$ 正则化）和变分问题中的“光滑性泛函”有什么联系？
 \end{enumerate}

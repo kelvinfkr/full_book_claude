@@ -382,7 +382,7 @@ def fig_cbf_controller():
 
  
 
-            u_safe = u_ref - lam * grad_h
+            u_safe = u_ref + lam * grad_h  # 沿 grad_h 推离障碍物（KKT: u* = u_ref + λ∇h）
 
             return u_safe, True  # 需要修正
 
@@ -670,7 +670,7 @@ def fig_multi_obstacle():
 
                         lam = -constraint / grad_h_norm_sq
 
-                        u = u - lam * grad_h
+                        u = u + lam * grad_h  # 沿 grad_h 推离障碍物
 
             return u
 

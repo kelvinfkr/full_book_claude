@@ -1,1921 +1,2250 @@
-\chapter{物理信息神经网络：当神经网络遇见物理定律}
-
 % ====================================================================================
-\section*{引言：一个新的求解思路}
+\chapter{有限元方法：能量极小化}
 % ====================================================================================
 
-\marginnote{PINN由Raissi、Perdikaris和Karniadakis于2019年在Journal of Computational Physics发表，全称Physics-Informed Neural Networks。这篇论文引用量已超过15000次，开创了AI for Science的重要方向。}
+\section*{引言：从飞机到桥梁}
 
-\marginnote{\textbf{George Karniadakis}(1961--)：布朗大学教授，美国工程院院士，PINN的主要推动者。他的研究横跨计算力学和机器学习，是``科学机器学习''(SciML)领域的奠基人之一。他培养了大量学生推动AI for Science的发展。}
+1943年，第二次世界大战正酣。英国工程师们面临一个紧迫的问题：如何计算新型飞机机翼的应力分布？机翼形状复杂，传统的解析方法根本无法应对。
 
-在传统的数值分析课程中，我们学习用有限差分、有限元等方法求解微分方程。这些方法需要将空间离散成网格，然后在网格点上求解代数方程组。
+\storynote{Richard Courant}{1888--1972，德裔美国数学家，有限元方法的先驱。纳粹上台后逃离德国，在纽约大学创建了著名的库朗数学研究所(Courant Institute)。他与希尔伯特合著的《数学物理方法》至今仍是经典教材。}
 
-但有没有一种完全不同的思路？
+数学家 Richard Courant 提出了一个革命性的想法：与其求解整个连续体的方程，不如把机翼\textbf{切成很多小三角形}，在每个三角形内假设应力是简单的（比如线性的），然后把这些小块``拼起来''。
 
-\textbf{物理信息神经网络}（Physics-Informed Neural Networks，简称PINN）提供了一个新视角：与其在网格上逐点求解，不如直接\textbf{学习一个满足物理定律的函数}。
+这个想法就是\textbf{有限元方法}（Finite Element Method，FEM）的雏形。不过“有限元”这个名字要到 1960 年才由 Ray Clough 在论文里首次使用；在那之前的 1956 年，Turner、Clough、Martin 和 Topp 已经为波音的机翼分析发展出了刚度法——“刚度”这个词，我们很快就会在刚度矩阵里再遇到。
 
-这个想法听起来很简单，但实现起来却充满挑战。本章我们将用熟悉的\textbf{拉格朗日乘子法}来理解PINN的数学本质，揭示它为什么有时很好用，有时却训练不出来，以及现代研究如何解决这些问题。
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.9]
+    % 定义机翼形状的上下边界函数
+    % 上边界: y_top(x) 从(0,0)到(6,0.15)，中间凸起
+    % 下边界: y_bot(x) 从(0,0)到(6,0.15)，中间凹陷
 
-\begin{framed}
-\textbf{本章目标}：
-\begin{enumerate}
-    \item 理解PINN的数学本质——它是一个约束优化问题
-    \item 亲手实现一个完整的PINN求解器
-    \item 分析训练困难的根源——梯度竞争与病态优化
-    \item 掌握现代PINN的改进方法——动态权重与拉格朗日对偶
-    \item 了解变分视角如何提供另一条路径
-\end{enumerate}
-\end{framed}
+    % 填充三角形网格 - 手动绘制以确保填满
+    \begin{scope}
+        \clip (0,0) .. controls (1.5,0.7) and (4,0.55) .. (6,0.15) --
+              (6,0.15) .. controls (4,-0.15) and (1.5,-0.25) .. (0,0);
+
+        % 绘制三角形网格
+        \foreach \i in {0,1,...,11} {
+            \foreach \j in {0,1,...,3} {
+                \pgfmathsetmacro{\x}{\i*0.5}
+                \pgfmathsetmacro{\y}{\j*0.25 - 0.25}
+                % 上三角形
+                \draw[gray!60, thin] (\x,\y) -- (\x+0.5,\y) -- (\x+0.25,\y+0.25) -- cycle;
+                % 下三角形
+                \draw[gray!60, thin] (\x+0.25,\y+0.25) -- (\x+0.5,\y) -- (\x+0.5,\y+0.25) -- cycle;
+            }
+        }
+    \end{scope}
+
+    % 机翼轮廓（加粗）
+    \draw[very thick, blue!70!black] (0,0) .. controls (1.5,0.7) and (4,0.55) .. (6,0.15);
+    \draw[very thick, blue!70!black] (0,0) .. controls (1.5,-0.25) and (4,-0.15) .. (6,0.15);
+
+    % 标注
+    \node at (3,-1) {机翼被切成很多小三角形单元};
+
+    % 放大一个单元
+    \begin{scope}[shift={(8,0)}]
+        \draw[thick, fill=blue!15] (0,0) -- (1.5,0) -- (0.75,1) -- cycle;
+        \fill[red] (0,0) circle (2.5pt);
+        \fill[red] (1.5,0) circle (2.5pt);
+        \fill[red] (0.75,1) circle (2.5pt);
+        \node at (0.75,-0.5) {一个三角形单元};
+        \node[right, font=\small] at (1.6,0) {节点};
+        \draw[<-, thick] (1.55,0.05) -- (1.9,0.3);
+    \end{scope}
+\end{tikzpicture}
+\caption{有限元方法的基本思想：把复杂形状切成简单的小块}
+\end{figure}
+
+\subsection*{有限元的现代应用}
+
+1967 年，Zienkiewicz 出版了第一本有限元专著。今天，有限元方法已是工程计算的绝对基石：建筑工程用它计算桥梁、高楼的应力分布以确保结构安全，汽车工业用它模拟碰撞测试、优化车身设计，航空航天用它分析飞机机翼与火箭发动机的热应力，电子产品用它模拟芯片散热与电磁场分布，医学用它分析人工关节的力学性能、模拟心脏血流。
+\clarify{为什么这一章放在“物理智能”部分，而不是紧跟第5章的力学？因为它真正的下游是第14章的 PINN 和第15章的神经算子：要把物理定律嵌进神经网络，先得知道物理是怎么被算出来的——弱形式、刚度矩阵、条件数，都会在那两章原样出现。它只依赖第3章的变分法和第5章的最小作用量，可以随时回来读。}
+
+\begin{example}[你身边的有限元]
+你的手机外壳在设计前，工程师用有限元模拟过跌落时的应力；港珠澳大桥在建造前，工程师用有限元分析过风载和车载下的变形；波音787的机翼用复合材料，设计全靠有限元优化。
+\end{example}
+
+\vspace{0.5cm}
+\noindent\textit{为什么一台连微分方程都不会解的计算机，能算出机翼上每一点的应力？为什么把区域切成三角形之后，问题反而变简单了？为什么工程师说“固定端的支反力”，数学家却说“边界条件的乘子”？}
+
+\begin{quote}
+\textbf{本章目标}：让你看清一个事实——工程师用来算桥梁、飞机的有限元软件，骨子里做的就是第1章那件事：写下一个能量（目标函数），把边界条件当约束，求导等于零。唯一的新东西是“把无限维的函数切成有限个帐篷”。读完本章，你应该能徒手算出一个刚度矩阵，并且说得清 $\lambda$ 为什么是边界上的热流或支反力。
+\end{quote}
+
+\subsection*{本章的核心观点}
+
+令人惊讶的是，这个强大的工程工具的数学本质就是我们已经学过的\textbf{变分法的离散化}：
+
+\begin{tcolorbox}[colback=yellow!10, colframe=orange!80, title=核心观点]
+\textbf{有限元不是什么新东西——它就是第1章的拉格朗日乘子法，只不过变量从几个数变成了成千上万个节点值。}目标函数是总势能 $J(U) = \frac{1}{2}U^\top KU - F^\top U$，约束是“边界上的值被钉死”，求导等于零就得到 $KU = F$。这里 $K$ 是刚度矩阵，描述系统的“硬度”；$U$ 是我们要求的未知量——节点处的位移、温度或电势；$F$ 是载荷向量，代表外部作用力、热源或电荷。
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabular}{lll}
+\toprule
+ & \textbf{第1章} & \textbf{本章（有限元）} \\
+\midrule
+变量 & $x \in \R^n$ & 节点值 $U \in \R^n$（离散化的 $u(x)$） \\
+目标 & $f(x)$ & 总势能 $J(U) = \frac{1}{2}U^\top KU - F^\top U$ \\
+约束 & $g(x) = 0$ & Dirichlet 边界条件 $BU = g$ \\
+乘子 & $\lambda$（影子价格） & $\lambda$ = 边界热流 / 支反力 \\
+一阶条件 & $\nabla f + \lambda \nabla g = 0$ & $KU + B^\top \lambda = F$，$BU = g$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{tcolorbox}
+\review{第3章}{还记得变分法吗？我们把连续曲线离散成$y_0, y_1, \ldots, y_N$，把积分变成求和，把泛函极值问题变成有限维优化问题。有限元方法用的是完全相同的套路！}
 
 \begin{tcolorbox}[colback=green!5, colframe=green!60!black, title=学完这章，你将能够...]
 \begin{itemize}
-    \item 用PyTorch实现一个完整的PINN求解Poisson方程
-    \item 诊断PINN训练失败的原因（梯度竞争、采样不足等）
-    \item 实现自适应损失加权（NTK权重、拉格朗日乘子法）
-    \item 对比PINN与传统数值方法的优缺点
-    \item 将PINN应用于简单的反问题（参数识别）
+    \item 把Poisson方程转化为能量最小化问题（变分形式）
+    \item 手算一维有限元问题的刚度矩阵和载荷向量
+    \item 用Python/MATLAB组装刚度矩阵并求解$KU=F$
+    \item 理解工程软件（ANSYS、COMSOL）背后的数学原理
+    \item 估算网格密度与计算精度的关系
 \end{itemize}
 \end{tcolorbox}
 
-% ====================================================================================
-\section{从约束优化看PINN}
-% ====================================================================================
+% ------------------------------------------------------------------------------------
+\section{从物理问题到数学方程}
 
-\subsection{传统数值方法的困境}
+\subsection{一个简单的例子：一维热传导}
 
-考虑一个你在数学物理方程课程中见过的泊松方程（Poisson equation）：
-\begin{equation}
-    -\nabla^2 u = f, \quad x \in \Omega
-\end{equation}
-\begin{equation}
-    u = g, \quad x \in \partial\Omega
-\end{equation}
-
-传统有限元方法求解这个问题需要以下步骤：
-\begin{enumerate}
-    \item 将区域$\Omega$剖分成$N$个网格单元（三角形或四边形）
-    \item 在每个单元上选取基函数，构造$N \times N$的刚度矩阵$\mathbf{K}$
-    \item 求解线性方程组$\mathbf{K}\mathbf{u} = \mathbf{f}$
-\end{enumerate}
-
-\begin{example}[维数灾难]
-假设我们要在一个$d$维立方体$[0,1]^d$上求解泊松方程，每个方向需要$n=100$个网格点。那么：
-\begin{itemize}
-    \item $d=1$（一维）：需要$100$个网格点
-    \item $d=2$（二维）：需要$100^2 = 10^4$个网格点
-    \item $d=3$（三维）：需要$100^3 = 10^6$个网格点
-    \item $d=4$（四维）：需要$100^4 = 10^8$个网格点
-    \item $d=10$（十维）：需要$100^{10} = 10^{20}$个网格点——这比宇宙中的原子数还多！
-\end{itemize}
-
-这就是著名的\textbf{维数灾难}（curse of dimensionality）：传统网格方法在高维问题上完全失效。
-\end{example}
-
-\subsection{PINN的核心思想}
-
-PINN的想法出奇地简单：
-
-\begin{framed}
-\textbf{PINN的核心思想}：用一个神经网络$u_\theta(x)$来近似微分方程的解，其中$\theta$是网络的所有可学习参数（权重和偏置）。
-\end{framed}
-
-神经网络有两个美妙的性质：
-
-\textbf{性质1：无网格}。给定任意点$x \in \mathbb{R}^d$，神经网络可以直接输出该点的函数值$u_\theta(x)$，无需事先构建网格。这意味着在高维空间中，我们只需要在感兴趣的点上采样，而不需要覆盖整个空间。
-
-\textbf{性质2：自动微分}。神经网络是由基本运算（矩阵乘法、非线性激活）复合而成的，每一步都是可微的。利用\textbf{自动微分}（automatic differentiation），我们可以精确计算$u_\theta$对输入$x$的任意阶导数：
-\begin{equation}
-    \frac{\partial u_\theta}{\partial x}, \quad \frac{\partial^2 u_\theta}{\partial x^2}, \quad \nabla^2 u_\theta, \quad \text{等等}
-\end{equation}
-
-\begin{remark}[自动微分 vs 数值微分 vs 符号微分]
-
-
-\begin{itemize}
-    \item \textbf{数值微分}：$f'(x) \approx \frac{f(x+h) - f(x)}{h}$，简单但有截断误差和舍入误差
-    \item \textbf{符号微分}：推导出$f'(x)$的解析表达式，精确但表达式可能爆炸式增长
-    \item \textbf{自动微分}：沿着计算图传播导数，既精确又高效。这是深度学习框架（PyTorch、TensorFlow）的核心技术
-\end{itemize}
-
-\end{remark}
+想象一根长度为 1 米的金属棒，两端固定在 0°C 的冰水中，中间有一个均匀的热源（比如电流通过产生的焦耳热）。问：稳态时棒上的温度分布是什么？
 
 \begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.95\textwidth]{figs_chap13/pinn_workflow.pdf}
-    \caption{PINN训练流程示意图。输入坐标$(x,t)$经过神经网络得到预测值$u_\theta$，通过自动微分计算所需的导数，然后分别计算PDE损失、边界条件损失和初值条件损失。三种损失加权求和后通过反向传播更新网络参数。}
-    \label{fig:pinn_workflow}
+\centering
+\begin{tikzpicture}[scale=1.0]
+    % 金属棒
+    \fill[gray!30] (0,-0.3) rectangle (6,0.3);
+    \draw[thick] (0,-0.3) rectangle (6,0.3);
+    
+    % 边界条件
+    \fill[blue!30] (-0.5,-0.5) rectangle (0,0.5);
+    \fill[blue!30] (6,-0.5) rectangle (6.5,0.5);
+    \node at (-0.25,0.8) {\small 0°C};
+    \node at (6.25,0.8) {\small 0°C};
+    
+    % 热源
+    \foreach \x in {1,2,3,4,5} {
+        \draw[red, thick, ->] (\x,-0.8) -- (\x,-0.4);
+    }
+    \node[red] at (3,-1.2) {均匀热源 $f$};
+    
+    % 温度分布（虚线）
+    \draw[blue, thick, dashed] plot[smooth] coordinates {(0,0.3) (1,0.8) (2,1.1) (3,1.2) (4,1.1) (5,0.8) (6,0.3)};
+    \node[blue] at (3,1.5) {温度分布 $u(x)$};
+    
+    % 坐标
+    \node at (0,-0.6) {\small $x=0$};
+    \node at (6,-0.6) {\small $x=1$};
+\end{tikzpicture}
+\caption{一维热传导问题}
 \end{figure}
 
-图\ref{fig:pinn_workflow}展示了PINN的完整训练流程。对于初学者来说，理解这个流程图是掌握PINN的关键：
-\begin{enumerate}
-    \item \textbf{前向传播}：给定输入坐标，神经网络输出预测的物理量
-    \item \textbf{自动微分}：利用计算图，精确计算网络输出对输入的各阶导数
-    \item \textbf{损失计算}：将导数代入PDE，计算残差；同时检查边界和初值条件是否满足
-    \item \textbf{反向传播}：基于总损失，更新网络参数
-\end{enumerate}
+\subsection{Poisson方程从哪里来？}
 
-但如何保证这个网络"学到"正确的物理？答案是：\textbf{约束优化}。
+在有限元和PINN中，你会反复遇到\textbf{Poisson方程}（泊松方程）。让我们从物理第一性原理推导它。
+\preview{第14章的 PINN 也要解同一个 Poisson 方程，只是把这里的“形函数”换成神经网络。学完本章再看第14章，你会发现两者只差一个“基函数怎么选”。}
 
-\subsection{约束优化的视角}
+\begin{keyidea}[Poisson方程的推导——大白话版]
+\textbf{核心物理}：守恒律 + 本构关系 = 偏微分方程
 
-让我们用你在数学分析中学过的拉格朗日乘子法来重新审视这个问题。
+\textbf{步骤1：守恒律}
 
-我们的目标是找到一个函数$u$，使得：
-\begin{align}
-    \mathcal{N}[u] &= f \quad \text{在} \quad \Omega \quad \text{内部（PDE约束）} \\
-    \mathcal{B}[u] &= g \quad \text{在} \quad \partial\Omega \quad \text{边界上（边界条件）}
-\end{align}
-这里$\mathcal{N}$是微分算子（比如$\mathcal{N} = -\nabla^2$），$\mathcal{B}$是边界算子（比如$\mathcal{B}[u] = u|_{\partial\Omega}$）。
+考虑热传导。取一小段$[x, x+\Delta x]$，稳态下热量``流进 + 生成 = 流出''：
+\[
+q(x) + f(x)\Delta x = q(x + \Delta x)
+\]
+其中$q(x)$是热流密度（单位时间流过$x$处的热量，向右为正），$f(x)$是热源强度。
 
-\begin{example}[回顾有限维拉格朗日乘子法]
-考虑有限维优化问题：
-\begin{equation}
-    \min_{x \in \mathbb{R}^n} f(x) \quad \text{s.t.} \quad h(x) = 0
-\end{equation}
-拉格朗日函数为：
-\begin{equation}
-    \mathcal{L}(x, \lambda) = f(x) + \lambda^T h(x)
-\end{equation}
-最优解满足KKT条件：$\nabla_x \mathcal{L} = 0$，$h(x) = 0$。
-\end{example}
+整理得：$\frac{q(x+\Delta x) - q(x)}{\Delta x} = f(x)$
 
-对于PINN，如果我们将约束严格写成拉格朗日形式：
-\begin{equation}
-    \mathcal{L}(u, \lambda, \mu) = \text{（某个目标函数）} + \int_\Omega \lambda(x) (\mathcal{N}[u] - f) \, dx + \int_{\partial\Omega} \mu(x) (\mathcal{B}[u] - g) \, ds
-\end{equation}
+当$\Delta x \to 0$：
+\[
+\frac{dq}{dx} = f(x) \quad \text{（守恒律：热流的增量来自热源）}
+\]
 
-但在实践中，我们通常不显式引入拉格朗日乘子函数$\lambda(x)$和$\mu(x)$（因为它们也是无穷维的），而是采用更简单的\textbf{罚函数法}——直接惩罚约束违反的程度。
+\textbf{步骤2：本构关系（傅里叶定律）}
 
-\subsection{PINN的损失函数：罚函数法}
+热量从高温流向低温，流速与温度梯度成正比：
+\[
+q = -k\frac{du}{dx} \quad \text{（傅里叶定律）}
+\]
+这里$k$是热导率（设$k=1$简化），负号表示热量流向温度降低的方向。
 
-\begin{keyidea}{配点（Collocation Points）是什么？——大白话版}
-在传统方法中，我们需要在整个区域建立"网格"，在每个网格点上求解。但PINN使用的是\textbf{配点法}（collocation method）：
+\textbf{步骤3：合并}
 
-\textbf{核心思想}：随机撒一些点，检查神经网络在这些点上是否"正确"。
+把傅里叶定律代入守恒律：
+\[
+\frac{d}{dx}\left(-\frac{du}{dx}\right) = f(x) \quad \Rightarrow \quad \boxed{-\frac{d^2u}{dx^2} = f(x)}
+\]
 
-\begin{itemize}
-    \item \textbf{内部配点}$\{x_i^r\}$：在区域$\Omega$内部随机撒的点。我们在这些点上检查：神经网络的输出是否满足微分方程？
-    \item \textbf{边界配点}$\{x_j^b\}$：在边界$\partial\Omega$上撒的点。我们在这些点上检查：神经网络的输出是否满足边界条件？
-\end{itemize}
-
-\textbf{类比}：想象你是一个老师在批改作业。你不可能检查学生在无穷多个点上的答案，所以你随机抽查几个点。如果这些点都对了，你就认为学生大概率掌握了（当然，抽查的点越多，判断越准确）。
-
-\textbf{为什么叫"配点"？}因为我们要求神经网络的输出在这些点上和正确答案"配"上（match）。
+这就是一维Poisson方程！高维情况只需把$\frac{d^2}{dx^2}$换成Laplacian算子$\nabla^2$：
+\[
+-\nabla^2 u = f \quad \text{（Poisson方程）}
+\]
 \end{keyidea}
 
-\begin{definition}[PINN损失函数]
-PINN的损失函数由两部分组成：
-\begin{equation}
-    \mathcal{L}_{\text{PINN}}(\theta) = \underbrace{\frac{1}{N_r}\sum_{i=1}^{N_r} \left|\mathcal{N}[u_\theta](x_i^r) - f(x_i^r)\right|^2}_{L_{\text{PDE}}：\text{PDE残差}} + \underbrace{\lambda \cdot \frac{1}{N_b}\sum_{j=1}^{N_b} \left|u_\theta(x_j^b) - g(x_j^b)\right|^2}_{L_{\text{BC}}：\text{边界条件残差}}
-\end{equation}
-其中：
-\begin{itemize}
-    \item $\{x_i^r\}_{i=1}^{N_r}$是在区域$\Omega$内部随机采样的\textbf{配点}（collocation points）
-    \item $\{x_j^b\}_{j=1}^{N_b}$是在边界$\partial\Omega$上采样的配点
-    \item $\lambda > 0$是\textbf{罚参数}（penalty parameter），平衡两个损失项的重要性
-\end{itemize}
-\end{definition}
+\subsection{现实问题与PDE的对应关系}
 
-\begin{remark}[罚函数法的本质]
-回顾你学过的罚函数法：将约束优化问题
-\begin{equation}
-    \min f(x) \quad \text{s.t.} \quad h(x) = 0
-\end{equation}
-转化为无约束问题：
-\begin{equation}
-    \min f(x) + \frac{\lambda}{2}\|h(x)\|^2
-\end{equation}
-当$\lambda \to \infty$时，最优解趋近于原问题的解。
-
-PINN正是这个思路：$L_{\text{PDE}}$惩罚方程不被满足的程度，$L_{\text{BC}}$惩罚边界条件不被满足的程度。
-\end{remark}
-
-\begin{tcolorbox}[colback=yellow!10, colframe=orange!50, title=关键洞察]
-罚参数$\lambda$的选择至关重要：
-\begin{itemize}
-    \item $\lambda$太小：边界条件得不到满足，解在边界上偏差很大
-    \item $\lambda$太大：梯度被边界项主导，PDE残差下降缓慢
-\end{itemize}
-这个两难困境是PINN训练困难的核心原因之一，我们将在第\ref{sec:gradient_pathology}节详细讨论。
-\end{tcolorbox}
-
-\subsubsection{罚参数$\lambda$的影响：实验验证}
-
-为了直观理解$\lambda$的影响，我们用不同的罚参数值训练PINN，并对比结果。
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.95\textwidth]{figs_chap13/lambda_effect.pdf}
-    \caption{罚参数$\lambda$的影响。左图：不同$\lambda$值下PINN的预测解与精确解（黑色）对比；右图：不同$\lambda$值对应的边界误差和整体MSE柱状对比。}
-    \label{fig:lambda_effect}
-\end{figure}
-
-从图\ref{fig:lambda_effect}中我们可以清楚地看到$\lambda$选择的"甜蜜点"：
+Poisson方程（及其变种）描述了惊人多的物理现象：
 
 \begin{center}
-\begin{tabular}{c|cccc}
-\hline
-$\lambda$ & 1.0 & 10.0 & 100.0 & 1000.0 \\
-\hline
-最终MSE & $1.56 \times 10^{-6}$ & $6.48 \times 10^{-8}$ & $\mathbf{4.60 \times 10^{-8}}$ & $6.70 \times 10^{-7}$ \\
-\hline
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{l|l|l|l}
+\toprule
+\textbf{物理问题} & \textbf{方程} & \textbf{$u$代表} & \textbf{$f$代表} \\
+\midrule
+稳态热传导 & $-\nabla^2 u = f$ & 温度 & 热源强度 \\
+静电场 & $-\nabla^2 \phi = \rho/\varepsilon_0$ & 电势 & 电荷密度 \\
+万有引力 & $\nabla^2 \phi = 4\pi G\rho$ & 引力势 & 质量密度 \\
+弹性膜变形 & $-\nabla^2 u = f$ & 挠度 & 压力 \\
+地下水渗流 & $-\nabla \cdot (K\nabla h) = Q$ & 水头 & 源/汇 \\
+\midrule
+\multicolumn{4}{c}{\textit{时间相关的方程}} \\
+\midrule
+热扩散 & $\frac{\partial u}{\partial t} = \alpha \nabla^2 u$ & 温度 & — \\
+波动 & $\frac{\partial^2 u}{\partial t^2} = c^2 \nabla^2 u$ & 位移 & — \\
+Schrödinger & $i\hbar\frac{\partial \psi}{\partial t} = -\frac{\hbar^2}{2m}\nabla^2\psi + V\psi$ & 波函数 & 势能 \\
+Navier-Stokes & $\rho(\frac{\partial \vec{v}}{\partial t} + \vec{v}\cdot\nabla\vec{v}) = -\nabla p + \mu\nabla^2\vec{v}$ & 速度场 & 压力 \\
+\bottomrule
 \end{tabular}
 \end{center}
 
-\textbf{实验结论}：
+\begin{insightbox}
+\textbf{为什么这么多问题都对应类似的方程？}因为它们都遵循相同的模式：一条\textbf{守恒律}（能量、质量或电荷守恒），加上一条\textbf{本构关系}（流量与梯度成正比，即 Fourier、Ohm 或 Darcy 定律）。这就是为什么学会用有限元解一个问题（如热传导），就等于学会了解\textbf{所有}类似问题！
+\end{insightbox}
+
+\subsection{物理定律：热传导方程}
+
+根据上面的推导，稳态温度分布 $u(x)$ 满足：
+
+\begin{equation}
+-\frac{d^2 u}{dx^2} = f(x), \quad x \in (0, 1)
+\end{equation}
+
+加上边界条件：
+\begin{equation}
+u(0) = 0, \quad u(1) = 0
+\end{equation}
+
+这里 $u(x)$ 是位置 $x$ 处的温度，是我们要求的未知函数；$f(x)$ 是已知的热源强度；$-\frac{d^2u}{dx^2}$ 则是热量的“净流出率”。
+
+\paragraph{物理直觉}
+
+方程 $-u'' = f$ 说的是：在稳态下，热源产生的热量等于热传导带走的热量。如果 $u'' < 0$，温度曲线开口向下、像山峰，热量就从这点向两边流出；如果 $u'' > 0$，温度曲线开口向上、像山谷，热量就从两边流入这点。稳态要求流入等于流出加上热源产生的量，这正是方程两边所表达的平衡。
+
+\subsection{这个方程能解析求解吗？}
+
+对于简单情况（如 $f = $ 常数），可以直接积分两次：
+
+\begin{example}[$f = 1$ 的解析解]
+\begin{align}
+-u'' &= 1 \\
+\Rightarrow \quad u' &= -x + C_1 \\
+\Rightarrow \quad u &= -\frac{x^2}{2} + C_1 x + C_2
+\end{align}
+
+代入边界条件 $u(0) = 0$ 得 $C_2 = 0$；$u(1) = 0$ 得 $C_1 = \frac{1}{2}$。
+
+所以解析解是：
+\[
+u(x) = \frac{x(1-x)}{2}
+\]
+这是一条开口向下的抛物线，最高点在 $x = 0.5$ 处，$u_{\max} = 0.125$。
+\end{example}
+
+\textbf{但是}，在实际工程问题中，区域形状可能很复杂（如飞机机翼），材料可能不均匀（$f$ 是复杂函数），边界条件也可能很复杂。这时解析解不存在，必须用数值方法——这就是有限元！
+
+% ------------------------------------------------------------------------------------
+\section{变分原理：换一个角度看问题}
+
+\subsection{从微分方程到能量最小化}
+
+上一节的结尾留下了一个困难：微分方程要求在每一点都成立，形状一复杂就无从下手。既然逐点求解走不通，能不能换一种提法，把“每点都满足方程”改写成“某个整体的量取最小”？第3章和第5章告诉我们，很多微分方程可以从变分原理推导出来。热传导方程也不例外！
+
+\begin{keytheorem}[title=能量原理]
+定义\textbf{能量泛函}：
+\begin{equation}
+J[u] = \frac{1}{2}\int_0^1 (u')^2 \, dx - \int_0^1 f \cdot u \, dx
+\end{equation}
+
+则：
+\begin{equation}
+u^* = \arg\min_u J[u] \quad \Longleftrightarrow \quad -u^{*\prime\prime} = f
+\end{equation}
+
+即：\textbf{求解微分方程} $\Leftrightarrow$ \textbf{找使能量最小的函数}
+\end{keytheorem}
+
+\paragraph{能量泛函的物理意义}
+
+第一项 $\frac{1}{2}\int (u')^2 dx$ 是\textbf{内能}，与温度梯度的平方成正比；第二项 $\int fu \, dx$ 是\textbf{外部热源的“功”}；两者相减，$J$ 就是内能减去外功，即总势能。系统自然趋向于总势能最小的状态——这就是能量最小化原理！
+\think{能量泛函里为什么是 $-\int fu\,dx$ 而不是 $+\int fu\,dx$？提示：把 $f$ 想成重力、$u$ 想成位移，外力做功会降低系统的势能。}
+
+\subsection{验证：从变分到微分方程}
+
+让我们用第3章的 Euler-Lagrange 方程验证这个等价性。
+
+泛函：$J[u] = \int_0^1 F(x, u, u') \, dx$，其中 $F = \frac{1}{2}(u')^2 - fu$
+
+计算偏导数：
+\[
+\frac{\partial F}{\partial u} = -f, \quad \frac{\partial F}{\partial u'} = u'
+\]
+
+E-L 方程：
+\[
+\frac{\partial F}{\partial u} - \frac{d}{dx}\frac{\partial F}{\partial u'} = 0 \quad \Rightarrow \quad -f - u'' = 0 \quad \Rightarrow \quad -u'' = f
+\]
+
+确实得到了热传导方程！
+
+\begin{insightbox}
+\textbf{两种视角的等价性}：
+
+\begin{center}
+\begin{tabular}{c|c}
+\textbf{微分方程视角} & \textbf{变分视角} \\
+\hline
+找满足 $-u'' = f$ 的函数 & 找使 $J[u]$ 最小的函数 \\
+\hline
+局部条件（每点都要满足） & 整体条件（能量最小） \\
+\hline
+需要解微分方程 & 需要做优化 \\
+\end{tabular}
+\end{center}
+
+有限元方法从变分视角出发——因为优化问题更容易离散化！
+\end{insightbox}
+
+% ------------------------------------------------------------------------------------
+\section{弱形式：降低光滑性要求}
+
+\subsection{强形式的困难}
+
+微分方程 $-u'' = f$ 叫做\textbf{强形式}，因为它要求 $u$ 在每个点都精确满足，而且 $u$ 必须有二阶导数。
+
+但在实际问题中，解可能不够光滑：材料交界处（如铜棒接钢棒）温度梯度可能不连续，集中热源处温度分布可能有“尖角”。这些地方二阶导数并不存在，强形式无从谈起，于是我们需要一种对光滑性要求更低的写法。
+
+\subsection{弱形式：用积分代替微分}
+
+\textbf{弱形式}用一个巧妙的技巧绕过了光滑性问题：
+
 \begin{enumerate}
-    \item \textbf{$\lambda=1$太小}：边界损失下降缓慢，最终MSE较大。从解的曲线可以看到，$\lambda=1$的解在边界附近与精确解有明显偏差。
-
-    \item \textbf{$\lambda=10 \sim 100$最优}：在这个范围内，边界条件和PDE都得到了较好的满足，MSE最小。
-
-    \item \textbf{$\lambda=1000$太大}：虽然边界损失很小，但PDE损失收敛缓慢，最终反而损害了整体精度。这是因为梯度被边界项"淹没"，网络无法有效学习内部的PDE行为。
+    \item 把方程两边乘以一个\textbf{测试函数} $v(x)$
+    \item 对整个区间积分
+    \item 用分部积分把导数“转移”到测试函数上
 \end{enumerate}
 
-这个实验验证了前面"关键洞察"中的分析：$\lambda$的选择是一个微妙的平衡问题，需要在边界条件和PDE残差之间找到合适的权衡。
+\paragraph{推导过程}
 
-% ====================================================================================
-\section{手把手实现：一维泊松方程求解器}
-% ====================================================================================
+从强形式出发：
+\[
+-u'' = f
+\]
 
-现在让我们从最简单的例子开始，完整实现一个PINN求解器。
+乘以测试函数 $v$，积分：
+\[
+-\int_0^1 u'' \cdot v \, dx = \int_0^1 f \cdot v \, dx
+\]
+
+对左边用分部积分：
+\[
+-\int_0^1 u'' v \, dx = -[u' v]_0^1 + \int_0^1 u' v' \, dx
+\]
+
+如果测试函数 $v$ 在边界上为零（$v(0) = v(1) = 0$），边界项消失：
+
+\begin{keyformula}[title=弱形式]
+找 $u$ 使得对所有满足 $v(0) = v(1) = 0$ 的测试函数 $v$：
+\begin{equation}
+\boxed{\int_0^1 u' \cdot v' \, dx = \int_0^1 f \cdot v \, dx}
+\end{equation}
+\end{keyformula}
+
+\clarify{“弱”不是“不严格”。弱形式的解若恰好足够光滑，它一定也满足强形式；反过来，材料交界处梯度不连续的解只满足弱形式。弱形式是“更宽容”，不是“更马虎”。}
+
+\paragraph{弱形式的优点}
+
+弱形式带来三样好处。首先它\textbf{降低了光滑性要求}：只需要 $u$ 有一阶导数，不需要二阶导数，前面说的材料交界处于是不再是障碍。其次它\textbf{自然地处理边界条件}：某些边界条件会在分部积分的边界项里自动满足。最后它\textbf{便于离散化}：下一节将看到，从弱形式可以直接导出有限元方程。
+
+\begin{physicalmeaning}
+弱形式的物理意义是\textbf{能量平衡}：
+
+左边 $\int u' v' dx$ 可以理解为“虚位移 $v$ 产生的内部虚功”
+
+右边 $\int fv dx$ 是“外力对虚位移做的虚功”
+
+弱形式说：对任意虚位移，内部虚功 = 外部虚功（虚功原理）
+\end{physicalmeaning}
+
+% ------------------------------------------------------------------------------------
+\section{有限元离散化}
+
+\subsection{核心思想：用有限维逼近无限维}
+
+弱形式是一个关于函数 $u(x)$ 的方程——$u$ 有无限多个自由度（每个点的值都是未知的）。
+
+有限元的核心思想是：用有限个\textbf{基函数}的线性组合来逼近真实解：
+\begin{equation}
+u_h(x) \approx U_1 \phi_1(x) + U_2 \phi_2(x) + \cdots + U_n \phi_n(x) = \sum_{j=1}^n U_j \phi_j(x)
+\end{equation}
+
+其中 $\phi_j(x)$ 是预先选定的\textbf{形函数}，是已知的；$U_j$ 是待求的\textbf{系数}，是未知的；$n$ 是自由度数，而且是有限的。这样，无限维问题变成了求 $n$ 个未知数 $(U_1, U_2, \ldots, U_n)$ 的问题！
+
+\subsection{形函数：有限元的“积木块”}
+
+最常用的形函数是\textbf{分片线性函数}，也叫\textbf{帐篷函数}或\textbf{帽子函数}：
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=1.5]
+    % 坐标轴
+    \draw[->] (-0.3,0) -- (5.5,0) node[right] {$x$};
+    \draw[->] (0,-0.2) -- (0,1.5) node[above] {$\phi_i(x)$};
+    
+    % 网格节点
+    \foreach \x/\lab in {0/$x_0$, 1/$x_{i-1}$, 2/$x_i$, 3/$x_{i+1}$, 4/$x_n$} {
+        \fill (\x,0) circle (1.5pt);
+        \node[below] at (\x,-0.1) {\small \lab};
+    }
+    
+    % 形函数 φ_i
+    \draw[very thick, blue] (0,0) -- (1,0) -- (2,1) -- (3,0) -- (4,0);
+    
+    % 标注
+    \node[blue, above] at (2,1) {$\phi_i(x_i) = 1$};
+    \draw[blue, <-] (1.1,0.1) -- (0.8,0.4) node[above] {\small $= 0$};
+    \draw[blue, <-] (2.9,0.1) -- (3.2,0.4) node[above] {\small $= 0$};
+    
+    % 帐篷形状说明
+    \draw[dashed, gray] (2,0) -- (2,1);
+\end{tikzpicture}
+\caption{帐篷函数 $\phi_i(x)$：在节点 $x_i$ 处等于 1，在相邻节点处等于 0，中间线性过渡}
+\end{figure}
+
+\paragraph{形函数的关键性质}
+
+\begin{equation}
+\phi_i(x_j) = \delta_{ij} = \begin{cases} 1, & i = j \\ 0, & i \neq j \end{cases}
+\end{equation}
+
+这个性质保证了：\textbf{系数 $U_i$ 恰好等于节点 $x_i$ 处的近似解值}！
+
+验证：
+\[
+u_h(x_i) = \sum_j U_j \phi_j(x_i) = \sum_j U_j \delta_{ji} = U_i
+\]
+
+\subsection{从弱形式到线性方程组}
+
+现在把近似解 $u_h = \sum_j U_j \phi_j$ 代入弱形式。
+
+测试函数也用形函数：取 $v = \phi_i$（$i = 1, 2, \ldots, n$）
+
+\paragraph{代入弱形式}
+
+\[
+\int_0^1 u_h' \cdot \phi_i' \, dx = \int_0^1 f \cdot \phi_i \, dx
+\]
+
+左边：
+\[
+\int_0^1 \left(\sum_j U_j \phi_j'\right) \phi_i' \, dx = \sum_j U_j \underbrace{\int_0^1 \phi_j' \phi_i' \, dx}_{K_{ij}}
+\]
+
+右边：
+\[
+\underbrace{\int_0^1 f \phi_i \, dx}_{F_i}
+\]
+
+于是得到：
+
+\begin{keyformula}[title=有限元线性方程组]
+\begin{equation}
+\boxed{KU = F}
+\end{equation}
+
+其中 $K_{ij} = \int_0^1 \phi_i'(x) \phi_j'(x) \, dx$ 是\textbf{刚度矩阵}的元素，$F_i = \int_0^1 f(x) \phi_i(x) \, dx$ 是\textbf{载荷向量}的元素，$U = (U_1, U_2, \ldots, U_n)^\top$ 是待求的\textbf{节点值向量}。
+\end{keyformula}
+
+这就是有限元的核心方程！一个无限维的变分问题，变成了一个 $n \times n$ 的线性方程组。
+\preview{本章“与优化的联系”一节会证明：$KU = F$ 正是 $J(U) = \frac{1}{2}U^\top KU - F^\top U$ 的一阶条件 $\nabla_U J = 0$——还是第1章“求导等于零”的老套路。}
+
+% ------------------------------------------------------------------------------------
+\section{刚度矩阵的计算}
+
+\subsection{为什么叫“刚度矩阵”？}
+
+“刚度”这个名字来自弹性力学。在弹簧系统中，$F = kx$，$k$ 是刚度——力与位移的比值。
+
+在有限元中，$KU = F$ 说的是：\textbf{节点力 = 刚度矩阵 $\times$ 节点位移}。
+
+$K_{ij}$ 的物理意义：给节点 $j$ 一个单位位移，节点 $i$ 受到多大的力？
+
+\subsection{刚度矩阵的结构}
+
+让我们计算刚度矩阵的元素 $K_{ij} = \int_0^1 \phi_i' \phi_j' dx$。
+
+\paragraph{关键观察}
+
+帐篷函数 $\phi_i$ 只在 $[x_{i-1}, x_{i+1}]$ 区间内非零（\textbf{局部支撑}）。因此，如果 $|i - j| > 1$，即节点不相邻，$\phi_i$ 和 $\phi_j$ 的支撑不重叠，积分自然为零，$K_{ij} = 0$；只有 $|i - j| \leq 1$，即相邻或相同节点时，$K_{ij} \neq 0$。这导致刚度矩阵是\textbf{稀疏的三对角矩阵}！
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.6]
+    % 画一个 5x5 的矩阵
+    \draw[gray] (0,0) grid (5,5);
+    
+    % 填充非零元素
+    % 主对角线
+    \foreach \i in {0,...,4} {
+        \fill[blue!60] (\i,4-\i) rectangle ++(1,1);
+    }
+    % 上下对角线
+    \foreach \i in {0,...,3} {
+        \fill[blue!30] (\i+1,4-\i) rectangle ++(1,1);
+        \fill[blue!30] (\i,3-\i) rectangle ++(1,1);
+    }
+    
+    % 标注
+    \node at (2.5,-1) {三对角矩阵};
+    \node[right] at (5.5,4.5) {\small $K_{11}$};
+    \node[right] at (5.5,3.5) {\small $K_{22}$};
+    \draw[->] (5.3,2.5) -- (4.2,2.5);
+    \node[right] at (5.5,2.5) {\small 对角线};
+\end{tikzpicture}
+\caption{一维有限元的刚度矩阵是三对角的：只有相邻节点之间有耦合}
+\end{figure}
+
+\subsection{具体计算刚度矩阵元素}
+
+设网格是均匀的，步长为 $h = \frac{1}{N}$，节点为 $x_k = kh$（$k = 0, 1, \ldots, N$）。
+
+\paragraph{情况1：对角线元素 $K_{ii}$（$i$ 和自己的耦合）}
+
+$\phi_i$ 在 $[x_{i-1}, x_i]$ 上斜率为 $+\frac{1}{h}$，在 $[x_i, x_{i+1}]$ 上斜率为 $-\frac{1}{h}$。
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=1.2]
+    \draw[->] (0,0) -- (4,0) node[right] {$x$};
+    \draw[->] (0,-0.2) -- (0,1.5);
+    
+    % 形函数
+    \draw[very thick, blue] (0,0) -- (1.5,1.2) -- (3,0);
+    \node[blue, above] at (1.5,1.2) {$\phi_i$};
+    
+    % 斜率标注
+    \node[blue] at (0.5,0.8) {\small $\frac{1}{h}$};
+    \node[blue] at (2.5,0.8) {\small $-\frac{1}{h}$};
+    
+    % 节点
+    \node[below] at (0,0) {$x_{i-1}$};
+    \node[below] at (1.5,0) {$x_i$};
+    \node[below] at (3,0) {$x_{i+1}$};
+    
+    % 区间标注
+    \draw[<->] (0,-0.5) -- (1.5,-0.5) node[midway, below] {$h$};
+    \draw[<->] (1.5,-0.5) -- (3,-0.5) node[midway, below] {$h$};
+\end{tikzpicture}
+\end{figure}
+
+\begin{align}
+K_{ii} &= \int_{x_{i-1}}^{x_{i+1}} (\phi_i')^2 \, dx \\
+&= \int_{x_{i-1}}^{x_i} \left(\frac{1}{h}\right)^2 dx + \int_{x_i}^{x_{i+1}} \left(-\frac{1}{h}\right)^2 dx \\
+&= \frac{1}{h^2} \cdot h + \frac{1}{h^2} \cdot h = \frac{2}{h}
+\end{align}
+
+\paragraph{情况2：相邻元素 $K_{i,i+1}$（相邻节点的耦合）}
+
+$\phi_i$ 和 $\phi_{i+1}$ 只在 $[x_i, x_{i+1}]$ 上同时非零。
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=1.8]
+    % 坐标轴
+    \draw[->] (-0.3,0) -- (4.5,0) node[right] {$x$};
+    \draw[->] (0,-0.2) -- (0,1.5) node[above] {};
+    
+    % 网格节点
+    \foreach \x/\lab in {0/$x_{i-1}$, 1.5/$x_i$, 3/$x_{i+1}$, 4.5/$x_{i+2}$} {
+        \fill (\x,0) circle (1.5pt);
+    }
+    \node[below] at (0,-0.1) {\small $x_{i-1}$};
+    \node[below] at (1.5,-0.1) {\small $x_i$};
+    \node[below] at (3,-0.1) {\small $x_{i+1}$};
+    \node[below] at (4.2,-0.1) {\small $x_{i+2}$};
+    
+    % 形函数 φ_i (蓝色)
+    \draw[very thick, blue] (0,0) -- (1.5,1.2) -- (3,0);
+    \node[blue, above left] at (1.5,1.2) {$\phi_i$};
+    
+    % 形函数 φ_{i+1} (红色)
+    \draw[very thick, red] (1.5,0) -- (3,1.2) -- (4.2,0);
+    \node[red, above right] at (3,1.2) {$\phi_{i+1}$};
+    
+    % 重叠区域高亮
+    \fill[purple, opacity=0.15] (1.5,0) -- (3,0) -- (3,1.2) -- (1.5,1.2) -- cycle;
+    \fill[purple, opacity=0.15] (1.5,0) -- (1.5,1.2) -- (3,0) -- cycle;
+    
+    % 实际重叠的三角形区域（两个函数都非零的地方）
+    \fill[green, opacity=0.2] (1.5,0) -- (2.25,0.6) -- (3,0) -- cycle;
+    
+    % 斜率标注
+    \draw[blue, thick, ->] (2,0.4) -- (2.4,0.08);
+    \node[blue] at (2.5,0.5) {\small $\phi_i' = -\dfrac{1}{h}$};
+    
+    \draw[red, thick, ->] (2.2,0.25) -- (2.6,0.57);
+    \node[red] at (1.8,0.9) {\small $\phi_{i+1}' = +\dfrac{1}{h}$};
+    
+    % 区间标注
+    \draw[<->, thick, purple] (1.5,-0.4) -- (3,-0.4);
+    \node[purple, below] at (2.25,-0.4) {\small 重叠区间 $[x_i, x_{i+1}]$};
+    
+    % h 标注
+    \draw[<->] (1.5,-0.7) -- (3,-0.7);
+    \node at (2.25,-0.9) {\small $h$};
+\end{tikzpicture}
+\caption{相邻形函数 $\phi_i$ 和 $\phi_{i+1}$ 在区间 $[x_i, x_{i+1}]$ 上重叠。在此区间内，$\phi_i$ 下降（斜率 $-1/h$），$\phi_{i+1}$ 上升（斜率 $+1/h$），导致 $K_{i,i+1} < 0$。}
+\end{figure}
+
+在重叠区间 $[x_i, x_{i+1}]$ 上，$\phi_i$ 从 1 下降到 0，斜率 $\phi_i' = -\dfrac{1}{h}$；$\phi_{i+1}$ 从 0 上升到 1，斜率 $\phi_{i+1}' = +\dfrac{1}{h}$。于是
+
+\begin{align}
+K_{i,i+1} &= \int_{x_i}^{x_{i+1}} \phi_i' \cdot \phi_{i+1}' \, dx \\
+&= \int_{x_i}^{x_{i+1}} \left(-\frac{1}{h}\right) \cdot \left(+\frac{1}{h}\right) dx \\
+&= -\frac{1}{h^2} \cdot h = \boxed{-\frac{1}{h}}
+\end{align}
+
+\begin{physicalmeaning}
+$K_{i,i+1} < 0$ 的物理意义：相邻节点之间是\textbf{负耦合}。
+
+用弹簧网络的比喻：节点 $i$ 和 $i+1$ 之间连着一根弹簧。当节点 $i$ 向上移动时，弹簧会把节点 $i+1$ 也往上拉——这就是负刚度系数的来源。
+
+对角线元素 $K_{ii} = \frac{2}{h} > 0$（正刚度），非对角线元素 $K_{i,i+1} = -\frac{1}{h} < 0$（负耦合），这种结构保证了刚度矩阵的正定性。
+\end{physicalmeaning}
+
+\paragraph{情况3：不相邻元素 $K_{ij}$（$|i-j| > 1$）}
+
+$\phi_i$ 和 $\phi_j$ 的支撑不重叠，所以：
+\[
+K_{ij} = \int_0^1 \phi_i' \phi_j' dx = 0
+\]
+
+\subsection{刚度矩阵的完整形式}
+
+综合以上，对于均匀网格，内部节点（$i = 1, 2, \ldots, N-1$）的刚度矩阵是：
+
+\begin{equation}
+K = \frac{1}{h}
+\begin{pmatrix}
+2 & -1 & 0 & \cdots & 0 \\
+-1 & 2 & -1 & \cdots & 0 \\
+0 & -1 & 2 & \cdots & 0 \\
+\vdots & & \ddots & \ddots & \vdots \\
+0 & 0 & \cdots & -1 & 2
+\end{pmatrix}
+\end{equation}
+
+\begin{insightbox}
+\textbf{这不是巧合}：对于均匀网格，有限元得到的矩阵 $\frac{1}{h}[-1, 2, -1]$ 与\textbf{二阶中心差分}完全相同！后面“殊途同归”一节会解释原因。但有限元的优势在别处：它可以处理非均匀网格，可以处理二维、三维的复杂几何，而且有坚实的数学理论保证收敛。
+\end{insightbox}
+
+% ------------------------------------------------------------------------------------
+\section{完整例题：手算有限元}
+
+让我们完整地手算一个例子，加深理解。
 
 \subsection{问题设定}
 
-考虑一维泊松方程：
-\begin{equation}
-    -u''(x) = \sin(\pi x), \quad x \in (0, 1)
-\end{equation}
-\begin{equation}
-    u(0) = 0, \quad u(1) = 0
-\end{equation}
+求解：
+\[
+-u''(x) = 1, \quad x \in (0, 1), \quad u(0) = u(1) = 0
+\]
 
-\begin{exercise}[title = 解析解推导]
-验证这个方程的解析解是$u(x) = \frac{1}{\pi^2}\sin(\pi x)$。
-
-\textbf{提示}：设$u(x) = A\sin(\pi x) + Bx + C$，代入方程和边界条件求解$A, B, C$。
-\end{exercise}
-
-\subsection{神经网络架构}
-
-我们使用一个简单的全连接神经网络（Multi-Layer Perceptron，MLP）：
-
-\begin{definition}[全连接神经网络]
-一个$L$层的全连接神经网络定义为：
-\begin{align}
-    h^{(0)} &= x \quad \text{（输入层）} \\
-    h^{(l)} &= \sigma(W^{(l)} h^{(l-1)} + b^{(l)}), \quad l = 1, \ldots, L-1 \quad \text{（隐藏层）} \\
-    u_\theta(x) &= W^{(L)} h^{(L-1)} + b^{(L)} \quad \text{（输出层，无激活函数）}
-\end{align}
-其中：
-\begin{itemize}
-    \item $W^{(l)} \in \mathbb{R}^{n_l \times n_{l-1}}$是第$l$层的权重矩阵
-    \item $b^{(l)} \in \mathbb{R}^{n_l}$是第$l$层的偏置向量
-    \item $\sigma(\cdot)$是激活函数（如$\tanh$、ReLU等）
-    \item $\theta = \{W^{(1)}, b^{(1)}, \ldots, W^{(L)}, b^{(L)}\}$是所有可学习参数
-\end{itemize}
-\end{definition}
-
-对于我们的问题，我们选择：
-\begin{itemize}
-    \item 输入维度：$n_0 = 1$（坐标$x$）
-    \item 隐藏层：3层，每层50个神经元
-    \item 输出维度：$n_L = 1$（函数值$u$）
-    \item 激活函数：$\tanh$（光滑，便于求高阶导数）
-\end{itemize}
-
-\subsection{完整代码实现}
-
-\begin{lstlisting}[language=Python, caption={PINN求解一维泊松方程的完整代码}]
-import torch
-import torch.nn as nn
-import numpy as np
-import matplotlib.pyplot as plt
-
-# ========================
-# 第一步：定义神经网络
-# ========================
-class PINN(nn.Module):
-    def __init__(self, layers):
-        """
-        layers: 每层神经元数量的列表
-        例如 [1, 50, 50, 50, 1] 表示输入1维，3个隐藏层各50个神经元，输出1维
-        """
-        super().__init__()
-        
-        # 构建网络层
-        self.layers = nn.ModuleList()
-        for i in range(len(layers) - 1):
-            self.layers.append(nn.Linear(layers[i], layers[i+1]))
-        
-        # 激活函数
-        self.activation = torch.tanh
-        
-        # 参数初始化（Xavier初始化，有助于训练稳定性）
-        for layer in self.layers:
-            nn.init.xavier_normal_(layer.weight)
-            nn.init.zeros_(layer.bias)
-    
-    def forward(self, x):
-        """前向传播"""
-        for i, layer in enumerate(self.layers[:-1]):
-            x = self.activation(layer(x))
-        # 最后一层不加激活函数
-        x = self.layers[-1](x)
-        return x
-
-# ========================
-# 第二步：计算PDE残差
-# ========================
-def compute_pde_residual(model, x):
-    """
-    计算PDE残差: -u''(x) - sin(pi*x)
-    
-    使用自动微分计算二阶导数
-    """
-    # 确保x需要梯度
-    x = x.requires_grad_(True)
-    
-    # 前向传播得到u
-    u = model(x)
-    
-    # 计算一阶导数 du/dx
-    u_x = torch.autograd.grad(
-        outputs=u,
-        inputs=x,
-        grad_outputs=torch.ones_like(u),
-        create_graph=True,  # 需要继续求导，所以保留计算图
-        retain_graph=True
-    )[0]
-    
-    # 计算二阶导数 d²u/dx²
-    u_xx = torch.autograd.grad(
-        outputs=u_x,
-        inputs=x,
-        grad_outputs=torch.ones_like(u_x),
-        create_graph=True
-    )[0]
-    
-    # PDE残差: -u'' - f = -u'' - sin(pi*x)
-    f = torch.sin(np.pi * x)
-    residual = -u_xx - f
-    
-    return residual
-
-# ========================
-# 第三步：定义损失函数
-# ========================
-def compute_loss(model, x_interior, x_boundary, lambda_bc=100.0):
-    """
-    计算PINN总损失
-    
-    参数:
-        model: 神经网络模型
-        x_interior: 内部配点 (N_r, 1)
-        x_boundary: 边界点 (N_b, 1)
-        lambda_bc: 边界条件的惩罚权重
-    """
-    # PDE残差损失
-    residual = compute_pde_residual(model, x_interior)
-    loss_pde = torch.mean(residual ** 2)
-    
-    # 边界条件损失: u(0) = 0, u(1) = 0
-    u_boundary = model(x_boundary)
-    loss_bc = torch.mean(u_boundary ** 2)
-    
-    # 总损失
-    total_loss = loss_pde + lambda_bc * loss_bc
-    
-    return total_loss, loss_pde, loss_bc
-
-# ========================
-# 第四步：训练循环
-# ========================
-def train_pinn(model, num_epochs=10000, lr=1e-3, N_interior=100, N_boundary=2):
-    """
-    训练PINN
-    """
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    
-    # 边界点（固定）
-    x_boundary = torch.tensor([[0.0], [1.0]], dtype=torch.float32)
-    
-    # 记录损失历史
-    history = {'total': [], 'pde': [], 'bc': []}
-    
-    for epoch in range(num_epochs):
-        # 在每个epoch随机采样内部配点
-        x_interior = torch.rand(N_interior, 1)  # 均匀分布在[0,1]
-        
-        # 计算损失
-        loss, loss_pde, loss_bc = compute_loss(model, x_interior, x_boundary)
-        
-        # 反向传播
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        
-        # 记录
-        history['total'].append(loss.item())
-        history['pde'].append(loss_pde.item())
-        history['bc'].append(loss_bc.item())
-        
-        # 打印进度
-        if (epoch + 1) % 1000 == 0:
-            print(f"Epoch {epoch+1:5d} | Loss: {loss.item():.2e} | "
-                  f"PDE: {loss_pde.item():.2e} | BC: {loss_bc.item():.2e}")
-    
-    return history
-
-# ========================
-# 第五步：主程序
-# ========================
-if __name__ == "__main__":
-    # 设置随机种子以保证可重复性
-    torch.manual_seed(42)
-    
-    # 创建网络: 1 -> 50 -> 50 -> 50 -> 1
-    model = PINN([1, 50, 50, 50, 1])
-    
-    # 训练
-    print("开始训练...")
-    history = train_pinn(model, num_epochs=10000, lr=1e-3)
-    print("训练完成！")
-    
-    # 可视化结果
-    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
-    
-    # 左图：解的对比
-    x_test = torch.linspace(0, 1, 100).reshape(-1, 1)
-    with torch.no_grad():
-        u_pred = model(x_test).numpy()
-    u_exact = np.sin(np.pi * x_test.numpy()) / (np.pi ** 2)
-    
-    axes[0].plot(x_test.numpy(), u_exact, 'b-', linewidth=2, label='解析解')
-    axes[0].plot(x_test.numpy(), u_pred, 'r--', linewidth=2, label='PINN预测')
-    axes[0].set_xlabel('$x$')
-    axes[0].set_ylabel('$u(x)$')
-    axes[0].legend()
-    axes[0].set_title('解的对比')
-    axes[0].grid(True, alpha=0.3)
-    
-    # 右图：损失曲线
-    axes[1].semilogy(history['total'], label='总损失')
-    axes[1].semilogy(history['pde'], label='PDE损失')
-    axes[1].semilogy(history['bc'], label='边界损失')
-    axes[1].set_xlabel('Epoch')
-    axes[1].set_ylabel('Loss')
-    axes[1].legend()
-    axes[1].set_title('训练损失')
-    axes[1].grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    plt.savefig('pinn_poisson_1d.png', dpi=150)
-    plt.show()
-    
-    # 计算误差
-    error = np.mean((u_pred - u_exact) ** 2)
-    print(f"\n均方误差 (MSE): {error:.2e}")
-\end{lstlisting}
-
-\subsection{代码解析}
-
-让我们逐步理解这段代码的关键部分。
-
-\subsubsection{自动微分的使用}
-
-最关键的部分是如何用PyTorch的自动微分计算二阶导数：
-
-\begin{lstlisting}[language=Python, caption={自动微分计算二阶导数}]
-# 第一步：计算 du/dx
-u_x = torch.autograd.grad(
-    outputs=u,           # 要对谁求导的"分子"
-    inputs=x,            # 对谁求导的"分母"
-    grad_outputs=torch.ones_like(u),  # 链式法则的上游梯度
-    create_graph=True,   # 保留计算图，因为还要继续求导
-    retain_graph=True    # 保留计算图供后续使用
-)[0]
-
-# 第二步：计算 d²u/dx²
-u_xx = torch.autograd.grad(
-    outputs=u_x,         # 现在对 u_x 求导
-    inputs=x,            # 还是对 x 求导
-    grad_outputs=torch.ones_like(u_x),
-    create_graph=True    # 如果还需要反向传播，继续保留
-)[0]
-\end{lstlisting}
-
-\begin{remark}[为什么需要create\_graph=True？]
-回顾链式法则：在训练时，我们需要计算$\frac{\partial \mathcal{L}}{\partial \theta}$，而$\mathcal{L}$依赖于$u_{xx}$，$u_{xx}$又依赖于$\theta$。因此，计算$u_{xx}$的过程本身也需要被"记住"，以便后续对$\theta$求导。这就是\texttt{create\_graph=True}的作用。
-\end{remark}
-
-\subsubsection{配点采样策略}
-
-我们在每个epoch随机采样新的配点：
-\begin{lstlisting}[language=Python]
-x_interior = torch.rand(N_interior, 1)  # 每次重新采样
-\end{lstlisting}
-
-这种策略称为\textbf{随机配点}（stochastic collocation），它有两个好处：
-\begin{enumerate}
-    \item 避免网络过拟合到特定的配点位置
-    \item 相当于对整个区域的积分进行蒙特卡洛估计
-\end{enumerate}
-
-\begin{exercise}[title = 对比实验]
-修改代码，比较以下两种配点策略的效果：
-\begin{enumerate}
-    \item 固定配点：在训练开始时采样一次，之后不再改变
-    \item 随机配点：每个epoch重新采样
-\end{enumerate}
-哪种策略收敛更快？最终精度如何？
-\end{exercise}
-
-\subsection{训练结果分析}
-
-运行上述代码，你应该能看到类似以下的输出：
-\begin{verbatim}
-开始训练...
-Epoch  1000 | Loss: 1.23e-03 | PDE: 1.21e-03 | BC: 1.89e-06
-Epoch  2000 | Loss: 2.45e-04 | PDE: 2.43e-04 | BC: 2.31e-07
-Epoch  3000 | Loss: 8.67e-05 | PDE: 8.65e-05 | BC: 1.45e-07
-...
-训练完成！
-均方误差 (MSE): 2.34e-07
-\end{verbatim}
-
+使用 4 个单元（5 个节点），步长 $h = 0.25$。
 \begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.95\textwidth]{figs_chap13/pinn_poisson_1d.pdf}
-    \caption{PINN求解一维泊松方程的结果。左图：训练损失曲线；右图：PINN预测（红色虚线）与精确解（蓝色实线）的对比。}
-    \label{fig:pinn_1d}
+\centering
+\begin{tikzpicture}[scale=1.2]
+    % ===== 上半部分：各个加权形函数 =====
+    \node[anchor=south] at (2,4.8) {\textbf{各个加权形函数}};
+    
+    % 坐标轴（上）
+    \draw[->] (-0.3,3) -- (4.5,3) node[right] {\small $x$};
+    \draw[->] (0,2.8) -- (0,4.7);
+    
+    % 节点位置
+    \foreach \i in {0,1,2,3,4} {
+        \fill (\i,3) circle (1.5pt);
+    }
+    
+    % U_1 φ_1 (蓝色) - 高度 0.09375 × 10 = 0.9375 (放大显示)
+    \draw[very thick, blue] (0,3) -- (1,3.75) -- (2,3);
+    \node[blue, right] at (1.1,3.85) {\small $U_1\phi_1$};
+    
+    % U_2 φ_2 (红色) - 高度 0.125 × 10 = 1.25
+    \draw[very thick, red] (1,3) -- (2,4) -- (3,3);
+    \node[red, above] at (2,4.05) {\small $U_2\phi_2$};
+    
+    % U_3 φ_3 (green) - 高度 0.09375 × 10 = 0.9375
+    \draw[very thick, green!60!black] (2,3) -- (3,3.75) -- (4,3);
+    \node[green!60!black, left] at (2.9,3.85) {\small $U_3\phi_3$};
+    
+    % 节点值标注
+    \node[blue, below] at (1,2.9) {\scriptsize $U_1$};
+    \node[red, below] at (2,2.9) {\scriptsize $U_2$};
+    \node[green!60!black, below] at (3,2.9) {\scriptsize $U_3$};
+    
+    % ===== 加号 =====
+    \node at (2,2.3) {\Large $\Downarrow$ \normalsize 叠加};
+    
+    % ===== 下半部分：叠加结果 =====
+    \node[anchor=south] at (2,1.3) {\textbf{近似解 $u_h(x) = \sum_{j=1}^{3} U_j \phi_j(x)$}};
+    
+    % 坐标轴（下）
+    \draw[->] (-0.3,0) -- (4.5,0) node[right] {\small $x$};
+    \draw[->] (0,-0.2) -- (0,1.3);
+    
+    % 节点
+    \foreach \i in {0,1,2,3,4} {
+        \fill (\i,0) circle (1.5pt);
+    }
+    \node[below] at (0,-0.1) {\scriptsize $0$};
+    \node[below] at (4,-0.1) {\scriptsize $1$};
+    
+    % 叠加后的分段线性函数 (紫色粗线)
+    \draw[very thick, purple] (0,0) -- (1,0.75) -- (2,1) -- (3,0.75) -- (4,0);
+    
+    % 节点值标注
+    \fill[purple] (1,0.75) circle (2pt);
+    \fill[purple] (2,1) circle (2pt);
+    \fill[purple] (3,0.75) circle (2pt);
+    \node[purple, above left] at (1,0.75) {\small $U_1$};
+    \node[purple, above] at (2,1.05) {\small $U_2$};
+    \node[purple, above right] at (3,0.75) {\small $U_3$};
+    
+    % 精确解（虚线）
+    \draw[dashed, gray, thick, domain=0:4, samples=50] plot (\x, {(\x/4)*(1-\x/4)*4});
+    \node[gray, right] at (4.2,0.5) {\small 精确解};
+    
+    % 边界条件
+    \fill[blue] (0,0) circle (2pt);
+    \fill[blue] (4,0) circle (2pt);
+    \node[blue, above left] at (0,0.1) {\scriptsize $U_0=0$};
+    \node[blue, above right] at (4,0.1) {\scriptsize $U_4=0$};
+\end{tikzpicture}
+\caption{有限元近似解的构造：$u_h(x) = U_1\phi_1(x) + U_2\phi_2(x) + U_3\phi_3(x)$。每个形函数 $\phi_j$ 在节点 $j$ 处取值为 1，乘以节点值 $U_j$ 后叠加得到分段线性的近似解。灰色虚线为精确解 $u(x) = \frac{x(1-x)}{2}$。}
 \end{figure}
 
-\subsubsection{实验结果分析}
+\begin{insightbox}[title=形函数的“插值”本质]
+形函数的关键性质是 $\phi_i(x_j) = \delta_{ij}$（在自己的节点上等于1，在其他节点上等于0）。
 
-从图\ref{fig:pinn_1d}中我们可以观察到几个重要现象：
+这意味着：
+\[
+u_h(x_j) = \sum_{k=1}^{n} U_k \phi_k(x_j) = \sum_{k=1}^{n} U_k \delta_{kj} = U_j
+\]
 
-\textbf{1. 收敛行为}。总损失从初始的$10^{-1}$量级下降到$10^{-5}$量级，说明网络成功学习到了满足PDE和边界条件的解。训练过程中，PDE损失和边界损失呈现出典型的"阶梯式"下降模式，这是因为我们每个epoch都重新采样配点，引入了随机性。
+即：\textbf{近似解在节点处的值恰好等于我们要求的未知量 $U_j$}！
 
-\textbf{2. 解的精度}。最终的均方误差（MSE）达到$4.60 \times 10^{-8}$，最大绝对误差约$3.4 \times 10^{-4}$。这个精度对于一个简单问题来说是令人满意的，说明PINN确实能够学习到正确的物理解。
+形函数的作用就是在节点之间进行\textbf{线性插值}，把离散的节点值“连接”成连续函数。
+\end{insightbox}
 
-\textbf{3. 边界条件的满足}。边界损失最终稳定在$10^{-7}$到$10^{-8}$量级，说明网络在边界点$x=0$和$x=1$处的预测值非常接近零。这体现了软约束（罚函数法）的有效性。
+\subsection{第一步：组装刚度矩阵}
 
-\subsubsection{解的数值对比}
+对于内部 3 个自由度，刚度矩阵是 $3 \times 3$：
 
-为了让读者更直观地判断PINN的效果，我们在几个特定点上对比PINN预测值与解析解：
+\[
+K = \frac{1}{h}
+\begin{pmatrix}
+2 & -1 & 0 \\
+-1 & 2 & -1 \\
+0 & -1 & 2
+\end{pmatrix}
+= \frac{1}{0.25}
+\begin{pmatrix}
+2 & -1 & 0 \\
+-1 & 2 & -1 \\
+0 & -1 & 2
+\end{pmatrix}
+=
+\begin{pmatrix}
+8 & -4 & 0 \\
+-4 & 8 & -4 \\
+0 & -4 & 8
+\end{pmatrix}
+\]
 
-\begin{table}[htbp]
+\subsection{第二步：计算载荷向量}
+
+对于 $f(x) = 1$，载荷向量的第 $i$ 个分量为：
+\[
+F_i = \int_0^1 1 \cdot \phi_i(x) \, dx
+\]
+
+$\phi_i$ 是一个“帐篷”，底边宽 $2h$，高度为 1，面积为：
+\[
+F_i = \frac{1}{2} \times 2h \times 1 = h = 0.25
+\]
+
+（边界节点的形函数只有半个帐篷，但它们对应 $U_0 = U_4 = 0$，不参与方程。）
+
+载荷向量：
+\[
+F = \begin{pmatrix} 0.25 \\ 0.25 \\ 0.25 \end{pmatrix}
+\]
+
+\subsection{第三步：求解线性方程组}
+
+现在求解：
+\[
+\begin{pmatrix}
+8 & -4 & 0 \\
+-4 & 8 & -4 \\
+0 & -4 & 8
+\end{pmatrix}
+\begin{pmatrix} U_1 \\ U_2 \\ U_3 \end{pmatrix}
+=
+\begin{pmatrix} 0.25 \\ 0.25 \\ 0.25 \end{pmatrix}
+\]
+
+\paragraph{用高斯消元法求解}
+
+第一个方程：$8U_1 - 4U_2 = 0.25$
+
+第二个方程加上第一个方程的 $\frac{1}{2}$ 倍：
+\[
+(-4 + 4)U_1 + (8 - 2)U_2 - 4U_3 = 0.25 + 0.125 \quad \Rightarrow \quad 6U_2 - 4U_3 = 0.375
+\]
+
+第三个方程加上新的第二个方程的 $\frac{2}{3}$ 倍：
+\[
+(8 - \frac{8}{3})U_3 = 0.25 + 0.25 \quad \Rightarrow \quad \frac{16}{3}U_3 = 0.5 \quad \Rightarrow \quad U_3 = 0.09375
+\]
+
+回代：
+\[
+U_2 = \frac{0.375 + 4 \times 0.09375}{6} = \frac{0.75}{6} = 0.125
+\]
+\[
+U_1 = \frac{0.25 + 4 \times 0.125}{8} = \frac{0.75}{8} = 0.09375
+\]
+
+\subsection{第四步：检验结果}
+
+有限元解：
+\[
+U_1 = U_3 = 0.09375, \quad U_2 = 0.125
+\]
+
+精确解 $u(x) = \frac{x(1-x)}{2}$ 在节点处的值：
+\[
+u(0.25) = \frac{0.25 \times 0.75}{2} = 0.09375
+\]
+\[
+u(0.5) = \frac{0.5 \times 0.5}{2} = 0.125
+\]
+\[
+u(0.75) = \frac{0.75 \times 0.25}{2} = 0.09375
+\]
+
+\textbf{有限元解在节点处恰好等于精确解！}
+
+\begin{figure}[htbp]
 \centering
-\caption{PINN预测值与解析解的数值对比}
-\label{tab:pinn_comparison}
-\begin{tabular}{c|ccc}
-\hline
-$x$ & 解析解 $u_{\text{exact}}(x)$ & PINN预测 $u_\theta(x)$ & 绝对误差 \\
-\hline
-0.0 & 0.0000000 & 0.0000592 & $5.9 \times 10^{-5}$ \\
-0.1 & 0.0031375 & 0.0031356 & $1.9 \times 10^{-6}$ \\
-0.25 & 0.0071696 & 0.0071682 & $1.4 \times 10^{-6}$ \\
-0.5 & 0.1013212 & 0.1013209 & $3.0 \times 10^{-7}$ \\
-0.75 & 0.0071696 & 0.0071711 & $1.5 \times 10^{-6}$ \\
-0.9 & 0.0031375 & 0.0031391 & $1.6 \times 10^{-6}$ \\
-1.0 & 0.0000000 & $-$0.0002720 & $2.7 \times 10^{-4}$ \\
-\hline
-\end{tabular}
-\end{table}
+\begin{tikzpicture}[x=6cm, y=15cm]
+    % 坐标轴
+    \draw[->] (-0.05,0) -- (1.15,0) node[right] {$x$};
+    \draw[->] (0,-0.01) -- (0,0.15) node[above] {$u(x)$};
+    
+    % 刻度
+    \foreach \x in {0, 0.25, 0.5, 0.75, 1} {
+        \draw (\x,0) -- (\x,-0.005);
+        \node[below] at (\x,-0.005) {\scriptsize $\x$};
+    }
+    \foreach \y in {0, 0.05, 0.1} {
+        \draw (0,\y) -- (-0.02,\y);
+        \node[left] at (-0.02,\y) {\scriptsize $\y$};
+    }
+    
+    % 精确解
+    \draw[thick, gray, dashed, domain=0:1, samples=50] plot (\x, {0.5*\x*(1-\x)});
+    \node[gray] at (0.85,0.11) {\small 精确解};
+    
+    % 有限元解
+    \draw[very thick, blue] (0,0) -- (0.25,0.09375) -- (0.5,0.125) -- (0.75,0.09375) -- (1,0);
+    \node[blue] at (0.15,0.06) {\small $u_h(x)$};
+    
+    % 节点
+    \fill[red] (0.25,0.09375) circle (2pt);
+    \fill[red] (0.5,0.125) circle (2pt);
+    \fill[red] (0.75,0.09375) circle (2pt);
+\end{tikzpicture}
+\caption{有限元解（蓝色折线）与精确解（灰色虚线）的对比}
+\end{figure}
 
-从表\ref{tab:pinn_comparison}中可以观察到：
-\begin{itemize}
-    \item \textbf{内部点精度很高}：在$x=0.5$（区域中心）处，误差仅为$3.0 \times 10^{-7}$，说明网络在内部很好地学习了PDE的解。
-    \item \textbf{边界处误差较大}：在$x=0$和$x=1$处，误差分别为$5.9 \times 10^{-5}$和$2.7 \times 10^{-4}$。这是软约束方法的固有特点——边界条件只能近似满足。
-    \item \textbf{对称性}：注意$x=0.25$和$x=0.75$处的误差相近，$x=0.1$和$x=0.9$处也类似，这反映了问题和网络的对称性。
-\end{itemize}
+\begin{insightbox}
+\textbf{超收敛现象}：对于一维问题和线性形函数，有限元解在节点处恰好等于精确解！
 
-\begin{remark}[训练的随机性]
-由于我们使用随机配点策略，每次运行的结果会略有不同。读者可以尝试多次运行，观察结果的稳定性。设置随机种子（如代码中的\texttt{torch.manual\_seed(42)}）可以保证可重复性。
-\end{remark}
+这是一维问题的特殊性质。在二维、三维问题中，有限元解在节点处通常只是近似值，但仍然是“最优”的（在能量范数意义下）。
+\end{insightbox}
 
-% ====================================================================================
-\section{硬约束与软约束：两种处理边界的哲学}
-% ====================================================================================
+\subsection{十行代码：一维线性有限元}
 
-上一节使用的方法是\textbf{软约束}（soft constraint）——通过在损失函数中加入惩罚项来"鼓励"网络满足边界条件。现在我们介绍另一种方法：\textbf{硬约束}（hard constraint）。
+上面的手算过程可以直接翻译成代码。刚度矩阵是三对角的，载荷向量在 $f = 1$ 时就是 $h$：
 
-\subsection{软约束的优缺点}
+\begin{lstlisting}[style=teaching, caption={一维线性有限元求解 $-u''=1$，$u(0)=u(1)=0$}]
+import numpy as np
+
+N = 4                       # 单元数
+h = 1.0 / N                 # 步长
+n = N - 1                   # 内部节点数（两端节点已知为 0）
+K = (np.diag(2*np.ones(n)) - np.diag(np.ones(n-1), 1)
+     - np.diag(np.ones(n-1), -1)) / h       # 刚度矩阵：(1/h)[-1, 2, -1]
+F = h * np.ones(n)          # 载荷向量：f = 1 时 F_i = h
+U = np.linalg.solve(K, F)   # 求解 KU = F
+x = np.linspace(h, 1-h, n)
+print(U)                    # [0.09375 0.125   0.09375]
+print(x*(1-x)/2)            # 精确解在节点处的值——完全一致
+\end{lstlisting}
+
+把 \texttt{N} 改成 8、16、32，你会看到节点值始终与精确解重合，而节点之间的最大误差按 $O(h^2)$ 下降（图~\ref{fig:chap13_fem}）。这十行代码就是所有商业有限元软件的“内核”——剩下的只是把 $K$ 组装得更聪明、解得更快（见本章扩展阅读）。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figs_chap13/chap13_fig2.png}
+\caption{一维有限元求解热传导问题$-u''=1$，$u(0)=u(1)=0$。(a) 有限元解（$N=4,8$）与解析解$u(x)=x(1-x)/2$的对比：节点值与解析解重合，误差只出现在单元内部。(b) 施加边界条件后的刚度矩阵$K$（$N=8$）的三对角结构——这源于帐篷函数的局部支撑性。(c) 网格细化时的收敛：$L^2$误差和单元内最大误差按$O(h^2)$下降（拟合斜率2.00），$H^1$半范数误差按$O(h)$下降（斜率1.00）；节点处的误差在$10^{-14}$以下（舍入水平），这是一维线性元的超收敛现象。}
+\label{fig:chap13_fem}
+\end{figure}
+
+% ------------------------------------------------------------------------------------
+\section{单元组装：从局部到整体}
+
+上一节我们直接写出了整体刚度矩阵，这在一维均匀网格上没有问题；可一旦网格不规则、单元类型混杂，逐个推导 $K_{ij}$ 就无从下手了。实际计算中的做法分两步：先在每个小\textbf{单元}上计算\textbf{单元刚度矩阵}，再把所有单元刚度矩阵\textbf{组装}成整体刚度矩阵。这种“分而治之”的策略使有限元方法非常灵活——可以处理不规则网格、不同类型的单元混合等。
+
+\subsection{单元刚度矩阵}
+
+对于一维线性单元（两个节点），单元刚度矩阵是 $2 \times 2$ 的：
+
+\begin{keyformula}[title=一维线性单元刚度矩阵]
+\begin{equation}
+K^e = \frac{1}{h}
+\begin{pmatrix}
+1 & -1 \\
+-1 & 1
+\end{pmatrix}
+\end{equation}
+
+行和列分别对应单元的左节点和右节点。
+\end{keyformula}
+
+\paragraph{推导}
+
+设单元长度为 $h$，两端节点为 $x_L$ 和 $x_R$。
+
+单元内的两个形函数：
+\[
+N_L(x) = \frac{x_R - x}{h}, \quad N_R(x) = \frac{x - x_L}{h}
+\]
+
+它们的导数：
+\[
+N_L' = -\frac{1}{h}, \quad N_R' = \frac{1}{h}
+\]
+
+单元刚度矩阵的元素：
+\[
+K^e_{LL} = \int_{x_L}^{x_R} (N_L')^2 dx = \frac{1}{h^2} \cdot h = \frac{1}{h}
+\]
+\[
+K^e_{LR} = \int_{x_L}^{x_R} N_L' N_R' dx = -\frac{1}{h^2} \cdot h = -\frac{1}{h}
+\]
+\[
+K^e_{RR} = \int_{x_L}^{x_R} (N_R')^2 dx = \frac{1}{h^2} \cdot h = \frac{1}{h}
+\]
+
+\subsection{组装过程}
+
+组装的规则很简单：把每个单元刚度矩阵“放入”整体矩阵的对应位置，重叠处累加。
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.6]
+    % 单元1矩阵（用数学矩阵表示，不用tikz框）
+    \node[anchor=east] at (-2,6) {\small 单元1 (节点0-1):};
+    \node at (0,6) {$\begin{pmatrix} \frac{1}{h} & -\frac{1}{h} \\[3pt] -\frac{1}{h} & \frac{1}{h} \end{pmatrix}$};
+
+    % 箭头指向蓝色区域
+    \draw[->, thick, blue!70] (1.8,6) -- (4.2,4.5);
+
+    % 单元2矩阵
+    \node[anchor=east] at (-2,2) {\small 单元2 (节点1-2):};
+    \node at (0,2) {$\begin{pmatrix} \frac{1}{h} & -\frac{1}{h} \\[3pt] -\frac{1}{h} & \frac{1}{h} \end{pmatrix}$};
+
+    % 箭头指向橙色区域
+    \draw[->, thick, orange!80] (1.8,2) -- (5.2,2.5);
+
+    % 整体矩阵框架
+    \draw[thick] (4,0) grid (9,5);
+
+    % 填充蓝色区域（单元1贡献：节点0,1）
+    \fill[blue!25] (4,4) rectangle (5,5);
+    \fill[blue!25] (5,4) rectangle (6,5);
+    \fill[blue!25] (4,3) rectangle (5,4);
+    \fill[blue!25] (5,3) rectangle (6,4);
+
+    % 填充橙色区域（单元2贡献：节点1,2）
+    \fill[orange!25] (5,3) rectangle (6,4);
+    \fill[orange!25] (6,3) rectangle (7,4);
+    \fill[orange!25] (5,2) rectangle (6,3);
+    \fill[orange!25] (6,2) rectangle (7,3);
+
+    % 重叠处（节点1的对角元）用红色标出
+    \fill[red!40] (5,3) rectangle (6,4);
+    \node[font=\footnotesize] at (5.5,3.5) {$\frac{2}{h}$};
+
+    % 列标签（在矩阵上方）
+    \foreach \i in {0,...,4} {
+        \node[above, font=\scriptsize] at (4.5+\i,5.1) {\i};
+    }
+    % 行标签（在矩阵左侧）
+    \foreach \i in {0,...,4} {
+        \node[left, font=\scriptsize] at (3.9,4.5-\i) {\i};
+    }
+
+    % 整体矩阵标题
+    \node[above] at (6.5,5.5) {\small 整体刚度矩阵 $K$};
+
+    % 说明文字
+    \node at (6.5,-0.8) {\small 重叠处累加：$\frac{1}{h} + \frac{1}{h} = \frac{2}{h}$};
+\end{tikzpicture}
+\caption{组装过程示意：单元矩阵放入整体矩阵对应位置，重叠处累加}
+\end{figure}
+
+\begin{physicalmeaning}
+\textbf{组装的物理意义}：对角线元素 $K_{ii}$ 累加了所有与节点 $i$ 相连的单元贡献，是节点的“总刚度”；非对角线元素 $K_{ij}$ 只来自同时包含 $i$ 和 $j$ 的单元，是节点间的“耦合”。这就像一个弹簧网络：每个节点的总刚度是连接它的所有弹簧刚度之和。
+\end{physicalmeaning}
+
+% ------------------------------------------------------------------------------------
+\section{边界条件处理}
+
+到目前为止，边界条件是靠“只对内部节点列方程”悄悄处理掉的。这一节把这件事摆到明面上：边界条件到底怎么进入方程组，有几种进入方式，以及为什么其中一种会把第1章的乘子带回来。
+
+\subsection{Dirichlet 边界条件（固定值）}
+
+我们的例子中，$u(0) = u(1) = 0$ 是 Dirichlet 边界条件——边界上的值是固定的。
+
+\paragraph{处理方法1：直接消去}
+
+既然 $U_0 = U_4 = 0$ 是已知的，就从方程组中删去这两个未知量，只求解内部节点。
+
+这就是我们上面手算例子用的方法。
+
+\paragraph{处理方法2：大数法（罚函数）}
+
+把对角线元素改成一个很大的数，对应的载荷也相应修改：
+
+\[
+K_{00} \leftarrow 10^{20}, \quad F_0 \leftarrow 10^{20} \times g_0
+\]
+
+其中 $g_0$ 是边界值。这样方程 $10^{20} U_0 = 10^{20} g_0$ 就强制 $U_0 \approx g_0$。
+
+\textbf{优点}：不改变矩阵结构，易于编程
+
+\textbf{缺点}：矩阵条件数变差
+
+\subsection{Neumann 边界条件（给定导数）}
+
+如果边界条件是 $u'(1) = q$（给定热流），这是 Neumann 边界条件。
+
+Neumann 条件在弱形式中\textbf{自然满足}——它会贡献到载荷向量：
+\[
+F_n \leftarrow F_n + q
+\]
+
+\subsection{拉格朗日乘子法}
+
+和第1章一样，我们也可以用拉格朗日乘子处理边界条件！
+
+把边界条件 $u(0) = g$ 看作约束，引入乘子 $\lambda$：
+\[
+\mathcal{L}[u, \lambda] = J[u] + \lambda(u(0) - g)
+\]
+
+这导出一个\textbf{鞍点问题}：
+\[
+\begin{pmatrix}
+K & B^\top \\
+B & 0
+\end{pmatrix}
+\begin{pmatrix}
+U \\
+\lambda
+\end{pmatrix}
+=
+\begin{pmatrix}
+F \\
+g
+\end{pmatrix}
+\]
+
+\begin{physicalmeaning}
+$\lambda$ 的物理意义是边界处的\textbf{法向通量}：在热传导里，$\lambda$ 是热流密度（W/m²）；在弹性力学里，$\lambda$ 是边界反力（N）。这与第5章力学中的约束力完全对应——边界条件本质上也是约束！
+\end{physicalmeaning}
+\review{第1章}{影子价格：$\lambda = -\dfrac{df^*}{d\epsilon}$。这里的 $\epsilon$ 是边界温度 $g$ 的微小改变，$f^*$ 是最小总势能。所以 $\lambda$ 度量“边界值抬高一点，总势能变多少”——量纲恰好是热流。}
+
+% ------------------------------------------------------------------------------------
+\section{误差分析与收敛性}
+
+\subsection{误差的来源}
+
+有限元解 $u_h$ 与精确解 $u$ 之间有误差。误差来自哪里？一方面是\textbf{离散化误差}——我们用有限维空间逼近了无限维空间；另一方面是\textbf{插值误差}——我们用分片多项式逼近了光滑函数。两者都随网格加密而减小，问题是减小得多快。
+
+\subsection{误差估计}
+
+对于线性形函数，误差有如下估计：
+
+\begin{keytheorem}[title=有限元误差估计]
+设 $u$ 是精确解，$u_h$ 是线性有限元解，$h$ 是网格步长。则：
+
+\textbf{能量范数误差}：
+\[
+\|u' - u_h'\|_{L^2} \leq Ch \|u''\|_{L^2}
+\]
+
+\textbf{$L^2$ 范数误差}：
+\[
+\|u - u_h\|_{L^2} \leq Ch^2 \|u''\|_{L^2}
+\]
+
+其中 $C$ 是与 $h$ 无关的常数。
+\end{keytheorem}
+
+\paragraph{含义}
+
+网格加密一倍（$h \to h/2$），导数误差减半，函数值误差减到 $\frac{1}{4}$。也就是说，线性元的收敛阶在能量范数下是 $O(h)$，在 $L^2$ 范数下是 $O(h^2)$；若用更高阶的多项式（如二次元、三次元），可以获得更高的收敛阶。
+
+\subsection{数值验证}
+
+让我们用不同的网格密度求解 $-u'' = 1$，验证收敛性：
 
 \begin{center}
-\begin{tabular}{p{6cm}|p{6cm}}
-\hline
-\textbf{优点} & \textbf{缺点} \\
-\hline
-实现简单，只需修改损失函数 & 边界条件永远只是近似满足 \\
-通用性强，适用于各种边界条件 & 需要调节罚参数$\lambda$ \\
-容易处理复杂几何 & 梯度竞争问题（见下节） \\
-\hline
+\begin{tabular}{c|c|c|c}
+\toprule
+单元数 $N$ & 步长 $h$ & 最大误差 & 误差比 \\
+\midrule
+4 & 0.25 & $7.8 \times 10^{-3}$ & -- \\
+8 & 0.125 & $2.0 \times 10^{-3}$ & 3.9 \\
+16 & 0.0625 & $4.9 \times 10^{-4}$ & 4.1 \\
+32 & 0.03125 & $1.2 \times 10^{-4}$ & 4.1 \\
+\bottomrule
 \end{tabular}
 \end{center}
 
-\subsection{硬约束：通过架构设计强制满足边界条件}
+每次加密一倍，误差减少到约 $\frac{1}{4}$——符合 $O(h^2)$ 的理论预测！
+\clarify{表中的“最大误差”取在单元中点。前面说过一维线性元在节点处是精确的，所以误差全部来自节点之间的线性插值，中点误差恰好是 $h^2/8$（$h = 0.25$ 时为 $0.0078$）。}
 
-有没有办法\textbf{精确}满足边界条件，而不是近似满足？
+% ------------------------------------------------------------------------------------
+\section{二维问题简介}
 
-\begin{definition}[硬约束PINN]
-硬约束PINN构造一个特殊形式的解：
-\begin{equation}
-    u_\theta(x) = A(x) + B(x) \cdot N_\theta(x)
-\end{equation}
-其中：
-\begin{itemize}
-    \item $A(x)$是一个精确满足边界条件的"提升函数"（lift function）
-    \item $B(x)$是一个在边界上为零的"距离函数"（distance function）
-    \item $N_\theta(x)$是普通的神经网络，可以输出任意值
-\end{itemize}
-\end{definition}
+\subsection{从一维到二维}
 
-\begin{example}[一维齐次边界条件]
-对于$u(0) = 0, u(1) = 0$的边界条件，我们可以选择：
-\begin{itemize}
-    \item $A(x) = 0$（齐次边界条件不需要提升）
-    \item $B(x) = x(1-x)$（在$x=0$和$x=1$处都为零）
-\end{itemize}
-因此：
-\begin{equation}
-    u_\theta(x) = x(1-x) \cdot N_\theta(x)
-\end{equation}
+一维的思想可以自然推广到二维。
 
-无论$N_\theta(x)$输出什么值，我们总有：
-\begin{align}
-    u_\theta(0) &= 0 \cdot (1-0) \cdot N_\theta(0) = 0 \quad \checkmark \\
-    u_\theta(1) &= 1 \cdot (1-1) \cdot N_\theta(1) = 0 \quad \checkmark
-\end{align}
-边界条件\textbf{自动精确满足}！
-\end{example}
+\textbf{二维 Poisson 方程}：
+\[
+-\nabla^2 u = -\left(\frac{\partial^2 u}{\partial x^2} + \frac{\partial^2 u}{\partial y^2}\right) = f \quad \text{in } \Omega
+\]
 
-\begin{example}[一维非齐次边界条件]
-如果边界条件是$u(0) = a, u(1) = b$，我们需要一个非零的提升函数：
-\begin{itemize}
-    \item $A(x) = a(1-x) + bx$（线性插值，满足$A(0)=a, A(1)=b$）
-    \item $B(x) = x(1-x)$（同上）
-\end{itemize}
-因此：
-\begin{equation}
-    u_\theta(x) = \underbrace{a(1-x) + bx}_{\text{满足边界条件}} + \underbrace{x(1-x) \cdot N_\theta(x)}_{\text{边界上为零的修正}}
-\end{equation}
+\textbf{弱形式}：
+\[
+\int_\Omega \nabla u \cdot \nabla v \, dA = \int_\Omega fv \, dA
+\]
 
-验证：$u_\theta(0) = a + 0 = a$，$u_\theta(1) = b + 0 = b$。
-\end{example}
+\textbf{离散化}：把区域 $\Omega$ 剖分成三角形或四边形单元。
 
 \begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.95\textwidth]{figs_chap13/constraint_concept.pdf}
-    \caption{软约束与硬约束的对比示意图。左图：软约束通过惩罚项间接满足边界条件，边界可能存在误差；右图：硬约束通过结构设计（乘以$x(1-x)$因子）使边界条件自动精确满足。}
-    \label{fig:constraint_concept}
-\end{figure}
-
-图\ref{fig:constraint_concept}直观展示了两种约束方式的本质区别：
-\begin{itemize}
-    \item \textbf{软约束}：网络直接输出预测值，通过惩罚项"告诉"网络边界应该取什么值。但这只是一种"建议"，网络可能无法完美遵守。
-    \item \textbf{硬约束}：在网络输出上乘以一个"距离函数"（如$x(1-x)$），这个函数在边界处恰好为零。无论网络输出什么，最终结果在边界上都精确为零。
-\end{itemize}
-
-\subsection{硬约束PINN的代码实现}
-
-\begin{lstlisting}[language=Python, caption={硬约束PINN的实现}]
-class HardConstraintPINN(nn.Module):
-    def __init__(self, layers, bc_left=0.0, bc_right=0.0):
-        """
-        硬约束PINN
-        
-        参数:
-            layers: 网络层定义（与之前相同）
-            bc_left: 左边界条件 u(0)
-            bc_right: 右边界条件 u(1)
-        """
-        super().__init__()
-        
-        # 内部网络 N_theta
-        self.net = nn.ModuleList()
-        for i in range(len(layers) - 1):
-            self.net.append(nn.Linear(layers[i], layers[i+1]))
-        
-        self.activation = torch.tanh
-        self.bc_left = bc_left
-        self.bc_right = bc_right
-        
-        # 初始化
-        for layer in self.net:
-            nn.init.xavier_normal_(layer.weight)
-            nn.init.zeros_(layer.bias)
-    
-    def forward(self, x):
-        # 计算内部网络的输出 N_theta(x)
-        h = x
-        for i, layer in enumerate(self.net[:-1]):
-            h = self.activation(layer(h))
-        N = self.net[-1](h)
-        
-        # 硬约束公式: u = A(x) + B(x) * N(x)
-        # A(x) = a*(1-x) + b*x  (线性插值)
-        # B(x) = x*(1-x)        (距离函数)
-        
-        A = self.bc_left * (1 - x) + self.bc_right * x
-        B = x * (1 - x)
-        
-        u = A + B * N
-        return u
-
-# 使用硬约束PINN时，损失函数只需要PDE残差，不需要边界损失！
-def compute_loss_hard_constraint(model, x_interior):
-    """硬约束PINN的损失函数——只有PDE残差"""
-    residual = compute_pde_residual(model, x_interior)
-    loss_pde = torch.mean(residual ** 2)
-    return loss_pde
-\end{lstlisting}
-
-\begin{exercise}[title = 硬约束 vs 软约束]
-用相同的网络架构和训练参数，比较硬约束和软约束PINN的：
-\begin{enumerate}
-    \item 训练收敛速度
-    \item 最终的边界条件满足程度
-    \item 总体精度
-\end{enumerate}
-你观察到什么现象？能解释原因吗？
-\end{exercise}
-
-\subsubsection{硬约束与软约束的实验对比}
-
-我们用相同的网络架构（3层隐藏层，每层50个神经元）和训练参数（Adam优化器，学习率$10^{-3}$，10000个epoch）分别训练了硬约束和软约束PINN。
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.95\textwidth]{figs_chap13/hard_vs_soft.pdf}
-    \caption{硬约束与软约束PINN的对比。左图：训练损失曲线对比，硬约束只需优化PDE损失，损失更低；右图：解的对比，两种方法都能较好逼近精确解（蓝色），硬约束（红色）在边界处精确为零。}
-    \label{fig:hard_vs_soft}
-\end{figure}
-
-从图\ref{fig:hard_vs_soft}的实验结果中，我们可以得出以下结论：
-
-\textbf{1. 边界条件满足程度}。这是两种方法最显著的差异：
-\begin{itemize}
-    \item \textbf{硬约束}：$u(0) = 0$（精确），$u(1) = 0$（精确）——边界条件\textbf{严格}满足
-    \item \textbf{软约束}：$|u(0)| \approx 5.9 \times 10^{-5}$，$|u(1)| \approx 2.7 \times 10^{-4}$——边界条件只是\textbf{近似}满足
-\end{itemize}
-
-\textbf{2. 总体精度}。从MSE来看：
-\begin{itemize}
-    \item 硬约束：$\text{MSE} = 6.64 \times 10^{-9}$
-    \item 软约束：$\text{MSE} = 4.60 \times 10^{-8}$
-\end{itemize}
-硬约束的精度高出约一个数量级！这说明精确满足边界条件确实有助于学习更准确的解。
-
-\textbf{3. 训练效率}。从PDE损失曲线来看，硬约束方法收敛更快，且最终损失更低。这是因为硬约束消除了边界条件的学习负担，网络可以专注于学习PDE本身。
-
-\subsubsection{逐点数值对比}
-
-下表给出了硬约束和软约束方法在几个典型点上的预测值对比：
-
-\begin{table}[htbp]
 \centering
-\caption{硬约束与软约束PINN的逐点数值对比}
-\label{tab:hard_soft_comparison}
-\begin{tabular}{c|c|cc|cc}
-\hline
-$x$ & 解析解 & 软约束预测 & 软约束误差 & 硬约束预测 & 硬约束误差 \\
-\hline
-0.0 & 0.0000000 & 0.0000592 & $5.9 \times 10^{-5}$ & \textbf{0.0000000} & \textbf{0} \\
-0.25 & 0.0071696 & 0.0071682 & $1.4 \times 10^{-6}$ & 0.0071699 & $3.0 \times 10^{-7}$ \\
-0.5 & 0.1013212 & 0.1013209 & $3.0 \times 10^{-7}$ & 0.1013211 & $1.0 \times 10^{-7}$ \\
-0.75 & 0.0071696 & 0.0071711 & $1.5 \times 10^{-6}$ & 0.0071698 & $2.0 \times 10^{-7}$ \\
-1.0 & 0.0000000 & $-$0.0002720 & $2.7 \times 10^{-4}$ & \textbf{0.0000000} & \textbf{0} \\
-\hline
-\multicolumn{2}{c|}{MSE} & \multicolumn{2}{c|}{$4.60 \times 10^{-8}$} & \multicolumn{2}{c}{$\mathbf{6.64 \times 10^{-9}}$} \\
-\hline
-\end{tabular}
-\end{table}
-
-从表\ref{tab:hard_soft_comparison}可以清楚地看到硬约束的优势：
-\begin{itemize}
-    \item 边界点的误差\textbf{严格为零}（这是架构设计保证的）
-    \item 内部点的误差也更小，因为网络不需要"分心"学习边界条件
-    \item 总体MSE比软约束低约7倍
-\end{itemize}
-
-\begin{tcolorbox}[colback=blue!5, colframe=blue!50, title=何时使用硬约束？]
-基于实验结果，我们建议：
-\begin{itemize}
-    \item 如果边界条件是简单的（如齐次Dirichlet条件），且几何区域规则，优先使用硬约束
-    \item 如果边界条件复杂或几何不规则，使用软约束更灵活
-    \item 对于工程应用中对边界精度要求高的问题，硬约束是更可靠的选择
-\end{itemize}
-\end{tcolorbox}
-
-\subsection{二维问题的硬约束}
-
-\begin{example}[二维矩形区域]
-考虑$\Omega = [0, 1]^2$上的齐次Dirichlet边界条件$u|_{\partial\Omega} = 0$。
-
-距离函数可以选择：
-\begin{equation}
-    B(x, y) = x(1-x) \cdot y(1-y)
-\end{equation}
-这个函数在四条边上都为零。
-\end{example}
-
-\begin{example}[二维圆域]
-\label{ex:circle}
-对于圆域$\Omega = \{(x, y) : x^2 + y^2 < 1\}$上的齐次边界条件：
-\begin{equation}
-    B(x, y) = 1 - x^2 - y^2
-\end{equation}
-这个函数在圆周上$x^2 + y^2 = 1$时为零，在内部为正。
-\end{example}
-
-\begin{tcolorbox}[colback=red!5, colframe=red!50, title=硬约束的局限]
-硬约束方法虽然优雅，但有几个限制：
-\begin{itemize}
-    \item 对于复杂几何区域（如带孔的区域、不规则边界），构造合适的距离函数$B(x)$很困难
-    \item 对于Neumann边界条件（给定$\frac{\partial u}{\partial n}$），硬约束设计更加复杂
-    \item 对于混合边界条件，可能需要分区域处理
-\end{itemize}
-\end{tcolorbox}
-
-% ====================================================================================
-\section{训练的病态：为什么PINN经常失败？}
-\label{sec:gradient_pathology}
-% ====================================================================================
-
-如果你已经运行了上一节的代码，你可能觉得PINN很简单。但如果尝试更复杂的问题，你很可能会遇到训练失败的情况。这一节我们来分析PINN训练困难的根本原因。
-
-\subsection{现象一：频谱偏差}
-
-\begin{definition}[频谱偏差]
-\textbf{频谱偏差}（spectral bias）是指神经网络倾向于首先学习目标函数的低频成分，而高频成分学习得很慢甚至学不会的现象。
-\end{definition}
-
-\begin{example}[高频函数的逼近困难]
-考虑函数：
-\begin{equation}
-    u(x) = \sin(2\pi x) + 0.1\sin(20\pi x)
-\end{equation}
-它包含一个低频成分$\sin(2\pi x)$（周期为1）和一个高频成分$0.1\sin(20\pi x)$（周期为0.1）。
-
-用一个标准的MLP去拟合这个函数，你会观察到：
-\begin{itemize}
-    \item 前100个epoch：网络快速学会了$\sin(2\pi x)$
-    \item 100-1000个epoch：高频成分$0.1\sin(20\pi x)$几乎没有进展
-    \item 1000-10000个epoch：高频成分缓慢改善，但仍有明显误差
-\end{itemize}
-\end{example}
-
-\begin{lstlisting}[language=Python, caption={频谱偏差的演示代码}]
-import torch
-import torch.nn as nn
-import numpy as np
-import matplotlib.pyplot as plt
-
-# 目标函数：低频 + 高频
-def target_function(x):
-    return torch.sin(2 * np.pi * x) + 0.1 * torch.sin(20 * np.pi * x)
-
-# 简单的MLP
-class SimpleMLP(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(1, 64),
-            nn.Tanh(),
-            nn.Linear(64, 64),
-            nn.Tanh(),
-            nn.Linear(64, 1)
-        )
+\begin{tikzpicture}[scale=0.8]
+    % 区域
+    \draw[thick] (0,0) -- (4,0) -- (4,3) -- (0,3) -- cycle;
     
-    def forward(self, x):
-        return self.net(x)
-
-# 训练并记录不同epoch的结果
-model = SimpleMLP()
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-
-x_train = torch.linspace(0, 1, 200).reshape(-1, 1)
-y_train = target_function(x_train)
-
-checkpoints = [100, 500, 1000, 5000, 10000]
-results = {}
-
-for epoch in range(10001):
-    pred = model(x_train)
-    loss = torch.mean((pred - y_train)**2)
+    % 三角形网格
+    \foreach \x in {0,1,...,4} {
+        \foreach \y in {0,1,2,3} {
+            \fill (\x,\y) circle (1.5pt);
+        }
+    }
     
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
+    % 画一些三角形
+    \draw[gray] (0,0) -- (1,1) -- (0,1) -- cycle;
+    \draw[gray] (0,0) -- (1,0) -- (1,1) -- cycle;
+    \draw[gray] (1,0) -- (2,1) -- (1,1) -- cycle;
+    \draw[gray] (1,0) -- (2,0) -- (2,1) -- cycle;
+    \draw[gray] (2,0) -- (3,1) -- (2,1) -- cycle;
+    \draw[gray] (2,0) -- (3,0) -- (3,1) -- cycle;
+    \draw[gray] (3,0) -- (4,1) -- (3,1) -- cycle;
+    \draw[gray] (3,0) -- (4,0) -- (4,1) -- cycle;
     
-    if epoch in checkpoints:
-        with torch.no_grad():
-            results[epoch] = model(x_train).numpy().flatten()
-        print(f"Epoch {epoch}: Loss = {loss.item():.6f}")
-
-# 可视化
-fig, axes = plt.subplots(1, len(checkpoints), figsize=(15, 3))
-x_np = x_train.numpy().flatten()
-y_np = y_train.numpy().flatten()
-
-for i, epoch in enumerate(checkpoints):
-    axes[i].plot(x_np, y_np, 'b-', label='真实值', alpha=0.7)
-    axes[i].plot(x_np, results[epoch], 'r--', label='预测值')
-    axes[i].set_title(f'Epoch {epoch}')
-    axes[i].legend()
-    axes[i].grid(True, alpha=0.3)
-
-plt.tight_layout()
-plt.savefig('spectral_bias.png', dpi=150)
-plt.show()
-\end{lstlisting}
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.95\textwidth]{figs_chap13/spectral_bias.pdf}
-    \caption{频谱偏置现象演示。目标函数$u(x) = \sin(2\pi x) + 0.5\sin(20\pi x)$包含低频和高频成分。四个子图展示不同训练阶段的拟合效果：左上为初始状态，右上为第500轮，左下为第2000轮，右下为第5000轮。可见网络先学会低频成分，高频成分需要更长时间才能拟合。}
-    \label{fig:spectral_bias}
+    \draw[gray] (0,1) -- (1,2) -- (0,2) -- cycle;
+    \draw[gray] (0,1) -- (1,1) -- (1,2) -- cycle;
+    \draw[gray] (1,1) -- (2,2) -- (1,2) -- cycle;
+    \draw[gray] (1,1) -- (2,1) -- (2,2) -- cycle;
+    \draw[gray] (2,1) -- (3,2) -- (2,2) -- cycle;
+    \draw[gray] (2,1) -- (3,1) -- (3,2) -- cycle;
+    \draw[gray] (3,1) -- (4,2) -- (3,2) -- cycle;
+    \draw[gray] (3,1) -- (4,1) -- (4,2) -- cycle;
+    
+    \draw[gray] (0,2) -- (1,3) -- (0,3) -- cycle;
+    \draw[gray] (0,2) -- (1,2) -- (1,3) -- cycle;
+    \draw[gray] (1,2) -- (2,3) -- (1,3) -- cycle;
+    \draw[gray] (1,2) -- (2,2) -- (2,3) -- cycle;
+    \draw[gray] (2,2) -- (3,3) -- (2,3) -- cycle;
+    \draw[gray] (2,2) -- (3,2) -- (3,3) -- cycle;
+    \draw[gray] (3,2) -- (4,3) -- (3,3) -- cycle;
+    \draw[gray] (3,2) -- (4,2) -- (4,3) -- cycle;
+    
+    % 标注
+    \node at (2,-0.8) {三角形网格剖分};
+\end{tikzpicture}
+\caption{二维有限元：区域被剖分成三角形单元}
 \end{figure}
 
-图\ref{fig:spectral_bias}清楚地展示了频谱偏差现象：
+\subsection{三角形单元}
 
-\begin{itemize}
-    \item \textbf{Epoch 100}：网络已经基本学会了低频成分$\sin(2\pi x)$的大致形状，但高频振荡完全没有出现。
-    \item \textbf{Epoch 500-1000}：低频成分拟合得很好，但高频成分$0.1\sin(20\pi x)$仍然几乎看不到。
-    \item \textbf{Epoch 5000-10000}：高频成分开始缓慢出现，但即使训练10000个epoch，最终MSE仍然在$2.6 \times 10^{-3}$左右，高频细节仍有明显差距。
-\end{itemize}
+最简单的二维单元是线性三角形单元。每个三角形有 3 个节点，单元内的近似解是：
+\[
+u_h(x, y) = U_1 N_1(x,y) + U_2 N_2(x,y) + U_3 N_3(x,y)
+\]
 
-这个实验深刻揭示了标准MLP的固有局限：\textbf{对高频信息学习缓慢}。在PINN求解PDE时，如果真解包含高频成分（如激波、边界层、快速振荡解），标准网络会表现得很差。
+其中 $N_i$ 是线性形函数，满足 $N_i(x_j, y_j) = \delta_{ij}$。
 
-\subsubsection{频谱偏差的理论解释：神经正切核}
+\paragraph{单元刚度矩阵}
 
-频谱偏差可以用\textbf{神经正切核}（Neural Tangent Kernel，NTK）理论来解释。
+三角形单元的刚度矩阵是 $3 \times 3$：
+\[
+K^e_{ij} = \int_{\text{三角形}} \nabla N_i \cdot \nabla N_j \, dA
+\]
 
-\begin{definition}[神经正切核]
-对于一个神经网络$f_\theta(x)$，神经正切核定义为：
-\begin{equation}
-    K(x, x') = \nabla_\theta f_\theta(x) \cdot \nabla_\theta f_\theta(x')
-\end{equation}
-它度量了两个输入点$x$和$x'$处的梯度相似性。
-\end{definition}
+由于 $N_i$ 是线性函数，$\nabla N_i$ 是常向量，积分很容易计算。
 
-在梯度下降训练中，网络函数的演化可以近似为：
-\begin{equation}
-    \frac{\partial f_\theta(x)}{\partial t} = -\int K(x, x') \left( f_\theta(x') - y(x') \right) dx'
-\end{equation}
+\subsection{刚度矩阵的稀疏性}
 
-\begin{proposition}[频谱偏差的NTK解释]
-NTK可以做谱分解：$K(x, x') = \sum_k \lambda_k \phi_k(x) \phi_k(x')$。
+二维问题的刚度矩阵仍然是稀疏的——只有相邻节点之间有耦合。
 
-学习的收敛速度与特征值$\lambda_k$成正比。对于标准的全连接网络，高频成分对应的特征值$\lambda_k$很小，因此学习很慢。
-\end{proposition}
-
-\subsubsection{解决方案：傅里叶特征映射}
-
-一个简单而有效的解决方法是在网络输入端加入\textbf{傅里叶特征}：
-
-\begin{definition}[傅里叶特征映射]
-给定输入$x \in \mathbb{R}^d$，傅里叶特征映射定义为：
-\begin{equation}
-    \gamma(x) = \begin{bmatrix} \sin(2\pi B x) \\ \cos(2\pi B x) \end{bmatrix} \in \mathbb{R}^{2m}
-\end{equation}
-其中$B \in \mathbb{R}^{m \times d}$是一个随机矩阵，每一行对应一个频率向量。
-\end{definition}
-
-\begin{lstlisting}[language=Python, caption={傅里叶特征映射的实现}]
-class FourierFeatures(nn.Module):
-    def __init__(self, input_dim, num_features, scale=10.0):
-        """
-        傅里叶特征映射
-        
-        参数:
-            input_dim: 输入维度
-            num_features: 傅里叶特征的数量
-            scale: 频率的标准差（控制能学习的最高频率）
-        """
-        super().__init__()
-        # 随机采样频率矩阵（固定，不训练）
-        B = torch.randn(num_features, input_dim) * scale
-        self.register_buffer('B', B)
-    
-    def forward(self, x):
-        # x: (batch, input_dim)
-        # 计算 2*pi*B*x
-        x_proj = 2 * np.pi * x @ self.B.T  # (batch, num_features)
-        # 返回 [sin, cos]
-        return torch.cat([torch.sin(x_proj), torch.cos(x_proj)], dim=-1)
-
-class FourierPINN(nn.Module):
-    def __init__(self, input_dim, hidden_layers, num_fourier=64, scale=10.0):
-        super().__init__()
-        
-        # 傅里叶特征层
-        self.fourier = FourierFeatures(input_dim, num_fourier, scale)
-        
-        # MLP处理傅里叶特征
-        layers = [2 * num_fourier] + hidden_layers + [1]
-        self.net = nn.ModuleList()
-        for i in range(len(layers) - 1):
-            self.net.append(nn.Linear(layers[i], layers[i+1]))
-        
-        self.activation = torch.tanh
-    
-    def forward(self, x):
-        # 先通过傅里叶特征映射
-        h = self.fourier(x)
-        # 再通过MLP
-        for i, layer in enumerate(self.net[:-1]):
-            h = self.activation(layer(h))
-        return self.net[-1](h)
-\end{lstlisting}
-
-\begin{exercise}[title = 傅里叶特征的效果]
-用傅里叶PINN重新拟合$u(x) = \sin(2\pi x) + 0.1\sin(20\pi x)$，比较收敛速度。
-
-尝试不同的\texttt{scale}参数（如1, 10, 100），观察其对学习高频成分的影响。
-\end{exercise}
-
-\subsubsection{傅里叶特征的实验结果}
-
-我们对比了标准MLP和不同scale参数的傅里叶特征网络在拟合高频函数上的效果。
+但稀疏结构更复杂：不再是三对角，而是\textbf{带状稀疏}矩阵。
 
 \begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.95\textwidth]{figs_chap13/fourier_features.pdf}
-    \caption{傅里叶特征映射的效果对比。左图：标准MLP与傅里叶特征网络的训练损失曲线，傅里叶特征网络收敛更快；右图：拟合效果对比，标准MLP（绿色）难以捕捉高频成分，傅里叶特征网络（红色）能准确拟合整个目标函数。}
-    \label{fig:fourier_features}
-\end{figure}
-
-从图\ref{fig:fourier_features}中我们可以得到几个关键结论：
-
-\begin{enumerate}
-    \item \textbf{傅里叶特征显著加速高频学习}。标准MLP在5000个epoch后MSE仍为$4.7 \times 10^{-3}$，而傅里叶特征（scale=10）在1000个epoch后MSE已降至$10^{-6}$量级，提升了\textbf{3个数量级}。
-
-    \item \textbf{scale参数影响学习能力}。
-    \begin{itemize}
-        \item scale=1.0：学习速度较慢，但最终MSE可达$2 \times 10^{-6}$
-        \item scale=10.0：收敛最快且最稳定，MSE可达$10^{-7}$量级
-        \item scale=30.0：能学习更高频，但训练初期可能有波动
-    \end{itemize}
-
-    \item \textbf{实践建议}。scale参数应该根据目标函数的最高频率来选择。经验法则是$\text{scale} \approx 10 \times f_{\max}$，其中$f_{\max}$是目标函数中期望捕捉的最高频率。
-\end{enumerate}
-
-\begin{tcolorbox}[colback=green!5, colframe=green!50, title=傅里叶特征的本质]
-傅里叶特征映射$\gamma(x) = [\sin(2\pi Bx), \cos(2\pi Bx)]$本质上是将输入空间"展开"到一个高维的频率空间。这使得原本对网络来说"困难"的高频成分，在新的特征空间中变成了"简单"的线性组合问题。
-\end{tcolorbox}
-
-\subsection{现象二：梯度竞争}
-\label{subsec:gradient_conflict}
-
-回到PINN的损失函数：
-\begin{equation}
-    \mathcal{L} = L_{\text{PDE}} + \lambda L_{\text{BC}}
-\end{equation}
-
-在优化过程中，参数更新方向为：
-\begin{equation}
-    \Delta \theta \propto -\nabla_\theta \mathcal{L} = -\nabla_\theta L_{\text{PDE}} - \lambda \nabla_\theta L_{\text{BC}}
-\end{equation}
-
-\begin{definition}[梯度竞争]
-\textbf{梯度竞争}（gradient pathology/conflict）是指多个损失项的梯度方向冲突，导致优化困难的现象。
-
-具体地，如果：
-\begin{equation}
-    \nabla_\theta L_{\text{PDE}} \cdot \nabla_\theta L_{\text{BC}} < 0
-\end{equation}
-即两个梯度的夹角大于90°，那么一个任务的优化会损害另一个任务。
-\end{definition}
-
-\begin{figure}[htbp]
-    \centering
-    \begin{tikzpicture}[scale=1.5]
-        % 坐标轴
-        \draw[->] (-2, 0) -- (2, 0) node[right] {$\theta_1$};
-        \draw[->] (0, -2) -- (0, 2) node[above] {$\theta_2$};
-        
-        % 梯度向量
-        \draw[->, thick, blue] (0, 0) -- (1.5, 0.5) node[above right] {$-\nabla L_{\text{PDE}}$};
-        \draw[->, thick, red] (0, 0) -- (-0.5, 1.5) node[above left] {$-\nabla L_{\text{BC}}$};
-        
-        % 合成梯度
-        \draw[->, thick, purple, dashed] (0, 0) -- (1, 2) node[above] {$-\nabla \mathcal{L}$};
-        
-        % 角度标注
-        \draw[gray] (0.5, 0.17) arc (18:108:0.5);
-        \node at (0.3, 0.6) {$\phi$};
-    \end{tikzpicture}
-    \caption{梯度竞争示意图。当$\phi > 90°$时，两个任务的优化方向冲突。}
-    \label{fig:gradient_conflict}
-\end{figure}
-
-\subsubsection{诊断梯度竞争}
-
-\begin{lstlisting}[language=Python, caption={诊断梯度竞争}]
-def diagnose_gradient_conflict(model, x_interior, x_boundary):
-    """
-    诊断梯度竞争
-    
-    返回:
-        cos_angle: 两个梯度的夹角余弦值
-        grad_ratio: 梯度范数的比值
-    """
-    # 计算PDE损失的梯度
-    model.zero_grad()
-    residual = compute_pde_residual(model, x_interior)
-    loss_pde = torch.mean(residual ** 2)
-    loss_pde.backward(retain_graph=True)
-    
-    grad_pde = torch.cat([p.grad.flatten() for p in model.parameters()])
-    
-    # 计算BC损失的梯度
-    model.zero_grad()
-    u_boundary = model(x_boundary)
-    loss_bc = torch.mean(u_boundary ** 2)
-    loss_bc.backward()
-    
-    grad_bc = torch.cat([p.grad.flatten() for p in model.parameters()])
-    
-    # 计算夹角余弦
-    cos_angle = torch.dot(grad_pde, grad_bc) / (grad_pde.norm() * grad_bc.norm() + 1e-8)
-    
-    # 计算梯度范数比值
-    grad_ratio = grad_pde.norm() / (grad_bc.norm() + 1e-8)
-    
-    return cos_angle.item(), grad_ratio.item()
-
-# 在训练过程中监控
-for epoch in range(num_epochs):
-    # ... 正常训练代码 ...
-    
-    if epoch % 100 == 0:
-        cos_angle, grad_ratio = diagnose_gradient_conflict(model, x_interior, x_boundary)
-        print(f"Epoch {epoch}: cos(angle) = {cos_angle:.3f}, |grad_pde|/|grad_bc| = {grad_ratio:.3f}")
-        
-        if cos_angle < -0.5:
-            print("  警告：存在严重的梯度竞争！")
-\end{lstlisting}
-
-\subsubsection{梯度竞争的实验观察}
-
-我们在训练过程中监控了PDE损失和边界损失各自产生的梯度，并计算它们的夹角余弦值和范数比值。
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.95\textwidth]{figs_chap13/gradient_diagnosis.pdf}
-    \caption{梯度冲突诊断结果。左图：PDE损失梯度与边界条件损失梯度的余弦相似度，负值表示梯度方向冲突；右图：两个损失项的梯度范数对比，边界条件梯度范数通常较大（因为权重$\lambda=100$）。}
-    \label{fig:gradient_diagnosis}
-\end{figure}
-
-从图\ref{fig:gradient_diagnosis}中，我们可以观察到以下现象：
-
-\textbf{1. 梯度冲突频繁发生}。在100个采样点中，有42次（42\%）出现了负的梯度夹角余弦值，即$\nabla L_{\text{PDE}} \cdot \nabla L_{\text{BC}} < 0$。这意味着\textbf{将近一半的训练步骤中，优化一个目标会损害另一个目标}。
-
-\textbf{2. 梯度范数不平衡}。PDE梯度的范数通常比BC梯度大1-2个数量级。这说明在使用固定权重$\lambda=100$时，两个任务的梯度贡献是不均衡的。
-
-\textbf{3. 训练不稳定性}。损失曲线中的锯齿状波动正是梯度竞争的直接反映——当PDE损失下降时，BC损失可能上升，反之亦然。
-
-\subsubsection{梯度竞争的后果}
-
-当梯度竞争严重时，你可能观察到：
-\begin{itemize}
-    \item 损失震荡：$L_{\text{PDE}}$下降时$L_{\text{BC}}$上升，反之亦然
-    \item 收敛极慢：优化器在两个任务之间"犹豫不决"
-    \item 收敛到错误的解：某个任务被完全牺牲
-\end{itemize}
-
-\begin{tcolorbox}[colback=red!5, colframe=red!50, title=梯度竞争是PINN的核心困难]
-梯度竞争不仅存在于PDE损失和BC损失之间，在时间演化问题中还存在于不同时刻的损失之间。这是PINN在复杂问题上经常失败的根本原因之一。下一节我们将介绍如何通过自适应加权来缓解这个问题。
-\end{tcolorbox}
-
-% ====================================================================================
-\section{拉格朗日对偶视角与自适应加权}
-% ====================================================================================
-
-\subsection{从罚函数到拉格朗日乘子}
-
-回顾罚函数法的局限：权重$\lambda$是固定的，无法自适应地平衡不同约束。
-
-让我们回归更一般的\textbf{拉格朗日对偶}框架。将PINN问题写成：
-\begin{equation}
-    \min_\theta L_{\text{PDE}}(\theta) \quad \text{s.t.} \quad L_{\text{BC}}(\theta) = 0
-\end{equation}
-
-增广拉格朗日函数为：
-\begin{equation}
-    \mathcal{L}(\theta, \lambda) = L_{\text{PDE}}(\theta) + \lambda L_{\text{BC}}(\theta)
-\end{equation}
-
-\begin{definition}[对偶上升法]
-对偶上升法（Dual Ascent）交替更新原始变量和对偶变量：
-\begin{align}
-    \theta^{k+1} &= \arg\min_\theta \mathcal{L}(\theta, \lambda^k) \quad \text{（原始更新）} \\
-    \lambda^{k+1} &= \lambda^k + \rho \cdot L_{\text{BC}}(\theta^{k+1}) \quad \text{（对偶更新）}
-\end{align}
-\end{definition}
-
-\begin{tcolorbox}[colback=green!5, colframe=green!50, title=关键洞察]
-对偶更新$\lambda^{k+1} = \lambda^k + \rho \cdot L_{\text{BC}}(\theta^{k+1})$的直觉：
-\begin{itemize}
-    \item 如果边界条件没被满足好（$L_{\text{BC}}$大），就增大$\lambda$，加强惩罚
-    \item 如果已经满足得很好（$L_{\text{BC}}$小），$\lambda$就保持稳定
-\end{itemize}
-这给了我们一个\textbf{自适应调整权重}的方法！
-\end{tcolorbox}
-
-\subsection{实用算法：自适应权重PINN}
-
-\begin{lstlisting}[language=Python, caption={自适应权重PINN的实现}]
-class AdaptiveWeightPINN:
-    def __init__(self, model, lr_model=1e-3, lr_lambda=1e-2, rho=1.0):
-        """
-        自适应权重PINN
-        
-        使用拉格朗日对偶方法自动调整边界条件的权重
-        """
-        self.model = model
-        self.optimizer = torch.optim.Adam(model.parameters(), lr=lr_model)
-        
-        # 拉格朗日乘子（可学习）
-        self.lambda_bc = torch.tensor([1.0], requires_grad=False)
-        self.lr_lambda = lr_lambda
-        self.rho = rho
-    
-    def train_step(self, x_interior, x_boundary):
-        # 计算损失
-        residual = compute_pde_residual(self.model, x_interior)
-        loss_pde = torch.mean(residual ** 2)
-        
-        u_boundary = self.model(x_boundary)
-        loss_bc = torch.mean(u_boundary ** 2)
-        
-        # 增广拉格朗日
-        total_loss = loss_pde + self.lambda_bc * loss_bc + self.rho / 2 * loss_bc ** 2
-        
-        # 更新网络参数（原始更新）
-        self.optimizer.zero_grad()
-        total_loss.backward()
-        self.optimizer.step()
-        
-        # 更新拉格朗日乘子（对偶更新）
-        with torch.no_grad():
-            self.lambda_bc += self.lr_lambda * loss_bc
-            self.lambda_bc = torch.clamp(self.lambda_bc, min=0.0)  # 保证非负
-        
-        return loss_pde.item(), loss_bc.item(), self.lambda_bc.item()
-    
-    def train(self, num_epochs, N_interior=100):
-        x_boundary = torch.tensor([[0.0], [1.0]])
-        history = {'pde': [], 'bc': [], 'lambda': []}
-        
-        for epoch in range(num_epochs):
-            x_interior = torch.rand(N_interior, 1)
-            loss_pde, loss_bc, lam = self.train_step(x_interior, x_boundary)
-            
-            history['pde'].append(loss_pde)
-            history['bc'].append(loss_bc)
-            history['lambda'].append(lam)
-            
-            if (epoch + 1) % 1000 == 0:
-                print(f"Epoch {epoch+1}: PDE={loss_pde:.2e}, BC={loss_bc:.2e}, λ={lam:.2f}")
-        
-        return history
-
-# 使用示例
-model = PINN([1, 50, 50, 50, 1])
-trainer = AdaptiveWeightPINN(model, lr_model=1e-3, lr_lambda=0.1, rho=10.0)
-history = trainer.train(num_epochs=10000)
-\end{lstlisting}
-
-\subsubsection{自适应权重的实验结果}
-
-我们对比了固定权重（$\lambda=100$）和拉格朗日对偶自适应权重两种方法。
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.95\textwidth]{figs_chap13/adaptive_weight.pdf}
-    \caption{自适应权重PINN的训练过程。左图：PDE损失和边界条件损失的变化曲线；中图：自适应权重$\lambda$的演化，可见权重自动调整以平衡两个损失；右图：训练后PINN预测与精确解的对比。}
-    \label{fig:adaptive_weight}
-\end{figure}
-
-从图\ref{fig:adaptive_weight}中我们观察到：
-
-\textbf{1. $\lambda$的动态调整}。在训练初期，$\lambda$从1.0快速上升到约1.04，然后基本稳定。这说明对偶上升机制在自动调整权重，使边界条件得到适当的关注。
-
-\textbf{2. 与固定权重的对比}。有趣的是，在这个简单问题上，自适应权重的最终$\lambda \approx 1.04$远小于我们人工设定的$\lambda = 100$。这说明：
-\begin{itemize}
-    \item 过大的固定权重可能并非最优选择
-    \item 自适应方法能自动找到合适的平衡点
-\end{itemize}
-
-\textbf{3. 精度对比}。在本实验中，固定权重方法的MSE（$4.60 \times 10^{-8}$）略优于自适应方法（$3.32 \times 10^{-6}$）。这是因为对于这个简单问题，$\lambda=100$恰好是一个较好的选择。
-
-\begin{remark}[自适应权重的适用场景]
-自适应权重方法的真正价值在于\textbf{复杂问题}中，当我们无法事先知道最优的权重比例时。对于多约束、多物理场耦合的问题，自适应方法可以避免繁琐的超参数调节。
-\end{remark}
-
-\subsection{GradNorm：基于梯度的自适应加权}
-
-另一种流行的方法是\textbf{GradNorm}，它的目标是让所有任务的梯度范数趋于一致。
-
-\begin{definition}[GradNorm目标]
-设$w_i$是第$i$个任务的权重，$g_i = |w_i \nabla_\theta L_i|$是加权后的梯度范数。GradNorm的目标是：
-\begin{equation}
-    g_i \approx \bar{g} \cdot r_i^{-\alpha} \quad \forall i
-\end{equation}
-其中$\bar{g}$是平均梯度范数，$r_i = L_i / L_i^{(0)}$是任务$i$的相对损失（相对于初始损失），$\alpha$是超参数（通常取1.5）。
-\end{definition}
-
-\begin{framed}
-\textbf{GradNorm算法伪代码}
-
-\texttt{初始化:} 权重 $w_i = 1$，记录初始损失 $L_i^{(0)}$
-
-\texttt{for} 每个训练步 \texttt{do}:
-\begin{enumerate}[label=\arabic*., leftmargin=2em]
-    \item 计算各任务损失 $L_{\text{pde}}, L_{\text{bc}}$
-    \item 计算各任务的加权梯度范数 $G_i = w_i \|\nabla_W L_i\|$
-    \item 计算平均梯度范数 $\bar{G} = \frac{1}{n}\sum_i G_i$
-    \item 计算相对损失 $r_i = L_i / L_i^{(0)}$
-    \item 计算目标梯度范数 $G_i^{\text{target}} = \bar{G} \cdot (r_i / \bar{r})^\alpha$
-    \item 更新权重以最小化 $\sum_i |G_i - G_i^{\text{target}}|$
-    \item 归一化权重使 $\sum_i w_i = n$
-    \item 用加权损失 $\sum_i w_i L_i$ 更新网络参数
-\end{enumerate}
-\texttt{end for}
-\end{framed}
-
-GradNorm的核心思想是：让学习\textbf{慢}的任务（损失下降慢，梯度相对小）获得更大的权重，让学习\textbf{快}的任务权重降低，从而平衡多个任务的学习速度。
-
-\begin{remark}
-GradNorm需要在每步计算多个任务的梯度范数，计算开销较大。在实践中，前面介绍的拉格朗日对偶方法通常是更简单有效的选择。我们在自适应权重实验（图\ref{fig:adaptive_weight}）中已经验证了其效果。
-\end{remark}
-
-\subsection{方法对比}
-
-\begin{table}[htbp]
 \centering
-\caption{不同权重调整方法的对比}
-\begin{tabular}{l|ccc}
-\hline
-\textbf{方法} & \textbf{实现复杂度} & \textbf{超参数} & \textbf{适用场景} \\
-\hline
-固定权重 & 低 & 需要调$\lambda$ & 简单问题 \\
-学习率退火 & 低 & 退火策略 & 时间演化问题 \\
-拉格朗日对偶 & 中 & $\rho, \eta_\lambda$ & 有明确约束的问题 \\
-GradNorm & 高 & $\alpha$ & 多任务学习 \\
-\hline
-\end{tabular}
-\end{table}
-
-% ====================================================================================
-\section{时间演化方程的特殊困难：因果性}
-% ====================================================================================
-
-\subsection{问题的特殊性}
-
-考虑热方程：
-\begin{equation}
-    \frac{\partial u}{\partial t} = \alpha \frac{\partial^2 u}{\partial x^2}, \quad (x, t) \in (0, 1) \times (0, T)
-\end{equation}
-\begin{equation}
-    u(x, 0) = u_0(x) \quad \text{（初始条件）}
-\end{equation}
-\begin{equation}
-    u(0, t) = u(1, t) = 0 \quad \text{（边界条件）}
-\end{equation}
-
-传统数值方法是\textbf{时间步进}的：
-\begin{enumerate}
-    \item 先算$t = \Delta t$时刻的解
-    \item 再算$t = 2\Delta t$时刻的解
-    \item 依次推进...
-\end{enumerate}
-
-这自然地尊重了\textbf{因果律}——未来依赖于过去，不能反过来。
-
-\subsection{标准PINN的问题}
-
-标准PINN怎么做？在整个时空域$(x, t) \in [0, 1] \times [0, T]$上\textbf{同时}采样配点，一起训练。
-
-\begin{lstlisting}[language=Python, caption={标准PINN处理热方程（有问题的版本）}]
-# 采样配点：在整个时空域上同时采样
-x = torch.rand(N, 1)  # 空间坐标
-t = torch.rand(N, 1) * T  # 时间坐标，从0到T均匀采样
-xt = torch.cat([x, t], dim=1)
-
-# 计算PDE残差
-u = model(xt)
-u_t = grad(u, t)
-u_xx = grad(grad(u, x), x)
-residual = u_t - alpha * u_xx
-
-# 同时训练所有时刻
-loss = torch.mean(residual ** 2) + lambda_ic * loss_ic + lambda_bc * loss_bc
-\end{lstlisting}
-
-\textbf{问题}：网络在同时学习所有时刻，但它没有"先把$t=0$学好，再学$t=\Delta t$"的机制。初始时刻的误差会传播到后续时刻，而网络对此毫无感知。
-
-\textbf{结果}：误差随时间累积，长时间预测严重失准。
-
-\subsection{解决方案：因果训练}
-
-\textbf{因果训练}（Causal Training）的思路是：引入一个时间权重函数$w(t)$，使得网络\textbf{优先}学习早期时刻。
-
-\begin{definition}[因果权重函数]
-定义因果权重：
-\begin{equation}
-    w(t) = \exp\left( -\epsilon \int_0^t |r(x, s)|^2 \, ds \right)
-\end{equation}
-其中$r(x, t)$是PDE残差，$\epsilon > 0$是控制因果性强度的参数。
-\end{definition}
-
-\textbf{直觉}：只有当$t' < t$时刻的残差足够小，$t$时刻的权重$w(t)$才会接近1。
-
-在离散形式下，可以简化为\textbf{分段训练}（time-marching）：
-
-\begin{framed}
-\textbf{因果PINN分段训练算法}
-
-\texttt{输入:} 总时间$T$，窗口数$K$，每窗口训练轮数$E$
-
-划分时间窗口: $[0, \Delta t], [\Delta t, 2\Delta t], \ldots, [(K-1)\Delta t, T]$，其中$\Delta t = T/K$
-
-\texttt{for} $k = 0, 1, \ldots, K-1$ \texttt{do}: \hfill {\small // 依次处理每个时间窗口}
-\begin{enumerate}[label=(\alph*), leftmargin=2em]
-    \item 当前窗口: $t \in [k\Delta t, (k+1)\Delta t]$
-    \item \texttt{for} $e = 1, \ldots, E$ \texttt{do}: \hfill {\small // 在当前窗口训练$E$轮}
-    \begin{itemize}[leftmargin=1em]
-        \item 在当前窗口内随机采样配点
-        \item 计算PDE残差损失
-        \item \texttt{if} $k = 0$: 添加初始条件损失（$t=0$时刻）
-        \item \texttt{else}: 添加连续性损失（与上一窗口终点衔接）
-        \item 梯度下降更新网络参数
-    \end{itemize}
-    \item 存储当前窗口终点的解，供下一窗口使用
-\end{enumerate}
-\texttt{end for}
-\end{framed}
-
-\textbf{关键思想}：先把$t \in [0, \Delta t]$学好，再学$[\Delta t, 2\Delta t]$，以此类推。这样初始条件的信息可以"逐步传递"到后续时刻，避免了标准PINN中各时刻相互干扰的问题。
-
-\begin{remark}
-因果训练在长时间演化问题（如$t \in [0, 100]$）中特别有效。标准PINN可能完全失效（误差累积爆炸），而因果PINN通过分段学习保持了预测精度。感兴趣的读者可以参考Wang等人2022年的工作\textit{"Respecting causality is all you need for training physics-informed neural networks"}。
-\end{remark}
-
-\begin{exercise}[title = 因果训练的效果]
-对比标准PINN和因果PINN在求解热方程时的表现：
-\begin{enumerate}
-    \item $t \in [0, 1]$的短时间预测
-    \item $t \in [0, 10]$的长时间预测
-\end{enumerate}
-哪种方法在长时间预测上更准确？
-\end{exercise}
-
-% ====================================================================================
-\section{变分视角：Deep Ritz Method}
-% ====================================================================================
-
-到目前为止，我们都在最小化\textbf{PDE残差}。但还有另一条路——最小化\textbf{能量泛函}。
-
-\subsection{从残差最小化到能量最小化}
-
-回顾泊松方程：
-\begin{equation}
-    -\nabla^2 u = f, \quad u|_{\partial\Omega} = 0
-\end{equation}
-
-这个方程等价于最小化能量泛函：
-\begin{equation}
-    J[u] = \frac{1}{2}\int_\Omega |\nabla u|^2 \, dx - \int_\Omega f \cdot u \, dx
-\end{equation}
-
-\begin{theorem}[能量原理]
-$u$是泊松方程的解，当且仅当$u$是能量泛函$J[u]$的极小点。
-\end{theorem}
-
-\begin{proof}
-对$J[u]$求变分。设$v$是任意满足$v|_{\partial\Omega} = 0$的函数，考虑：
-\begin{equation}
-    \frac{d}{d\epsilon}\bigg|_{\epsilon=0} J[u + \epsilon v] = 0
-\end{equation}
-
-计算：
-\begin{align}
-    J[u + \epsilon v] &= \frac{1}{2}\int_\Omega |\nabla u + \epsilon \nabla v|^2 \, dx - \int_\Omega f(u + \epsilon v) \, dx \\
-    &= J[u] + \epsilon \left( \int_\Omega \nabla u \cdot \nabla v \, dx - \int_\Omega fv \, dx \right) + O(\epsilon^2)
-\end{align}
-
-因此：
-\begin{equation}
-    \delta J = \int_\Omega \nabla u \cdot \nabla v \, dx - \int_\Omega fv \, dx = 0
-\end{equation}
-
-利用分部积分（格林第一公式）：
-\begin{equation}
-    \int_\Omega \nabla u \cdot \nabla v \, dx = -\int_\Omega (\nabla^2 u) v \, dx + \underbrace{\int_{\partial\Omega} \frac{\partial u}{\partial n} v \, ds}_{= 0 \text{ （因为 } v|_{\partial\Omega} = 0\text{）}}
-\end{equation}
-
-代入得：
-\begin{equation}
-    \delta J = \int_\Omega (-\nabla^2 u - f) v \, dx = 0
-\end{equation}
-
-由$v$的任意性，$-\nabla^2 u = f$。
-\end{proof}
-
-\subsection{Deep Ritz Method}
-
-\textbf{Deep Ritz Method}的想法是：不最小化残差$|{-\nabla^2 u - f}|^2$，而是最小化能量泛函$J[u_\theta]$。
-
-\begin{equation}
-    \mathcal{L}_{\text{Ritz}}(\theta) = \underbrace{\frac{1}{N}\sum_{i=1}^{N} \left( \frac{1}{2}|\nabla u_\theta(x_i)|^2 - f(x_i) u_\theta(x_i) \right)}_{\text{能量的蒙特卡洛估计}} + \underbrace{\lambda \cdot \frac{1}{M}\sum_{j=1}^{M} |u_\theta(x_j^b)|^2}_{\text{边界惩罚}}
-\end{equation}
-
-\begin{lstlisting}[language=Python, caption={Deep Ritz Method的实现}]
-def compute_ritz_loss(model, x_interior, x_boundary, f_func, lambda_bc=100.0):
-    """
-    Deep Ritz Method的损失函数
-    """
-    # 内部点
-    x = x_interior.requires_grad_(True)
-    u = model(x)
+\begin{tikzpicture}[scale=0.08]
+    % 画一个稀疏矩阵的样子
+    \draw[gray] (0,0) rectangle (50,50);
     
-    # 计算梯度 ∇u
-    grad_u = torch.autograd.grad(
-        outputs=u,
-        inputs=x,
-        grad_outputs=torch.ones_like(u),
-        create_graph=True
-    )[0]
+    % 用随机点表示非零元素
+    \foreach \i in {0,...,49} {
+        \fill[blue] (\i,49-\i) circle (1);
+        \pgfmathsetmacro{\jone}{int(\i+1)}
+        \pgfmathsetmacro{\jtwo}{int(\i+2)}
+        \pgfmathsetmacro{\jthree}{int(\i+5)}
+        \pgfmathsetmacro{\jfour}{int(\i+6)}
+        \ifnum\i<49
+            \fill[blue!50] (\jone,49-\i) circle (0.8);
+            \fill[blue!50] (\i,49-\jone) circle (0.8);
+        \fi
+        \ifnum\i<48
+            \fill[blue!30] (\jtwo,49-\i) circle (0.6);
+            \fill[blue!30] (\i,49-\jtwo) circle (0.6);
+        \fi
+        \ifnum\i<45
+            \fill[blue!20] (\jthree,49-\i) circle (0.5);
+            \fill[blue!20] (\i,49-\jthree) circle (0.5);
+        \fi
+    }
     
-    # 能量泛函: (1/2)|∇u|² - f·u
-    f = f_func(x)
-    energy = 0.5 * torch.sum(grad_u ** 2, dim=1) - f.squeeze() * u.squeeze()
-    loss_energy = torch.mean(energy)
-    
-    # 边界条件
-    u_boundary = model(x_boundary)
-    loss_bc = torch.mean(u_boundary ** 2)
-    
-    total_loss = loss_energy + lambda_bc * loss_bc
-    
-    return total_loss, loss_energy, loss_bc
-\end{lstlisting}
-
-\subsection{Deep Ritz vs 标准PINN}
-
-\begin{table}[htbp]
-\centering
-\caption{Deep Ritz Method与标准PINN的对比}
-\begin{tabular}{l|cc}
-\hline
-& \textbf{标准PINN（残差最小化）} & \textbf{Deep Ritz（能量最小化）} \\
-\hline
-损失函数 & $|{-\nabla^2 u - f}|^2$ & $\frac{1}{2}|\nabla u|^2 - fu$ \\
-需要的导数阶数 & 二阶（$\nabla^2 u$） & 一阶（$\nabla u$） \\
-适用方程类型 & 任意PDE & 有变分形式的PDE \\
-高维扩展性 & 一般 & 更好 \\
-物理直觉 & 方程残差 & 能量最小化 \\
-\hline
-\end{tabular}
-\end{table}
-
-\begin{tcolorbox}[colback=blue!5, colframe=blue!50, title=Deep Ritz的优势]
-\begin{enumerate}
-    \item \textbf{导数阶数降低}：只需要一阶导数，计算更稳定
-    \item \textbf{物理直觉}：对应最小作用量原理——物理系统总是"选择"能量最低的状态
-    \item \textbf{高维友好}：蒙特卡洛积分在高维空间中效率较高
-\end{enumerate}
-\end{tcolorbox}
-
-\subsubsection{实验对比：Deep Ritz vs 标准PINN}
-
-为了验证两种方法的效果，我们用相同的网络结构求解一维泊松方程$-u'' = \pi^2\sin(\pi x)$。
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.95\textwidth]{figs_chap13/deep_ritz_comparison.pdf}
-    \caption{Deep Ritz Method与标准PINN对比。左图：两种方法的解与精确解对比；中图：训练损失演化（注意Deep Ritz的损失是能量值，可以为负）；右图：点误差分布。}
-    \label{fig:deep_ritz}
+    \node at (25,-8) {\small 二维有限元的稀疏刚度矩阵};
+\end{tikzpicture}
 \end{figure}
 
-\textbf{实验结果}（图\ref{fig:deep_ritz}）：
+% ------------------------------------------------------------------------------------
+% ------------------------------------------------------------------------------------
+\section{殊途同归：有限差分与有限元}
+
+在继续深入之前，让我们回答一个常见问题：有限差分法（FDM）和有限元法（FEM）有什么区别？
+
+\subsection{一维情况：完全等价}
+
+考虑一维问题 $-u'' = f$，用 $N$ 个等距节点离散化。
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=1.2]
+    % 左边：FDM
+    \node[font=\bfseries] at (-3, 2) {有限差分 (FDM)};
+    \draw[->] (-5, 0) -- (-1, 0) node[right] {$x$};
+    \foreach \i in {0,1,2,3,4} {
+        \fill (-5+\i, 0) circle (2pt);
+        \node[below] at (-5+\i, -0.2) {\small $x_\i$};
+    }
+    % Taylor展开示意
+    \draw[blue, thick, ->] (-3, 0.3) -- (-4, 0.3);
+    \draw[blue, thick, ->] (-3, 0.3) -- (-2, 0.3);
+    \node[blue, above] at (-3, 0.4) {\small Taylor展开};
+    
+    % 右边：FEM
+    \node[font=\bfseries] at (3, 2) {有限元 (FEM)};
+    \draw[->] (1, 0) -- (5, 0) node[right] {$x$};
+    \foreach \i in {0,1,2,3,4} {
+        \fill (1+\i, 0) circle (2pt);
+    }
+    % 形函数示意
+    \draw[red, thick] (1,0) -- (2,0.8) -- (3,0);
+    \draw[red, thick] (2,0) -- (3,0.8) -- (4,0);
+    \node[red, above] at (3, 0.9) {\small 形函数};
+\end{tikzpicture}
+\caption{有限差分 vs 有限元的离散化方式}
+\end{figure}
+
+\vspace{0.3cm}
+\noindent
+\begin{minipage}[t]{0.48\textwidth}
+\textbf{有限差分的推导}
+
+出发点：Taylor展开近似导数
+\[
+-u''(x_i) \approx -\frac{u_{i+1} - 2u_i + u_{i-1}}{h^2}
+\]
+
+离散方程（第 $i$ 行）：
+\[
+\frac{-u_{i-1} + 2u_i - u_{i+1}}{h^2} = f_i
+\]
+
+系数：$\left[ -\frac{1}{h^2}, \; \frac{2}{h^2}, \; -\frac{1}{h^2} \right]$
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\textbf{有限元的推导}
+
+出发点：弱形式 + 线性形函数
+\[
+K_{ij} = \int \phi_i' \phi_j' dx
+\]
+
+刚度矩阵（第 $i$ 行）：
+\[
+\frac{1}{h} [-1, \quad 2, \quad -1]
+\]
+
+方程：$\frac{-U_{i-1} + 2U_i - U_{i+1}}{h} = hf_i$
+\end{minipage}
+
+\vspace{0.5cm}
+把FEM方程两边除以 $h$：
+\[
+\frac{-U_{i-1} + 2U_i - U_{i+1}}{h^2} = f_i
+\]
+
+\begin{insightbox}
+在一维均匀网格上，线性有限元和中心差分给出\textbf{完全相同}的方程！
+
+这不是巧合——两种方法从不同角度逼近了同一个物理问题。
+\end{insightbox}
+
+
+
+\subsection{二维情况：分道扬镳}
+
+当问题升级到二维，两种方法开始展现本质区别。
+
+\textbf{任务}：在圆形区域 $\Omega$ 上求解 $-\Delta u = f$。
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=1.8]
+    % 左边：FDM
+    \begin{scope}[xshift=-3cm]
+        \node[font=\bfseries] at (0.5, 1.3) {有限差分};
+        % 规则网格
+        \draw[step=0.2, gray!30, thin] (0,0) grid (1.1,1.1);
+        % 真实圆边界
+        \draw[thick, red] (0,1) arc (90:0:1);
+        % 锯齿逼近
+        \draw[blue, thick]
+            (0,1) -- (0.2,1) -- (0.2,0.8) --
+            (0.4,0.8) -- (0.4,0.6) --
+            (0.6,0.6) -- (0.6,0.4) --
+            (0.8,0.4) -- (0.8,0.2) --
+            (1.0,0.2) -- (1.0,0);
+        % 五点差分模板
+        \fill[blue] (0.6,0.4) circle (1pt);
+        \foreach \dx/\dy in {0.2/0, -0.2/0, 0/0.2, 0/-0.2}{
+            \draw[->, thick, blue!60] (0.6,0.4) -- +(\dx,\dy);
+        }
+        \node[red, font=\scriptsize] at (0.5, 1.15) {真实边界};
+        \node[blue, font=\scriptsize] at (0.2, 0.5) {锯齿};
+    \end{scope}
+    
+    % 右边：FEM
+    \begin{scope}[xshift=1.5cm]
+        \node[font=\bfseries] at (0.5, 1.3) {有限元};
+        % 真实圆边界
+        \draw[thick, red] (0,1) arc (90:0:1);
+        % 三角剖分
+        \coordinate (O) at (0,0);
+        \coordinate (B) at (0,1);
+        \coordinate (C) at (0.5,0.866);
+        \coordinate (D) at (0.866,0.5);
+        \coordinate (E) at (1,0);
+        \coordinate (b) at (0,0.5);
+        \coordinate (c) at (0.25,0.433);
+        \coordinate (d) at (0.433,0.25);
+        \coordinate (e) at (0.5,0);
+        
+        \draw[blue] (O) -- (b) -- (c) -- cycle;
+        \draw[blue] (O) -- (c) -- (d) -- cycle;
+        \draw[blue] (O) -- (d) -- (e) -- cycle;
+        \draw[blue] (b) -- (B) -- (C) -- (c) -- cycle;
+        \draw[blue] (c) -- (C) -- (D) -- (d) -- cycle;
+        \draw[blue] (d) -- (D) -- (E) -- (e) -- cycle;
+        
+        % 边界节点
+        \foreach \P in {B,C,D,E} {
+            \fill[red] (\P) circle (1.5pt);
+        }
+        \node[blue, font=\scriptsize] at (0.5, 0.5) {三角形};
+        \node[red, font=\scriptsize] at (0.7, 1.0) {节点在边界上};
+    \end{scope}
+\end{tikzpicture}
+\caption{二维圆形区域的离散化：FDM用锯齿逼近边界，FEM可以精确贴合。}
+\end{figure}
+
 \begin{center}
-\begin{tabular}{c|cc}
-\hline
-方法 & MSE & 备注 \\
-\hline
-标准PINN（残差最小化） & $4.48 \times 10^{-9}$ & 需要二阶导数 \\
-Deep Ritz（能量最小化） & $4.84 \times 10^{-7}$ & 只需一阶导数 \\
-\hline
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{l|p{5cm}|p{5cm}}
+\toprule
+& \textbf{有限差分} & \textbf{有限元} \\
+\midrule
+网格类型 & 结构化（规则方格） & 非结构化（任意三角形） \\
+边界处理 & 锯齿逼近，精度损失 & 节点直接在边界上 \\
+复杂几何 & 困难（需要特殊处理） & 自然（只需网格生成） \\
+实现难度 & 简单（数组索引） & 复杂（邻接关系） \\
+适用场景 & 规则区域（图像、芯片） & 复杂几何（飞机、骨骼） \\
+\bottomrule
 \end{tabular}
 \end{center}
 
-\textbf{观察}：
+\begin{physicalmeaning}
+\textbf{为什么FEM统治了工程计算？}
+
+现实世界的几何很少是规则的：飞机机翼是流线型的，人体骨骼是弯曲的，汽车车身是复杂曲面。
+
+有限元的三角形/四面体网格可以\textbf{贴合任意几何形状}，这是它在工程中广泛应用的根本原因。
+
+代价是：需要维护复杂的网格数据结构和邻接关系。
+\end{physicalmeaning}
+
+% ------------------------------------------------------------------------------------
+\section{连续性的秘密}
+
+\subsection{为什么要求连续？}
+
+在前面的推导中，我们默默假设了 $u_h(x)$ 是连续的。但为什么？
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=1.2]
+    % 上半部分：连续函数
+    \begin{scope}[yshift=2cm]
+        \draw[->] (0,0) -- (4,0) node[right] {$x$};
+        \draw[->] (0,0) -- (0,1.5);
+        \draw[blue, very thick] (0.5, 0.3) -- (2, 1.2) -- (3.5, 0.8);
+        \node[blue] at (2, 1.5) {连续折线};
+        \node[blue, align=center] at (5, 0.8) {导数有限 \\ 能量有限 $\checkmark$};
+    \end{scope}
+    
+    % 下半部分：不连续函数
+    \begin{scope}
+        \draw[->] (0,0) -- (4,0) node[right] {$x$};
+        \draw[->] (0,0) -- (0,1.5);
+        \draw[red, very thick] (0.5, 0.3) -- (2, 1.2);
+        \draw[red, very thick] (2, 0.4) -- (3.5, 0.8);
+        \draw[red, dashed] (2, 0.4) -- (2, 1.2);
+        \node[red] at (2.3, 0.8) {Jump!};
+        \node[red, align=center] at (5, 0.8) {导数 $= \infty$ \\ 能量 $= \infty$ $\times$};
+    \end{scope}
+\end{tikzpicture}
+\caption{连续性与能量的关系}
+\end{figure}
+
+\textbf{数学解释}：我们的弱形式包含梯度项 $\int |\nabla u|^2 dx$（能量）。如果 $u$ 在某点有跳跃（不连续），导数 $u'$ 在该点就变成 Dirac $\delta$ 函数（无穷大），于是能量 $\int (u')^2 dx = \int \delta^2 dx = \infty$。物理上，无穷大的能量是不允许的。
+
+\begin{keyformula}[title=$C^0$ 连续性]
+我们要求有限元解空间 $V_h \subset C^0(\Omega)$，即：
+
+\textbf{函数值连续，但导数可以不连续}
+
+换句话说：$u_h$ 可以“折”，但不能“断”。
+\end{keyformula}
+
+\subsection{线性单元如何保证连续？}
+
+一个关键问题：我们只要求\textbf{节点值}相等，怎么能保证整条公共边上都连续？
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=1.5]
+    % 两个三角形共享边
+    \coordinate (N1) at (0,1);
+    \coordinate (N2) at (0,-1);
+    \coordinate (N3) at (-1.5, 0);
+    \coordinate (N4) at (1.5, 0);
+    
+    \draw[fill=blue!10] (N1) -- (N2) -- (N3) -- cycle;
+    \draw[fill=orange!10] (N1) -- (N2) -- (N4) -- cycle;
+    
+    % 共享边
+    \draw[ultra thick, red] (N1) -- (N2);
+    
+    % 节点标注
+    \node[above] at (N1) {$U_1$};
+    \node[below] at (N2) {$U_2$};
+    \node[left] at (N3) {$U_3$};
+    \node[right] at (N4) {$U_4$};
+    
+    \node[blue] at (-0.7, 0) {单元 A};
+    \node[orange] at (0.7, 0) {单元 B};
+    
+    % 边上的点
+    \fill[black] (0, 0.3) circle (1.5pt) node[right] {$P$};
+\end{tikzpicture}
+\caption{两个三角形共享边 1-2}
+\end{figure}
+
+\textbf{几何证明}：
+
 \begin{enumerate}
-    \item 对于这个简单的一维问题，标准PINN精度更高。这是因为残差最小化直接约束了方程的满足程度。
-    \item Deep Ritz的损失值可以为负（能量泛函可以是负值），这是正常的。
-    \item Deep Ritz的优势在高维问题中才能体现——当空间维度很高时，只需要一阶导数可以显著减少计算量。
+    \item 在三角形 A 内部，$u_h$ 是一个\textbf{平面}（线性函数）
+    
+    \item 这个平面在边 1-2 上截出一条\textbf{直线}
+    
+    \item 这条直线由两个端点值 $U_1$ 和 $U_2$ \textbf{唯一确定}（两点定一线！）
+    
+    \item 同样，三角形 B 在边 1-2 上也截出一条直线，也由 $U_1$ 和 $U_2$ 确定
+    
+    \item 两条直线端点相同 $\Rightarrow$ 两条直线重合！
 \end{enumerate}
 
-% ====================================================================================
-\section{逆问题与物理发现}
-% ====================================================================================
+\begin{insightbox}
+\textbf{线性单元连续性的关键}：两点确定一条直线。
 
-\subsection{正问题与逆问题}
+只要共享节点的值相同，整条公共边就自动连续——就像\textbf{合页(Hinge)}一样严丝合缝。
 
-到目前为止，我们讨论的都是\textbf{正问题}：已知方程（包括所有参数），求解。
+这就是为什么线性单元只需要在顶点处设置自由度。
+\end{insightbox}
 
-\textbf{逆问题}则反过来：已知（部分）解的观测数据，反推方程中的未知参数。
+\textbf{高阶单元怎么办？}
 
-\begin{example}[热扩散系数反演]
-考虑带未知扩散系数的热方程：
+如果是二次单元，边上的函数是抛物线。两点定不了抛物线！
+
+解决方案：在边的中点增加一个节点，三点定抛物线。
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=1.2]
+    % 线性单元
+    \begin{scope}
+        \node[font=\bfseries] at (1, 1.8) {线性单元};
+        \draw[thick] (0,0) -- (2,0) -- (1,1.5) -- cycle;
+        \fill[blue] (0,0) circle (3pt);
+        \fill[blue] (2,0) circle (3pt);
+        \fill[blue] (1,1.5) circle (3pt);
+        \node[below] at (1, -0.3) {3个节点};
+    \end{scope}
+    
+    % 二次单元
+    \begin{scope}[xshift=5cm]
+        \node[font=\bfseries] at (1, 1.8) {二次单元};
+        \draw[thick] (0,0) -- (2,0) -- (1,1.5) -- cycle;
+        % 顶点
+        \fill[blue] (0,0) circle (3pt);
+        \fill[blue] (2,0) circle (3pt);
+        \fill[blue] (1,1.5) circle (3pt);
+        % 边中点
+        \fill[red] (1,0) circle (3pt);
+        \fill[red] (1.5,0.75) circle (3pt);
+        \fill[red] (0.5,0.75) circle (3pt);
+        \node[below] at (1, -0.3) {6个节点};
+    \end{scope}
+\end{tikzpicture}
+\caption{线性单元（3节点）vs 二次单元（6节点）}
+\end{figure}
+
+\subsection{一维二次单元详解}
+
+为了理解高阶单元，让我们先看最简单的情况：一维二次单元。
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=1.5]
+    % 坐标轴
+    \draw[->] (-0.5, 0) -- (4.5, 0) node[right] {$x$};
+    \draw[->] (0, -0.3) -- (0, 1.5);
+    
+    % 三个节点
+    \fill[blue] (0, 0) circle (3pt) node[below] {$x_1 = 0$};
+    \fill[red] (2, 0) circle (3pt) node[below] {$x_2 = h/2$};
+    \fill[blue] (4, 0) circle (3pt) node[below] {$x_3 = h$};
+    
+    % 三个形函数
+    % φ_1: 在x_1=1, 其他=0
+    \draw[blue, thick, domain=0:4, samples=50] plot (\x, {((\x-2)*(\x-4))/((-2)*(-4))});
+    \node[blue] at (0.3, 1.2) {$\phi_1$};
+    
+    % φ_2: 在x_2=1, 其他=0
+    \draw[red, thick, domain=0:4, samples=50] plot (\x, {((\x-0)*(\x-4))/((2-0)*(2-4))});
+    \node[red] at (2, 1.3) {$\phi_2$};
+    
+    % φ_3: 在x_3=1, 其他=0
+    \draw[green!60!black, thick, domain=0:4, samples=50] plot (\x, {((\x-0)*(\x-2))/((4-0)*(4-2))});
+    \node[green!60!black] at (3.7, 1.2) {$\phi_3$};
+    
+    % 高度标记
+    \draw[dashed, gray] (0, 1) -- (0.2, 1);
+    \node[left, gray] at (0, 1) {\small 1};
+    \draw[dashed, gray] (2, 1) -- (2.2, 1);
+    \draw[dashed, gray] (4, 1) -- (4.2, 1);
+\end{tikzpicture}
+\caption{一维二次单元的三个形函数：都是抛物线！}
+\end{figure}
+
+\textbf{二次形函数的公式}
+
+用拉格朗日插值构造（三点定抛物线）：
+
+\begin{align}
+\phi_1(x) &= \frac{(x - x_2)(x - x_3)}{(x_1 - x_2)(x_1 - x_3)} = \frac{(x - h/2)(x - h)}{(0 - h/2)(0 - h)} = \frac{2(x - h/2)(x - h)}{h^2} \\[5pt]
+\phi_2(x) &= \frac{(x - x_1)(x - x_3)}{(x_2 - x_1)(x_2 - x_3)} = \frac{(x - 0)(x - h)}{(h/2)(- h/2)} = -\frac{4x(x - h)}{h^2} \\[5pt]
+\phi_3(x) &= \frac{(x - x_1)(x - x_2)}{(x_3 - x_1)(x_3 - x_2)} = \frac{(x - 0)(x - h/2)}{(h)(h/2)} = \frac{2x(x - h/2)}{h^2}
+\end{align}
+
+可以验证：$\phi_i(x_j) = \delta_{ij}$（在自己的节点上等于1，其他节点上等于0）。
+
+\begin{example}[二次单元的刚度矩阵]
+计算一维二次单元的刚度矩阵 $K_{ij} = \int_0^h \phi_i'(x) \phi_j'(x) dx$。
+
+\textbf{Step 1: 求导}
+
+先对形函数求导（注意这次导数不再是常数了！）：
+\begin{align}
+\phi_1'(x) &= \frac{2(2x - 3h/2)}{h^2} = \frac{4x - 3h}{h^2} \\[3pt]
+\phi_2'(x) &= \frac{-4(2x - h)}{h^2} = \frac{-8x + 4h}{h^2} \\[3pt]
+\phi_3'(x) &= \frac{2(2x - h/2)}{h^2} = \frac{4x - h}{h^2}
+\end{align}
+
+\textbf{Step 2: 计算 $K_{11}$}
+\begin{align}
+K_{11} &= \int_0^h (\phi_1')^2 dx = \int_0^h \frac{(4x - 3h)^2}{h^4} dx \\
+&= \frac{1}{h^4} \int_0^h (16x^2 - 24hx + 9h^2) dx \\
+&= \frac{1}{h^4} \left[ \frac{16x^3}{3} - 12hx^2 + 9h^2 x \right]_0^h \\
+&= \frac{1}{h^4} \left( \frac{16h^3}{3} - 12h^3 + 9h^3 \right) = \frac{1}{h^4} \cdot \frac{7h^3}{3} = \boxed{\frac{7}{3h}}
+\end{align}
+
+\textbf{Step 3: 计算 $K_{12}$}
+\begin{align}
+K_{12} &= \int_0^h \phi_1' \phi_2' dx = \int_0^h \frac{(4x - 3h)(-8x + 4h)}{h^4} dx \\
+&= \frac{1}{h^4} \int_0^h (-32x^2 + 40hx - 12h^2) dx \\
+&= \frac{1}{h^4} \left[ -\frac{32x^3}{3} + 20hx^2 - 12h^2 x \right]_0^h \\
+&= \frac{1}{h^4} \left( -\frac{32h^3}{3} + 20h^3 - 12h^3 \right) = \frac{1}{h^4} \cdot \left(-\frac{8h^3}{3}\right) = \boxed{-\frac{8}{3h}}
+\end{align}
+
+\textbf{完整的刚度矩阵}（类似计算其他元素后）：
 \begin{equation}
-    \frac{\partial u}{\partial t} = D \frac{\partial^2 u}{\partial x^2}
+K^{(e)} = \frac{1}{3h} \begin{pmatrix}
+7 & -8 & 1 \\
+-8 & 16 & -8 \\
+1 & -8 & 7
+\end{pmatrix}
 \end{equation}
-
-我们在某些点$(x_i, t_i)$测量了$u$的值$u_i^{\text{obs}}$，想要反推扩散系数$D$。
-
-这在实际中很常见：材料的热扩散系数往往需要通过实验测定。
 \end{example}
 
-\subsection{PINN求解逆问题}
+\begin{physicalmeaning}
+对比线性单元和二次单元的刚度矩阵：
 
-PINN天然适合逆问题！只需将$D$也作为可学习参数：
-
-\begin{equation}
-    \mathcal{L}(\theta, D) = \underbrace{\sum_i |u_\theta(x_i, t_i) - u_i^{\text{obs}}|^2}_{L_{\text{data}}：\text{拟合观测数据}} + \underbrace{\lambda \sum_j |r_D(x_j, t_j)|^2}_{L_{\text{PDE}}：\text{PDE残差}}
-\end{equation}
-
-其中残差$r_D = \partial_t u_\theta - D \partial_{xx} u_\theta$依赖于待定参数$D$。
-
-同时优化$\theta$和$D$，最终得到：
-\begin{itemize}
-    \item 网络$u_\theta$逼近真实解
-    \item 参数$D$收敛到真实扩散系数
-\end{itemize}
-
-\begin{lstlisting}[language=Python, caption={PINN求解逆问题}]
-class InversePINN(nn.Module):
-    def __init__(self, layers):
-        super().__init__()
-        
-        # 神经网络逼近u
-        self.net = PINN(layers)
-        
-        # 未知物理参数（可学习）
-        self.D = nn.Parameter(torch.tensor([0.5]))  # 初始猜测
-    
-    def forward(self, x, t):
-        xt = torch.cat([x, t], dim=1)
-        return self.net(xt)
-
-def train_inverse_pinn(model, x_obs, t_obs, u_obs, num_epochs=10000):
-    """
-    训练逆问题PINN
-    
-    参数:
-        x_obs, t_obs: 观测点的坐标
-        u_obs: 观测值
-    """
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-    
-    D_history = []
-    
-    for epoch in range(num_epochs):
-        # 数据拟合损失
-        u_pred = model(x_obs, t_obs)
-        loss_data = torch.mean((u_pred - u_obs) ** 2)
-        
-        # PDE残差损失
-        x_coll = torch.rand(200, 1, requires_grad=True)
-        t_coll = torch.rand(200, 1, requires_grad=True)
-        
-        u = model(x_coll, t_coll)
-        
-        u_t = torch.autograd.grad(u, t_coll, torch.ones_like(u), create_graph=True)[0]
-        u_x = torch.autograd.grad(u, x_coll, torch.ones_like(u), create_graph=True)[0]
-        u_xx = torch.autograd.grad(u_x, x_coll, torch.ones_like(u_x), create_graph=True)[0]
-        
-        # PDE残差: u_t - D * u_xx
-        residual = u_t - model.D * u_xx
-        loss_pde = torch.mean(residual ** 2)
-        
-        # 总损失
-        loss = loss_data + loss_pde
-        
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        
-        D_history.append(model.D.item())
-        
-        if (epoch + 1) % 1000 == 0:
-            print(f"Epoch {epoch+1}: Loss = {loss.item():.2e}, D = {model.D.item():.4f}")
-    
-    return D_history
-
-# 使用示例
-# 假设真实 D = 0.1
-D_true = 0.1
-
-# 生成合成观测数据（实际应用中来自实验）
-# ...
-
-# 训练
-model = InversePINN([2, 50, 50, 50, 1])
-D_history = train_inverse_pinn(model, x_obs, t_obs, u_obs)
-
-print(f"\n真实D = {D_true}, 估计D = {model.D.item():.4f}")
-\end{lstlisting}
-
-\subsubsection{实验结果：热扩散系数反演}
-
-我们生成合成数据来验证逆问题PINN的效果。热方程的精确解为$u(x,t) = e^{-D\pi^2 t}\sin(\pi x)$，设真实扩散系数$D_{\text{true}} = 0.1$，在时空域随机采样100个观测点（添加1\%高斯噪声）。
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.95\textwidth]{figs_chap13/inverse_problem.pdf}
-    \caption{逆问题PINN反演扩散系数。左图：反演的$D$值随训练收敛到真实值；中图：训练损失曲线；右图：$t=0.2$时刻预测解与精确解对比（绿色点为观测数据）。}
-    \label{fig:inverse_problem}
-\end{figure}
-
-\textbf{实验结果}（图\ref{fig:inverse_problem}）：
-\begin{itemize}
-    \item \textbf{反演精度}：训练5000轮后，反演得到$D = 0.0995$，相对误差仅$0.54\%$。
-    \item \textbf{收敛行为}：$D$的估计值从初始猜测0.5快速下降，约1000轮后接近真实值0.1，后续逐渐稳定。
-    \item \textbf{解的重构}：PINN不仅反演出物理参数，还同时学会了整个解的场（红色虚线与蓝色实线高度吻合）。
-\end{itemize}
-
-这个例子展示了PINN在\textbf{物理发现}方面的潜力：给定足够的观测数据，我们可以同时学习未知的物理定律（方程中的参数）和系统的状态（解本身）。
-
-\begin{exercise}[title = 逆问题的可辨识性]
-考虑以下问题：如果观测数据$\{u_i^{\text{obs}}\}$只在很少的几个点上给出，参数$D$能否被唯一确定？
-
-设计实验：改变观测点的数量（如10, 50, 200个），观察$D$估计的方差如何变化。
-\end{exercise}
-
-% ====================================================================================
-\section{综合实验：二维泊松方程}
-% ====================================================================================
-
-为了让读者对PINN有更直观的认识，我们展示一个完整的二维问题求解实例。
-
-\subsection{问题设定}
-
-考虑二维泊松方程：
-\begin{equation}
-    -\nabla^2 u = -\frac{\partial^2 u}{\partial x^2} - \frac{\partial^2 u}{\partial y^2} = 2\pi^2 \sin(\pi x)\sin(\pi y), \quad (x, y) \in (0, 1)^2
-\end{equation}
-\begin{equation}
-    u = 0, \quad (x, y) \in \partial[0, 1]^2 \quad \text{（四条边界上）}
-\end{equation}
-
-这个方程的解析解为：
-\begin{equation}
-    u(x, y) = \sin(\pi x)\sin(\pi y)
-\end{equation}
-
-\subsection{实验结果}
-
-我们使用硬约束PINN（距离函数$B(x,y) = x(1-x)y(1-y)$）求解此问题，网络结构为$[2, 64, 64, 64, 1]$，训练15000个epoch。
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.98\textwidth]{figs_chap13/pinn_poisson_2d.pdf}
-    \caption{二维泊松方程PINN求解结果。上排从左到右：精确解3D视图、PINN预测3D视图、绝对误差3D视图；下排从左到右：精确解等高线、PINN预测等高线、训练损失曲线。}
-    \label{fig:pinn_2d}
-\end{figure}
-
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.98\textwidth]{figs_chap13/pinn_poisson_2d_slices.pdf}
-    \caption{二维泊松方程的切片对比。左图：$x=0.5$处沿$y$方向的截面对比；右图：$y=0.5$处沿$x$方向的截面对比。两个截面均显示PINN预测（红色虚线）与精确解（蓝色实线）高度吻合。}
-    \label{fig:pinn_2d_slices}
-\end{figure}
-
-从图\ref{fig:pinn_2d}和图\ref{fig:pinn_2d_slices}中可以看到：
-
-\begin{enumerate}
-    \item \textbf{全局解的高质量逼近}：PINN预测的等高线与解析解几乎完全重合，3D表面形态一致。
-    \item \textbf{误差分布}：最大误差约$2.0 \times 10^{-4}$，MSE为$1.0 \times 10^{-8}$，精度很高。
-    \item \textbf{边界条件精确满足}：由于使用硬约束，四条边界上的值严格为零。
-\end{enumerate}
-
-\subsection{数值对比}
-
-下表给出了若干典型点上的数值对比：
-
-\begin{table}[htbp]
+\vspace{0.3cm}
+\begin{minipage}[t]{0.45\textwidth}
 \centering
-\caption{二维泊松方程：PINN预测与解析解的数值对比}
-\label{tab:pinn_2d_comparison}
-\begin{tabular}{c|ccc}
-\hline
-$(x, y)$ & 解析解 & PINN预测 & 绝对误差 \\
-\hline
-$(0.0, 0.0)$ & 0.0000000 & 0.0000000 & 0（边界） \\
-$(0.5, 0.0)$ & 0.0000000 & 0.0000000 & 0（边界） \\
-$(0.25, 0.25)$ & 0.5000000 & 0.4999527 & $4.7 \times 10^{-5}$ \\
-$(0.5, 0.5)$ & 1.0000000 & 0.9998640 & $1.4 \times 10^{-4}$ \\
-$(0.75, 0.75)$ & 0.5000000 & 0.4998326 & $1.7 \times 10^{-4}$ \\
-$(0.25, 0.75)$ & 0.5000000 & 0.4998247 & $1.8 \times 10^{-4}$ \\
-\hline
-\multicolumn{3}{c|}{MSE} & $1.0 \times 10^{-8}$ \\
-\hline
+\textbf{线性单元}（2节点）
+\[
+K^{(e)} = \frac{1}{h} \begin{pmatrix}
+1 & -1 \\
+-1 & 1
+\end{pmatrix}
+\]
+只有相邻节点耦合
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.45\textwidth}
+\centering
+\textbf{二次单元}（3节点）
+\[
+K^{(e)} = \frac{1}{3h} \begin{pmatrix}
+7 & -8 & 1 \\
+-8 & 16 & -8 \\
+1 & -8 & 7
+\end{pmatrix}
+\]
+三个节点都有耦合！
+\end{minipage}
+
+\vspace{0.3cm}
+注意二次单元中 $K_{13} = \frac{1}{3h} \neq 0$：端点1和端点3虽然不相邻，但通过中间的抛物线“感受”到彼此！
+\end{physicalmeaning}
+
+\begin{example}[精度提升的威力]
+用二次单元求解 $-u'' = 1$，$u(0) = u(1) = 0$。
+
+只用\textbf{2个二次单元}（5个节点：$x = 0, 0.25, 0.5, 0.75, 1$）：
+
+\begin{center}
+\begin{tabular}{c|c|c|c}
+\toprule
+$x$ & 数值解 $U$ & 精确解 $u = \frac{x(1-x)}{2}$ & 误差 \\
+\midrule
+0 & 0 & 0 & 0 \\
+0.25 & 0.09375 & 0.09375 & 0 \\
+0.5 & 0.125 & 0.125 & 0 \\
+0.75 & 0.09375 & 0.09375 & 0 \\
+1 & 0 & 0 & 0 \\
+\bottomrule
 \end{tabular}
-\end{table}
+\end{center}
 
-从表\ref{tab:pinn_2d_comparison}可以看到：
-\begin{itemize}
-    \item 边界点的误差严格为零（硬约束保证）
-    \item 解的最大值点$(0.5, 0.5)$处误差为$1.4 \times 10^{-4}$，相对误差仅0.014\%
-    \item 整体MSE达到$10^{-8}$量级，说明PINN在二维问题上同样有效
-\end{itemize}
+误差为\textbf{零}！因为精确解是二次多项式，而二次单元可以精确表示二次多项式。
 
-\begin{tcolorbox}[colback=green!5, colframe=green!50, title=从一维到二维的扩展]
-对比一维和二维实验，我们发现：
-\begin{itemize}
-    \item 代码结构基本相同，只需修改输入维度和导数计算
-    \item 二维问题需要更多的配点（1000个 vs 100个）和训练epoch
-    \item 硬约束在二维同样有效：$B(x,y) = x(1-x)y(1-y)$保证四边界为零
-    \item 精度仍然很高，说明PINN具有良好的维度扩展性
-\end{itemize}
-\end{tcolorbox}
+这叫做\textbf{多项式精确性}：$p$阶单元可以精确表示$p$阶及以下的多项式。
+\end{example}
 
-% ====================================================================================
+\begin{insightbox}
+\textbf{高阶单元的代价与收益}：代价是每个单元的节点数增加（线性 3 个 $\to$ 二次 6 个），单元刚度矩阵更大、计算量增加，形函数也更复杂、需要数值积分。收益是相同网格下精度大幅提高，收敛速度从 $O(h^2)$ 提高到 $O(h^3)$，对于光滑解常常“事半功倍”。工程中的经验法则：对于光滑问题，用少量高阶单元往往比大量低阶单元更高效！
+\end{insightbox}
+% ------------------------------------------------------------------------------------
+\section{全局视角：帐篷函数的叠加}
+
+\subsection{从单元思维到全局思维}
+
+前面我们一直从“拼装单元”的角度理解有限元。现在换个视角：
+
+与其说是“把单元拼起来”，不如说是“把全局基函数叠加起来”。
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.7, x={(1cm,0cm)}, y={(0.5cm,0.4cm)}, z={(0cm,1cm)}]
+    % 中心点
+    \coordinate (C) at (0,0,0);
+    \coordinate (Top) at (0,0,2.5);
+    
+    % 周围一圈点 (六边形)
+    \foreach \i in {0, 60, ..., 300} {
+        \coordinate (P\i) at ({2.5*cos(\i)}, {2.5*sin(\i)}, 0);
+        \draw[gray] (C) -- (P\i);
+        \draw[blue, thick] (Top) -- (P\i);
+    }
+    % 连外圈
+    \draw[gray] (P0)--(P60)--(P120)--(P180)--(P240)--(P300)--cycle;
+    
+    % 填充几个面
+    \fill[blue!20, opacity=0.5] (P0)--(Top)--(P60)--cycle;
+    \fill[blue!30, opacity=0.5] (P60)--(Top)--(P120)--cycle;
+    \fill[blue!15, opacity=0.5] (P120)--(Top)--(P180)--cycle;
+    
+    \node[above, red, font=\bfseries] at (Top) {$\Phi_i = 1$};
+    \node[below] at (C) {节点 $i$};
+    \node[gray] at (3, 0, 0) {$\Phi_i = 0$};
+\end{tikzpicture}
+\caption{全局形函数 $\Phi_i$：一个以节点 $i$ 为顶点的“帐篷”}
+\end{figure}
+
+全局形函数 $\Phi_i$ 在节点 $i$ 处取值为 1，在所有邻居节点处取值为 0，在其他地方也是 0（局部支撑），形状像一个多面体的“帐篷”或“金字塔”。有限元解可以写成：
+\begin{equation}
+u_h(x) = \sum_{i=1}^{N} U_i \Phi_i(x)
+\end{equation}
+
+这就是 $N$ 个帐篷高低错落地叠加在一起！
+
+\begin{physicalmeaning}
+\textbf{连续性的本质}：
+
+每个全局基函数 $\Phi_i$ 本身都是连续的（帐篷布没有破洞）。
+
+连续函数的线性组合还是连续函数。
+
+所以 $u_h = \sum U_i \Phi_i$ 必然是连续的！
+
+“节点共享”的本质，是我们定义了\textbf{跨越多个单元的全局基函数}。
+\end{physicalmeaning}
+
+\subsection{稀疏性的来源}
+
+刚度矩阵为什么是稀疏的？
+
+\begin{equation}
+K_{ij} = \int_\Omega \nabla\Phi_i \cdot \nabla\Phi_j \, dx
+\end{equation}
+
+关键观察：$\Phi_i$ 和 $\Phi_j$ 只在它们的支撑区域重叠时，积分才非零！
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=1.5]
+    % 中心点 i
+    \coordinate (Ni) at (0,0);
+    
+    % i 的影响范围
+    \fill[red!15] (1,0) -- (0.5, 0.866) -- (-0.5, 0.866) -- (-1,0) -- (-0.5, -0.866) -- (0.5, -0.866) -- cycle;
+    
+    % 画中心点
+    \fill[red] (Ni) circle (2.5pt);
+    \node[red, below=3pt] at (Ni) {$U_i$};
+    
+    % 邻居节点
+    \foreach \angle/\idx in {0/1, 60/2, 120/3, 180/4, 240/5, 300/6} {
+        \coordinate (Nj\idx) at (\angle:1);
+        \draw[thick, gray] (Ni) -- (Nj\idx);
+        \fill[blue] (Nj\idx) circle (2pt);
+    }
+    
+    % 远处的点
+    \coordinate (Nk) at (1.8, 0.8);
+    \fill[black!50] (Nk) circle (2pt);
+    \node[right, font=\small] at (Nk) {$U_k$（非邻居）};
+    
+    \draw[dashed, gray] (Ni) -- (Nk);
+    \node[font=\scriptsize, gray] at (1.2, 0.5) {$K_{ik} = 0$};
+\end{tikzpicture}
+\caption{节点 $i$ 只与直接相邻的节点耦合}
+\end{figure}
+
+如果节点 $i$ 和 $j$ 直接相邻（有边相连），$\Phi_i$ 和 $\Phi_j$ 重叠，$K_{ij} \neq 0$；如果节点 $i$ 和 $j$ 不相邻，$\Phi_i$ 和 $\Phi_j$ 不重叠，$K_{ij} = 0$。
+
+\begin{insightbox}
+\textbf{稀疏性的物理意义}：
+
+即使网格有100万个节点，每个节点也只与周围约6-8个邻居耦合。
+
+刚度矩阵的每一行只有约7个非零元素（自己 + 6个邻居）。
+
+这就是为什么我们能求解大规模有限元问题——矩阵虽大，但几乎全是零！
+\end{insightbox}
+
+% ------------------------------------------------------------------------------------
+\section{与优化的联系}
+
+让我们从拉格朗日乘子的角度重新审视有限元。
+
+\subsection{有限元 = 能量最小化}
+
+回顾一下有限元的推导路径：
+
+\begin{center}
+\begin{tikzpicture}[node distance=3.25cm, auto,
+    block/.style={rectangle, draw, fill=blue!10, text width=2.5cm, text centered, rounded corners, minimum height=1.2cm, font=\small}]
+    \node[block] (pde) {PDE\\[2pt]$-\Delta u = f$};
+    \node[block, right of=pde] (var) {变分问题\\[2pt]$\min J[u]$};
+    \node[block, right of=var] (weak) {弱形式\\[2pt]$\int \nabla u \cdot \nabla v = \int fv$};
+    \node[block, right of=weak] (lin) {线性方程\\[2pt]$KU = F$};
+
+    \draw[->, thick] (pde) -- (var);
+    \draw[->, thick] (var) -- (weak);
+    \draw[->, thick] (weak) -- (lin);
+\end{tikzpicture}
+\end{center}
+
+有限元方程 $KU = F$ 其实是以下优化问题的\textbf{一阶最优性条件}：
+
+\begin{equation}
+\min_U \quad J(U) = \frac{1}{2}U^\top K U - F^\top U
+\end{equation}
+
+求导：$\nabla_U J = KU - F = 0 \quad \Rightarrow \quad KU = F$
+
+\begin{physicalmeaning}
+$J(U) = \frac{1}{2}U^\top KU - F^\top U$ 的物理意义：$\frac{1}{2}U^\top KU$ 是系统的内部能量（弹性势能、热能等），$F^\top U$ 是外力做的功，两者之差 $J(U)$ 就是总势能。\textbf{有限元求解的本质}是找到使总势能最小的状态，这与自然界的规律一致——系统总是趋向于能量最低的平衡态！
+\end{physicalmeaning}
+
+\subsection{约束处理的统一视角}
+
+现在，边界条件可以被理解为\textbf{约束}：
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{c|c|c}
+\toprule
+\textbf{优化概念} & \textbf{有限元对应} & \textbf{物理意义} \\
+\midrule
+决策变量 $U$ & 节点值 $U_i$ & 温度/位移 \\
+目标函数 $J(U)$ & $\frac{1}{2}U^\top KU - F^\top U$ & 总势能 \\
+等式约束 $CU = g$ & Dirichlet 边界条件 & 固定边界 \\
+拉格朗日乘子 $\lambda$ & 边界反力/热流 & 约束力 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+带边界条件的有限元问题：
+\begin{align}
+\min_U \quad & \frac{1}{2}U^\top K U - F^\top U \\
+\text{s.t.} \quad & U_i = g_i \quad \text{（边界节点）}
+\end{align}
+
+拉格朗日函数：
+\begin{equation}
+\mathcal{L}(U, \lambda) = \frac{1}{2}U^\top K U - F^\top U + \sum_{i \in \text{边界}} \lambda_i (U_i - g_i)
+\end{equation}
+
+\begin{keytheorem}[title=乘子的物理意义]
+有限元中的拉格朗日乘子 $\lambda_i$ = 边界节点 $i$ 处的\textbf{反力}（或热流）。
+
+它告诉我们：\textbf{为了维持边界条件，需要施加多大的外力}。
+\end{keytheorem}
+
+\begin{example}[悬臂梁]
+考虑一端固定的悬臂梁，固定端位移为零：$U_1 = 0$。
+
+拉格朗日乘子 $\lambda_1$ 就是固定端的支反力——墙壁对梁的作用力。
+
+如果放松约束（允许 $U_1$ 有微小位移 $\delta U_1$），最小总势能会改变 $-\lambda_1\, \delta U_1$——这正是第1章的约定 $dJ^*/dg = -\lambda$：乘子就是影子价格。
+\end{example}
+\review{第5章}{在第5章，乘子 $\lambda$ 给出约束力（绳子的张力、斜面的支持力）。这里的 $\lambda_1$ 是墙对梁的支反力——同一个东西，只是从“连续体”换成了“离散节点”。}
+
+% ------------------------------------------------------------------------------------
+\section{打破传统：间断有限元初探}
+
+前面我们花了很大功夫保证有限元解的连续性。但有没有可能\textbf{故意让它不连续}？
+
+\subsection{一个大胆的想法}
+
+传统有限元的“痛点”都来自节点共享：必须维护复杂的节点共享关系，网格生成困难（要保证相邻单元节点对齐），也难以并行化（单元之间有耦合）。\textbf{新思路}是让每个单元拥有\textbf{独立的节点}，然后用\textbf{约束}把它们“缝合”起来！
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=1.5]
+    % 左边：传统FEM
+    \begin{scope}
+        \node[font=\bfseries] at (0.75, 1.5) {传统 FEM};
+        \coordinate (A) at (0,0);
+        \coordinate (B) at (1.5,0);
+        \coordinate (C) at (0.75, 1.2);
+        \coordinate (D) at (2.25, 1.2);
+        
+        \draw[thick, fill=blue!10] (A)--(B)--(C)--cycle;
+        \draw[thick, fill=orange!10] (B)--(D)--(C)--cycle;
+        
+        \fill[red] (B) circle (2pt) node[below]{$U_2$};
+        \fill[red] (C) circle (2pt) node[above]{$U_3$};
+        
+        \node[align=center, font=\scriptsize] at (0.75, -0.5) {共享节点\\$U_2, U_3$ 只有一份};
+    \end{scope}
+    
+    % 右边：间断FEM
+    \begin{scope}[xshift=4cm]
+        \node[font=\bfseries] at (0.75, 1.5) {间断 FEM};
+        % 左单元
+        \coordinate (A) at (0,0);
+        \coordinate (B1) at (1.4,0);
+        \coordinate (C1) at (0.65, 1.2);
+        \draw[thick, fill=blue!10] (A)--(B1)--(C1)--cycle;
+        
+        % 右单元（稍微拉开）
+        \coordinate (B2) at (1.6,0);
+        \coordinate (C2) at (0.85, 1.2);
+        \coordinate (D) at (2.35, 1.2);
+        \draw[thick, fill=orange!10] (B2)--(D)--(C2)--cycle;
+        
+        \fill[blue] (B1) circle (2pt) node[below left=-2pt, font=\scriptsize]{$U_2^{(1)}$};
+        \fill[blue] (C1) circle (2pt) node[above left=-2pt, font=\scriptsize]{$U_3^{(1)}$};
+        \fill[orange] (B2) circle (2pt) node[below right=-2pt, font=\scriptsize]{$U_2^{(2)}$};
+        \fill[orange] (C2) circle (2pt) node[above right=-2pt, font=\scriptsize]{$U_3^{(2)}$};
+        
+        \draw[<->, dashed, red] (B1)--(B2);
+        \node[red, font=\scriptsize] at (1.5, -0.3) {Gap};
+        
+        \node[align=center, font=\scriptsize] at (0.75, -0.5) {独立节点\\需要约束缝合};
+    \end{scope}
+\end{tikzpicture}
+\caption{传统FEM（共享节点）vs 间断FEM（独立节点）}
+\end{figure}
+
+\subsection{变量倍增与约束方程}
+
+\textbf{变量变化}：传统做法的未知量是 $U = [U_1, U_2, U_3, U_4]$，共 4 个；间断做法把共享节点拆开，未知量变成 $U = [U_1^{(1)}, U_2^{(1)}, U_3^{(1)}, U_2^{(2)}, U_3^{(2)}, U_4^{(2)}]$，共 6 个。
+
+\textbf{新增约束}（缝合条件）：
+\begin{equation}
+U_2^{(1)} = U_2^{(2)}, \quad U_3^{(1)} = U_3^{(2)}
+\end{equation}
+
+写成矩阵形式：$CU = 0$，其中
+\begin{equation}
+C = \begin{bmatrix}
+0 & 1 & 0 & -1 & 0 & 0 \\
+0 & 0 & 1 & 0 & -1 & 0
+\end{bmatrix}
+\end{equation}
+
+\subsection{用拉格朗日乘子缝合}
+
+新的优化问题：
+\begin{align}
+\min_U \quad & \frac{1}{2}U^\top K_{block} U - F^\top U \\
+\text{s.t.} \quad & CU = 0 \quad \text{（缝合条件）}
+\end{align}
+
+其中 $K_{block}$ 是\textbf{块对角矩阵}：
+\begin{equation}
+K_{block} = \begin{bmatrix}
+K^{(1)} & 0 \\
+0 & K^{(2)}
+\end{bmatrix}
+\end{equation}
+
+拉格朗日函数：
+\begin{equation}
+\mathcal{L}(U, \lambda) = \frac{1}{2}U^\top K_{block} U - F^\top U + \lambda^\top (CU)
+\end{equation}
+
+\begin{physicalmeaning}
+乘子 $\lambda$ 的物理意义：\textbf{界面力}（interface flux）。
+
+它是维持单元之间连续性的“胶水力”——强制两边位移相等的约束力。
+
+这与传统FEM中隐式存在的单元间作用力是一样的，只不过现在被显式地表示出来了！
+\end{physicalmeaning}
+
+\subsection{块对角结构的威力}
+
+间断有限元的最大优势：$K_{block}$ 是块对角的！
+
+\begin{equation}
+K_{block}^{-1} = \begin{bmatrix}
+(K^{(1)})^{-1} & 0 \\
+0 & (K^{(2)})^{-1}
+\end{bmatrix}
+\end{equation}
+
+\textbf{这意味着}：每个单元可以\textbf{独立求解}！
+\clarify{“每个单元独立求解”有个前提：界面力 $\lambda$ 已知。$\lambda$ 本身要靠界面方程解出——这正是本章扩展阅读里 Schur 补与区域分解的思路。}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{l|c|c}
+\toprule
+& \textbf{传统 FEM} & \textbf{间断 FEM} \\
+\midrule
+刚度矩阵结构 & 稀疏但耦合 & 块对角 \\
+单元独立求解 & 不可能 & 可以！ \\
+并行化 & 困难 & 天然并行 \\
+GPU 加速 & 有限 & 极度友好 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{insightbox}
+\textbf{为什么这很重要？}
+
+现代 GPU 有数千个核心，但它们最擅长的是做\textbf{相同的独立计算}。
+
+间断有限元把一个大问题分解成了百万个 $3 \times 3$（或 $4 \times 4$）的小问题，每个核心解一个——这正是 GPU 的最爱！
+
+这就是为什么间断 Galerkin (DG) 方法在计算流体力学等领域越来越流行。
+\end{insightbox}
+
+\subsection{罚函数方法：软约束}
+
+直接处理带约束的鞍点问题比较复杂。一个常用技巧是\textbf{罚函数}：
+
+不强制 $U^{(1)} = U^{(2)}$，而是惩罚它们的差距：
+\begin{equation}
+J_\rho(U) = \frac{1}{2}U^\top K_{block} U - F^\top U + \frac{\rho}{2}\|CU\|^2
+\end{equation}
+
+其中 $\rho$ 是罚参数（很大的正数）——记号与第1章“视角三：罚函数”一致。
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.9]
+    % 弱罚
+    \begin{scope}
+        \node[font=\bfseries] at (1.5, 1.8) {弱罚（$\rho$ 小）};
+        \draw[fill=blue!20, thick] (0,0) rectangle (2,1);
+        \draw[fill=blue!20, thick] (2.5,0) rectangle (4.5,1);
+        \draw[decorate, decoration={coil,aspect=0.5,segment length=3mm,amplitude=3mm}, thick, red] (2,0.5) -- (2.5,0.5);
+        \node[red, font=\small] at (2.25, 1.3) {Gap 大};
+        \node at (1, 0.5) {单元1};
+        \node at (3.5, 0.5) {单元2};
+    \end{scope}
+    
+    % 强罚
+    \begin{scope}[xshift=6cm]
+        \node[font=\bfseries] at (1.5, 1.8) {强罚（$\rho \to \infty$）};
+        \draw[fill=blue!20, thick] (0,0) rectangle (2.1,1);
+        \draw[fill=blue!20, thick] (2.2,0) rectangle (4.3,1);
+        \draw[decorate, decoration={coil,aspect=0.3,segment length=1mm,amplitude=2mm}, thick, red] (2.1,0.5) -- (2.2,0.5);
+        \node[red, font=\small] at (2.15, 1.3) {Gap $\approx 0$};
+        \node at (1, 0.5) {单元1};
+        \node at (3.25, 0.5) {单元2};
+    \end{scope}
+\end{tikzpicture}
+\caption{罚函数就像在断口处装了一个弹簧}
+\end{figure}
+
+当 $\rho \to \infty$ 时，任何微小的 Gap 都会产生巨大的惩罚，系统被迫让 $CU \to 0$，于是恢复到传统有限元的连续解。
+
+\begin{physicalmeaning}
+罚函数的物理图像：在断口处装一个\textbf{刚度为 $\rho$ 的弹簧}。$\rho$ 小，弹簧软，拉不住，Gap 大；$\rho$ 大，弹簧硬，瞬间把两端吸在一起。这与深度学习中的正则化项异曲同工！
+\[
+\text{Loss} = \text{Data\_Fidelity} + \rho \cdot \text{Regularization}
+\]
+
+这个思想也激励了我们探索物理信息神经网络(PINN)。
+\end{physicalmeaning}
+
+% ------------------------------------------------------------------------------------
+% ------------------------------------------------------------------------------------
 \section{本章小结}
-% ====================================================================================
-
-本章我们从约束优化的视角系统地介绍了物理信息神经网络（PINN）。
-
-\subsection{核心知识点}
 
 \begin{enumerate}
-    \item \textbf{PINN的数学本质}：将PDE求解问题转化为约束优化问题
-    \begin{itemize}
-        \item 软约束：罚函数法，通过损失函数惩罚约束违反
-        \item 硬约束：架构设计，通过网络结构强制满足边界条件
-    \end{itemize}
+    \item \textbf{核心思想}：有限元方法把无限维的变分问题转化为有限维的线性方程组 $KU = F$。
     
-    \item \textbf{训练困难的根源}
-    \begin{itemize}
-        \item 频谱偏差：神经网络倾向于学习低频，解决方案是傅里叶特征
-        \item 梯度竞争：多个损失项方向冲突，解决方案是自适应加权
-        \item 因果性：时间演化问题需要尊重因果律，解决方案是因果训练
-    \end{itemize}
+    \item \textbf{与有限差分的关系}：一维等价，二维开始分化；FEM 的优势在于处理复杂几何。
     
-    \item \textbf{拉格朗日对偶视角}
-    \begin{itemize}
-        \item 罚函数法是拉格朗日方法的特例
-        \item 对偶上升法提供自适应调整权重的机制
-    \end{itemize}
+    \item \textbf{连续性}：$C^0$ 连续性保证能量有限；线性单元靠“两点定一线”自动满足连续性。
     
-    \item \textbf{变分视角（Deep Ritz Method）}
-    \begin{itemize}
-        \item 最小化能量泛函而非PDE残差
-        \item 降低导数阶数，更适合高维问题
-    \end{itemize}
+    \item \textbf{全局视角}：有限元解是全局“帐篷”基函数的线性叠加。
     
-    \item \textbf{逆问题}
-    \begin{itemize}
-        \item PINN可以同时求解正问题和反演物理参数
-        \item 将未知参数作为可学习变量
-    \end{itemize}
+    \item \textbf{稀疏性}：基函数的局部支撑性导致刚度矩阵稀疏。
+    
+    \item \textbf{优化视角}：有限元 $\Leftrightarrow$ 能量最小化 $\Leftrightarrow$ 带约束的 QP 问题。
+    
+    \item \textbf{间断有限元}：放弃强制连续性，用约束/罚函数缝合，获得天然并行性。
 \end{enumerate}
 
-\subsection{与前几章的联系}
+\begin{unification}[title=有限元：优化视角的大统一]
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{优化概念} & \textbf{有限元对应} & \textbf{物理意义} \\
+\midrule
+决策变量 & 节点值 $U_i$ & 物理量（温度/位移） \\
+目标函数 & $\frac{1}{2}U^\top KU - F^\top U$ & 总势能 \\
+等式约束 & Dirichlet 边界条件 & 固定边界 \\
+拉格朗日乘子 & 边界反力 & 约束力 \\
+罚函数 & 界面耦合项 & 虚拟弹簧 \\
+\bottomrule
+\end{tabular}
+\end{center}
 
-\begin{itemize}
-    \item \textbf{第1章（拉格朗日乘子法）}：PINN中的软约束就是罚函数法，硬约束则消除了约束
-    \item \textbf{第3章（变分法）}：Deep Ritz Method直接使用了能量泛函最小化
-    \item \textbf{第5章扩展阅读（条件数）}：PINN的训练困难与优化问题的条件数密切相关
-\end{itemize}
+有限元不是孤立的数值技术，它是\textbf{变分原理}和\textbf{约束优化}在工程中的自然统一！
 
-% ====================================================================================
-\section{思考题}
-% ====================================================================================
+从第1章的拉格朗日乘子，到这里的有限元，$\lambda$ 始终扮演着“约束力”的角色。
+\end{unification}
 
+\begin{physicalmeaning}
+\textbf{$\lambda$ 在本章的意义}：边界条件是约束，$\lambda$ 是“把边界钉住”所需的力——热传导里是边界热流，弹性力学里是支反力，间断元里是单元之间的界面力。它仍然是影子价格：$\lambda_i = -\partial J^*/\partial g_i$，边界值放松一点，最小总势能就改变 $\lambda_i$ 那么多。
+
+回头看：第1章的 $\lambda$ 是影子价格，第5章的 $\lambda$ 是约束力，本章把两者接在了一起——约束力就是能量对约束的敏感度。往前看：第6章机器人的接触力，以及第14章 PINN 把 PDE 当作软约束写进损失函数，用的都是同一个 $\lambda$。
+\end{physicalmeaning}
+
+
+% ------------------------------------------------------------------------------------
+\section{习题}
+
+\paragraph{计算题}
 \begin{enumerate}
-    \item \textbf{硬约束设计}：对于二维圆域$\Omega = \{(x, y) : x^2 + y^2 < 1\}$上的齐次边界条件，设计一个硬约束形式的网络$u_\theta(x, y)$。（提示：参考例\ref{ex:circle}）
+    \item 用 2 个线性单元求解 $-u'' = 1$，$u(0) = u(1) = 0$。
+    \begin{enumerate}
+        \item 写出刚度矩阵 $K$ 和载荷向量 $F$
+        \item 求解线性方程组，得到节点值 $U_1$
+        \item 与精确解 $u(0.5) = 0.125$ 比较
+    \end{enumerate}
     
-    \item \textbf{条件数分析}：在有限差分法中，刚度矩阵的条件数通常与$h^{-2}$成正比（$h$是网格步长）。你认为PINN的优化问题是否也存在类似的条件数问题？这与哪些因素有关？
+    \item 用 4 个线性单元求解 $-u'' = \sin(\pi x)$，$u(0) = u(1) = 0$。
+    \begin{enumerate}
+        \item 计算载荷向量（需要积分 $\int \sin(\pi x) \phi_i dx$）
+        \item 求解节点值
+        \item 与精确解 $u(x) = \frac{\sin(\pi x)}{\pi^2}$ 比较
+    \end{enumerate}
     
-    \item \textbf{能量与残差}：对于非椭圆型方程（如对流方程$u_t + c u_x = 0$），是否存在相应的能量泛函？Deep Ritz Method是否适用？
-    
-    \item \textbf{逆问题的可辨识性}：在逆问题中，如果观测数据太少，参数可能无法唯一确定。举一个具体的例子说明这一点。
-    
-    \item \textbf{编程实践}：实现一个完整的PINN求解器，求解二维泊松方程
-    \begin{equation}
-        -\nabla^2 u = 2\pi^2 \sin(\pi x)\sin(\pi y), \quad (x, y) \in [0, 1]^2
-    \end{equation}
-    \begin{equation}
-        u = 0, \quad (x, y) \in \partial[0, 1]^2
-    \end{equation}
-    解析解为$u(x, y) = \sin(\pi x)\sin(\pi y)$。比较软约束和硬约束方法的效果。
+    \item 考虑非齐次边界条件：$-u'' = 0$，$u(0) = 0$，$u(1) = 1$。
+    \begin{enumerate}
+        \item 用 3 个单元建立有限元方程
+        \item 用直接消去法处理边界条件
+        \item 求解并验证结果是直线 $u(x) = x$
+    \end{enumerate}
 \end{enumerate}
 
-% 
+\paragraph{证明题}
+\begin{enumerate}
+    \setcounter{enumi}{3}
+    \item 证明刚度矩阵 $K$ 是对称的：$K_{ij} = K_{ji}$。
+    
+    \item 证明刚度矩阵 $K$ 是半正定的：$U^\top K U \geq 0$ 对所有 $U$ 成立。
+    
+    \item 证明有限元解 $u_h$ 是精确解 $u$ 在有限元空间中的“最佳逼近”：
+    \[
+    \int_0^1 (u_h' - u')^2 dx \leq \int_0^1 (v_h' - u')^2 dx \quad \forall v_h \in V_h
+    \]
+    （提示：这叫做 Galerkin 正交性）
+\end{enumerate}
+
+\paragraph{编程题}
+\begin{enumerate}
+    \setcounter{enumi}{6}
+    \item 实现一维线性有限元：
+    \begin{enumerate}
+        \item 输入：区间 $[0, 1]$，单元数 $N$，源项 $f(x)$，边界值
+        \item 输出：节点值向量 $U$
+        \item 测试：$-u'' = 1$，$u(0) = u(1) = 0$
+    \end{enumerate}
+    
+    \item 做收敛性实验：
+    \begin{enumerate}
+        \item 用 $N = 4, 8, 16, 32, 64$ 个单元求解
+        \item 计算误差 $\|u - u_h\|_{L^2}$（用数值积分）
+        \item 画 $\log(\text{误差})$ vs $\log(h)$ 的图，验证 $O(h^2)$ 收敛
+    \end{enumerate}
+    
+    \item （挑战）实现二维三角形有限元：
+    \begin{enumerate}
+        \item 对单位正方形用三角形网格剖分
+        \item 组装刚度矩阵和载荷向量
+        \item 求解 $-\nabla^2 u = 1$，$u|_{\partial\Omega} = 0$
+        \item 可视化数值解
+    \end{enumerate}
+\end{enumerate}
+
+\paragraph{思考题}
+\begin{enumerate}
+    \setcounter{enumi}{9}
+    \item 有限元方法和有限差分方法有什么本质区别？各有什么优缺点？
+    
+    \item 为什么有限元在工程中如此成功？它解决了工程师的什么痛点？
+    
+    \item 有限元方法与第14章的 PINN（物理信息神经网络）有什么联系和区别？
+    
+    \item 如果你要模拟一架飞机的应力分布，需要多少个有限元节点？这对计算机的要求是什么？
+\end{enumerate}
+
+
+
+% ====================================================================================
+% 本章原有三篇工程类扩展阅读（大规模线性方程组的求解艺术、CPU 并行计算、流固耦合有限元）
+% 已移至附录D“工程专题”。
+% ====================================================================================
+\paragraph{延伸阅读}
+想知道 $KU=F$ 在百万自由度时怎么解（共轭梯度、多重网格、条件数）、CPU 并行到底并行了什么、以及一个真实的流固耦合基准算例，请看附录D“工程专题”的前三节——它们都是本章内容的工程延伸，不影响主线阅读。

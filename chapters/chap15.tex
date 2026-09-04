@@ -1,1047 +1,1274 @@
-\chapter{多智能体系统：从微观博弈到宏观平均场}
-
 % ====================================================================================
-\section*{引言：当优化遇到博弈}
+\chapter{神经算子：从函数到函数的映射}
 % ====================================================================================
 
-\marginnote{\textbf{约翰·纳什}(1928--2015)：普林斯顿数学博士，22岁时证明了纳什均衡的存在性。患精神分裂症数十年后奇迹康复，1994年获诺贝尔经济学奖。他的故事被拍成电影《美丽心灵》(A Beautiful Mind)，获奥斯卡最佳影片。2015年与妻子在出租车事故中去世。}
+% ====================================================================================
+\section*{引言：一次训练，任意条件}
+% ====================================================================================
 
-\marginnote{\textbf{冯·诺伊曼}(1903--1957)：20世纪最伟大的数学家之一，博弈论奠基人。他还发明了冯·诺伊曼计算机架构、参与曼哈顿计划、创立量子力学数学基础。据说他能用心算积分，智商估计超过180。}
+\sidenoteplain{神经算子的两个里程碑工作几乎同时出现：Lu Lu等人在2019年提出DeepONet，Zongyi Li等人在2020年提出FNO。两种方法代表了不同的设计哲学——DeepONet基于万能逼近定理，FNO利用傅里叶变换的效率。}
 
-在前面的章节中，我们一直在解决"一个智能体对抗环境"的问题：
-\begin{itemize}
-    \item 最优控制：一个控制器操控一个动力系统
-    \item 强化学习：一个智能体在环境中最大化累积奖励
-    \item PINN/神经算子：求解一个固定的PDE
-\end{itemize}
+\storynote{Lu Lu}{Karniadakis 的学生，DeepONet 第一作者，也是开源库 DeepXDE 的作者——PINN 与神经算子研究的事实标准工具。DeepONet 的理论基础是 Tianping Chen 与 Hong Chen 1995 年的算子万能逼近定理，一个被埋没了二十多年的结果。}
 
-但真实世界远比这复杂。想象以下场景：
+在上一章中，我们学习了PINN：用神经网络逼近一个特定PDE的解。但你可能已经意识到一个问题：
 
 \begin{quote}
-\textit{早高峰时，每个司机都想选择最快的路线。但"最快"取决于其他人的选择——如果大家都选同一条路，这条路反而最慢。}
+\textit{每次初始条件或边界条件变化，我们都要重新训练网络。这太低效了！}
 \end{quote}
+
+想象一下天气预报的场景：大气动力学方程是固定的（Navier-Stokes方程），但每天的初始状态都不同。如果用PINN，每天凌晨都要花几个小时重新训练网络——这显然不切实际。
+
+有没有办法\textbf{一次训练，对任意初始条件都能直接预测}？
+
+这就是\textbf{神经算子}（Neural Operator）的目标：不是学习一个特定的解函数$u(x)$，而是学习从“条件函数”到“解函数”的\textbf{映射}。
+
+\vspace{0.3cm}
+\noindent\textit{为什么天气预报模型可以“一次训练、天天用”，而 PINN 却要天天重训？为什么一个在 64 个格点上训练的网络，可以直接在 256 个格点上推理？第13章辛辛苦苦组装的刚度矩阵 $K$，和这里学出来的“算子”是什么关系？}
 
 \begin{quote}
-\textit{在电力市场中，每个发电厂都想最大化利润。但电价取决于所有发电厂的总供应量——你的最优策略取决于别人怎么做。}
+\textbf{本章目标}：让你看到神经算子不是又一个新架构，而是第13章那句“解方程就是算 $K^{-1}F$”的直接延伸：第13章我们辛辛苦苦组装 $K$ 再去解，本章干脆从数据里把 $K^{-1}$——也就是格林函数——学出来。读完本章你会明白，为什么“一次训练、任意条件”是可能的，为什么它与网格分辨率无关，以及当我们把约束（物理定律）从损失函数里拿掉时，究竟丢掉了什么。
 \end{quote}
-
-\begin{quote}
-\textit{一群无人机需要协作完成搜索任务。每架无人机的最优路径取决于其他无人机去哪里——你不想和别人重复搜索同一区域。}
-\end{quote}
-
-这些问题的共同特点是：\textbf{我的最优决策取决于你的决策，而你的最优决策也取决于我的决策}。
-
-这就是\textbf{博弈论}（Game Theory）的领域。
-
-\begin{framed}
-\textbf{本章目标}：
-\begin{enumerate}
-    \item 理解多智能体系统中"均衡"的概念，以及它与优化的深刻联系
-    \item 掌握用拉格朗日方法分析静态博弈的技术
-    \item 了解深度多智能体强化学习的主流架构（QMIX、MAPPO）
-    \item 建立从微观到宏观的统一视角：当智能体数量趋于无穷时，博弈如何变成流体力学
-\end{enumerate}
-\end{framed}
 
 \begin{tcolorbox}[colback=green!5, colframe=green!60!black, title=学完这章，你将能够...]
 \begin{itemize}
-    \item 用KKT条件计算简单博弈的纳什均衡
-    \item 分析交通流量分配中的Wardrop均衡
-    \item 理解QMIX、MAPPO等多智能体RL算法的核心思想
-    \item 解释平均场博弈如何将$N$体问题简化为连续极限
-    \item 用拉格朗日方法分析带约束的博弈问题
+    \item 解释为什么神经算子比PINN更适合实时预测
+    \item 实现一个简化版DeepONet学习一个简单算子（反导数算子；热传导方程见习题）
+    \item 理解FNO如何用傅里叶变换实现高效的全局卷积
+    \item 分析神经算子与格林函数的数学联系
+    \item 评估神经算子在给定任务上的适用性
 \end{itemize}
 \end{tcolorbox}
 
 % ====================================================================================
-\section{博弈论基础：从优化到均衡}
+\section{从求解到映射：算子学习的思想}
 % ====================================================================================
 
-\subsection{从单人优化到多人博弈}
+\subsection{PINN的局限性}
 
-回顾单人优化问题：
-\begin{equation}
-    \min_{x} f(x) \quad \text{s.t.} \quad g(x) \leq 0
-\end{equation}
-
-最优解$x^*$满足KKT条件。这里只有一个决策者，目标函数$f(x)$只依赖于自己的决策$x$。
-
-现在考虑\textbf{两人博弈}：
-
-\begin{definition}[二人博弈]
-一个二人博弈由以下元素组成：
-\begin{itemize}
-    \item \textbf{玩家1的策略空间}$\mathcal{A}_1$：玩家1可以选择的所有策略的集合
-    \item \textbf{玩家2的策略空间}$\mathcal{A}_2$：玩家2可以选择的所有策略的集合
-    \item \textbf{玩家1的代价函数}$J_1(a_1, a_2)$：玩家1要最小化的目标，\textbf{同时依赖于双方的策略}
-    \item \textbf{玩家2的代价函数}$J_2(a_1, a_2)$：玩家2要最小化的目标，同样依赖于双方的策略
-\end{itemize}
-\end{definition}
-
-\begin{remark}[与优化问题的关键区别]
-在单人优化中，目标函数$f(x)$只依赖于决策者自己的选择$x$。但在博弈中，$J_1(a_1, a_2)$不仅依赖于玩家1的选择$a_1$，还依赖于玩家2的选择$a_2$。这意味着：
-\begin{itemize}
-    \item 玩家1想最小化$J_1$，但他控制不了$a_2$
-    \item 玩家2想最小化$J_2$，但他控制不了$a_1$
-    \item 双方的决策相互影响，形成一个"耦合"的系统
-\end{itemize}
-\end{remark}
-
-每个玩家都想最小化自己的代价，但代价取决于对方的选择。这就产生了一个根本性的问题：
-
-\begin{quote}
-\textit{什么是"好"的策略组合？}
-\end{quote}
-
-\subsection{纳什均衡：没有人想单方面改变}
-
-\begin{definition}[纳什均衡]
-策略组合$(a_1^*, a_2^*)$是一个\textbf{纳什均衡}（Nash Equilibrium），如果：
-\begin{align}
-    J_1(a_1^*, a_2^*) &\leq J_1(a_1, a_2^*), \quad \forall a_1 \in \mathcal{A}_1 \\
-    J_2(a_1^*, a_2^*) &\leq J_2(a_1^*, a_2), \quad \forall a_2 \in \mathcal{A}_2
-\end{align}
-即：给定对方的策略，没有人能通过单方面改变自己的策略来降低代价。
-\end{definition}
-
-\begin{remark}[纳什均衡的直观理解]
-让我们用更通俗的语言解释纳什均衡：
-
-想象你和朋友在玩一个游戏。如果你们达到了纳什均衡状态，那意味着：
-\begin{itemize}
-    \item 你看了朋友的策略后，觉得"我现在的选择已经是最好的了，换别的只会更差"
-    \item 你的朋友看了你的策略后，也觉得"我现在的选择已经是最好的了"
-    \item 双方都没有动力去改变，系统达到一种"稳定"状态
-\end{itemize}
-
-\textbf{关键词}：单方面。纳什均衡不是说大家都开心，而是说没人想\textbf{单独}改变。
-\end{remark}
-
-\begin{example}[囚徒困境——博弈论最经典的例子]
-\label{ex:prisoners}
-两个囚犯分别被审讯，每人可以选择"合作"（保持沉默）或"背叛"（揭发对方）。
-
-\textbf{变量含义}：
-\begin{itemize}
-    \item $a_1 \in \{\text{合作}, \text{背叛}\}$：玩家1的策略
-    \item $a_2 \in \{\text{合作}, \text{背叛}\}$：玩家2的策略
-    \item $J_1(a_1, a_2)$：玩家1的刑期（年），希望越小越好
-    \item $J_2(a_1, a_2)$：玩家2的刑期（年），希望越小越好
-\end{itemize}
-
-代价矩阵（刑期）如下：
+回顾PINN的工作方式：
 
 \begin{center}
-\begin{tabular}{c|cc}
-& 玩家2合作 & 玩家2背叛 \\
-\hline
-玩家1合作 & (1年, 1年) & (3年, 0年) \\
-玩家1背叛 & (0年, 3年) & (2年, 2年) \\
-\end{tabular}
+\begin{tikzpicture}[
+    box/.style={rectangle, draw, minimum width=2.5cm, minimum height=1cm, align=center},
+    arrow/.style={-{Stealth}, thick}
+]
+    \node[box] (input) at (0, 0) {初始条件\\$u_0(x)$};
+    \node[box] (pinn) at (4, 0) {PINN\\训练};
+    \node[box] (output) at (8, 0) {解\\$u(x,t)$};
+    
+    \draw[arrow] (input) -- (pinn);
+    \draw[arrow] (pinn) -- (output);
+    
+    \node[below=0.5cm of pinn, text=red] {每次新条件都要重训！};
+\end{tikzpicture}
 \end{center}
 
-\textbf{如何解读这个表格}：
-\begin{itemize}
-    \item 如果双方都合作（保持沉默），证据不足，各判1年
-    \item 如果你背叛而对方合作，你当污点证人获释（0年），对方被重判（3年）
-    \item 如果双方都背叛，各判2年
-\end{itemize}
-
-\textbf{分析纳什均衡}——我们来做"最优响应分析"：
-
-\textit{假设玩家2选择合作}：
-\begin{itemize}
-    \item 玩家1选合作：刑期1年
-    \item 玩家1选背叛：刑期0年 $\leftarrow$ \textbf{更好！}
-\end{itemize}
-
-\textit{假设玩家2选择背叛}：
-\begin{itemize}
-    \item 玩家1选合作：刑期3年
-    \item 玩家1选背叛：刑期2年 $\leftarrow$ \textbf{更好！}
-\end{itemize}
-
-结论：\textbf{无论玩家2怎么选，玩家1选背叛总是更好}。这叫做"背叛是玩家1的\textbf{占优策略}"。
-
-由于博弈是对称的，玩家2也会得出同样结论。
-
-因此，\textbf{（背叛，背叛）是唯一的纳什均衡}，双方各判2年。
-
-\textbf{悖论所在}：如果双方都选合作，各判1年，明明对双方都更好！但理性的个体不会选择合作，因为背叛总是对自己更有利。
-
-这揭示了博弈论的一个深刻洞察：\textbf{个体理性不一定导致集体理性}。
-\end{example}
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{figs_chap15/prisoners_dilemma.pdf}
-\caption{囚徒困境的可视化分析。左图：支付矩阵热力图，红色虚线框标记纳什均衡（背叛，背叛）。右图：玩家1的最优响应分析，无论玩家2如何选择，背叛都是玩家1的更优选择。}
-\label{fig:prisoners}
-\end{figure}
-
-图\ref{fig:prisoners}展示了囚徒困境的两种分析视角。从右图可以清楚看到：不管对手选什么，选择背叛总能让自己的代价更低。这就是为什么理性的玩家会陷入（背叛，背叛）的均衡，尽管（合作，合作）对双方都更好。
-
-\subsection{连续策略博弈与最优响应}
-
-当策略空间是连续的（如$\mathcal{A}_i = \R$），我们可以用微积分来分析。
-
-\begin{definition}[最优响应]
-给定对手的策略$a_{-i}$，玩家$i$的\textbf{最优响应}（Best Response）是：
+具体地，考虑热传导方程：
 \begin{equation}
-    BR_i(a_{-i}) = \arg\min_{a_i \in \mathcal{A}_i} J_i(a_i, a_{-i})
+    \frac{\partial u}{\partial t} = \alpha \frac{\partial^2 u}{\partial x^2}, \quad u(x, 0) = u_0(x)
 \end{equation}
 
-\textbf{直观理解}：如果我知道对手会选$a_{-i}$，我应该选什么来最小化自己的代价？答案就是$BR_i(a_{-i})$。
+如果$u_0(x) = \sin(\pi x)$，我们训练一个PINN得到解$u_1(x,t)$。
+
+现在换一个初始条件$u_0(x) = \sin(2\pi x)$，我们必须\textbf{从头训练}另一个PINN得到$u_2(x,t)$。
+
+\begin{example}[PINN的计算成本]
+假设训练一个PINN需要10分钟，而我们需要预测1000个不同初始条件下的解，那么总计算时间是$10 \times 1000 = 10000$分钟 $\approx$ 7天！这对于需要实时预测的应用（如天气预报）是完全不可接受的。
+\end{example}
+
+\subsection{算子学习的目标}
+
+算子学习的思路是：既然方程是固定的，不同的只是初始/边界条件，那么我们应该学习的是\textbf{从条件到解的映射}。
+
+\begin{definition}[解算子]
+考虑PDE：
+\begin{equation}
+    \mathcal{L}[u] = f, \quad u|_{\partial\Omega} = g, \quad u|_{t=0} = u_0
+\end{equation}
+\textbf{解算子}$\mathcal{G}$是从初始/边界条件到解的映射：
+\begin{equation}
+    \mathcal{G}: u_0 \mapsto u
+\end{equation}
+其中$u_0$是输入函数，$u$是输出函数。
 \end{definition}
+\review{第13章}{有限元把 $-\nabla^2 u = f$ 变成 $KU = F$，解是 $U = K^{-1}F$。$K$ 只依赖方程和网格，不依赖载荷：换一个 $F$ 只需再乘一次 $K^{-1}$。“解算子”就是 $K^{-1}$ 的连续版本——本章要学的正是它。}
 
-\begin{proposition}[纳什均衡的不动点特征]
-$(a_1^*, a_2^*)$是纳什均衡，当且仅当：
-\begin{equation}
-    a_1^* = BR_1(a_2^*), \quad a_2^* = BR_2(a_1^*)
-\end{equation}
-即每个人的策略都是对方策略的最优响应。
-\end{proposition}
-
-\begin{remark}[不动点的直观含义]
-这个条件说的是：在纳什均衡点，形成了一个"自洽"的循环：
-\begin{itemize}
-    \item 玩家1选$a_1^*$是因为对手选了$a_2^*$
-    \item 玩家2选$a_2^*$是因为对手选了$a_1^*$
-    \item 谁也不想先改变，因为改变只会让自己更差
-\end{itemize}
-
-这正是数学中"不动点"的概念：$x^* = f(x^*)$，即函数作用在某个点上还是它自己。
-\end{remark}
-
-这给出了一个寻找纳什均衡的算法思路：\textbf{迭代最优响应}（Iterated Best Response）。
-
-\begin{algorithm}
-\caption{迭代最优响应（伪代码）}
-\begin{algorithmic}[1]
-\State \textbf{输入}: 初始策略 $a_1^{(0)}, a_2^{(0)}$，迭代次数 $K$
-\State \textbf{输出}: 近似纳什均衡 $(a_1^{(K)}, a_2^{(K)})$
-\For{$k = 0, 1, 2, \ldots, K-1$}
-    \State $a_1^{(k+1)} \leftarrow BR_1(a_2^{(k)})$ \Comment{玩家1对玩家2当前策略的最优响应}
-    \State $a_2^{(k+1)} \leftarrow BR_2(a_1^{(k+1)})$ \Comment{玩家2对玩家1新策略的最优响应}
-\EndFor
-\State \Return $(a_1^{(K)}, a_2^{(K)})$
-\end{algorithmic}
-\end{algorithm}
-
-\begin{warning}[title=迭代最优响应不一定收敛]
-迭代最优响应可能：
-\begin{itemize}
-    \item \textbf{收敛到纳什均衡}（如果博弈是"好"的）
-    \item \textbf{陷入循环}（如石头剪刀布）
-    \item \textbf{发散}
-\end{itemize}
-收敛性取决于博弈的结构，我们稍后会看到一类保证收敛的"势博弈"。
-\end{warning}
-
-% ====================================================================================
-\section{物理约束下的静态博弈}
-% ====================================================================================
-
-\subsection{广义纳什均衡与KKT条件}
-
-在实际问题中，每个玩家的策略通常受到\textbf{物理约束}：
-\begin{itemize}
-    \item 能量上限：$\|a_i\|^2 \leq E_{\max}$
-    \item 位置限制：$a_i \in [0, L]$
-    \item 资源预算：$c^T a_i \leq B$
-\end{itemize}
-
-\begin{definition}[广义纳什均衡问题]
-$N$个玩家的\textbf{广义纳什均衡问题}（Generalized Nash Equilibrium Problem, GNEP）：
-
-每个玩家$i$求解：
-\begin{equation}
-    \min_{a_i} J_i(a_i, a_{-i}) \quad \text{s.t.} \quad g_i(a_i, a_{-i}) \leq 0
-\end{equation}
-
-\textbf{变量说明}：
-\begin{itemize}
-    \item $a_i$：玩家$i$的策略（决策变量）
-    \item $a_{-i}$：除玩家$i$外所有其他玩家的策略
-    \item $J_i$：玩家$i$的代价函数
-    \item $g_i$：玩家$i$面临的约束（可能依赖于其他玩家的策略）
-\end{itemize}
-\end{definition}
-
-\begin{keyinsight}
-纳什均衡可以用\textbf{KKT条件系统}来刻画！
-
-在纳什均衡$(a_1^*, \ldots, a_N^*)$处，每个玩家$i$的策略$a_i^*$必须满足其优化问题的KKT条件：
-\begin{align}
-    \nabla_{a_i} J_i(a_i^*, a_{-i}^*) + \sum_j \lambda_{ij}^* \nabla_{a_i} g_{ij}(a_i^*, a_{-i}^*) &= 0 \quad \text{（驻点条件）} \\
-    \lambda_{ij}^* &\geq 0 \quad \text{（乘子非负）} \\
-    \lambda_{ij}^* g_{ij}(a_i^*, a_{-i}^*) &= 0 \quad \text{（互补松弛）} \\
-    g_{ij}(a_i^*, a_{-i}^*) &\leq 0 \quad \text{（可行性）}
-\end{align}
-
-这是$N$组KKT条件\textbf{同时成立}！
-\end{keyinsight}
-
-\begin{remark}[KKT条件的物理意义]
-回忆一下KKT条件的含义：
-\begin{itemize}
-    \item \textbf{驻点条件}：在最优点，目标函数的梯度被约束的梯度"抵消"了
-    \item \textbf{互补松弛}：约束要么不起作用（$g < 0$），要么起作用但乘子为正（$\lambda > 0$）
-\end{itemize}
-
-在博弈中，每个玩家都在自己的约束下做优化，所以每个人的KKT条件都要满足。纳什均衡就是这$N$组条件的公共解。
-\end{remark}
-
-\subsection{案例一：图博弈——邻居之间的互动}
-
-\begin{definition}[图博弈]
-在\textbf{图博弈}（Network Game）中：
-\begin{itemize}
-    \item 玩家位于图$G = (V, E)$的节点上
-    \item 玩家$i$的代价只依赖于自己和\textbf{邻居}的策略：
-    \begin{equation}
-        J_i(a_i, a_{N(i)}) = f_i(a_i) + \sum_{j \in N(i)} \phi_{ij}(a_i, a_j)
-    \end{equation}
-    其中$N(i)$是$i$的邻居集合
-\end{itemize}
-\end{definition}
-
-\begin{example}[线性二次图博弈——一个完整的求解过程]
-\label{ex:lq_network}
-考虑代价函数：
-\begin{equation}
-    J_i = \frac{1}{2}(a_i - a_{i,0})^2 + \delta \cdot a_i \sum_{j \in N(i)} a_j
-\end{equation}
-
-\textbf{变量含义详解}：
-\begin{itemize}
-    \item $a_i \in \R$：玩家$i$的策略/行动（比如生产量、投入的努力等）
-    \item $a_{i,0}$：玩家$i$的"理想状态"或"目标值"（如果没有邻居影响，他想选择的值）
-    \item $\delta$：交互强度参数，决定邻居对你的影响有多大
-    \item $N(i)$：玩家$i$的邻居集合（图中与$i$相连的节点）
-\end{itemize}
-
-\textbf{代价函数的物理解释}：
-\begin{itemize}
-    \item \textbf{第一项} $(a_i - a_{i,0})^2/2$：偏离理想状态的代价。你想待在$a_{i,0}$附近，离得越远代价越大
-    \item \textbf{第二项} $\delta \cdot a_i \sum_{j \in N(i)} a_j$：与邻居的交互代价
-    \begin{itemize}
-        \item 如果$\delta > 0$（\textbf{策略替代}）：邻居做得多，你做得多会增加代价。类似于竞争关系——市场上对手生产越多，你再多生产就越亏
-        \item 如果$\delta < 0$（\textbf{策略互补}）：邻居做得多，你做得多反而减少代价。类似于协作关系——朋友都在学习，你学习效果也更好
-    \end{itemize}
-\end{itemize}
-
-\textbf{求解纳什均衡}：
-
-每个玩家$i$想最小化$J_i$，将$a_i$视为决策变量，$a_{-i}$视为已知。
-
-对$a_i$求导并令其为零（一阶最优性条件）：
-\begin{equation}
-    \frac{\partial J_i}{\partial a_i} = (a_i - a_{i,0}) + \delta \sum_{j \in N(i)} a_j = 0
-\end{equation}
-
-解这个方程得到\textbf{最优响应}：
-\begin{equation}
-    a_i^* = a_{i,0} - \delta \sum_{j \in N(i)} a_j^*
-\end{equation}
-
-\textbf{解读}：如果$\delta > 0$（竞争），邻居行动越大，你的最优响应越小。如果$\delta < 0$（协作），邻居行动越大，你也应该行动更大。
-
-\textbf{矩阵形式}：
-
-把所有$N$个玩家的最优响应方程写在一起：
-\begin{equation}
-    \mathbf{a}^* = \mathbf{a}_0 - \delta A \mathbf{a}^*
-\end{equation}
-其中$A$是图的邻接矩阵：$A_{ij} = 1$如果$i$和$j$是邻居，否则为0。
-
-移项整理：
-\begin{equation}
-    (I + \delta A) \mathbf{a}^* = \mathbf{a}_0
-\end{equation}
-
-解得纳什均衡：
-\begin{equation}
-    \boxed{\mathbf{a}^* = (I + \delta A)^{-1} \mathbf{a}_0}
-\end{equation}
-
-这是一个漂亮的闭式解！只需要知道图结构（邻接矩阵$A$）和每个人的理想状态（$\mathbf{a}_0$），就能直接算出均衡。
-\end{example}
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{figs_chap15/network_game.pdf}
-\caption{图博弈的数值实验。左图：6个玩家组成的网络，节点颜色表示均衡策略的大小。中图：迭代最优响应过程，从零初始化出发，每个玩家的策略逐渐收敛到纳什均衡（虚线）。右图：收敛误差随迭代次数呈指数下降，表明算法线性收敛。参数：$\delta = 0.15$（策略替代）。}
-\label{fig:network_game}
-\end{figure}
-
-图\ref{fig:network_game}展示了图博弈的实际计算结果。可以观察到：
-\begin{itemize}
-    \item 迭代最优响应算法确实收敛到了纳什均衡
-    \item 收敛速度是\textbf{线性}的（在对数坐标下误差直线下降）
-    \item 不同位置的玩家（中心节点vs边缘节点）有不同的均衡策略
-\end{itemize}
-
-\subsection{案例二：交通均衡与Braess悖论}
-
-\begin{example}[Wardrop交通均衡]
-\label{ex:wardrop}
-考虑一个交通网络：
-\begin{itemize}
-    \item $W$个OD对（Origin-Destination，起点-终点对）
-    \item 每个OD对$w$有需求$d_w$（单位时间内要从起点到终点的车辆数）
-    \item 每个OD对有多条可选路径$P_w$
-    \item 每条边$a$有时间函数$t_a(x_a)$，其中$x_a$是边$a$的流量
-\end{itemize}
-
-\textbf{Wardrop第一原理}（用户均衡）：在均衡状态下，每个OD对所有被使用的路径具有\textbf{相同且最小}的旅行时间。
-
-\textbf{直观理解}：如果有一条更快的路，司机会切换过去。切换的人多了，那条路就变慢了。最终达到平衡：所有在用的路一样快，没人想换。
-\end{example}
-
-\begin{example}[Braess悖论——增加道路反而更堵！]
-\label{ex:braess}
-这是交通领域最著名的悖论之一。考虑从起点S到终点E的交通网络：
-
-\textbf{网络结构}：
-\begin{itemize}
-    \item 节点：S（起点）、A、B、E（终点）
-    \item 边SA：时间函数$t_{SA}(x) = x/100$（流量越大越慢）
-    \item 边AE：固定时间$t_{AE} = 45$分钟
-    \item 边SB：固定时间$t_{SB} = 45$分钟
-    \item 边BE：时间函数$t_{BE}(x) = x/100$
-    \item 边AB（Braess边）：时间$t_{AB} = 0$（\textbf{免费捷径！}）
-\end{itemize}
-
-总需求：4000辆车从S到E。
-
-\textbf{情况1：没有AB边}
-
-可选路径：
-\begin{itemize}
-    \item 路径1：S $\to$ A $\to$ E，时间 = $x_{SA}/100 + 45$
-    \item 路径2：S $\to$ B $\to$ E，时间 = $45 + x_{BE}/100$
-\end{itemize}
-
-由对称性，均衡时各2000辆车：
-\begin{itemize}
-    \item 路径1时间：$2000/100 + 45 = 20 + 45 = 65$分钟
-    \item 路径2时间：$45 + 2000/100 = 45 + 20 = 65$分钟 $\checkmark$
-\end{itemize}
-
-\textbf{所有人旅行时间：65分钟}
-
-\textbf{情况2：有AB边（免费捷径）}
-
-新增路径3：S $\to$ A $\to$ B $\to$ E，时间 = $x_{SA}/100 + 0 + x_{BE}/100$
-
-\textbf{关键分析}：假设所有4000辆车都走路径3（S$\to$A$\to$B$\to$E）：
-\begin{itemize}
-    \item 路径3时间：$4000/100 + 0 + 4000/100 = 40 + 0 + 40 = 80$分钟
-\end{itemize}
-
-验证这是纳什均衡——有人想换路吗？
-\begin{itemize}
-    \item 换到路径1（S$\to$A$\to$E）：$40 + 45 = 85$分钟 > 80分钟，更差！
-    \item 换到路径2（S$\to$B$\to$E）：$45 + 40 = 85$分钟 > 80分钟，更差！
-\end{itemize}
-
-没人想换，所以\textbf{所有人走S$\to$A$\to$B$\to$E确实是纳什均衡}。
-
-\textbf{所有人旅行时间：80分钟}
-
-\textbf{悖论}：增加了一条\textbf{免费}道路，所有人的旅行时间反而从65分钟增加到80分钟！增加了约23\%！
-
-\textbf{为什么会这样？}
-\begin{itemize}
-    \item 免费捷径看起来很诱人
-    \item 每个人都"理性"地选择它
-    \item 但大家都这么想，导致SA和BE两条边都拥挤了
-    \item 如果政府\textbf{禁止}这条免费道路，反而能让所有人更快到达！
-\end{itemize}
-
-这再次说明：\textbf{个体理性 $\neq$ 集体理性}。
-\end{example}
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{figs_chap15/braess_paradox.pdf}
-\caption{Braess悖论的数值验证。左图：有免费道路（红色AB边）时，所有车辆都选择S$\to$A$\to$B$\to$E路径，平均旅行时间80分钟。中图：没有免费道路时，车辆均匀分布在两条路径上，平均旅行时间65分钟。右图：柱状对比显示，移除免费道路可减少约18.8\%的旅行时间。}
-\label{fig:braess}
-\end{figure}
-
-图\ref{fig:braess}直观展示了Braess悖论。这个悖论在现实中确实存在——1990年代，纽约市关闭了第42街的一段道路后，周围的交通状况反而改善了！首尔在2003年拆除了一条高架路后，交通拥堵也得到缓解。
-
-\subsection{势博弈：自私博弈的隐藏秩序}
-
-\begin{theorem}[Beckmann势函数]
-如果边时间函数$t_a(x_a)$是连续且非递减的，则Wardrop用户均衡是以下\textbf{凸优化问题}的解：
-\begin{equation}
-    \min_{\mathbf{f}} \Phi(\mathbf{x}) = \sum_{a} \int_0^{x_a} t_a(s) \, ds
-\end{equation}
-\begin{equation}
-    \text{s.t.} \quad \sum_{p \in P_w} f_p = d_w, \quad f_p \geq 0, \quad x_a = \sum_{p \ni a} f_p
-\end{equation}
-
-\textbf{变量说明}：
-\begin{itemize}
-    \item $f_p$：路径$p$上的流量
-    \item $x_a$：边$a$上的总流量（所有经过边$a$的路径流量之和）
-    \item $d_w$：OD对$w$的总需求
-    \item $\Phi$：Beckmann势函数
-\end{itemize}
-\end{theorem}
-
-\begin{proof}[用KKT条件证明Wardrop均衡]
-这是一个经典的``优化 $\Leftrightarrow$ 均衡''对应。让我们用KKT条件来证明Beckmann问题的解恰好满足Wardrop用户均衡条件。
-
-\textbf{Step 1：写出拉格朗日函数}
-
-对于路径流量$f_p$的约束优化问题，拉格朗日函数为：
-\begin{equation}
-    \mathcal{L} = \sum_{a} \int_0^{x_a} t_a(s) \, ds - \sum_w \lambda_w \left( \sum_{p \in P_w} f_p - d_w \right) - \sum_p \mu_p f_p
-\end{equation}
-其中：
-\begin{itemize}
-    \item $\lambda_w$：OD对$w$的需求约束的乘子
-    \item $\mu_p \geq 0$：路径流量非负约束$f_p \geq 0$的乘子
-\end{itemize}
-
-\textbf{Step 2：对$f_p$求偏导}
-
-注意$x_a = \sum_{p \ni a} f_p$，所以$\frac{\partial x_a}{\partial f_p} = 1$（如果路径$p$经过边$a$）。因此：
-\begin{equation}
-    \frac{\partial \mathcal{L}}{\partial f_p} = \sum_{a \in p} t_a(x_a) - \lambda_w - \mu_p = 0
-\end{equation}
-即：\textbf{路径$p$的总旅行时间} = $\lambda_w + \mu_p$
-
-\textbf{Step 3：互补松弛条件}
-
-KKT的互补松弛条件要求：$\mu_p \cdot f_p = 0$
-\begin{itemize}
-    \item 若$f_p > 0$（路径被使用），则$\mu_p = 0$，故路径时间 $= \lambda_w$
-    \item 若$f_p = 0$（路径未被使用），则$\mu_p \geq 0$，故路径时间 $\geq \lambda_w$
-\end{itemize}
-
-\textbf{Step 4：这正是Wardrop条件！}
-
-上述结论可以总结为：
 \begin{center}
-\fbox{\parbox{0.8\textwidth}{
-\textbf{所有被使用的路径}（$f_p > 0$）具有\textbf{相同的}旅行时间$\lambda_w$；\\
-\textbf{所有未被使用的路径}（$f_p = 0$）旅行时间$\geq \lambda_w$。
-}}
+\begin{tikzpicture}[
+    box/.style={rectangle, draw, minimum width=2.5cm, minimum height=1cm, align=center},
+    arrow/.style={-{Stealth}, thick}
+]
+    \node[box] (input1) at (0, 1) {$u_0^{(1)}(x)$};
+    \node[box] (input2) at (0, 0) {$u_0^{(2)}(x)$};
+    \node[box] (input3) at (0, -1) {$u_0^{(3)}(x)$};
+    
+    \node[box, minimum height=3cm] (operator) at (4, 0) {神经算子\\$\mathcal{G}_\theta$\\（一次训练）};
+    
+    \node[box] (output1) at (8, 1) {$u^{(1)}(x,t)$};
+    \node[box] (output2) at (8, 0) {$u^{(2)}(x,t)$};
+    \node[box] (output3) at (8, -1) {$u^{(3)}(x,t)$};
+    
+    \draw[arrow] (input1) -- (operator);
+    \draw[arrow] (input2) -- (operator);
+    \draw[arrow] (input3) -- (operator);
+    \draw[arrow] (operator) -- (output1);
+    \draw[arrow] (operator) -- (output2);
+    \draw[arrow] (operator) -- (output3);
+    
+    \node[below=0.5cm of operator, text=blue] {训练后，任意新条件直接推理！};
+\end{tikzpicture}
 \end{center}
 
-这正是Wardrop第一原理的数学表述！乘子$\lambda_w$就是OD对$w$的\textbf{均衡旅行时间}。
-\end{proof}
+\begin{insightbox}
+\textbf{传统神经网络} vs \textbf{神经算子}：
 
-\begin{keyinsight}
-\textbf{自私博弈的隐藏秩序}：
-
-看似混乱的交通系统——每个司机都在自私地最小化自己的旅行时间——在宏观上却等价于在优化一个系统的``总势能''$\Phi$。
-
-这类博弈被称为\textbf{势博弈}（Potential Game）：存在一个势函数$\Phi$，每个玩家改变策略导致的代价变化等于势函数的变化。
-
-势博弈有很好的性质：
-\begin{itemize}
-    \item 纳什均衡一定存在（$\Phi$的最小值点）
-    \item 最优响应动态一定收敛（因为$\Phi$单调下降）
-    \item 可以用优化算法求解均衡
-\end{itemize}
-\end{keyinsight}
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{figs_chap15/potential_game.pdf}
-\caption{势博弈的收敛性质。左图：势函数$\Phi(a_1, a_2)$的等高线，红星标记纳什均衡（势函数最小值点）。中图：从不同初始点出发的迭代最优响应轨迹，都收敛到纳什均衡。右图：势函数沿轨迹单调下降，保证收敛性。}
-\label{fig:potential}
-\end{figure}
-
-图\ref{fig:potential}展示了势博弈的核心性质：势函数沿着迭代最优响应的轨迹\textbf{单调下降}。这就像一个小球在山谷中滚动，总会滚到最低点（纳什均衡）。这也是为什么势博弈特别"好"——我们可以把博弈问题转化为优化问题来求解。
-
-% ====================================================================================
-\section{深度多智能体强化学习}
-% ====================================================================================
-
-前面我们讨论的都是\textbf{静态博弈}——玩家同时做出决策，博弈只进行一轮。
-
-现在我们加入\textbf{时间}维度：智能体需要在多个时间步做出决策，当前决策会影响未来状态。这就是\textbf{动态博弈}，或更具体地说，\textbf{马尔可夫博弈}（Markov Game）。
-
-\subsection{从静态到动态：马尔可夫博弈}
-
-\begin{definition}[马尔可夫博弈]
-一个$N$人\textbf{马尔可夫博弈}（又称随机博弈）由以下元素组成：
-\begin{itemize}
-    \item \textbf{状态空间}$\mathcal{S}$：系统可能处于的所有状态
-    \item \textbf{动作空间}$\mathcal{A}_i$：每个智能体$i$可选择的动作
-    \item \textbf{状态转移}$P(s' | s, a_1, \ldots, a_N)$：给定当前状态和所有人的动作，下一个状态的概率分布
-    \item \textbf{奖励函数}$r_i(s, a_1, \ldots, a_N)$：每个智能体在每一步获得的即时奖励
-    \item \textbf{折扣因子}$\gamma \in [0,1)$：未来奖励的折扣率
-\end{itemize}
-
-每个智能体$i$的目标是最大化累积奖励：
-\begin{equation}
-    \max_{\pi_i} \E\left[ \sum_{t=0}^{\infty} \gamma^t r_i(s_t, a_{1,t}, \ldots, a_{N,t}) \right]
-\end{equation}
-\end{definition}
-
-\begin{warning}[title=多智能体RL的核心困难：非平稳性]
-\textbf{问题}：从智能体$i$的视角看，环境的转移概率是：
-\begin{equation}
-    P(s' | s, a_i) = \sum_{a_{-i}} P(s' | s, a_i, a_{-i}) \pi_{-i}(a_{-i} | s)
-\end{equation}
-
-但其他智能体也在学习，所以$\pi_{-i}$在不断变化！
-
-\textbf{后果}：
-\begin{itemize}
-    \item 环境对于单个智能体是\textbf{非平稳}的（规则在变）
-    \item 单智能体RL的收敛性保证不再成立
-    \item "追逐移动目标"问题——你刚学会应对对手的策略，对手又变了
-\end{itemize}
-
-\textbf{类比}：想象你在学下棋，但对手每天都在变强。你昨天赢他的策略，今天可能就不管用了。
-\end{warning}
-
-\subsection{CTDE范式：集中训练，分散执行}
-
-解决非平稳性的一个关键思想是\textbf{CTDE}（Centralized Training with Decentralized Execution）：
-
-\begin{itemize}
-    \item \textbf{训练时}：可以使用全局信息（所有智能体的观测和动作）
-    \item \textbf{执行时}：每个智能体只能使用自己的局部观测
-\end{itemize}
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{figs_chap15/ctde_comparison.pdf}
-\caption{三种多智能体学习范式的对比。左：独立学习（IQL），每个智能体独立与环境交互，面临非平稳性问题。中：CTDE范式，训练时使用全局信息（集中式Critic），执行时只用局部观测（分散式Actor）。右：完全集中式，由单一控制器指挥所有智能体，存在可扩展性和通信瓶颈问题。}
-\label{fig:ctde}
-\end{figure}
-
-图\ref{fig:ctde}对比了三种学习范式。CTDE是目前最流行的方法，因为它在\textbf{训练效率}和\textbf{执行灵活性}之间取得了很好的平衡。
-
-\subsection{价值分解方法：QMIX}
-
-QMIX是CTDE范式下\textbf{价值分解}（Value Decomposition）方法的代表。
-
-\begin{definition}[IGM原则——核心思想]
-\textbf{IGM}（Individual-Global-Max）原则要求：
-\begin{equation}
-    \arg\max_{\mathbf{a}} Q_{tot}(s, \mathbf{a}) = \begin{pmatrix} \arg\max_{a_1} Q_1(o_1, a_1) \\ \vdots \\ \arg\max_{a_N} Q_N(o_N, a_N) \end{pmatrix}
-\end{equation}
-
-\textbf{直观理解}：最大化全局Q值的联合动作，等于每个智能体分别最大化自己局部Q值的动作组合。
-
-\textbf{为什么重要}：这保证了分散执行的一致性——每个智能体贪婪地选择自己的最优动作，组合起来就是全局最优！
-\end{definition}
-
-\begin{theorem}[QMIX的单调性约束]
-如果$Q_{tot}$关于每个$Q_i$是单调递增的：
-\begin{equation}
-    \frac{\partial Q_{tot}}{\partial Q_i} \geq 0, \quad \forall i
-\end{equation}
-则IGM原则自动满足。
-\end{theorem}
-
-\begin{proof}
-设$a_i^* = \arg\max_{a_i} Q_i(o_i, a_i)$。
-
-对于任意其他动作$a_i'$，有$Q_i(o_i, a_i^*) \geq Q_i(o_i, a_i')$。
-
-由单调性：
-\begin{equation}
-    Q_{tot}(s, a_1^*, \ldots, a_N^*) \geq Q_{tot}(s, a_1^*, \ldots, a_i', \ldots, a_N^*)
-\end{equation}
-
-这对所有$i$和所有$a_i'$成立，所以$(a_1^*, \ldots, a_N^*)$最大化$Q_{tot}$。
-\end{proof}
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.8\textwidth]{figs_chap15/qmix_architecture.pdf}
-\caption{QMIX架构示意图。每个智能体有自己的Q网络$Q_i(o_i, a_i)$，只使用局部观测。混合网络将各个局部Q值组合成全局Q值$Q_{tot}$。关键：混合网络的权重由超网络（Hypernetwork）根据全局状态$s$生成，且保证对$Q_i$的偏导非负（单调性约束），从而满足IGM原则。}
-\label{fig:qmix}
-\end{figure}
-
-\textbf{QMIX架构的关键组件}（见图\ref{fig:qmix}）：
-\begin{enumerate}
-    \item \textbf{局部Q网络}：每个智能体$i$有一个Q网络$Q_i(o_i, a_i)$，只使用自己的观测
-    \item \textbf{混合网络}：将所有局部Q值组合成全局Q值
-    \item \textbf{超网络}：根据全局状态$s$生成混合网络的权重
-    \item \textbf{非负权重}：通过绝对值或指数函数保证权重非负，从而满足单调性
-\end{enumerate}
-
-\begin{algorithm}
-\caption{QMIX训练流程（伪代码）}
-\begin{algorithmic}[1]
-\State \textbf{输入}: 经验回放池，学习率$\alpha$，目标网络更新率$\tau$
-\For{每个训练步}
-    \State 从回放池采样一批经验 $(o, a, r, o', s, s', done)$
-    \State \Comment{$o$: 各智能体观测, $a$: 各智能体动作, $s$: 全局状态}
-
-    \State \textbf{计算当前Q值}:
-    \For{每个智能体 $i$}
-        \State $Q_i \leftarrow Q_i(o_i, a_i; \theta_i)$ \Comment{局部Q网络}
-    \EndFor
-    \State $Q_{tot} \leftarrow \text{MixingNetwork}(Q_1, \ldots, Q_N; s)$ \Comment{混合得到全局Q}
-
-    \State \textbf{计算目标Q值}:
-    \For{每个智能体 $i$}
-        \State $Q'_i \leftarrow \max_{a'_i} Q^{target}_i(o'_i, a'_i)$ \Comment{目标网络}
-    \EndFor
-    \State $Q'_{tot} \leftarrow \text{MixingNetwork}^{target}(Q'_1, \ldots, Q'_N; s')$
-    \State $y \leftarrow r + \gamma (1 - done) \cdot Q'_{tot}$ \Comment{TD目标}
-
-    \State \textbf{更新网络}:
-    \State $\mathcal{L} \leftarrow (Q_{tot} - y)^2$ \Comment{TD损失}
-    \State 梯度下降更新所有网络参数
-    \State 软更新目标网络: $\theta^{target} \leftarrow \tau \theta + (1-\tau) \theta^{target}$
-\EndFor
-\end{algorithmic}
-\end{algorithm}
-
-\begin{physicalintuition}
-QMIX的单调性约束有深刻的物理意义：
-
-\textbf{总能量是子系统能量的非线性叠加}。
-
-想象一个物理系统由$N$个子系统组成，每个子系统有能量$E_i$。如果：
-\begin{equation}
-    \frac{\partial E_{tot}}{\partial E_i} \geq 0
-\end{equation}
-
-这意味着：任何子系统能量的增加都会导致总能量增加。没有"负能量贡献"。
-
-QMIX假设的是一个\textbf{协作博弈}：每个智能体的"贡献"都是正向的。这在很多团队任务中是合理的（如星际争霸的微操、机器人协作搬运等）。
-
-但如果智能体之间存在竞争关系（零和或混合博弈），QMIX的表达能力就不足了——这时需要其他方法。
-\end{physicalintuition}
-
-\subsection{策略梯度方法：MAPPO}
-
-MAPPO是将PPO（近端策略优化）扩展到多智能体设置的方法。
-
-\begin{definition}[MAPPO]
-MAPPO使用Actor-Critic架构：
-\begin{itemize}
-    \item \textbf{Actor}（分散）：每个智能体$i$有自己的策略网络$\pi_i(a_i | o_i)$，只依赖局部观测
-    \item \textbf{Critic}（集中）：一个共享的价值网络$V(s)$，使用全局状态
-\end{itemize}
-
-策略更新使用PPO的裁剪目标：
-\begin{equation}
-    L^{\text{CLIP}}_i = \E\left[ \min\left( r_t(\theta) \hat{A}_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon) \hat{A}_t \right) \right]
-\end{equation}
-其中：
-\begin{itemize}
-    \item $r_t(\theta) = \frac{\pi_\theta(a_t | o_t)}{\pi_{\theta_{\text{old}}}(a_t | o_t)}$：新旧策略的概率比
-    \item $\hat{A}_t$：优势函数估计（这个动作比平均好多少）
-    \item $\epsilon$：裁剪参数（通常取0.1-0.2）
-\end{itemize}
-\end{definition}
-
-\begin{remark}[MAPPO vs QMIX]
 \begin{center}
 \begin{tabular}{l|cc}
 \toprule
-& \textbf{QMIX} & \textbf{MAPPO} \\
+& \textbf{传统神经网络} & \textbf{神经算子} \\
 \midrule
-方法类型 & 价值分解 & 策略梯度 \\
-动作空间 & 离散为主 & 离散/连续都可 \\
-训练稳定性 & 较稳定 & 需要仔细调参 \\
-表达能力 & 受单调性限制 & 更灵活 \\
-适用场景 & 纯协作博弈 & 更广泛 \\
+输入 & 向量 $x \in \mathbb{R}^n$ & 函数 $u(x)$ \\
+输出 & 向量 $y \in \mathbb{R}^m$ & 函数 $v(x)$ \\
+学习目标 & $f: \mathbb{R}^n \to \mathbb{R}^m$ & $\mathcal{G}: \mathcal{U} \to \mathcal{V}$ \\
 \bottomrule
 \end{tabular}
 \end{center}
-\end{remark}
+
+神经算子是\textbf{函数空间到函数空间}的映射！
+\end{insightbox}
+
+\subsection{为什么这很难？}
+
+函数是无穷维对象，如何用有限参数的神经网络来表示“函数到函数”的映射？
+
+传统方法是离散化：把函数$u(x)$在网格点$\{x_1, \ldots, x_n\}$上采样，得到向量$(u(x_1), \ldots, u(x_n))$，然后用传统神经网络处理。
+
+但这样做，网络的输入维度就被采样点数绑死了：在$32 \times 32$网格上训练的网络，不能直接用于$64 \times 64$的输入；换一种网格划分方式，也需要重新训练。更根本的问题是，这样的网络学到的是“像素到像素”的映射，而不是“函数到函数”的映射，它并没有理解输入是一个连续对象。于是神经算子的核心挑战就是：如何设计一个\textbf{与离散化方式无关}的架构？
 
 % ====================================================================================
-\section{宏观极限：平均场博弈}
+\section{离散化无关性：神经算子的核心特性}
 % ====================================================================================
 
-\subsection{维度灾难与平均场近似}
+\subsection{什么是离散化无关性}
 
-当智能体数量很大时（如$N = 10000$个无人机、百万级的交通参与者），直接处理$N$体博弈面临\textbf{维度灾难}：
-\begin{itemize}
-    \item 联合状态空间：$\mathcal{S}^N$
-    \item 联合动作空间：$\mathcal{A}^N$
-    \item 存储和计算指数增长
-\end{itemize}
+上一节把目标定为学习“函数到函数”的映射，本节要回答的是：什么样的架构才算真正学到了函数之间的映射，而不是像素之间的映射？判据就是下面这条性质。
 
-\textbf{平均场近似}的思想来自统计物理：
-
-\begin{quote}
-\textit{当粒子数量趋于无穷时，忽略具体个体，只关注群体的统计分布。}
-\end{quote}
-
-\marginnote{\textbf{平均场博弈创始人}：MFG由法国数学家Jean-Michel Lasry和Pierre-Louis Lions于2006年独立提出。Lions是1994年菲尔兹奖得主（数学界最高荣誉），专长非线性PDE。他在法兰西公学院的MFG课程推动了该领域的蓬勃发展。}
-
-\begin{definition}[平均场博弈]
-在\textbf{平均场博弈}（Mean Field Game, MFG）中：
-\begin{itemize}
-    \item 有无穷多个同质（相同）智能体
-    \item 每个智能体与群体分布$m(x, t)$交互，而不是与具体个体交互
-    \item 群体分布由所有智能体的策略决定
-\end{itemize}
-
-\textbf{核心简化}：把``与$N$个具体对手的博弈''替换为``与群体分布的博弈''。
+\begin{definition}[离散化无关性]
+一个神经算子$\mathcal{G}_\theta$具有\textbf{离散化无关性}（discretization invariance），如果它可以接受任意分辨率的输入、可以在任意分辨率上输出，并且无论使用什么分辨率，它都在逼近同一个连续算子。
 \end{definition}
 
-\begin{example}[平均场近似的直观理解]
-想象你是一滴水在大海中。
+用数学语言说：设$\mathcal{G}^*$是真实的连续算子，$\mathcal{G}_\theta^{(n)}$是在$n$个网格点上的离散近似。离散化无关性意味着：
+\begin{equation}
+    \lim_{n \to \infty} \mathcal{G}_\theta^{(n)} = \mathcal{G}_\theta \quad \text{（在适当范数意义下）}
+\end{equation}
+\clarify{离散化无关性保证的是：分辨率 $n \to \infty$ 时 $\mathcal{G}_\theta^{(n)}$ 收敛到某个与网格无关的连续算子 $\mathcal{G}_\theta$。它是否等于真实的 $\mathcal{G}^*$，取决于训练得好不好——那是另一回事。}
 
-\textbf{微观视角}：你要考虑周围每一滴水的位置和速度（几乎不可能）
-
-\textbf{平均场视角}：你只需要知道周围水的"平均流动方向"（密度场和速度场）
-
-类似地，在有大量智能体的博弈中：
-\begin{itemize}
-    \item 你不需要知道每个对手的具体策略
-    \item 你只需要知道对手群体的"分布"——有多少比例在做什么
-    \item 基于这个分布，你做出最优响应
-    \item 当每个人都这样做时，形成一个自洽的均衡
-\end{itemize}
+\begin{example}[零样本超分辨率]
+这是离散化无关性最惊人的应用。假设我们在$32 \times 32$的粗网格上训练了一个FNO模型，训练完成后，输入$64 \times 64$的数据就得到$64 \times 64$的输出，输入$128 \times 128$或$256 \times 256$的数据也同样得到相应分辨率的输出，\textbf{无需任何额外训练}。这被称为\textbf{零样本超分辨率}（zero-shot super-resolution）。
 \end{example}
 
-\subsection{MFG的核心思想：两步不动点}
+\subsection{为什么传统CNN不具有离散化无关性？}
 
-理解MFG最关键的是把它看成一个\textbf{两步迭代过程}，最终要找的是一个\textbf{不动点}：
+考虑一个简单的1D卷积：
+\begin{equation}
+    (k * u)_i = \sum_{j=-r}^{r} k_j \cdot u_{i+j}
+\end{equation}
 
-\begin{keyidea}[MFG的不动点结构——给大二同学的直观解释]
-想象你是无数智能体中的一个，你需要做两件事：
+这里$k$是一个固定大小的卷积核（如$3 \times 3$）。问题在于，卷积核的大小是固定的像素数，而不是固定的物理尺寸，于是在不同分辨率下，同样大小的卷积核覆盖的物理区域并不相同。
 
-\textbf{第一步：猜测别人的行为}
+\begin{example}[卷积核的分辨率依赖]
+假设物理域是$[0, 1]$，使用$3 \times 3$卷积核。在$32$个网格点上，卷积核覆盖的物理尺寸是$3 \times \frac{1}{32} \approx 0.094$；换到$64$个网格点上，它覆盖的物理尺寸就缩小为$3 \times \frac{1}{64} \approx 0.047$。同样的卷积核，在不同分辨率下“看到”的物理区域完全不同！
+\end{example}
 
-你不知道每个具体对手会做什么，但你可以``猜''一个群体分布$m(x,t)$——表示``在时刻$t$，有多少比例的智能体在位置$x$附近''。
+\subsection{如何实现离散化无关性？}
 
-\textbf{第二步：基于猜测，优化自己}
+有两种主要思路：
 
-假设群体分布就是$m$，那么你面临的是一个\textbf{单人最优控制问题}——环境（别人的分布）已经固定了，你只需要最小化自己的代价。解这个问题得到\textbf{最优策略}$\pi^*(m)$和对应的\textbf{价值函数}$u(x,t)$。
+\textbf{思路1：在函数空间定义操作}
 
-\textbf{第三步：验证猜测是否自洽}
+不要在“像素”上定义操作，而是在“函数”上定义操作。具体方法是使用\textbf{积分算子}：
+\begin{equation}
+    (Ku)(x) = \int_\Omega \kappa(x, y) u(y) \, dy
+\end{equation}
 
-如果每个智能体都用$\pi^*(m)$这个策略，那么所有人的运动会产生一个新的密度分布$m'$。问题来了：$m'$和你最初猜的$m$一样吗？
+积分是定义在连续函数上的，与离散化方式无关。不同分辨率只是对同一个积分的不同数值近似。
 
-\textbf{不动点条件}：如果$m' = m$，说明你的猜测是自洽的——每个人基于这个分布做最优决策，而这些最优决策恰好产生了这个分布。这就是\textbf{纳什均衡}！
+\textbf{思路2：在频域操作}
+
+傅里叶变换将函数映射到频域。频域表示是“坐标无关”的——频率$k$的傅里叶系数对应的是函数的全局特性，与网格划分无关。
+
+% ====================================================================================
+\section{数学统一：格林函数与积分变换}
+% ====================================================================================
+
+在深入具体架构之前，让我们建立一个统一的数学框架。
+
+\begin{tcolorbox}[colback=yellow!10, colframe=orange!80, title=本章的核心观点]
+\textbf{本章的问题仍是第1章的拉格朗日乘子法，只是这次我们不求某一个问题的解，而是求“约束放松一点、解变多少”这张影子价格表本身。}
+
+线性情形下这张表有名字：格林函数 $G(x, \xi) = \partial u(x)/\partial f(\xi)$，也就是第13章 $K^{-1}$ 的连续版本。神经算子把它推广到非线性方程，并直接从数据里学。
 
 \begin{center}
-\begin{tikzpicture}[>=stealth, scale=0.9]
-    \node[draw, rounded corners, fill=blue!15, minimum width=3cm, minimum height=1.2cm, align=center] (m) at (0, 0) {群体分布\\$m(x,t)$};
-    \node[draw, rounded corners, fill=orange!15, minimum width=3cm, minimum height=1.2cm, align=center] (u) at (6, 0) {最优策略/价值函数\\$u(x,t), \pi^*$};
-
-    \draw[->, thick] (m.east) -- node[above, font=\small] {固定$m$，解最优控制} node[below, font=\small, gray] {(HJB方程)} (u.west);
-    \draw[->, thick] (u.south) .. controls (6, -2) and (0, -2) .. node[below, font=\small] {按$\pi^*$行动，推导密度} node[above, font=\small, gray] {(FP方程)} (m.south);
-
-    \node[font=\small, red] at (3, -2.8) {\textbf{不动点}：$m \xrightarrow{\text{HJB}} u \xrightarrow{\text{FP}} m$};
-\end{tikzpicture}
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabularx}{\linewidth}{l>{\raggedright\arraybackslash}p{4.2cm}>{\raggedright\arraybackslash}X}
+\toprule
+ & \textbf{第1章 / 第13章} & \textbf{本章（神经算子）} \\
+\midrule
+变量 & $x \in \R^n$ / 节点值 $U$ & 算子参数 $\theta$（一次学完一族问题） \\
+目标 & $f(x)$ / $\frac{1}{2}U^\top KU - F^\top U$ & 数据误差 $\sum_i \|\mathcal{G}_\theta(a_i) - u_i\|^2$ \\
+约束 & $g(x) = 0$ / 无（已在能量里） & 纯数据驱动：无显式约束；PINO：$\mathcal{N}[\mathcal{G}_\theta(a)] = f$ \\
+乘子 & $\lambda$（影子价格） & 格林函数 $G(x, \xi) = \partial u(x)/\partial f(\xi)$：对源项的影子价格表 \\
+一阶条件 & $\nabla f + \lambda^\top \nabla g = 0$ / $KU = F$ & $u = \int G(x, \xi) f(\xi)\,d\xi$，即 $U = K^{-1}F$ \\
+求解方式 & 组装 $K$，解方程 & 跳过组装，直接学 $K^{-1}$（$\kappa_\theta$、$R(k)$、$b_k t_k$） \\
+\bottomrule
+\end{tabularx}
 \end{center}
-\end{keyidea}
+\end{tcolorbox}
 
-\subsection{MFG的数学方程}
+\subsection{线性PDE的解算子}
 
-上面的直觉对应两个偏微分方程：
-
-\begin{keyformula}[title=平均场博弈方程组]
-\textbf{1. HJB方程}（``给定$m$，求最优策略''）：
+考虑线性PDE：
 \begin{equation}
-    -\frac{\partial u}{\partial t} - H(x, \nabla u, m) = 0, \quad u(x, T) = g(x)
+    \mathcal{L}[u] = f
 \end{equation}
-这是一个\textbf{后向方程}：从终端条件$g(x)$出发，往回算每个时刻的最优代价$u(x,t)$。
+其中$\mathcal{L}$是线性微分算子（如$-\nabla^2$）。
 
-\textbf{2. FP方程}（``给定最优策略，算密度演化''）：
+\begin{theorem}[格林函数表示]
+\label{thm:green}
+如果格林函数$G(x, y)$满足：
 \begin{equation}
-    \frac{\partial m}{\partial t} + \nabla \cdot (m \cdot v^*) - \nu \Delta m = 0, \quad m(x, 0) = m_0(x)
+    \mathcal{L}_x[G(x, y)] = \delta(x - y)
 \end{equation}
-这是一个\textbf{前向方程}：从初始分布$m_0(x)$出发，根据最优速度场$v^* = -\nabla_p H$往前推演密度如何变化。
+且 $G(\cdot, y)$ 满足齐次边界条件，那么PDE的解可以写成积分形式：
+\begin{equation}
+    u(x) = \int_\Omega G(x, y) f(y) \, dy
+\end{equation}
+\end{theorem}
 
-\textbf{耦合与不动点}：
-\begin{itemize}
-    \item HJB需要$m$：你的最优策略取决于别人在哪里（拥挤效应等）
-    \item FP需要$u$：密度演化取决于大家的最优运动方向
-    \item \textbf{纳什均衡} = 同时满足两个方程的$(u^*, m^*)$
-\end{itemize}
+\begin{proof}
+将$u(x) = \int G(x, y) f(y) dy$代入方程：
+\begin{align}
+    \mathcal{L}[u](x) &= \mathcal{L}_x\left[\int_\Omega G(x, y) f(y) \, dy\right] \\
+    &= \int_\Omega \mathcal{L}_x[G(x, y)] f(y) \, dy \quad \text{（线性性）} \\
+    &= \int_\Omega \delta(x - y) f(y) \, dy \\
+    &= f(x)
+\end{align}
+（边界条件由 $G(\cdot, y)$ 满足齐次边界条件保证。）
+\end{proof}
+\review{第1章}{影子价格 $\lambda = -df^*/d\epsilon$：约束放松一点，最优值变多少。现在的约束是“每个点 $\xi$ 处方程都成立”，无穷多条；在 $\xi$ 处放松一个单位源 $\delta(x - \xi)$，解在 $x$ 处变化 $G(x, \xi)$。格林函数就是一整张影子价格表，第8章的伴随变量就是这张表乘上目标的梯度。}
+
+\begin{example}[一维泊松方程的格林函数]
+考虑：
+\begin{equation}
+    -u''(x) = f(x), \quad x \in (0, 1), \quad u(0) = u(1) = 0
+\end{equation}
+
+格林函数为：
+\begin{equation}
+    G(x, y) = \begin{cases}
+        y(1-x), & y < x \\
+        x(1-y), & y \geq x
+    \end{cases}
+\end{equation}
+
+解为：
+\begin{equation}
+    u(x) = \int_0^1 G(x, y) f(y) \, dy
+\end{equation}
+\end{example}
+
+回想第13章：有限元把这个方程变成 $KU = F$，解是 $U = K^{-1}F$。刚度矩阵 $K$ 只和方程、网格有关，与载荷无关——换一个 $F$，只需再乘一次 $K^{-1}$。所以“解算子”就是 $K^{-1}$，格林函数 $G(x, y)$ 就是 $K^{-1}$ 的连续版本：对一维泊松方程，$K^{-1}$ 的第 $(i, j)$ 元恰好等于 $h\, G(x_i, x_j)$。第13章我们组装 $K$ 再解方程；本章跳过组装，直接从数据里学 $K^{-1}$。
+\tryit{用第13章的代码组装一维泊松方程的刚度矩阵 $K = \frac{1}{h}\,\mathrm{tridiag}(-1, 2, -1)$（$h = 0.1$），算 $K^{-1}$ 并画热力图，与 $G(x, y) = \min(x, y)(1 - \max(x, y))$ 对比：$K^{-1}$ 的第 $(i, j)$ 元恰好等于 $h\, G(x_i, x_j)$。}
+
+\subsection{神经算子的统一形式}
+
+定理\ref{thm:green}告诉我们：线性PDE的解算子本质上是一个\textbf{积分算子}。
+
+这启发了神经算子的设计：
+
+\begin{keyformula}[title=神经算子的核心形式]
+所有神经算子都可以写成积分变换的形式：
+\begin{equation}
+    v(x) = \sigma\left( Wu(x) + \int_\Omega \kappa_\theta(x, y) u(y) \, dy + b(x) \right)
+\end{equation}
+其中$\kappa_\theta(x, y)$是\textbf{可学习的积分核}（类比格林函数），$W$是局部线性变换，$\sigma$是非线性激活函数，$b(x)$是偏置。
 \end{keyformula}
 
-\begin{remark}[物理直觉]
-\begin{itemize}
-    \item \textbf{HJB方程}：类似量子力学中的Schrödinger方程，描述``价值波''的演化
-    \item \textbf{FP方程}：就是连续性方程/扩散方程，描述概率密度的输运
-\end{itemize}
-MFG是统计力学和最优控制的交叉——群体行为的``热力学''。
+\begin{unification}[title=不同神经算子架构的统一]
+不同的神经算子架构，本质上是选择了不同的方式来参数化积分核$\kappa_\theta(x, y)$：
+
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{l|>{\raggedright\arraybackslash}X}
+\toprule
+\textbf{架构} & \textbf{积分核的形式} \\
+\midrule
+DeepONet & $\sum_k b_k(u)\, t_k(x)$：分支给系数、主干给基函数（分支为线性层时 $\kappa(x,y) = \sum_k t_k(x) \sum_j w_{kj}\delta(y - y_j)$；一般情形对 $u$ 非线性，已超出线性积分算子族） \\
+FNO & $\kappa(x, y) = \kappa(x - y)$（平移不变，频域表示） \\
+GNO & 图上的消息传递（非规则网格） \\
+Transformer & $\kappa(x, y) = \text{softmax}(Q(x)K(y)^T / \sqrt{d})$（数据依赖） \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\end{unification}
+\think{分支网络 $b_k(u)$ 对 $u$ 是非线性的，所以 DeepONet 写不成对 $u$ 线性的 $\int \kappa(x, y) u(y)\,dy$。那它和积分算子框架“统一”在哪里？提示：把分支网络换成线性层，看看 $\kappa$ 长什么样。}
+
+% ====================================================================================
+\section{DeepONet：基函数展开视角}
+\label{sec:deeponet}
+% ====================================================================================
+
+\subsection{万能逼近定理}
+
+DeepONet的理论基础是Chen \& Chen在1995年证明的万能逼近定理：
+
+\begin{theorem}[算子的万能逼近定理]
+设$\mathcal{G}: \mathcal{U} \to \mathcal{V}$是从紧集$K \subset C(\Omega_1)$到$C(\Omega_2)$的非线性连续算子。那么对于任意$\epsilon > 0$，存在正整数$p$、连续函数$g_k$、$f_k$和点$\{y_j\}_{j=1}^m \subset \Omega_1$，使得：
+\begin{equation}
+    \left| \mathcal{G}(u)(x) - \sum_{k=1}^{p} \underbrace{g_k\left(u(y_1), \ldots, u(y_m)\right)}_{\text{依赖于输入函数}} \cdot \underbrace{f_k(x)}_{\text{依赖于输出位置}} \right| < \epsilon
+\end{equation}
+对所有$u \in K$和$x \in \Omega_2$成立。
+\end{theorem}
+
+\begin{remark}[直觉理解]
+这个定理说的是：任何算子都可以近似为“\textbf{系数}”乘以“\textbf{基函数}”的形式，其中系数$g_k(u(y_1), \ldots, u(y_m))$依赖于输入函数在某些“传感器”位置的值，而基函数$f_k(x)$只依赖于输出位置。这类似于傅里叶级数$f(x) = \sum_k c_k e^{ikx}$，只是这里的“傅里叶系数”$c_k$变成了输入函数的非线性泛函。
 \end{remark}
 
-\begin{example}[线性二次MFG——一个可以精确求解的例子]
-为了让上面的抽象方程变得具体，我们考虑一个最简单的MFG问题：
+\subsection{DeepONet架构}
 
-\textbf{场景}：无穷多个智能体在一维空间$x \in \mathbb{R}$上运动，时间$t \in [0, T]$。
+定理给出的形式已经把“依赖于输入函数”和“依赖于输出位置”两部分分开了，剩下的问题只是用什么去逼近$g_k$和$f_k$。Lu Lu 等人正是从这个定理出发，用两个神经网络分别承担这两部分，设计出 DeepONet 的“双塔”结构：
 
-\textbf{每个智能体的目标}：最小化自己的代价
+\begin{definition}[DeepONet]
+DeepONet由两个子网络组成。\textbf{分支网络}（Branch Net）$\mathbf{b}_\theta$的输入是函数$u$在传感器位置的采样值$(u(y_1), \ldots, u(y_m))$，输出是$p$维向量$(b_1, \ldots, b_p)$；\textbf{主干网络}（Trunk Net）$\mathbf{t}_\phi$的输入是查询位置$x$，输出是$p$维向量$(t_1, \ldots, t_p)$。最终输出通过内积计算：
 \begin{equation}
-    J = \int_0^T \left[ \frac{1}{2}v^2 + \frac{\alpha}{2}(x - \bar{x})^2 \right] dt + \frac{1}{2}x(T)^2
+    \mathcal{G}_{\theta, \phi}(u)(x) = \sum_{k=1}^{p} b_k(u) \cdot t_k(x) = \mathbf{b}_\theta(u) \cdot \mathbf{t}_\phi(x)
 \end{equation}
-其中：
-\begin{itemize}
-    \item $\frac{1}{2}v^2$：控制代价——速度越大，``油费''越贵
-    \item $\frac{\alpha}{2}(x - \bar{x})^2$：\textbf{拥挤代价}——离群体平均位置$\bar{x} = \int x \, m(x,t) dx$越远越好（或越近越好，取决于$\alpha$的符号）
-    \item $\frac{1}{2}x(T)^2$：终端代价——最后希望靠近原点
-\end{itemize}
-
-\textbf{动力学}：每个智能体按$\dot{x} = v$运动，并受布朗运动扰动（扩散系数$\nu$）。
-
-\textbf{初始条件}：所有智能体初始集中在原点附近，$m_0(x) \sim \mathcal{N}(0, \sigma_0^2)$。
-
-这个问题的MFG方程可以用有限差分法数值求解。图\ref{fig:mfg}展示了求解结果。
-\end{example}
+\end{definition}
+\review{第13章}{$\sum_k b_k(u)\, t_k(x)$ 和有限元的 $u_h(x) = \sum_j U_j \phi_j(x)$ 是同一种写法：主干网络学“基函数” $\phi_j$，分支网络学“系数” $U_j$ 对载荷的依赖，也就是 $K^{-1}F$ 这一步。区别只是基函数不再是固定的帐篷函数，而是学出来的。}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap15/mfg_solution.pdf}
-\caption{线性二次MFG的数值解。左上：密度分布$m(x,t)$随时间的演化，初始集中在原点附近，逐渐扩散。右上：价值函数$u(x,t)$，终端条件为二次型$g(x)=x^2$（越远离原点代价越高）。左下：不同时刻的密度剖面，展示群体从集中到分散的过程。右下：最优速度场（箭头）和密度轮廓线（红色），展示智能体的最优运动方向——总体趋势是向原点靠拢。}
-\label{fig:mfg}
+\begin{tikzpicture}[
+    box/.style={rectangle, draw, rounded corners, minimum width=2cm, minimum height=0.8cm, align=center},
+    arrow/.style={-{Stealth}, thick}
+]
+    % Branch Net
+    \node[box, fill=blue!20] (sensors) at (0, 2) {传感器值\\$(u(y_1), \ldots, u(y_m))$};
+    \node[box, fill=blue!30] (branch) at (0, 0) {分支网络\\(MLP)};
+    \node[box, fill=blue!10] (b) at (0, -2) {$\mathbf{b} = (b_1, \ldots, b_p)$};
+    
+    % Trunk Net
+    \node[box, fill=green!20] (query) at (6, 2) {查询位置\\$x$};
+    \node[box, fill=green!30] (trunk) at (6, 0) {主干网络\\(MLP)};
+    \node[box, fill=green!10] (t) at (6, -2) {$\mathbf{t} = (t_1, \ldots, t_p)$};
+    
+    % Output
+    \node[box, fill=red!20] (output) at (3, -4) {$\mathcal{G}(u)(x) = \mathbf{b} \cdot \mathbf{t}$};
+    
+    % Arrows
+    \draw[arrow] (sensors) -- (branch);
+    \draw[arrow] (branch) -- (b);
+    \draw[arrow] (query) -- (trunk);
+    \draw[arrow] (trunk) -- (t);
+    \draw[arrow] (b) -- (output);
+    \draw[arrow] (t) -- (output);
+\end{tikzpicture}
+\caption{DeepONet的双塔架构}
+\label{fig:deeponet}
 \end{figure}
 
-\textbf{从图中可以观察到}：
-\begin{itemize}
-    \item \textbf{左上}：密度分布从初始的高斯分布逐渐扩散，但由于终端代价的``吸引''，最终并没有完全散开
-    \item \textbf{右上}：价值函数在$t=T$时是$u(x,T) = x^2$（碗形），越早的时刻价值越平缓
-    \item \textbf{右下}：速度场箭头指向原点方向——每个智能体的最优策略是向原点移动，因为终端代价惩罚远离原点
-\end{itemize}
+\subsection{物理直觉：POD分解}
+
+DeepONet的形式让人联想到\textbf{本征正交分解}（Proper Orthogonal Decomposition，POD）。
+
+在POD中，我们将参数化的解$u(x; \mu)$分解为：
+\begin{equation}
+    u(x; \mu) \approx \sum_{k=1}^{p} \alpha_k(\mu) \phi_k(x)
+\end{equation}
+其中$\{\phi_k\}$是数据驱动的基函数，$\alpha_k(\mu)$是依赖于参数的系数。
+
+DeepONet可以看作是POD的\textbf{神经网络版本}：主干网络学习的是基函数 $t_k(x)$，分支网络学习的是系数 $b_k(u)$ 对输入函数的依赖。
+
+\begin{remark}[为什么用内积？]
+内积$\mathbf{b} \cdot \mathbf{t}$是一种“双线性”操作：固定$u$，输出是$x$的非线性函数（通过主干网络）；固定$x$，输出是$u$的非线性函数（通过分支网络）。这种结构允许两个网络独立地编码各自的信息，然后通过简单的内积组合。也可以用其他组合方式（如拼接后过MLP），但内积最简洁高效。
+\end{remark}
+
+\subsection{完整代码实现}
+
+\begin{lstlisting}[language=Python, caption={DeepONet的完整实现}]
+import torch
+import torch.nn as nn
+import numpy as np
+
+class DeepONet(nn.Module):
+    """
+    DeepONet: 学习函数到函数的映射
+    
+    架构：
+    - 分支网络：编码输入函数 u 在传感器位置的值
+    - 主干网络：编码输出查询位置 x
+    - 输出：两个网络输出的内积
+    """
+    
+    def __init__(self, 
+                 n_sensors,      # 传感器数量（输入函数的采样点数）
+                 branch_layers,  # 分支网络层结构，如 [100, 64, 64, 64]
+                 trunk_layers,   # 主干网络层结构，如 [1, 64, 64, 64]
+                 p):             # 输出维度（"基函数"数量）
+        super().__init__()
+        
+        # ========== 分支网络 ==========
+        # 输入：u在传感器位置的值，形状 (batch, n_sensors)
+        # 输出：系数向量，形状 (batch, p)
+        branch_layers = [n_sensors] + branch_layers + [p]
+        self.branch_net = self._build_mlp(branch_layers)
+        
+        # ========== 主干网络 ==========
+        # 输入：查询位置 x，形状 (batch, input_dim)
+        # 输出：基函数值，形状 (batch, p)
+        trunk_layers = trunk_layers + [p]
+        self.trunk_net = self._build_mlp(trunk_layers)
+        
+        # 偏置项
+        self.bias = nn.Parameter(torch.zeros(1))
+        
+    def _build_mlp(self, layers):
+        """构建MLP"""
+        net = []
+        for i in range(len(layers) - 1):
+            net.append(nn.Linear(layers[i], layers[i+1]))
+            if i < len(layers) - 2:  # 最后一层不加激活
+                net.append(nn.Tanh())
+        return nn.Sequential(*net)
+    
+    def forward(self, u_sensors, x_query):
+        """
+        前向传播
+        
+        参数:
+            u_sensors: 输入函数在传感器的值, 形状 (batch, n_sensors)
+            x_query: 查询位置, 形状 (batch, input_dim) 或 (batch, n_query, input_dim)
+        
+        返回:
+            G(u)(x): 算子输出, 形状与x_query对应
+        """
+        # 分支网络：编码输入函数
+        b = self.branch_net(u_sensors)  # (batch, p)
+        
+        # 主干网络：编码查询位置
+        # 处理不同形状的x_query
+        if x_query.dim() == 2:
+            t = self.trunk_net(x_query)  # (batch, p)
+            # 内积
+            output = torch.sum(b * t, dim=-1, keepdim=True) + self.bias
+        else:
+            # x_query: (batch, n_query, input_dim)
+            batch_size, n_query, input_dim = x_query.shape
+            x_flat = x_query.reshape(-1, input_dim)  # (batch*n_query, input_dim)
+            t_flat = self.trunk_net(x_flat)  # (batch*n_query, p)
+            t = t_flat.reshape(batch_size, n_query, -1)  # (batch, n_query, p)
+            
+            # b: (batch, p) -> (batch, 1, p)
+            b = b.unsqueeze(1)
+            # 内积: (batch, n_query)
+            output = torch.sum(b * t, dim=-1) + self.bias
+        
+        return output
+
+
+def demo_deeponet_antiderivative():
+    """
+    演示：用DeepONet学习反导数算子
+    
+    目标算子：G(u)(x) = integral_0^x u(t) dt
+    """
+    torch.manual_seed(42)
+    
+    # ========== 参数设置 ==========
+    n_sensors = 50      # 传感器数量
+    n_train = 1000      # 训练样本数
+    n_test = 100        # 测试样本数
+    
+    # ========== 生成数据 ==========
+    def generate_data(n_samples, n_sensors, n_query=50):
+        """
+        生成训练数据
+        
+        输入函数：随机傅里叶级数
+        u(x) = sum_k a_k * sin(k*pi*x) + b_k * cos(k*pi*x)
+        
+        输出：反导数 G(u)(x) = integral_0^x u(t) dt
+        """
+        x_sensors = torch.linspace(0, 1, n_sensors)
+        x_query = torch.linspace(0, 1, n_query)
+        
+        U_sensors = []  # 输入函数在传感器的值
+        X_query = []    # 查询位置
+        Y_true = []     # 真实积分值
+        
+        for _ in range(n_samples):
+            # 生成随机傅里叶系数
+            n_modes = 5
+            a = torch.randn(n_modes) * 0.5
+            b = torch.randn(n_modes) * 0.5
+            
+            # 计算u(x) = sum_k a_k*sin(k*pi*x) + b_k*cos(k*pi*x)
+            def u(x):
+                result = torch.zeros_like(x)
+                for k in range(1, n_modes + 1):
+                    result += a[k-1] * torch.sin(k * np.pi * x)
+                    result += b[k-1] * torch.cos(k * np.pi * x)
+                return result
+            
+            # 计算积分的解析解
+            # integral sin(k*pi*x) = -cos(k*pi*x)/(k*pi) + C
+            # integral cos(k*pi*x) = sin(k*pi*x)/(k*pi) + C
+            def integral_u(x):
+                result = torch.zeros_like(x)
+                for k in range(1, n_modes + 1):
+                    # integral_0^x sin(k*pi*t) dt = (1 - cos(k*pi*x))/(k*pi)
+                    result += a[k-1] * (1 - torch.cos(k * np.pi * x)) / (k * np.pi)
+                    # integral_0^x cos(k*pi*t) dt = sin(k*pi*x)/(k*pi)
+                    result += b[k-1] * torch.sin(k * np.pi * x) / (k * np.pi)
+                return result
+            
+            U_sensors.append(u(x_sensors))
+            X_query.append(x_query)
+            Y_true.append(integral_u(x_query))
+        
+        U_sensors = torch.stack(U_sensors)  # (n_samples, n_sensors)
+        X_query = torch.stack(X_query)      # (n_samples, n_query)
+        Y_true = torch.stack(Y_true)        # (n_samples, n_query)
+        
+        return U_sensors, X_query.unsqueeze(-1), Y_true
+    
+    # 生成数据
+    U_train, X_train, Y_train = generate_data(n_train, n_sensors)
+    U_test, X_test, Y_test = generate_data(n_test, n_sensors)
+    
+    # ========== 创建模型 ==========
+    model = DeepONet(
+        n_sensors=n_sensors,
+        branch_layers=[64, 64],
+        trunk_layers=[1, 64, 64],
+        p=64
+    )
+    
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    
+    # ========== 训练 ==========
+    print("开始训练DeepONet...")
+    n_epochs = 2000
+    batch_size = 64
+    
+    for epoch in range(n_epochs):
+        # 随机打乱
+        perm = torch.randperm(n_train)
+        total_loss = 0.0
+        n_batches = 0
+        
+        for i in range(0, n_train, batch_size):
+            idx = perm[i:i+batch_size]
+            u_batch = U_train[idx]
+            x_batch = X_train[idx]
+            y_batch = Y_train[idx]
+            
+            # 前向传播
+            y_pred = model(u_batch, x_batch)
+            
+            # 损失
+            loss = torch.mean((y_pred - y_batch) ** 2)
+            
+            # 反向传播
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            
+            total_loss += loss.item()
+            n_batches += 1
+        
+        if (epoch + 1) % 200 == 0:
+            avg_loss = total_loss / n_batches
+            print(f"Epoch {epoch+1}: MSE = {avg_loss:.6f}")
+    
+    # ========== 测试 ==========
+    model.eval()
+    with torch.no_grad():
+        Y_pred = model(U_test, X_test)
+        test_mse = torch.mean((Y_pred - Y_test) ** 2).item()
+        print(f"\n测试集 MSE: {test_mse:.6f}")
+        
+        # 相对误差
+        rel_error = torch.mean(torch.abs(Y_pred - Y_test) / (torch.abs(Y_test) + 1e-6))
+        print(f"测试集相对误差: {rel_error:.4f}")
+    
+    print("\n训练完成！")
+
+if __name__ == "__main__":
+    demo_deeponet_antiderivative()
+\end{lstlisting}
+
+\begin{exercise}[title = 扩展DeepONet]
+\begin{enumerate}
+    \item 修改上述代码，让DeepONet学习\textbf{微分算子}$\mathcal{G}(u)(x) = u'(x)$。
+    
+    \textbf{提示}：微分比积分更难学（因为它是“不连续”的操作），你可能需要更多的训练数据和更大的网络。
+    
+    \item 将DeepONet应用到热传导方程：输入初始温度分布$u_0(x)$，输出$t=0.1$时刻的温度分布$u(x, 0.1)$。
+    
+    \textbf{提示}：主干网络的输入应该是$(x, t)$，但训练时$t$固定为$0.1$。
+\end{enumerate}
+\end{exercise}
+
+% ====================================================================================
+\section{FNO：傅里叶变换视角}
+\label{sec:fno}
+% ====================================================================================
+
+\subsection{卷积定理：空域积分 = 频域乘法}
+
+DeepONet 用两个网络把积分核拆成了“系数乘基函数”，但它没有利用核本身可能具有的结构。如果方程是常系数的、区域是周期的，那么核只依赖于$x - y$，这一点结构就足以让积分算子的计算量从$O(N^2)$降到$O(N \log N)$。2020 年，Zongyi Li 等人（出自 Anandkumar 组）提出的傅里叶神经算子（FNO）正是抓住了这一点，它的核心思想基于\textbf{卷积定理}：
+
+\begin{theorem}[卷积定理]
+设$f, g$是$L^2$函数，$\hat{f}, \hat{g}$是它们的傅里叶变换。那么：
+\begin{equation}
+    \widehat{f * g} = \hat{f} \cdot \hat{g}
+\end{equation}
+即\textbf{空域的卷积等于频域的逐点乘法}。
+\end{theorem}
+
+回顾我们在上一节看到的积分算子：
+\begin{equation}
+    (Ku)(x) = \int_\Omega \kappa(x-y) u(y) \, dy
+\end{equation}
+
+如果积分核$\kappa$是\textbf{平移不变}的（只依赖于$x-y$），这就是一个卷积！
+
+根据卷积定理：
+\begin{equation}
+    \widehat{Ku}(k) = \hat{\kappa}(k) \cdot \hat{u}(k)
+\end{equation}
+
+\begin{insightbox}
+\textbf{在频域做积分算子}：
+\begin{enumerate}
+    \item 对输入$u$做傅里叶变换：$\hat{u} = \mathcal{F}(u)$
+    \item 在频域做逐点乘法：$\hat{v} = R \cdot \hat{u}$，其中$R$是可学习的
+    \item 做逆傅里叶变换：$v = \mathcal{F}^{-1}(\hat{v})$
+\end{enumerate}
+
+这比直接计算积分高效得多：直接在$N$个网格点上做积分需要$O(N^2)$次运算，而借助 FFT 只需要$O(N \log N)$。
+\end{insightbox}
+\clarify{对周期域上的常系数方程，格林函数是平移不变的 $G(x - y)$，它的傅里叶变换就是微分算子符号的倒数：$-u'' = f \Rightarrow \hat{G}(k) = 1/k^2$。FNO 在线性情形下学到的 $R(k)$ 就是 $1/k^2$——$K^{-1}$ 的谱表示。}
+
+\subsection{FNO层的设计}
+
+\begin{definition}[傅里叶层]
+FNO中的一层（Fourier Layer）定义为：
+\begin{equation}
+    v^{(l+1)}(x) = \sigma\left( Wv^{(l)}(x) + \mathcal{F}^{-1}\left(R^{(l)} \cdot \mathcal{F}(v^{(l)})\right)(x) + b \right)
+\end{equation}
+其中$W \in \mathbb{R}^{d_v \times d_v}$是局部线性变换，$R^{(l)} \in \mathbb{C}^{k_{\max} \times d_v \times d_v}$是频域中的可学习权重，$k_{\max}$是保留的最大频率模态数，$\sigma$是激活函数（如GELU）。
+\end{definition}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    xscale=0.85,
+    box/.style={rectangle, draw, rounded corners, minimum width=1.5cm, minimum height=0.8cm, align=center, font=\small},
+    arrow/.style={-{Stealth}, thick}
+]
+    % 输入
+    \node[box, fill=blue!20] (input) at (0, 0) {$v^{(l)}$};
+    
+    % 上路：傅里叶分支
+    \node[box, fill=yellow!30] (fft) at (2.5, 1.5) {FFT\\$\mathcal{F}$};
+    \node[box, fill=orange!30] (filter) at (5, 1.5) {频域滤波\\$R \cdot$};
+    \node[box, fill=yellow!30] (ifft) at (7.5, 1.5) {IFFT\\$\mathcal{F}^{-1}$};
+    
+    % 下路：局部线性
+    \node[box, fill=green!30] (linear) at (5, -1) {线性\\$W$};
+    
+    % 合并
+    \node[circle, draw, fill=white] (add) at (9, 0) {$+$};
+    
+    % 激活
+    \node[box, fill=red!20] (act) at (11, 0) {$\sigma$};
+    
+    % 输出
+    \node[box, fill=blue!20] (output) at (13, 0) {$v^{(l+1)}$};
+    
+    % 箭头
+    \draw[arrow] (input) -- (1.5, 0) -- (1.5, 1.5) -- (fft);
+    \draw[arrow] (fft) -- (filter);
+    \draw[arrow] (filter) -- (ifft);
+    \draw[arrow] (ifft) -- (8.5, 1.5) -- (8.5, 0.3) -- (add);
+    
+    \draw[arrow] (input) -- (1.5, 0) -- (1.5, -1) -- (linear);
+    \draw[arrow] (linear) -- (8.5, -1) -- (8.5, -0.3) -- (add);
+    
+    \draw[arrow] (add) -- (act);
+    \draw[arrow] (act) -- (output);
+\end{tikzpicture}
+\caption{FNO中傅里叶层的结构}
+\label{fig:fno_layer}
+\end{figure}
+
+\subsection{低通滤波特性}
+
+FNO的一个关键设计是\textbf{只保留低频模态}：
+
+在傅里叶变换后，我们只保留前$k_{\max}$个频率的分量，高频分量直接截断为零。
+
+\begin{lstlisting}[language=Python, caption={频域截断}]
+# 假设输入形状为 (batch, n_x, d_v)
+# 傅里叶变换后形状为 (batch, n_x, d_v)（复数）
+
+x_ft = torch.fft.rfft(x, dim=1)  # 实数FFT
+
+# 只保留前 k_max 个模态
+x_ft_truncated = x_ft[:, :k_max, :]
+
+# 频域乘法
+out_ft = torch.einsum('bki,kio->bko', x_ft_truncated, R)
+
+# 补零到原始大小，然后逆变换
+out_ft_padded = torch.zeros_like(x_ft)
+out_ft_padded[:, :k_max, :] = out_ft
+x_out = torch.fft.irfft(out_ft_padded, n=n_x, dim=1)
+\end{lstlisting}
+
+\begin{remark}[为什么截断高频？]
+截断的第一个理由是物理假设：大多数PDE的解是\textbf{光滑}的，高频成分能量很小，保留低频就足以捕捉主要特征。第二个理由是参数效率：只学习$k_{\max}$个频率的权重而不是$N$个，参数量从$O(N)$降到$O(k_{\max})$。第三个理由最关键，它正是离散化无关性的来源：傅里叶系数$\hat{u}(k)$的物理意义与网格大小$N$无关——频率$k$代表的是函数的全局振荡特性，所以在$k_{\max}$个频率上学到的权重换一个分辨率仍然有意义。
+\end{remark}
+
+\begin{warning}[title = FNO的局限]
+低通滤波特性意味着FNO\textbf{不适合处理间断解}，例如流体力学中的激波和接触间断，固体力学中的裂纹和相界面。这些间断在傅里叶空间表现为高频成分（Gibbs现象），被FNO截断后无法恢复。
+\end{warning}
+
+\subsection{完整FNO实现}
+
+\begin{lstlisting}[language=Python, caption={FNO的完整实现}]
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class SpectralConv1d(nn.Module):
+    """
+    1D傅里叶层
+    
+    在频域进行可学习的滤波操作
+    """
+    
+    def __init__(self, in_channels, out_channels, modes):
+        """
+        参数:
+            in_channels: 输入通道数
+            out_channels: 输出通道数  
+            modes: 保留的傅里叶模态数
+        """
+        super().__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.modes = modes
+        
+        # 可学习的频域权重（复数）
+        # 形状: (modes, in_channels, out_channels)
+        scale = 1 / (in_channels * out_channels)
+        self.weights = nn.Parameter(
+            scale * torch.rand(modes, in_channels, out_channels, 2)
+        )
+    
+    def compl_mul1d(self, input, weights):
+        """
+        复数矩阵乘法
+        
+        input: (batch, modes, in_channels) 复数
+        weights: (modes, in_channels, out_channels) 复数
+        output: (batch, modes, out_channels) 复数
+        """
+        # 转换为复数张量
+        weights_complex = torch.view_as_complex(weights)
+        return torch.einsum("bmi,mio->bmo", input, weights_complex)
+    
+    def forward(self, x):
+        """
+        前向传播
+        
+        x: (batch, n_x, in_channels)
+        output: (batch, n_x, out_channels)
+        """
+        batch_size, n_x, _ = x.shape
+        
+        # 傅里叶变换
+        x_ft = torch.fft.rfft(x, dim=1)  # (batch, n_x//2+1, in_channels)
+        
+        # 只取前modes个模态
+        x_ft_truncated = x_ft[:, :self.modes, :]
+        
+        # 频域乘法
+        out_ft = self.compl_mul1d(x_ft_truncated, self.weights)
+        
+        # 补零并逆变换
+        out_ft_full = torch.zeros(
+            batch_size, n_x // 2 + 1, self.out_channels,
+            dtype=torch.cfloat, device=x.device
+        )
+        out_ft_full[:, :self.modes, :] = out_ft
+        
+        # 逆傅里叶变换
+        x_out = torch.fft.irfft(out_ft_full, n=n_x, dim=1)
+        
+        return x_out
+
+
+class FNO1d(nn.Module):
+    """
+    1D傅里叶神经算子
+    
+    用于学习1D函数到1D函数的映射
+    """
+    
+    def __init__(self, modes, width, in_channels=1, out_channels=1, n_layers=4):
+        """
+        参数:
+            modes: 保留的傅里叶模态数
+            width: 隐藏层宽度
+            in_channels: 输入通道数
+            out_channels: 输出通道数
+            n_layers: 傅里叶层数
+        """
+        super().__init__()
+        self.modes = modes
+        self.width = width
+        self.n_layers = n_layers
+        
+        # 输入提升
+        self.fc0 = nn.Linear(in_channels + 1, width)  # +1 for spatial coordinate
+        
+        # 傅里叶层
+        self.spectral_convs = nn.ModuleList([
+            SpectralConv1d(width, width, modes) for _ in range(n_layers)
+        ])
+        self.linears = nn.ModuleList([
+            nn.Conv1d(width, width, 1) for _ in range(n_layers)
+        ])
+        
+        # 输出投影
+        self.fc1 = nn.Linear(width, 128)
+        self.fc2 = nn.Linear(128, out_channels)
+    
+    def forward(self, x, grid=None):
+        """
+        前向传播
+        
+        x: (batch, n_x, in_channels) 输入函数
+        grid: (batch, n_x, 1) 空间坐标（可选）
+        
+        output: (batch, n_x, out_channels)
+        """
+        batch_size, n_x, _ = x.shape
+        
+        # 如果没有提供grid，自动生成
+        if grid is None:
+            grid = torch.linspace(0, 1, n_x, device=x.device)
+            grid = grid.reshape(1, n_x, 1).expand(batch_size, -1, -1)
+        
+        # 拼接空间坐标
+        x = torch.cat([x, grid], dim=-1)  # (batch, n_x, in_channels+1)
+        
+        # 输入提升
+        x = self.fc0(x)  # (batch, n_x, width)
+        
+        # 傅里叶层
+        for i in range(self.n_layers):
+            # 频域路径
+            x_ft = self.spectral_convs[i](x)
+            
+            # 局部线性路径
+            x_lin = self.linears[i](x.permute(0, 2, 1)).permute(0, 2, 1)
+            
+            # 相加并激活
+            x = F.gelu(x_ft + x_lin)
+        
+        # 输出投影
+        x = self.fc1(x)
+        x = F.gelu(x)
+        x = self.fc2(x)
+        
+        return x
+
+
+def demo_fno_burgers():
+    """
+    演示：用FNO求解Burgers方程
+    
+    du/dt + u * du/dx = nu * d^2u/dx^2
+    
+    学习映射：初始条件 u(x, 0) -> 解 u(x, T)
+    """
+    torch.manual_seed(42)
+    
+    print("=" * 50)
+    print("FNO求解Burgers方程演示")
+    print("=" * 50)
+    
+    # ========== 生成合成数据 ==========
+    # 实际应用中，这些数据来自数值求解器
+    n_train = 500
+    n_test = 100
+    n_x = 64
+    
+    def generate_burgers_data(n_samples, n_x):
+        """
+        生成Burgers方程的训练数据
+        
+        这里用简化的模型生成"伪数据"用于演示
+        实际应用需要用数值方法（如谱方法）生成真实数据
+        """
+        x = torch.linspace(0, 2*np.pi, n_x)
+        
+        # 随机初始条件（傅里叶级数）
+        U0 = []
+        UT = []
+        
+        for _ in range(n_samples):
+            # 随机傅里叶系数
+            a = torch.randn(5) * 0.3
+            b = torch.randn(5) * 0.3
+            
+            # 初始条件
+            u0 = torch.zeros(n_x)
+            for k in range(1, 6):
+                u0 += a[k-1] * torch.sin(k * x) + b[k-1] * torch.cos(k * x)
+            
+            # "模拟"T时刻的解（这里简化为耗散+非线性变形）
+            # 真实应用需要用数值方法
+            decay = 0.5
+            # 注意：这是逐点映射，只为演示流程
+            uT = u0 * decay - 0.1 * u0 ** 2
+            
+            U0.append(u0)
+            UT.append(uT)
+        
+        U0 = torch.stack(U0).unsqueeze(-1)  # (n_samples, n_x, 1)
+        UT = torch.stack(UT).unsqueeze(-1)  # (n_samples, n_x, 1)
+        
+        return U0, UT
+    
+    # 生成数据
+    U0_train, UT_train = generate_burgers_data(n_train, n_x)
+    U0_test, UT_test = generate_burgers_data(n_test, n_x)
+    
+    print(f"训练数据: {U0_train.shape}")
+    print(f"测试数据: {U0_test.shape}")
+    
+    # ========== 创建FNO模型 ==========
+    model = FNO1d(
+        modes=16,      # 保留16个傅里叶模态
+        width=32,      # 隐藏层宽度
+        n_layers=4     # 4层傅里叶层
+    )
+    
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=500, gamma=0.5)
+    
+    # ========== 训练 ==========
+    print("\n开始训练FNO...")
+    n_epochs = 1000
+    batch_size = 32
+    
+    for epoch in range(n_epochs):
+        model.train()
+        perm = torch.randperm(n_train)
+        total_loss = 0.0
+        
+        for i in range(0, n_train, batch_size):
+            idx = perm[i:i+batch_size]
+            u0 = U0_train[idx]
+            uT = UT_train[idx]
+            
+            # 前向传播
+            uT_pred = model(u0)
+            
+            # 损失
+            loss = F.mse_loss(uT_pred, uT)
+            
+            # 反向传播
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            
+            total_loss += loss.item()
+        
+        scheduler.step()
+        
+        if (epoch + 1) % 200 == 0:
+            avg_loss = total_loss / (n_train // batch_size)
+            print(f"Epoch {epoch+1}: MSE = {avg_loss:.6f}")
+    
+    # ========== 测试 ==========
+    model.eval()
+    with torch.no_grad():
+        UT_pred = model(U0_test)
+        test_mse = F.mse_loss(UT_pred, UT_test).item()
+        print(f"\n测试集 MSE: {test_mse:.6f}")
+    
+    # ========== 测试离散化无关性 ==========
+    print("\n测试离散化无关性...")
+    
+    # 在不同分辨率上测试同一个模型
+    for new_nx in [32, 64, 128, 256]:
+        # 生成新分辨率的测试数据
+        U0_new, UT_new = generate_burgers_data(10, new_nx)
+        
+        with torch.no_grad():
+            UT_pred_new = model(U0_new)
+            mse_new = F.mse_loss(UT_pred_new, UT_new).item()
+            print(f"  分辨率 {new_nx}: MSE = {mse_new:.6f}")
+    
+    print("\n训练完成！")
+
+if __name__ == "__main__":
+    demo_fno_burgers()
+\end{lstlisting}
+
+\subsection{离散化无关性的验证}
+
+FNO最令人惊讶的特性是\textbf{零样本超分辨率}：
+
+\begin{exercise}[title = 验证离散化无关性]
+运行上面的代码，观察模型在不同分辨率（32, 64, 128, 256）上的表现。
+
+思考：
+\begin{enumerate}
+    \item 为什么在64点上训练的模型可以直接用于256点的输入？
+    \item 如果用传统CNN代替FNO，会发生什么？
+    \item 在什么情况下，零样本超分辨率的效果会变差？
+\end{enumerate}
+\end{exercise}
+
+% ====================================================================================
+\section{Transformer作为神经算子}
+\label{sec:transformer_operator}
+% ====================================================================================
+
+\subsection{Attention机制的积分算子视角}
+
+回顾Transformer中的自注意力机制：
+\begin{equation}
+    \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d}}\right) V
+\end{equation}
+
+让我们从积分算子的角度重新审视这个公式。
+
+\begin{proposition}[Attention作为积分算子]
+自注意力可以写成积分算子的离散形式：
+\begin{equation}
+    v_i = \sum_{j=1}^{N} \kappa(x_i, x_j) u_j
+\end{equation}
+其中积分核为：
+\begin{equation}
+    \kappa(x_i, x_j) = \frac{\exp\left(q(x_i)^T k(x_j) / \sqrt{d}\right)}{\sum_l \exp\left(q(x_i)^T k(x_l) / \sqrt{d}\right)}
+\end{equation}
+\end{proposition}
+\review{第11章}{第11章已证明单层注意力等价于 softmax 核的核回归 $\hat{v}_t = \sum_i k(q_t, k_i) v_i$。这里只是把“序列位置”换成“空间坐标”，核回归就成了积分算子。}
+
+\begin{insightbox}
+Attention与传统积分算子的关键区别：
+
+\begin{center}
+\begin{tabular}{l|cc}
+\toprule
+& \textbf{传统积分算子} & \textbf{Attention} \\
+\midrule
+积分核 & $\kappa(x, y)$固定或可学习 & $\kappa(x_i, x_j)$\textbf{数据依赖} \\
+计算复杂度 & $O(N^2)$或$O(N \log N)$ & $O(N^2)$ \\
+平移不变性 & 通常假设$\kappa(x-y)$ & 不假设 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Attention的积分核是\textbf{输入依赖}的——它根据具体的输入函数动态调整“谁跟谁相关”。
+\end{insightbox}
+
+\subsection{Galerkin Transformer}
+
+Galerkin Transformer是将Transformer用于算子学习的一个变体：
+
+\begin{definition}[Galerkin Attention]
+在Galerkin Transformer（Cao, 2021）中，注意力去掉了 softmax，变成线性注意力：
+\begin{equation}
+    \text{GalerkinAttn}(Q, K, V) = \frac{1}{N}\, Q \left( \tilde{K}^\top \tilde{V} \right)
+\end{equation}
+其中 $\tilde{K}, \tilde{V}$ 是做过层归一化的 $K, V$，$N$ 是序列长度（网格点数）。
+\end{definition}
+
+这个简单的修改有深刻的数学意义：
+
+\begin{remark}[为什么除以$N$？]
+回顾积分的黎曼和近似：
+\begin{equation}
+    \int_0^1 \kappa(x, y) u(y) \, dy \approx \frac{1}{N} \sum_{j=1}^{N} \kappa(x, y_j) u(y_j)
+\end{equation}
+
+$1/N$ 因子是积分近似的求积权重。去掉 softmax 之后，$K^\top V$ 是对网格点求和，必须乘上 $1/N$ 才是积分——这正是“Galerkin”这个名字的来历：它对应有限元弱形式里的内积 $(\kappa, u)$，而不是 softmax 那种“归一化的加权平均”。
+
+这使得模型在不同分辨率 $N$ 下的行为一致，有助于离散化无关性；顺便还把复杂度从 $O(N^2)$ 降到了 $O(N d^2)$。
+\end{remark}
+
+\subsection{Transformer vs FNO}
+
+\begin{center}
+\begin{tabular}{l|cc}
+\toprule
+& \textbf{FNO} & \textbf{Transformer} \\
+\midrule
+积分核类型 & 平移不变（卷积） & 数据依赖 \\
+计算复杂度 & $O(N \log N)$ & $O(N^2)$ \\
+适合的问题 & 周期边界、光滑解 & 复杂边界、长程依赖 \\
+离散化无关性 & 天然具备 & 需要特殊设计 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ====================================================================================
+\section{应用案例：气象大模型}
+\label{sec:weather}
+% ====================================================================================
+
+神经算子最成功的应用之一是\textbf{天气预报}。
+
+\subsection{传统数值天气预报}
+
+传统天气预报基于求解大气动力学方程（本质上是Navier-Stokes方程的变体）：
+
+\begin{align}
+    \frac{\partial \mathbf{v}}{\partial t} + (\mathbf{v} \cdot \nabla)\mathbf{v} &= -\frac{1}{\rho}\nabla p + \mathbf{g} + \mathbf{F} \\
+    \frac{\partial \rho}{\partial t} + \nabla \cdot (\rho \mathbf{v}) &= 0 \\
+    \frac{\partial T}{\partial t} + \mathbf{v} \cdot \nabla T &= Q
+\end{align}
+
+全球顶尖的数值预报系统（如ECMWF的IFS）在约9km的网格分辨率上，同时演化温度、湿度、风速、气压等数十个变量，每次预报都需要在超级计算机上运行数小时。这正是本章开头说的处境：方程是固定的，每天变的只是初始状态，而每一次都要从头把方程解一遍。
+
+\subsection{神经算子方法}
+
+神经算子将天气预报重新表述为\textbf{算子学习问题}：
+
+\begin{quote}
+学习映射：当前时刻的大气状态 $\to$ 未来时刻的大气状态
+\end{quote}
+
+\begin{example}[FourCastNet (NVIDIA, 2022)]
+FourCastNet 采用基于\textbf{FNO}的架构，输入当前时刻的气象场（20+变量），输出6小时后的气象场，更长时间的预报则通过迭代应用模型得到。它的推理速度是\textbf{秒级}的（数值模式则是小时级），能耗降低$10000\times$；预报精度在短期、大尺度变量上接近欧洲中心的 IFS，降水等少数变量略优。
+\end{example}
+\preview{第16章的“世界模型”学的正是“当前状态 $\to$ 下一状态”的映射。气象大模型是世界模型在地球尺度上的实例；把神经算子换成机器人或游戏引擎，就是第16章。}
+
+\begin{example}[GraphCast (DeepMind, 2023)]
+GraphCast 采用基于\textbf{图神经网络}的架构：把地球表面建模为图（节点是网格点，边是邻居关系），用消息传递机制聚合信息，因此能更好地处理极地区域这类非规则网格。它在90\%的指标上超越了ECMWF的HRES系统，10天预报只需不到1分钟。
+\end{example}
+
+2023 年是这条路线被主流接受的一年：华为的盘古气象大模型发表在《自然》上，DeepMind 的 GraphCast 发表在《科学》上，两者都在中期预报上达到或超过了传统数值天气预报。
+
+\subsection{为什么神经算子在天气预报上成功？}
+
+这个问题的答案不在架构上，而在问题本身的性质上。首先是数据丰富：ERA5再分析数据提供了40年的高质量全球气象数据，约250TB，足以支撑一个大模型。其次是物理约束较弱：大气系统是混沌的，长期预测本质上是概率性的，神经算子不需要精确满足PDE，只需要统计上准确。再次，分辨率需求适中：天气预报关心的是大尺度模式（低频），而不是精细结构（高频），正好符合FNO的低通特性。最后，速度至关重要：气象部门需要在有限时间内生成多个集合预报成员，神经算子的速度优势是决定性的。
+
+\begin{warning}[title = 神经算子在天气预报中的局限]
+神经算子的预测结果可能违反物理守恒律（如质量、能量守恒），这是物理一致性上的隐患；模型为什么做出特定预测难以理解，这是可解释性上的短板；而气候变化可能导致训练数据分布与未来不同，这是分布漂移的风险。
+\end{warning}
+
+% ====================================================================================
+图~\ref{fig:chap15_neural_operator} 汇总了本章两种架构的结构，以及它们与格林函数 / 积分算子的对应关系。
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figs_chap15/chap15_fig1.png}
+\caption{神经算子概念演示。（1）DeepONet架构：分支网络处理输入函数采样值，主干网络处理查询位置，输出通过内积合成——这是万能逼近定理的实现；（2）FNO频域滤波：在傅里叶空间对高频和低频分量进行不同处理，体现频域操作的离散化无关性；（3）离散化无关性验证：同一个算子在不同分辨率网格上的输出保持一致性，实现零样本超分辨率的关键特性。}
+\label{fig:chap15_neural_operator}
+\end{figure}
 
 % ====================================================================================
 \section{本章小结}
 % ====================================================================================
 
-\begin{summary}
-\textbf{从优化到博弈}：
-\begin{itemize}
-    \item 单人优化：$\min_x f(x)$——只有一个决策者
-    \item 多人博弈：每个人的最优依赖于他人的选择——决策耦合
-    \item 纳什均衡：没有人想单方面改变——系统的"稳定状态"
-\end{itemize}
+\begin{enumerate}
+    \item \textbf{从函数到算子}：PINN 学一个特定问题的解 $u(x)$；神经算子学“条件函数 $\to$ 解函数”的映射 $\mathcal{G}$，一次训练、任意条件。
+    \item \textbf{离散化无关性}：模型逼近的是连续算子，训练分辨率和推理分辨率可以不同（零样本超分辨率）。
+    \item \textbf{数学统一}：所有神经算子都可以写成积分算子 $v(x) = \int \kappa(x, y) u(y)\,dy$，不同架构只是参数化积分核 $\kappa$ 的不同方式；线性情形下这个核就是格林函数，也就是第13章 $K^{-1}$ 的连续版本。
+    \item \textbf{两种主流架构}：DeepONet（基函数展开：分支网络给系数、主干网络给基函数，理论清晰、通用）与 FNO（频域卷积：效率高、分辨率无关，适合周期 / 光滑问题）。
+    \item \textbf{与 PINN 的关系}：PINN 把物理约束写进损失、针对单个问题；神经算子把物理隐含在数据里、针对一类问题；PINO 把两者结合。
+\end{enumerate}
 
-\textbf{静态博弈的分析工具}：
-\begin{itemize}
-    \item 广义纳什均衡 = 所有玩家的KKT条件同时成立
-    \item 势博弈：自私博弈可能在优化一个全局势函数（保证收敛）
-    \item 图博弈：局部交互，分布式计算
-    \item Braess悖论：增加选择反而可能让所有人更差
-\end{itemize}
-
-\textbf{动态博弈与深度MARL}：
-\begin{itemize}
-    \item CTDE范式：集中训练利用全局信息，分散执行只用局部观测
-    \item QMIX：价值分解 + 单调性约束，保证IGM原则
-    \item MAPPO：集中式Critic + 分散式Actor，策略梯度方法
-\end{itemize}
-
-\textbf{宏观极限——平均场博弈}：
-\begin{itemize}
-    \item 当$N \to \infty$，多体交互 $\to$ 个体-场交互
-    \item HJB（后向，最优控制）+ FP（前向，密度演化）耦合方程组
-    \item 连接了博弈论与偏微分方程、统计物理
-\end{itemize}
-\end{summary}
-
-\begin{unification}[title=从微观到宏观的统一视角]
-\begin{center}
-\begin{tabular}{lccc}
-\toprule
-\textbf{维度} & \textbf{微观} & \textbf{中观} & \textbf{宏观} \\
-\midrule
-\textbf{智能体数} & 少量（2-10） & 中等（10-1000） & 无穷 \\
-\textbf{核心对象} & 个体动作 $a_i$ & 联合动作 $\mathbf{a}$ & 密度分布 $m(x)$ \\
-\textbf{静态模型} & 纳什均衡 & 图博弈/势博弈 & Wardrop均衡 \\
-\textbf{动态模型} & MDP & Markov Game & MFG (HJB-FP) \\
-\textbf{AI算法} & DQN/PPO & QMIX/MAPPO & Neural MFG \\
-\textbf{物理类比} & 质点力学 & 多体系统 & 流体力学/统计物理 \\
-\bottomrule
-\end{tabular}
-\end{center}
-
-这个表格展示了一个美妙的对应：随着智能体数量的增加，我们从离散的个体视角逐渐过渡到连续的场视角，就像从牛顿力学过渡到流体力学一样。
-\end{unification}
+\begin{physicalmeaning}
+\textbf{$\lambda$ 在本章的意义}：第1章的 $\lambda$ 回答“这条约束放松一点，目标变多少”；PDE 是一整族约束——每个点 $\xi$ 处方程都要成立——于是影子价格也成了一个函数：在 $\xi$ 处加一个单位源，解在 $x$ 处变化 $G(x, \xi)$。格林函数就是 PDE 约束的影子价格表，第8章的伴随变量就是这张表乘上目标的梯度。神经算子学的就是这张表。代价也在这里：纯数据驱动的 DeepONet / FNO 没有显式约束，$\lambda \equiv 0$，没有人替物理定律“看门”——这就是“应用案例”一节警告“预测可能违反守恒律”的根源；PINO 把第14章的乘子请回来，正是为了补上这个缺口。
+\end{physicalmeaning}
 
 % ====================================================================================
 \section{习题}
 % ====================================================================================
 
-\subsection{概念理解}
-
-\begin{exercise}[title=纳什均衡的理解]
-考虑以下"协调博弈"：两个人要选择在哪里见面，可以选A地或B地。如果选同一个地方就能见面（代价0），选不同地方就见不到（代价1）。
+\paragraph{计算题}
 \begin{enumerate}
-    \item 写出代价矩阵
-    \item 找出所有纳什均衡
-    \item 解释为什么会有多个纳什均衡
-    \item 这个博弈是势博弈吗？为什么？
+    \item \textbf{格林函数与DeepONet}：
+    考虑一维泊松方程$-u''(x) = f(x)$，$u(0) = u(1) = 0$。
+    
+    \begin{enumerate}
+        \item 写出格林函数$G(x, y)$的表达式
+        \item 如果用DeepONet学习从$f$到$u$的映射，分支网络的输入是什么？主干网络的输入是什么？
+        \item DeepONet学到的$\sum_k b_k(f) t_k(x)$与格林函数表示$\int G(x,y) f(y) dy$有什么联系？
+    \end{enumerate}
+    
 \end{enumerate}
-\end{exercise}
 
-\begin{exercise}[title=Braess悖论的变种]
-在Braess悖论的例子中，如果免费道路AB的时间不是0，而是一个正数$c$，问：
+\paragraph{编程题}
 \begin{enumerate}
-    \item $c$取什么范围时，悖论仍然存在（有免费道路更差）？
-    \item $c$取什么值时，有道路和没道路的均衡时间相同？
-    \item 给出直观解释。
+    \setcounter{enumi}{1}
+    \item \textbf{实现2D FNO}：
+    将本章的1D FNO代码扩展到2D情况：
+    \begin{enumerate}
+        \item 实现\code{SpectralConv2d}类
+        \item 实现\code{FNO2d}类
+        \item 在Darcy流问题上测试：给定渗透率场$a(x,y)$，预测压力场$u(x,y)$
+    \end{enumerate}
+    
+    \textbf{提示}：2D FFT使用\code{torch.fft.rfft2}和\code{torch.fft.irfft2}。
+    
+    \item \textbf{DeepONet变体}：
+    实现以下DeepONet的变体，并比较它们的性能：
+    \begin{enumerate}
+        \item \textbf{PI-DeepONet}：在损失函数中加入物理约束
+        \item \textbf{Multi-output DeepONet}：主干网络输出多个查询点的结果
+        \item \textbf{Deep DeepONet}：在内积之后再加一个MLP
+    \end{enumerate}
+    
 \end{enumerate}
-\end{exercise}
 
-\subsection{计算推导}
-
-\begin{exercise}[title=图博弈的KKT条件]
-对于代价函数$J_i = \frac{1}{2}(a_i - a_{i,0})^2 + \delta a_i \sum_{j \in N(i)} a_j$和约束$a_i \in [0, L]$：
+\paragraph{思考题}
 \begin{enumerate}
-    \item 写出每个玩家的拉格朗日函数（提示：需要两个乘子，分别对应$a_i \geq 0$和$a_i \leq L$）
-    \item 推导KKT条件
-    \item 证明投影最优响应$a_i = \Pi_{[0,L]}(a_{i,0} - \delta \sum_{j} a_j)$满足KKT条件
-    \item 其中$\Pi_{[0,L]}(x) = \max(0, \min(x, L))$是到区间$[0,L]$的投影
-\end{enumerate}
-\end{exercise}
-
-\begin{exercise}[title=QMIX的IGM证明]
-证明：如果$\frac{\partial Q_{tot}}{\partial Q_i} \geq 0$对所有$i$成立，则IGM原则满足。
-
-提示：用反证法，假设存在$a'$使得$Q_{tot}(s, a') > Q_{tot}(s, a^*)$，其中$a_i^* = \arg\max Q_i$，推导矛盾。
-\end{exercise}
-
-\subsection{编程实践}
-
-\begin{exercise}[title=实现迭代最优响应]
-对于例\ref{ex:lq_network}中的线性二次图博弈：
-\begin{enumerate}
-    \item 用Python实现迭代最优响应算法
-    \item 在一个10节点的随机图上测试收敛性
-    \item 画出收敛曲线，验证线性收敛率
-    \item 探索：$\delta$取什么值时算法不收敛？与图的谱半径有什么关系？
-\end{enumerate}
-\end{exercise}
-
-\begin{exercise}[title=Braess悖论的数值验证]
-参考本章的Python代码（\texttt{generate\_figures.py}）：
-\begin{enumerate}
-    \item 复现Braess悖论的计算
-    \item 修改需求量（从4000变为其他值），观察悖论是否仍然存在
-    \item 设计一个你自己的交通网络，尝试找到/构造Braess悖论
-\end{enumerate}
-\end{exercise}
-
-% ====================================================================================
-\section{延伸阅读}
-% ====================================================================================
-
-\begin{enumerate}
-    \item \textbf{博弈论入门}：Osborne, M. J. (2004). \textit{An Introduction to Game Theory}. Oxford University Press. 非常适合本科生的博弈论教材。
-
-    \item \textbf{平均场博弈}：Lasry, J. M., \& Lions, P. L. (2007). Mean field games. \textit{Japanese Journal of Mathematics}, 2(1), 229-260. 平均场博弈的奠基性论文。
-
-    \item \textbf{QMIX}：Rashid, T., et al. (2018). QMIX: Monotonic value function factorisation for deep multi-agent reinforcement learning. \textit{ICML 2018}. 价值分解方法的里程碑。
-
-    \item \textbf{MAPPO}：Yu, C., et al. (2022). The surprising effectiveness of PPO in cooperative multi-agent games. \textit{NeurIPS 2022}. 展示了简单方法在多智能体RL中的强大能力。
-
-    \item \textbf{Braess悖论}：Braess, D. (1968). Über ein Paradoxon aus der Verkehrsplanung. \textit{Unternehmensforschung}, 12(1), 258-268. 原始论文（德语）。
-
-    \item \textbf{交通均衡}：Wardrop, J. G. (1952). Road paper. Some theoretical aspects of road traffic research. \textit{Proceedings of the Institution of Civil Engineers}, 1(3), 325-362. 交通均衡理论的经典。
+    \setcounter{enumi}{3}
+    \item \textbf{理解离散化无关性}：
+    解释为什么以下操作不具有离散化无关性：
+    \begin{enumerate}
+        \item 全连接层 $y = Wx + b$，其中$x \in \mathbb{R}^n$
+        \item 固定大小的卷积核
+    \end{enumerate}
+    
+    提出一种使它们具有离散化无关性的修改方案。
+    
+    \item \textbf{神经算子的局限}：
+    讨论神经算子在以下场景中可能遇到的困难：
+    \begin{enumerate}
+        \item 激波问题（Burgers方程在黏性趋近于零时）
+        \item 湍流（高雷诺数Navier-Stokes方程）
+        \item 多尺度问题（例如大气-海洋耦合）
+    \end{enumerate}
+    
+    你能想到什么改进方法？
+    
+    \item \textbf{算子学习 vs 传统数值方法}：
+    比较神经算子和传统数值方法（如有限元）的优缺点。在什么情况下应该选择神经算子？在什么情况下应该坚持传统方法？
+    
 \end{enumerate}

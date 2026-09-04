@@ -1,175 +1,140 @@
 # 第10章 图片说明
 
-## arm_kinematics.pdf
+## prisoners_dilemma.pdf / prisoners_dilemma.png
 
-**背景**：第10章介绍强化学习在控制中的应用。
+**背景**：第10章介绍多智能体系统与博弈论。
 
-**意图**：展示机械臂控制任务的设置。
+**意图**：用经典的囚徒困境说明博弈论基本概念。
 
 **生成方法**：
-- 代码文件：`code_chap10/robotic_arm_control.py`
-- 绘制机械臂和目标点
-- 标注状态空间和动作空间
+- 代码文件：`code_chap10/chap10_generate_figures.py`
+- 绘制支付矩阵
+- 标注纳什均衡
 
 **数据来源**：
-- 2自由度平面机械臂
-- 状态：[θ1, θ2, ω1, ω2]
-- 动作：[τ1, τ2]（关节力矩）
+- 经典囚徒困境支付矩阵
+- (合作,合作)=(-1,-1)
+- (背叛,背叛)=(-3,-3)
+- 纳什均衡：(背叛,背叛)
 
 ---
 
-## pd_control_trajectory.pdf
+## potential_game.pdf / potential_game.png
 
-**背景**：PD控制是经典的反馈控制方法。
+**背景**：势博弈是一类特殊的多人博弈。
 
-**意图**：展示PD控制器的轨迹跟踪效果，作为RL的基准对比。
+**意图**：说明势函数如何简化均衡分析。
 
 **生成方法**：
-- 代码文件：`code_chap10/robotic_arm_control.py`
-- 实现PD控制器
-- 绘制跟踪误差曲线
+- 代码文件：`code_chap10/chap10_generate_figures.py`
+- 绘制势函数等高线
+- 标注各玩家的最优响应
 
 **数据来源**：
-- PD增益：Kp=100, Kd=10
-- 目标轨迹：圆形
-- 采样频率：100Hz
+- 拥堵博弈示例
+- 势函数：Φ(a) = Σ cost(a)
 
 ---
 
-## rl_control_comparison.pdf
+## network_game.pdf / network_game.png
 
-**背景**：对比RL与经典控制。
+**背景**：网络博弈发生在图结构上。
 
-**意图**：展示PPO/SAC学习到的控制策略与PD控制的对比。
+**意图**：展示网络结构如何影响博弈均衡。
 
 **生成方法**：
-- 代码文件：`code_chap10/robotic_arm_control.py`
-- 训练RL agent
-- 对比轨迹和能量消耗
+- 代码文件：`code_chap10/chap10_generate_figures.py`
+- networkx绘制博弈网络
+- 节点颜色表示策略
 
 **数据来源**：
-- 训练回合：1000
-- 奖励函数：-||位置误差|| - 0.01||力矩||
+- 20节点随机网络
+- 协调博弈设置
+- 均衡状态可视化
 
 ---
 
-## cartpole_demo.pdf
+## braess_paradox.pdf / braess_paradox.png
 
-**背景**：CartPole是RL的经典入门环境。
+**背景**：Braess悖论是交通网络的经典现象。
 
-**意图**：可视化倒立摆的平衡控制问题。
+**意图**：说明增加道路反而可能增加拥堵。
 
 **生成方法**：
-- 代码文件：`code_chap10/chap10_rl.py`
-- 使用gym的CartPole环境
-- 绘制状态序列快照
+- 代码文件：`code_chap10/chap10_generate_figures.py`
+- 绘制交通网络拓扑
+- 对比有无新路的均衡流量
 
 **数据来源**：
-- OpenAI Gym CartPole-v1
-- 状态：[x, v, θ, ω]
-- 动作：左/右推力
+- 经典Braess网络（4节点）
+- 用户均衡计算
+- 总行程时间对比
 
 ---
 
-## chap10_value_iteration.png
+## mfg_solution.pdf / mfg_solution.png
 
-**背景**：值迭代是动态规划的基础算法。
+**背景**：平均场博弈（MFG）把 $N\to\infty$ 个智能体的博弈写成两个耦合的偏微分方程：HJB（倒向，"给定群体分布 $m$，每个人怎么走最优"）和 FP（正向，"大家都这么走，分布怎么演化"）。纳什均衡是这对方程的不动点 $(u^*, m^*)$。正文里的线性二次例子是"跟随群体平均位置"，图里为了让"别人对我的价格"看得见，改用**拥挤代价**：运行代价 $\tfrac12 v^2 + \tfrac{\alpha}{2}(x-x_{\rm target})^2 + \kappa\, m(x,t)$，终端代价 $g=\tfrac{\alpha}{2}(x-x_{\rm target})^2$。群体想去 $x_{\rm target}=1$，但当地人越多越贵。
 
-**意图**：展示值函数如何逐步收敛。
+**意图**：用一个**真正解出来**的例子展示 MFG 的四个要素——密度的时空演化、价值函数与最优速度场、拥挤惩罚对群体形状的影响、不动点迭代的收敛。旧版本（`chap10_generate_figures.py` 旧的 `plot_mfg_solution`）是用解析高斯和抛物线拼出来的示意图，不满足方程；本版本已替换。
+
+**思路（这张图想让读者看到什么）**：
+- 每个个体按 HJB 做最优响应（只看自己所在位置的 $\nabla u$，不需要知道别人在哪），群体按 FP 演化；两者互为约束，均衡是"猜的分布 = 大家最优行动后产生的分布"这个不动点。
+- $u(x,t)$ 就是本章的 $\lambda$（第 7 章的协态）：它的梯度直接给出每个人的最优速度 $v^*=-\partial_x u$。
+- 拥挤项 $\kappa m$ 是群体反过来施加给个体的"价格"：有它时群体铺成宽平台，走在最前面的人会越过目标点给后面的人让位；把 $\kappa$ 设为 0 群体就挤成尖峰。
+- 面板 (d) 的残差按指数衰减到 $10^{-8}$，证明这是数值解而不是画出来的形状；迭代必须加阻尼，因为"人多的地方大家都想离开"是负反馈，不加阻尼会周期性振荡。
+
+**读图指南（先看哪、再看哪）**：
+1. 先看 (a)：蓝色密度带从 $x=-1$ 整体向右迁移到目标点（黑色点线）附近；红色虚线是沿 $\dot x=-\partial_x u$ 积分的个体轨迹，注意最右边的轨迹在 $t=T$ 时越过了 $x=1$。
+2. 再看 (b)：价值函数在离目标远处最大（深橙），箭头（最优速度）在目标两侧相向指向目标，靠近目标后变短。
+3. 然后看 (c)：对比最深的蓝线（$t=T$，$\kappa=2$，峰值 1.3、标准差 0.28）和灰色虚线（$t=T$，$\kappa=0$，峰值 2.6、标准差 0.16）——拥挤惩罚把尖峰摊成平台。
+4. 最后看 (d)：两条残差曲线（密度、价值函数）在对数轴上是直线，约 110 轮后低于阈值。
 
 **生成方法**：
-- 代码文件：`code_chap10/chap10_rl.py`
-- 网格世界环境
-- 绘制每次迭代后的V(s)
+- 代码文件：`code_chap10/chap10_mfg_solver.py`（从仓库根目录运行 `python3 code_chap10/chap10_mfg_solver.py`；`chap10_generate_figures.py` 里的 `plot_mfg_solution()` 现在只是转调它）
+- 方程（与正文 keyformula 一致，$H(p)=\tfrac12 p^2 - F$）：
+  HJB $-\partial_t u - \nu\partial_{xx}u + \tfrac12|\partial_x u|^2 = F(x,m)$，$u(x,T)=g$；
+  FP $\partial_t m - \nu\partial_{xx}m - \partial_x(m\,\partial_x u)=0$，$m(x,0)=m_0$
+- 离散化：均匀网格 $x\in[-2.5,2.5]$、$N_x=251$（$h=0.02$），$T=1.5$、$N_t=1500$（$\Delta t=10^{-3}$）。HJB 倒向推进：扩散隐式（三对角），Hamilton 项用 Osher–Sethian 单调迎风格式显式（CFL 数 0.52）。FP 正向推进：迎风通量 + 隐式扩散的守恒格式，速度取自 $u^{n+1}$（与 HJB 格式伴随），离散总质量守恒到 $10^{-14}$，密度非负。边界取 Neumann / 零通量。
+- 外层不动点迭代：$m\to$HJB$\to u\to$FP$\to\tilde m$，阻尼更新 $m\leftarrow(1-\theta)m+\theta\tilde m$，$\theta$ 从 0.3 起、残差回升时乘 0.7（最终 0.147）。残差 $\|\tilde m-m\|_\infty$ 从 2.6 单调指数衰减到 $<10^{-8}$，共 112 轮，约 17 s。
+- 对照组 $\kappa=0$：HJB 与 $m$ 解耦，一轮即收敛。
+- 面板 (a) 的个体轨迹：用收敛后的 $u$ 计算 $-\partial_x u$，从 $x_0\in\{-1.5,-1.2,-0.9,-0.6,-0.3\}$ 出发做显式 Euler 积分（无噪声的平均个体）。
 
 **数据来源**：
-- 5×5网格世界
-- 折扣因子γ=0.9
-- 收敛阈值：1e-4
+- 参数：$\alpha=3$，$\kappa=2$，$\nu=0.05$，$x_{\rm target}=1$，$m_0\sim\mathcal N(-1,0.3^2)$
+- 全部数值由脚本实时求解，无随机性，可完全复现；终端会打印每轮残差、质量误差与 CFL 数
+- 可核对的数字：$t=T$ 时密度均值 0.89、标准差 0.279、峰值 1.275（$\kappa=2$）；均值 0.89、标准差 0.155、峰值 2.61（$\kappa=0$）
 
 ---
 
-## chap10_value_heatmap.png
+## ctde_comparison.pdf / ctde_comparison.png
 
-**背景**：可视化最终的值函数。
+**背景**：集中训练分散执行（CTDE）是多智能体RL的主流范式。
 
-**意图**：用热图展示状态价值的空间分布。
+**意图**：对比不同MARL架构：独立学习、完全集中、CTDE。
 
 **生成方法**：
-- 代码文件：`code_chap10/chap10_rl.py`
-- 值迭代收敛后的V(s)
-- matplotlib热图绘制
+- 代码文件：`code_chap10/chap10_generate_figures.py`
+- 架构示意图
+- 性能曲线对比
 
 **数据来源**：
-- 收敛后的值函数
-- 颜色映射：高价值=暖色
+- 概念性架构图
+- 合作导航任务的学习曲线
 
 ---
 
-## chap10_qtable.png
+## qmix_architecture.pdf / qmix_architecture.png
 
-**背景**：Q表是表格型RL的核心数据结构。
+**背景**：QMIX是著名的值分解方法。
 
-**意图**：展示Q(s,a)的学习结果。
-
-**生成方法**：
-- 代码文件：`code_chap10/chap10_rl.py`
-- Q-learning训练后的Q表
-- 热图+箭头表示最优动作
-
-**数据来源**：
-- 训练episode：500
-- 学习率α=0.1
-- ε-greedy探索
-
----
-
-## chap10_qlearning_sarsa.png
-
-**背景**：对比off-policy和on-policy方法。
-
-**意图**：展示Q-learning与SARSA在cliff walking问题上的差异。
+**意图**：图解QMIX如何将个体Q值混合成全局Q值。
 
 **生成方法**：
-- 代码文件：`code_chap10/chap10_rl.py`
-- 悬崖行走环境
-- 对比学到的策略路径
+- 代码文件：`code_chap10/chap10_generate_figures.py`
+- 网络架构图绘制
+- 标注单调性约束
 
 **数据来源**：
-- Q-learning：最优但冒险
-- SARSA：保守但安全
-
----
-
-## chap10_shortest_path.png
-
-**背景**：最短路径是RL的基础应用。
-
-**意图**：展示RL学到的从起点到终点的路径。
-
-**生成方法**：
-- 代码文件：`code_chap10/chap10_rl.py`
-- 网格世界中的路径规划
-- 绘制学到的轨迹
-
-**数据来源**：
-- 网格世界带障碍
-- 起点：左上角
-- 终点：右下角
-
----
-
-## chap10_policy.png
-
-**背景**：策略可视化。
-
-**意图**：用箭头展示每个状态的最优动作。
-
-**生成方法**：
-- 代码文件：`code_chap10/chap10_rl.py`
-- 从Q表提取贪婪策略
-- 箭头图绘制
-
-**数据来源**：
-- π(s) = argmax_a Q(s,a)
-- 四个方向：上下左右
+- QMIX论文架构
+- 混合网络权重由超网络生成

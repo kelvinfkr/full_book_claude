@@ -1,1077 +1,1116 @@
 % ====================================================================================
-\chapter{经典力学：最小作用量原理}
+\chapter{信息与编码：最大熵原理}
 % ====================================================================================
 
-\section*{引言：上帝是一位优化专家？}
+\section*{从猜数字游戏说起}
 
-1744年，法国科学院院长 Pierre-Louis Maupertuis（莫佩尔蒂）宣布了一个惊人的发现：自然界的所有运动都遵循一个简单的原则——\textbf{作用量最小}。
-\storynote{Maupertuis}{莫佩尔蒂是个传奇人物。他曾带队去北极测量地球形状（证明地球是扁的），还和伏尔泰的情人有一段暧昧关系。他的"最小作用量原理"最初更像神学宣言而非物理定理，却歪打正着成为现代物理的基石。}
+假设我心里想了一个1到8之间的整数，你要用“是/否”问题来猜出它。
 
-Maupertuis 是这样推理的：如果上帝创造了这个世界，他一定会让一切都以最"经济"的方式运行。因此，物体的运动路径一定是所有可能路径中"作用量"最小的那条。
+\textbf{策略A}（逐个问）：
+\begin{quote}
+“是1吗？” → 否 → “是2吗？” → 否 → $\cdots$
+\end{quote}
+最坏情况需要7次。
 
-这个想法立即引发了巨大的争议。伏尔泰写了一篇讽刺文章，嘲笑 Maupertuis 试图用物理学证明上帝存在。数学家们也指出，Maupertuis 的"作用量"定义模糊不清。
+\textbf{策略B}（二分法）：
+\begin{quote}
+“大于4吗？” → 是 → “大于6吗？” → 否 → “是5吗？” → 否 → “是6！”
+\end{quote}
+无论如何只需要3次。
 
-讽刺的是，这个被嘲笑的想法后来成为整个物理学的基石。
+为什么是3次？因为 $\log_2 8 = 3$。每个“是/否”问题最多能把可能性减半，8种可能性需要 $\log_2 8 = 3$ 次二分。
 
-今天，我们知道：
-\begin{itemize}
-    \item 牛顿的 $F = ma$ 可以从最小作用量原理\textbf{推导}出来
-    \item 量子力学的路径积分直接建立在作用量上
-    \item 爱因斯坦的广义相对论可以写成作用量的形式
-    \item 粒子物理的标准模型由一个作用量完全描述
-\end{itemize}
+\begin{insightbox}
+这个简单的游戏揭示了信息论的核心思想：\textbf{信息量 = 消除不确定性所需的最少问题数}。
+
+Shannon把这个“问题数”叫做\textbf{比特（bit）}——1 bit就是一个“是/否”问题能传递的信息量。
+\end{insightbox}
+
+\storynote{Claude Shannon}{1916--2001。他是个有趣的人。他喜欢骑独轮车，会在贝尔实验室的走廊里边骑边抛球杂耍。他发明了“bit”这个词，建立了整个信息论学科。业余时间，他炒股赚了很多钱，还造了各种稀奇古怪的机器。}
+
+\vspace{0.5cm}
+\noindent\textit{为什么压缩文件有极限？为什么分类网络的最后一层非用 softmax 不可？为什么“我只知道平均值”这一句话，就足以推出整个分布？}
 
 \begin{quote}
-\textbf{本章目标}：展示牛顿定律不是"公理"，而是从一个更深刻的优化原理推导出来的结果。你在第1章学过的拉格朗日乘子法，正是分析约束力学系统的标准工具。
+\textbf{本章目标}：你会发现，“信息”这个日常概念可以被精确量化，而计算最大熵分布的方法，正是我们在第1章学过的拉格朗日乘子法！逻辑回归、softmax函数、交叉熵损失，都可以从最大熵原理推导出来。
 \end{quote}
 
 \begin{tcolorbox}[colback=green!5, colframe=green!60!black, title=学完这章，你将能够...]
 \begin{itemize}
-    \item 写出任意力学系统的拉格朗日量$L = T - V$
-    \item 用Euler-Lagrange方程推导运动方程（比牛顿法更简洁）
-    \item 分析带约束的力学系统（单摆、双摆、滑块等）
-    \item 用守恒量（能量、动量）简化复杂问题
-    \item 理解约束力如何自然地由拉格朗日乘子给出
+    \item 计算离散分布和连续分布的熵
+    \item 用拉格朗日乘子法推导最大熵分布（如指数分布、正态分布）
+    \item 解释为什么机器学习用交叉熵作为损失函数
+    \item 从最大熵原理推导softmax函数和逻辑回归
+    \item 理解KL散度、交叉熵与最大似然之间的关系
 \end{itemize}
 \end{tcolorbox}
 
 % ------------------------------------------------------------------------------------
-\section{两种世界观：牛顿 vs 拉格朗日}
+\section{信息量的直觉}
 
-\subsection{牛顿的视角：力导致运动}
+\subsection{什么消息更有“信息量”？}
 
-\marginnote{\textbf{牛顿}(1643--1727)：人类历史上最伟大的科学家之一。他发明了微积分、发现万有引力、建立经典力学体系。牛顿出生那年伽利略去世，爱因斯坦出生那年麦克斯韦去世——科学史的巧合令人惊叹。}
+要把“信息”变成一个可以计算的量，先得弄清楚它到底和什么有关。比较两条消息：消息A说“明天太阳从东边升起”，消息B说“明天北京下雪”（假设现在是7月）。哪条消息的信息量更大？直觉告诉我们是消息B，因为消息A是必然发生的事（概率 $\approx 1$），听了等于没听；而消息B是罕见事件（概率很小），一旦成真就大大改变了我们对明天的预期。于是信息量应当是概率的减函数——概率越小，消息越“值钱”。
 
-你在大一物理课上学过牛顿第二定律：
+\begin{keyformula}[title=单个事件的信息量]
+事件 $x$ 的信息量（自信息）定义为：
+\begin{equation}
+I(x) = -\log_2 p(x) \quad \text{（单位：比特）}
+\end{equation}
+\end{keyformula}
+\clarify{这里$p(x)$是事件$x$发生的概率。概率是0到1之间的数，表示事件发生的可能性。比如“抛硬币正面朝上”的概率是0.5，“太阳从东边升起”的概率是1。}
+
+用几个例子验证这个定义是否符合直觉。必然事件（$p=1$）的信息量是 $I = -\log_2 1 = 0$ 比特，没有新信息；抛硬币得到正面（$p=0.5$）的信息量是 $I = -\log_2 0.5 = 1$ 比特；掷骰子得到 6（$p=1/6$）的信息量是 $I = -\log_2(1/6) \approx 2.58$ 比特；一个概率为 $0.001$ 的罕见事件则携带 $I = -\log_2 0.001 \approx 10$ 比特。概率每减半，信息量恰好增加一比特。
+
+\begin{physicalmeaning}
+为什么偏偏是 $-\log p$，而不是别的减函数？因为除了“概率越小，信息量越大”（$-\log$ 是单调递减函数）之外，我们对信息量还有两条要求。其一，独立事件的信息量应当可加：同时得知两件互不相关的事，得到的信息应等于分别得知它们的信息之和，而独立事件的概率是相乘的，$I(x \cap y) = -\log(p_x p_y) = -\log p_x - \log p_y = I(x) + I(y)$，对数恰好把乘法变成加法。其二，确定事件的信息量应为零，而 $-\log 1 = 0$。这三条性质唯一地确定了 $-\log p$ 的形式！
+\end{physicalmeaning}
+
+\subsection{回到猜数字游戏}
+
+现在我们可以理解为什么猜1-8的数字需要3比特：
+
+每个数字的概率是 $p = 1/8$，信息量是：
 \[
-\vec{F} = m\vec{a}
+I = -\log_2 \frac{1}{8} = \log_2 8 = 3 \text{ 比特}
 \]
 
-这是一个\textbf{因果}描述：力是因，加速度是果。要分析一个系统，你需要：
-\begin{enumerate}
-    \item 画受力图，找出所有作用在物体上的力
-    \item 对每个方向列出 $F = ma$
-    \item 解微分方程，得到运动轨迹
-\end{enumerate}
+\textbf{推广}：猜 $n$ 个等可能事件中的一个，需要 $\log_2 n$ 比特。
 
-\begin{example}[斜面上的滑块]
-一个质量为 $m$ 的滑块在光滑斜面上下滑。
+% ------------------------------------------------------------------------------------
+\section{熵：平均信息量}
 
-\textbf{牛顿方法}：
-\begin{enumerate}
-    \item 画受力图：重力 $mg$（向下）、支持力 $N$（垂直斜面向上）
-    \item 建立坐标系：沿斜面方向和垂直斜面方向
-    \item 列方程：
-    \begin{itemize}
-        \item 沿斜面：$mg\sin\theta = ma$
-        \item 垂直斜面：$N - mg\cos\theta = 0$
-    \end{itemize}
-    \item 解得：$a = g\sin\theta$，$N = mg\cos\theta$
-\end{enumerate}
+\subsection{不均匀概率的情况}
 
-这个例子很简单。但如果斜面本身也在运动呢？如果有多个物体通过绳子连接呢？
+猜数字游戏里每个答案等可能，所以每条消息的信息量都一样。现实中的消息源却往往不均匀：假设天气预报说晴天概率 70\%、雨天概率 30\%。如果告诉你“明天是晴天”，信息量是 $-\log_2 0.7 \approx 0.51$ 比特；如果告诉你“明天下雨”，信息量是 $-\log_2 0.3 \approx 1.74$ 比特。两种消息的信息量不同，那么\textbf{平均来看}，每天的天气消息能带来多少信息？自然的做法是按概率加权：
+
+\begin{align}
+\text{平均信息量} &= 0.7 \times (-\log_2 0.7) + 0.3 \times (-\log_2 0.3) \\
+&= 0.7 \times 0.51 + 0.3 \times 1.74 \\
+&\approx 0.88 \text{ 比特}
+\end{align}
+
+这个“平均信息量”就是\textbf{熵}。香农 1948 年在《通信的数学理论》里引入这个量时，据说是冯·诺伊曼建议他把它叫作“熵”，理由之一是“没人真正知道熵是什么，所以辩论时你总占上风”。名字的来历下一节会讲清楚——它确实和物理学里的熵是同一个东西。
+
+\begin{keyformula}[title=熵（Shannon Entropy）]
+\begin{equation}
+H(p) = -\sum_{i=1}^{k} p_i \log_2 p_i = \mathbb{E}[-\log_2 p(X)]
+\end{equation}
+
+熵 = 信息量的期望 = 平均每次观测带来的“惊讶程度”
+\end{keyformula}
+\clarify{$\mathbb{E}[\cdot]$表示“期望”，就是加权平均。如果你没学过概率论，只需记住：期望 = $\sum_i p_i \times (\text{第}i\text{个值})$，即每个值乘以它的概率再求和。}
+
+\subsection{熵的计算例子}
+
+\begin{example}[抛硬币]
+公平硬币：$p(\text{正}) = p(\text{反}) = 0.5$
+\[
+H = -0.5 \log_2 0.5 - 0.5 \log_2 0.5 = 0.5 + 0.5 = 1 \text{ 比特}
+\]
+
+不公平硬币：$p(\text{正}) = 0.9$，$p(\text{反}) = 0.1$
+\[
+H = -0.9 \log_2 0.9 - 0.1 \log_2 0.1 \approx 0.14 + 0.33 = 0.47 \text{ 比特}
+\]
+
+\textbf{结论}：越不公平的硬币，熵越小，结果越“可预测”。
 \end{example}
 
-\textbf{牛顿方法的困难}：
-\begin{itemize}
-    \item 需要分析\textbf{约束力}（支持力、张力、摩擦力……），但这些力的大小往往\textbf{不知道}
-    \item 坐标选择不当时，方程会变得非常复杂
-    \item 对于复杂的多体系统，受力分析容易出错
-\end{itemize}
+\begin{example}[掷骰子]
+公平骰子：$p_i = 1/6$
+\[
+H = -6 \times \frac{1}{6} \log_2 \frac{1}{6} = \log_2 6 \approx 2.58 \text{ 比特}
+\]
 
-\subsection{拉格朗日的视角：自然选择最优路径}
-\storynote{Lagrange}{拉格朗日（1736-1813）19岁就当上了教授。他从不画图，完全用代数推导力学。他的《分析力学》开篇就说："这本书里没有一张图。"他追求的是纯粹的数学之美。}
+作弊骰子（6的概率是50\%，其他各10\%）：
+\[
+H = -0.5 \log_2 0.5 - 5 \times 0.1 \log_2 0.1 \approx 0.5 + 1.66 = 2.16 \text{ 比特}
+\]
+\end{example}
 
-拉格朗日换了一个角度思考：
+\subsection{熵的性质}
 
-\begin{quote}
-与其问"力如何导致运动"，不如问"在所有可能的路径中，自然为什么选择这一条？"
-\end{quote}
-
-想象把一个球从 A 点抛到 B 点。球可以走很多条不同的路径——高抛、低抛、直线、曲线……但实际上，球只会走\textbf{一条}特定的抛物线。
-
-为什么是这一条？拉格朗日的回答是：因为这条路径使某个叫做\textbf{作用量}的东西取极值。
-
-\begin{figure}[h]
+\begin{figure}[htbp]
 \centering
-\begin{tikzpicture}[scale=0.9]
-    % 起点和终点
-    \fill[red] (0,0) circle (3pt) node[below left] {A（起点）};
-    \fill[red] (6,0) circle (3pt) node[below right] {B（终点）};
+\begin{tikzpicture}[scale=1.2]
+    \begin{axis}[
+        xlabel={$p$（正面概率）},
+        ylabel={$H(p)$（比特）},
+        xmin=0, xmax=1,
+        ymin=0, ymax=1.1,
+        samples=100,
+        domain=0.001:0.999,
+        grid=major,
+        width=10cm,
+        height=6cm,
+    ]
+    \addplot[very thick, blue] {-x*ln(x)/ln(2) - (1-x)*ln(1-x)/ln(2)};
     
-    % 多条可能路径
-    \draw[gray, dashed] (0,0) .. controls (1,3) and (5,3) .. (6,0);
-    \node[gray] at (3,2.8) {\small 高抛路径};
+    % 标注最大值点
+    \addplot[only marks, mark=*, mark size=3pt, red] coordinates {(0.5, 1)};
+    \node[above right, red] at (axis cs:0.5, 0.8) {最大值 $H=1$};
     
-    \draw[gray, dashed] (0,0) .. controls (2,0.5) and (4,0.5) .. (6,0);
-    \node[gray] at (3,0.8) {\small 低抛路径};
-    
-    \draw[gray, dashed] (0,0) -- (6,0);
-    \node[gray] at (3,-0.4) {\small 直线路径};
-    
-    % 真实路径（抛物线）
-    \draw[blue, very thick] (0,0) .. controls (1.5,2) and (4.5,2) .. (6,0);
-    \node[blue] at (4,1.8) {\textbf{真实路径}};
-    
-    % 重力
-    \draw[->, thick] (3,1.5) -- (3,0.7) node[right] {$g$};
+    % 标注两端
+    \node[below] at (axis cs:0, 0) {\small 确定反面};
+    \node[below] at (axis cs:1, 0) {\small 确定正面};
+    \end{axis}
 \end{tikzpicture}
-\caption{从 A 到 B 的无数条可能路径中，自然选择使作用量取极值的那一条}
+\caption{二元熵函数 $H(p) = -p\log_2 p - (1-p)\log_2(1-p)$。当 $p=0.5$ 时熵最大，当 $p=0$ 或 $p=1$ 时熵为零。}
 \end{figure}
 
-\subsection{两种视角的对比}
+从定义可以直接读出熵的三条基本性质。第一是非负性：$H(p) \geq 0$，等号当且仅当某个 $p_i = 1$，也就是结果完全确定时。第二是最大值：对于 $k$ 个可能结果，$H \leq \log_2 k$，等号当且仅当分布均匀——二元熵函数 $H(p)$ 的曲线在 $p = 0.5$ 处取到最大值 1 比特，正是这条性质最简单的情形。第三是可加性：独立系统的熵等于各部分熵之和，
+\[
+H(X, Y) = H(X) + H(Y) \quad \text{（若 $X, Y$ 独立）}
+\]
+这一条直接继承自信息量的可加性。
+
+\begin{insightbox}
+同一个量 $H(p)$ 可以从三个角度理解，它们说的是一回事：作为\textbf{不确定性}，熵越大，结果越难预测；作为\textbf{信息量}，熵越大，每次观测带来的平均信息越多；作为\textbf{均匀程度}，熵越大，分布越“平坦”。本章后面的最大熵原理用的主要是第三种理解。
+\end{insightbox}
+
+% ------------------------------------------------------------------------------------
+\section{熵的组合学起源}
+
+\subsection{微观态计数}
+
+上一节把熵定义成平均信息量，但这个定义看上去仍有几分人为：为什么恰好是 $-\sum p \ln p$，而不是别的某个衡量“平坦程度”的函数？答案来自物理学，而且来自一个纯粹的计数问题。
+
+\textbf{问题}：把 $N$ 个可区分的球放入 $k$ 个盒子，第 $i$ 个盒子有 $n_i$ 个球（$\sum_i n_i = N$）。有多少种放法？
+
+答案是多项式系数：
+\begin{equation}
+W = \frac{N!}{n_1! n_2! \cdots n_k!}
+\end{equation}
+
+\begin{example}[具体计算]
+把6个球放入3个盒子，分布为 $(3, 2, 1)$：
+\[
+W = \frac{6!}{3! \cdot 2! \cdot 1!} = \frac{720}{6 \cdot 2 \cdot 1} = 60 \text{ 种}
+\]
+
+如果分布为 $(2, 2, 2)$（均匀）：
+\[
+W = \frac{6!}{2! \cdot 2! \cdot 2!} = \frac{720}{8} = 90 \text{ 种}
+\]
+
+均匀分布有更多的微观实现方式！
+\end{example}
+
+\subsection{从计数到熵}
+
+当 $N$ 很大时，用 Stirling 近似 $\ln n! \approx n \ln n - n$：
+\clarify{从这里开始，我们改用自然对数 $\ln$（单位是奈特 nat），它与 $\log_2$（比特）只差常数 $\ln 2$。凡是与比特有关的地方（编码、压缩）会再换回 $\log_2$。}
+
+令 $p_i = n_i / N$（各盒子的比例），则：
+\begin{align}
+\frac{1}{N} \ln W &= \frac{1}{N} \left( \ln N! - \sum_i \ln n_i! \right) \\
+&\approx \frac{1}{N} \left( N \ln N - N - \sum_i (n_i \ln n_i - n_i) \right) \\
+&= \ln N - \sum_i \frac{n_i}{N} \ln n_i \\
+&= -\sum_i p_i \ln p_i
+\end{align}
+
+（最后一步用到 $\ln n_i = \ln(p_i N) = \ln p_i + \ln N$）
+
+于是，香农的熵不是凭空定义的：它就是微观态数的对数按球数平摊后的值。这也回答了前面的疑问——$-\sum p \ln p$ 这个形式是从计数里长出来的，不是选出来的。
+
+\begin{keytheorem}[title=熵的组合学意义]
+\begin{equation}
+H(p) = -\sum_i p_i \ln p_i \approx \frac{1}{N} \ln W
+\end{equation}
+
+\textbf{熵 $\propto$ 微观态数的对数}
+
+熵大 $\Leftrightarrow$ 微观实现方式多 $\Leftrightarrow$ 更“自然”、更容易出现
+\end{keytheorem}
+\storynote{Ludwig Boltzmann}{1844--1906，奥地利物理学家，统计力学奠基人。他的墓碑上刻着$S = k \log W$——熵等于微观态数的对数。这个公式连接了宏观热力学和微观统计力学。他因学术争论而抑郁，最终自杀，但他的理论被后世完全证实。}
+
+\begin{physicalmeaning}
+想象把一盒气体分子放到房间里。所有分子挤在角落是低熵状态，只有极少数微观态对应这种宏观状态；分子均匀分布在房间是高熵状态，有海量微观态与之对应。这就是为什么气体会自发扩散——不是因为有什么“力”推动，而是因为均匀分布对应的微观态数压倒性地多！
+\end{physicalmeaning}
+
+% ------------------------------------------------------------------------------------
+\section{最大熵原理}
+
+\subsection{一个关键问题}
+
+前两节回答了“熵是什么”。现在把问题反过来：能不能用熵去\textbf{构造}分布？假设你在调查某城市的收入分布，但只知道两个信息——平均收入是 5 万元，而且收入必须非负。你应该假设什么样的收入分布？
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[scale=0.9]
+    \begin{axis}[
+        xlabel={收入（万元）},
+        ylabel={概率密度},
+        xmin=0, xmax=20,
+        ymin=0, ymax=0.25,
+        samples=100,
+        domain=0:20,
+        width=12cm,
+        height=6cm,
+        legend pos=north east,
+    ]
+    % 指数分布（最大熵）
+    \addplot[very thick, blue] {0.2*exp(-0.2*x)};
+    \addlegendentry{指数分布（最大熵）}
+    
+    % 其他可能的分布
+    \addplot[thick, red, dashed] {0.4*x*exp(-0.4*x)};
+    \addlegendentry{其他分布1}
+    
+    \addplot[thick, green!60!black, dotted] {1/(5*sqrt(2*pi))*exp(-(x-5)^2/50)};
+    \addlegendentry{其他分布2}
+    \end{axis}
+\end{tikzpicture}
+\caption{满足“均值=5万”约束的不同分布。哪个是“最合理”的选择？}
+\end{figure}
+
+有无穷多个分布满足“均值=5万”的条件。选哪一个？
+
+\subsection{最大熵原理的回答}
+
+\begin{quote}
+\textit{“不要假装知道你不知道的东西。在约束条件下，选择最均匀（熵最大）的分布。”}
+\end{quote}
+
+\begin{keyformula}[title=最大熵原理]
+在所有满足已知约束的分布中，选择\textbf{熵最大}的那个。
+
+数学形式：
+\begin{equation}
+\max_{p} \quad H(p) = -\sum_i p_i \ln p_i
+\end{equation}
+\begin{align}
+\text{s.t.} \quad & \sum_i p_i = 1 \quad \text{（归一化）} \\
+& \sum_i p_i g_j(x_i) = c_j, \quad j = 1, \ldots, m \quad \text{（已知约束）}
+\end{align}
+\end{keyformula}
+
+为什么这是合理的？可以从三个角度回答。从组合学看，上一节的计数表明最大熵分布对应最多的微观态，是“最可能”的宏观状态；从信息论看，最大熵就是最大不确定性，意味着除了已知约束之外不引入任何额外假设；从决策论看，如果你用错误的分布做决策，最大熵分布让你的“最坏情况损失”最小。三条理由指向同一个结论：只知道部分信息时，最大熵分布是最诚实的选择。
+
+\storynote{Edwin Jaynes}{1922--1998，美国物理学家，最大熵原理的现代奠基人。他1957年的论文将熵和概率推理统一起来，影响了统计学、机器学习、贝叶斯推断等领域。他认为``概率是知识的逻辑，不是物理的性质''。}
+
+\begin{tcolorbox}[colback=yellow!10, colframe=orange!80, title=本章的核心观点]
+\textbf{最大熵原理不是什么新东西——它就是第1章的拉格朗日乘子法，只不过“变量”从一个向量 $x$ 变成了一个概率分布 $p$，“目标”从某个代价变成了熵。}
+
+约束是什么？——你\textbf{已知}的东西：概率必须归一化，某些量的平均值必须等于观测值。
+
+乘子是什么？——每条已知信息的“熵价格”：$\beta_j = -\partial H^*/\partial c_j$。在物理里它给出温度的倒数，在机器学习里它是特征权重 $w_j$。这不是巧合。
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabularx}{\linewidth}{llX}
+\toprule
+ & \textbf{第1章（约束优化）} & \textbf{本章（最大熵）} \\
+\midrule
+变量 & 向量 $x \in \R^n$ & 分布 $p = (p_1, \ldots, p_k)$ 或密度 $p(x)$ \\
+目标 & $\min f(x)$ & $\max H(p) = -\sum_i p_i \ln p_i$ \\
+约束 & $g(x) = 0$ & $\sum_i p_i = 1$，$\sum_i p_i g_j(x_i) = c_j$ \\
+乘子 & $\lambda$ & $\alpha$（给出配分函数 $Z$），$\beta_j$（特征权重 / 逆温度） \\
+一阶条件 & $\nabla f + \lambda \nabla g = 0$ & $-\ln p_i - 1 + \alpha + \sum_j \beta_j g_j(x_i) = 0$ \\
+解 & 驻点 $x^*$ & 指数族 $p_i = e^{\sum_j \beta_j g_j(x_i)} / Z$ \\
+影子价格 & $\lambda = -df^*/d\epsilon$ & $\beta_j = -\partial H^*/\partial c_j$ \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\end{tcolorbox}
+
+\subsection{用拉格朗日乘子法求解}
+
+这是一个带等式约束的优化问题——正是第1章拉格朗日乘子法的舞台！
+\review{第1章}{拉格朗日函数 $\Lag = f + \lambda^\top g$，对所有变量（包括乘子）求导令其为零。这里 $f = -H(p)$（最小化负熵），$g$ 是归一化和矩约束，每个约束配一个乘子——本章把它们记作 $\alpha$ 和 $\beta_j$，以免与指数分布的率参数 $\lambda$ 混淆。}
+
+\paragraph{Step 1：构造拉格朗日函数}
+\begin{equation}
+\mathcal{L}(p, \alpha, \bm{\beta}) = -\sum_i p_i \ln p_i + \alpha\left(\sum_i p_i - 1\right) + \sum_{j=1}^{m} \beta_j \left(\sum_i p_i g_j(x_i) - c_j\right)
+\end{equation}
+
+\paragraph{Step 2：对 $p_i$ 求导并令其为零}
+\begin{equation}
+\frac{\partial \mathcal{L}}{\partial p_i} = -\ln p_i - 1 + \alpha + \sum_j \beta_j g_j(x_i) = 0
+\end{equation}
+
+\paragraph{Step 3：解出 $p_i$}
+\begin{equation}
+\ln p_i = \alpha - 1 + \sum_j \beta_j g_j(x_i)
+\end{equation}
+
+\begin{equation}
+p_i = \exp\left( \alpha - 1 + \sum_j \beta_j g_j(x_i) \right)
+\end{equation}
+
+\paragraph{Step 4：用归一化条件确定 $\alpha$}
+
+由 $\sum_i p_i = 1$，定义配分函数：
+\review{第2章}{“$\beta$ 的值由约束隐式确定”其实就是在解对偶问题：$\min_\beta [\ln Z(\beta) - \beta^\top c]$。它无约束、且是凸的（log-sum-exp 减线性），对 $\beta_j$ 求导恰好得到 $\langle g_j \rangle = c_j$。}
+\begin{equation}
+Z(\bm{\beta}) = \sum_i \exp\left( \sum_j \beta_j g_j(x_i) \right)
+\end{equation}
+
+则 $e^{\alpha - 1} = 1/Z$，最终得到：
+
+\begin{keytheorem}[title=最大熵分布的指数形式]
+\begin{equation}
+\boxed{p_i = \frac{1}{Z} \exp\left( \sum_j \beta_j g_j(x_i) \right)}
+\label{eq:maxent}
+\end{equation}
+
+其中 $Z = \sum_i \exp\left( \sum_j \beta_j g_j(x_i) \right)$ 是归一化常数（配分函数），$\beta_j$ 是约束 $\langle g_j \rangle = c_j$ 对应的拉格朗日乘子，它的值由约束条件隐式确定。
+\end{keytheorem}
+\preview{这个“指数族”形式就是深度学习里的 softmax：第8章分类网络的输出层、第11章 Transformer 的注意力权重 $\mathrm{softmax}(q \cdot k / \sqrt{d})$ 都是它的实例，第11章还会把 $\sqrt{d}$ 解释成“温度”。}
+
+\begin{physicalmeaning}
+拉格朗日乘子 $\beta_j$ 做的事情是调节分布的形状，使得约束 $\langle g_j \rangle = c_j$ 被精确满足：$\beta_j > 0$ 时，分布倾向于让 $g_j(x)$ 大的状态概率增加；$\beta_j < 0$ 时则相反，倾向于让 $g_j(x)$ 大的状态概率减少。
+
+在物理中，取 $g = E$（能量）时得到玻尔兹曼分布 $p \propto e^{-E/kT}$，即 $\beta = -1/kT$（物理惯例把乘子取相反符号），$|\beta|$ 是逆温度；在机器学习中，$\beta$ 是特征权重。E. T. Jaynes 1957 年提出最大熵原理时，正是把统计力学整个解释成这样一种在已知约束下的推断：玻尔兹曼分布不是额外的物理假设，而是“只知道平均能量”时的最大熵解。
+
+更准确地说：$\beta_j = -\dfrac{\partial H^*}{\partial c_j}$——它度量“多知道一点信息（约束值变一个单位），最大熵下降多少”。这与第1章的 $\lambda = -df^*/d\epsilon$ 完全对应：从“影子价格”到“特征权重”，$\lambda$ 的统一性再次显现！
+\end{physicalmeaning}
+
+% ------------------------------------------------------------------------------------
+\section{经典分布的推导}
+
+有了式~\eqref{eq:maxent}，推导一个具体的分布就只剩两步：说清楚约束是什么，再由约束把乘子定出来。下面用这套程序推导几个著名的概率分布，约束一次比一次多。
+\clarify{如果你没学过概率论，不用担心——本节推导的这些分布（均匀分布、指数分布、高斯分布）是最基础的概率分布，学完本节你就掌握了概率论最核心的几个分布！}
+
+\subsection{均匀分布：一无所知时}
+
+这时唯一的约束是归一化 $\sum_i p_i = 1$，拉格朗日函数只需要一个乘子：
+\begin{equation}
+\mathcal{L} = -\sum_i p_i \ln p_i + \alpha \left( \sum_i p_i - 1 \right)
+\end{equation}
+
+\begin{equation}
+\frac{\partial \mathcal{L}}{\partial p_i} = -\ln p_i - 1 + \alpha = 0 \quad \Rightarrow \quad p_i = e^{\alpha - 1}
+\end{equation}
+
+由于右边不依赖于 $i$，所以 $p_i$ 对所有 $i$ 相同：
+\begin{equation}
+\boxed{p_i = \frac{1}{k}} \quad \text{（均匀分布）}
+\end{equation}
+
+\begin{insightbox}
+当你对一件事\textbf{一无所知}时（没有任何约束），最大熵原理告诉你：\textbf{假设每种可能性相等}。
+
+这就是概率论中的“无差别原理”或“不充分理由原则”。
+\end{insightbox}
+
+\subsection{指数分布：已知均值时}
+
+现在多知道一点：变量非负，而且均值已知。约束因此有三条——归一化 $\int_0^\infty p(x) dx = 1$，均值 $\int_0^\infty x \cdot p(x) dx = \mu$，以及支撑 $x \geq 0$（它决定了积分区间）。其中只有一个“矩约束” $g(x) = x$，$c = \mu$。
+
+由最大熵公式：
+\begin{equation}
+p(x) = \frac{1}{Z} e^{\beta x}
+\end{equation}
+
+为了让 $p(x)$ 在 $[0, \infty)$ 上可积，必须 $\beta < 0$。令 $\lambda = -\beta > 0$：
+\clarify{这里的 $\lambda = -\beta$ 只是指数分布的率参数（rate），和第1章的乘子 $\lambda$ 不是一回事——本章的乘子记作 $\alpha$、$\beta_j$。}
+\begin{equation}
+p(x) = \frac{1}{Z} e^{-\lambda x}
+\end{equation}
+
+计算归一化常数：
+\begin{equation}
+Z = \int_0^\infty e^{-\lambda x} dx = \frac{1}{\lambda}
+\end{equation}
+
+计算均值约束：
+\begin{equation}
+\mu = \int_0^\infty x \cdot \lambda e^{-\lambda x} dx = \frac{1}{\lambda}
+\end{equation}
+
+所以 $\lambda = 1/\mu$，最终得到：
+
+\begin{equation}
+\boxed{p(x) = \frac{1}{\mu} e^{-x/\mu}} \quad \text{（指数分布）}
+\end{equation}
+
+\begin{physicalmeaning}
+指数分布在放射性衰变（已知平均寿命）、电话呼叫的到达间隔（已知平均间隔）、设备的故障时间（已知平均寿命）里反复出现。这些情况的共同特点是只知道均值，不知道其他信息；最大熵原理告诉我们，这时就应该假设指数分布。
+\end{physicalmeaning}
+\think{按第1章“影子价格”的定义，$\beta_j$ 应该等于哪个导数？提示：把最优熵 $H^*$ 看成 $c_j$ 的函数，用包络定理，你会得到 $\beta_j = -\partial H^*/\partial c_j$。热力学里 $\partial S/\partial U = 1/T$——温度的倒数正是“能量约束的影子价格”。}
+
+\subsection{高斯分布：已知均值和方差时}
+
+再多知道一点：均值 $\mu$ 和方差 $\sigma^2$ 都已知，支撑是整个实轴。约束是归一化 $\int_{-\infty}^{\infty} p(x) dx = 1$、均值 $\int x \cdot p(x) dx = \mu$ 和方差 $\int (x-\mu)^2 \cdot p(x) dx = \sigma^2$，也就是两个矩约束 $g_1(x) = x$，$g_2(x) = (x-\mu)^2$。
+
+由最大熵公式：
+\begin{equation}
+p(x) = \frac{1}{Z} \exp\left( \beta_1 x + \beta_2 (x-\mu)^2 \right)
+\end{equation}
+
+为了可积，$\beta_2 < 0$。令 $\beta_2 = -1/(2\sigma^2)$，可以验证均值约束要求 $\beta_1 = 0$（因为 $(x-\mu)^2$ 已经以 $\mu$ 为中心）。
+
+最终：
+\begin{equation}
+\boxed{p(x) = \frac{1}{\sqrt{2\pi\sigma^2}} \exp\left( -\frac{(x-\mu)^2}{2\sigma^2} \right)} \quad \text{（高斯分布）}
+\end{equation}
+\storynote{高斯}{高斯（1777-1855）被誉为“数学王子”。高斯分布以他命名，但最早是德莫瓦弗在1733年发现的。高斯用它来分析天文观测误差，发现它神奇地描述了几乎所有测量误差的分布。}
+
+\begin{keytheorem}[title=高斯分布的最大熵性质]
+在所有均值为 $\mu$、方差为 $\sigma^2$ 的连续分布中，\textbf{高斯分布的熵最大}。
+
+这解释了为什么高斯分布在自然界和统计学中如此普遍——当你只知道均值和方差时，高斯分布是“最诚实”的选择。
+\end{keytheorem}
+
+\subsection{经典分布总结}
 
 \begin{center}
 \renewcommand{\arraystretch}{1.5}
-\begin{tabular}{c|c|c}
+\begin{tabular}{l|l|l}
 \toprule
-& \textbf{牛顿视角} & \textbf{拉格朗日视角} \\
+\textbf{已知约束} & \textbf{最大熵分布} & \textbf{应用场景} \\
 \midrule
-核心方程 & $\vec{F} = m\vec{a}$ & $\delta S = 0$ \\
-\midrule
-思维方式 & 因果：力 $\to$ 运动 & 整体：运动是最优路径 \\
-\midrule
-需要什么 & 分析所有力 & 只需能量 $T$ 和 $V$ \\
-\midrule
-约束力 & 需要猜测或求解 & 自动算出（乘子 $\lambda$） \\
-\midrule
-坐标变换 & 麻烦（要重新分析力） & 简单（形式不变） \\
-\midrule
-适用范围 & 经典力学 & 整个物理学 \\
+仅归一化 & 均匀分布 & 完全无知 \\
+均值（离散有限） & 几何分布 & 等待时间 \\
+均值（连续非负） & 指数分布 & 寿命、间隔 \\
+均值 + 方差 & 高斯分布 & 测量误差、自然现象 \\
+均值（非负整数） & 泊松分布 & 计数数据 \\
 \bottomrule
 \end{tabular}
 \end{center}
-
-\begin{insightbox}
-\textbf{类比}：
-
-牛顿方法就像你开车时看着 GPS 的\textbf{即时导航}——"前面路口左转，然后直行500米……"
-
-拉格朗日方法就像\textbf{事先规划好整条路线}——"从所有可能的路线中，选择总时间最短的那条"。
-
-两种方法最终到达同一个目的地，但思维方式完全不同。
-\end{insightbox}
+\tryit{用 numpy 各生成 10 万个均值 0、方差 1 的样本（高斯、均匀 $[-\sqrt{3}, \sqrt{3}]$、拉普拉斯），用直方图估计熵，验证高斯最大：理论值分别约 1.42、1.24、1.35 nat。}
 
 % ------------------------------------------------------------------------------------
-\section{作用量与拉格朗日量}
+\section{KL散度：分布之间的“距离”}
 
-\subsection{什么是作用量？}
+\subsection{问题的提出}
 
-想象一个粒子从时刻 $t_1$ 的位置 A 运动到时刻 $t_2$ 的位置 B。在这两个时刻之间，它可以走很多条不同的路径。
+到目前为止我们只谈单个分布的熵。但机器学习里更常见的情形是手里有两个分布，需要比较它们的“差异”：模型预测的分布 $q$ 与真实分布 $p$ 有多接近？数据的经验分布与理论分布差多少？一个自然的想法是用“距离”来度量。但什么样的“距离”对概率分布是合理的？
 
-我们需要一个方法来"评价"每条路径的好坏。\textbf{作用量}就是这个评价指标。
+\subsection{KL散度的定义}
 
-\begin{definition}[作用量]
-作用量 $S$ 是一个泛函，它把一条路径 $q(t)$ 映射成一个数字：
+\begin{keyformula}[title=KL散度（Kullback-Leibler Divergence）]
 \begin{equation}
-S[q] = \int_{t_1}^{t_2} L(q, \dot{q}, t) \, dt
-\end{equation}
-其中 $L$ 叫做\textbf{拉格朗日量}。
-\end{definition}
-\review{第3章}{还记得泛函吗？泛函是"吃函数、吐数字"的映射。这里的$S[q]$就是一个泛函——输入一条路径$q(t)$，输出一个数字（作用量）。}
-
-\textbf{作用量的单位}：能量 $\times$ 时间 = 焦耳·秒 = $\mathrm{J \cdot s}$
-
-这个单位在量子力学中非常重要——普朗克常数 $\hbar$ 的单位正是 $\mathrm{J \cdot s}$！
-
-\subsection{拉格朗日量：$L = T - V$}
-
-对于经典力学系统，拉格朗日量定义为：
-
-\begin{definition}[拉格朗日量]
-\begin{equation}
-\boxed{L = T - V}
-\end{equation}
-其中 $T$ 是\textbf{动能}，$V$ 是\textbf{势能}。
-\end{definition}
-
-\paragraph{为什么是 $T - V$ 而不是 $T + V$？}
-
-这是一个很好的问题。$T + V$ 是总能量，似乎更"自然"。但让我们看看两者的区别：
-
-\begin{itemize}
-    \item $T + V$：总能量，在保守系统中是\textbf{守恒量}（不随时间变化）
-    \item $T - V$：拉格朗日量，是\textbf{变化量}（随位置和速度变化）
-\end{itemize}
-
-如果用 $T + V$ 做被积函数，由于它是常数，对不同路径积分会得到相同的值——无法区分路径的好坏！
-
-只有 $T - V$ 才能从变分原理导出正确的运动方程。这不是人为选择，而是数学推导的\textbf{必然结果}。
-
-\begin{example}[一维谐振子的拉格朗日量]
-弹簧-质量系统，弹簧常数 $k$，质量 $m$。
-
-\textbf{动能}：$T = \frac{1}{2}m\dot{x}^2$
-
-\textbf{势能}：$V = \frac{1}{2}kx^2$（以平衡位置为零势能点）
-
-\textbf{拉格朗日量}：
-\[
-L = T - V = \frac{1}{2}m\dot{x}^2 - \frac{1}{2}kx^2
-\]
-
-注意 $L$ 依赖于位置 $x$（通过势能）和速度 $\dot{x}$（通过动能）。
-\end{example}
-
-\subsection{广义坐标}
-
-在牛顿力学中，我们通常用笛卡尔坐标 $(x, y, z)$ 描述位置。但在拉格朗日力学中，我们可以用任何方便的坐标——这些坐标叫做\textbf{广义坐标}，记作 $q_1, q_2, \ldots, q_n$。
-
-\begin{example}[单摆的广义坐标]
-单摆可以用笛卡尔坐标 $(x, y)$ 描述，但它们不是独立的——必须满足约束 $x^2 + y^2 = l^2$。
-
-更聪明的做法是用\textbf{角度} $\theta$ 作为广义坐标。这样：
-\begin{itemize}
-    \item 只有一个自由度（$\theta$）
-    \item 约束自动满足
-    \item 方程更简洁
-\end{itemize}
-\end{example}
-
-\begin{definition}[自由度]
-系统的\textbf{自由度}是描述系统状态所需的最小独立坐标数。
-
-\begin{itemize}
-    \item 空间中的自由粒子：3 个自由度（$x, y, z$）
-    \item 单摆：1 个自由度（$\theta$）
-    \item 双摆：2 个自由度（$\theta_1, \theta_2$）
-    \item 刚体：6 个自由度（3 个位置 + 3 个姿态）
-\end{itemize}
-\end{definition}
-
-\subsection{最小作用量原理}
-
-现在我们可以陈述物理学中最深刻的原理之一：
-
-\marginnote{\textbf{哈密顿}(1805--1865)：爱尔兰数学家，被誉为继牛顿之后最伟大的英国科学家。他12岁精通13种语言，22岁当上教授。除了哈密顿力学，他还发明了四元数，为量子力学奠定了数学基础。}
-
-\begin{keytheorem}[title=最小作用量原理（Hamilton 原理）]
-在所有连接初态和终态的路径中，真实的运动轨迹使作用量 $S$ 取\textbf{极值}：
-\begin{equation}
-\boxed{\delta S = 0}
-\end{equation}
-\end{keytheorem}
-
-这里 $\delta S = 0$ 是第4章学过的变分条件——泛函的一阶变分为零。
-
-\paragraph{为什么是"极值"而不是"最小值"？}
-
-在大多数情况下，作用量确实取最小值。但在某些情况下（如某些光学问题），作用量可能取最大值或鞍点。所以更准确的说法是"稳定作用量原理"。
-
-不过，为了方便，我们仍然沿用"最小作用量原理"这个名称。
-
-% ------------------------------------------------------------------------------------
-\section{拉格朗日方程的推导}
-
-\subsection{从变分原理到运动方程}
-
-现在让我们推导拉格朗日方程——这直接应用第4章的 Euler-Lagrange 方程。
-
-\paragraph{问题设置}
-
-我们要找使作用量取极值的路径：
-\[
-\delta S = \delta \int_{t_1}^{t_2} L(q, \dot{q}, t) \, dt = 0
-\]
-
-边界条件：$q(t_1) = q_a$（固定起点），$q(t_2) = q_b$（固定终点）
-
-\paragraph{应用 E-L 方程}
-
-这正是第4章的变分问题！把 $x \to t$，$y \to q$，$y' \to \dot{q}$，$F \to L$，E-L 方程变成：
-
-\begin{keyformula}[title=拉格朗日方程]
-\begin{equation}
-\boxed{\frac{d}{dt}\frac{\partial L}{\partial \dot{q}_i} - \frac{\partial L}{\partial q_i} = 0, \quad i = 1, 2, \ldots, n}
+D_{KL}(P \| Q) = \sum_i p_i \ln \frac{p_i}{q_i} = \sum_i p_i \ln p_i - \sum_i p_i \ln q_i
 \end{equation}
 
-对于 $n$ 个广义坐标，有 $n$ 个这样的方程。
+或写成期望形式：
+\begin{equation}
+D_{KL}(P \| Q) = \mathbb{E}_{x \sim P} \left[ \ln \frac{P(x)}{Q(x)} \right]
+\end{equation}
 \end{keyformula}
+\preview{KL散度是深度学习中最重要的概念之一。第8章的神经网络训练、第9章的强化学习策略优化、第12章的大模型后训练（RLHF 里的 KL 约束）、第16章的世界模型，都会反复用到它。现在花时间理解透彻，后面会事半功倍！}
 
-\subsection{理解拉格朗日方程的结构}
-
-让我们仔细分析这个方程的各个部分：
-
-\[
-\underbrace{\frac{d}{dt}\frac{\partial L}{\partial \dot{q}_i}}_{\text{动量的时间导数}} - \underbrace{\frac{\partial L}{\partial q_i}}_{\text{广义力}} = 0
-\]
-
-\paragraph{广义动量}
-
-定义\textbf{广义动量}（也叫\textbf{共轭动量}）：
-\begin{equation}
-p_i := \frac{\partial L}{\partial \dot{q}_i}
-\end{equation}
-
-这是拉格朗日量对广义速度的偏导数。
-
-\begin{example}[普通动量是广义动量的特例]
-对于笛卡尔坐标下的自由粒子，$L = \frac{1}{2}m\dot{x}^2$。
-
-广义动量：$p_x = \frac{\partial L}{\partial \dot{x}} = m\dot{x}$
-
-这正是我们熟悉的动量 $p = mv$！
-\end{example}
-
-\paragraph{广义力}
-
-定义\textbf{广义力}：
-\begin{equation}
-F_i := \frac{\partial L}{\partial q_i}
-\end{equation}
-
-这是拉格朗日量对广义坐标的偏导数。
-
-对于保守力系统（$L = T - V$，且 $T$ 不显含 $q$）：
-\[
-F_i = \frac{\partial L}{\partial q_i} = -\frac{\partial V}{\partial q_i}
-\]
-
-这正是势能的负梯度——即保守力！
-
-\paragraph{拉格朗日方程的物理意义}
-
-用广义动量和广义力重写拉格朗日方程：
-\[
-\frac{dp_i}{dt} = F_i
-\]
-
-\textbf{动量的变化率等于力}——这就是牛顿第二定律 $F = \dot{p}$！
-
-\begin{insightbox}
-拉格朗日方程不是什么新东西，它就是牛顿第二定律在广义坐标下的表达形式。
-
-但拉格朗日方法的威力在于：
-\begin{enumerate}
-    \item 不需要分析力，只需要写出能量 $T$ 和 $V$
-    \item 可以使用任何方便的坐标
-    \item 约束力自动处理
-\end{enumerate}
-\end{insightbox}
-
-% ------------------------------------------------------------------------------------
-\section{例题详解：从简单到复杂}
-
-\subsection{例1：自由粒子}
-
-一个质量为 $m$ 的粒子在一维空间中自由运动（无势能）。
-
-\paragraph{步骤1：写出拉格朗日量}
-
-动能：$T = \frac{1}{2}m\dot{x}^2$
-
-势能：$V = 0$
-
-拉格朗日量：$L = T - V = \frac{1}{2}m\dot{x}^2$
-
-\paragraph{步骤2：计算偏导数}
-
-\[
-\frac{\partial L}{\partial \dot{x}} = m\dot{x}, \quad \frac{\partial L}{\partial x} = 0
-\]
-
-\paragraph{步骤3：代入拉格朗日方程}
-
-\[
-\frac{d}{dt}(m\dot{x}) - 0 = 0 \quad \Rightarrow \quad m\ddot{x} = 0
-\]
-
-\paragraph{结论}
-
-$\ddot{x} = 0$，即加速度为零——粒子做匀速直线运动。
-
-这就是\textbf{牛顿第一定律}！
-
-\subsection{例2：一维谐振子}
-
-弹簧-质量系统：质量 $m$，弹簧常数 $k$。
-
-\paragraph{步骤1：写出拉格朗日量}
-
-\[
-L = \frac{1}{2}m\dot{x}^2 - \frac{1}{2}kx^2
-\]
-
-\paragraph{步骤2：计算偏导数}
-
-\[
-\frac{\partial L}{\partial \dot{x}} = m\dot{x}, \quad \frac{\partial L}{\partial x} = -kx
-\]
-
-\paragraph{步骤3：代入拉格朗日方程}
-
-\[
-\frac{d}{dt}(m\dot{x}) - (-kx) = 0 \quad \Rightarrow \quad m\ddot{x} + kx = 0
-\]
-
-\paragraph{结论}
-
-这是谐振子方程！解为 $x(t) = A\cos(\omega t + \phi)$，其中 $\omega = \sqrt{k/m}$。
-
-\textbf{验证}：这与牛顿方法得到的结果一致。胡克定律 $F = -kx$ 代入 $F = ma$ 得到 $m\ddot{x} = -kx$。
-
-\subsection{例3：自由落体}
-
-质量为 $m$ 的物体在重力场中下落。
-
-\paragraph{步骤1：写出拉格朗日量}
-
-取向下为 $y$ 的正方向（这样势能为负）。
-
-动能：$T = \frac{1}{2}m\dot{y}^2$
-
-势能：$V = -mgy$（以某个参考点为零势能）
-
-拉格朗日量：$L = \frac{1}{2}m\dot{y}^2 + mgy$
-
-\paragraph{步骤2：计算偏导数}
-
-\[
-\frac{\partial L}{\partial \dot{y}} = m\dot{y}, \quad \frac{\partial L}{\partial y} = mg
-\]
-
-\paragraph{步骤3：代入拉格朗日方程}
-
-\[
-\frac{d}{dt}(m\dot{y}) - mg = 0 \quad \Rightarrow \quad m\ddot{y} = mg \quad \Rightarrow \quad \ddot{y} = g
-\]
-
-\paragraph{结论}
-
-加速度等于重力加速度 $g$——这就是自由落体运动！
-
-\subsection{例4：单摆（用角度坐标）}
-
-长度为 $l$、质量为 $m$ 的单摆。
-
-\begin{figure}[h]
-\centering
-\begin{tikzpicture}[scale=1.8]
-    % 支点
-    \fill (0,0) circle (1.5pt);
-    \draw[thick] (-0.3,0) -- (0.3,0);
-    
-    % 摆杆
-    \draw[thick] (0,0) -- ({1.2*sin(30)},{-1.2*cos(30)});
-    \node at ({0.6*sin(30)+0.15},{-0.6*cos(30)}) {$l$};
-    
-    % 摆球
-    \shade[ball color=blue!30] ({1.2*sin(30)},{-1.2*cos(30)}) circle (4pt);
-    \node[right] at ({1.2*sin(30)+0.1},{-1.2*cos(30)}) {$m$};
-    
-    % 角度
-    \draw[dashed] (0,0) -- (0,-1);
-    \draw[->] (0,-0.5) arc (-90:-60:0.5);
-    \node at (0.25,-0.6) {$\theta$};
-    
-    % 速度方向
-    \draw[->, red, thick] ({1.2*sin(30)},{-1.2*cos(30)}) -- ({1.2*sin(30)+0.4*cos(30)},{-1.2*cos(30)+0.4*sin(30)});
-    \node[red, above right] at ({1.2*sin(30)+0.3},{-1.2*cos(30)+0.2}) {$v = l\dot{\theta}$};
-    
-    % 高度标注
-    \draw[<->, gray] (1.5,0) -- (1.5,{-1.2*cos(30)});
-    \node[gray, right] at (1.5,{-0.6*cos(30)}) {$h = l\cos\theta$};
-\end{tikzpicture}
-\caption{单摆：用角度 $\theta$ 作为广义坐标}
-\end{figure}
-
-\paragraph{步骤1：选择广义坐标}
-
-用角度 $\theta$ 作为广义坐标（只有1个自由度）。
-
-\paragraph{步骤2：用 $\theta$ 表示位置和速度}
-
-位置：
-\[
-x = l\sin\theta, \quad y = -l\cos\theta \quad \text{（取支点为原点，向下为正）}
-\]
-
-速度：
-\[
-\dot{x} = l\dot{\theta}\cos\theta, \quad \dot{y} = l\dot{\theta}\sin\theta
-\]
-
-速度大小：$v = \sqrt{\dot{x}^2 + \dot{y}^2} = l|\dot{\theta}|$
-
-\paragraph{步骤3：写出动能和势能}
-
-动能：
-\[
-T = \frac{1}{2}mv^2 = \frac{1}{2}m(l\dot{\theta})^2 = \frac{1}{2}ml^2\dot{\theta}^2
-\]
-
-势能（取支点为零势能点，向下为负）：
-\[
-V = -mgy = -mg(-l\cos\theta) = mgl\cos\theta
-\]
-
-\textit{注}：当 $\theta = 0$（最低点），$V = mgl$；当 $\theta = \pi/2$（水平），$V = 0$。这个选择使得最低点势能最大，看起来有点奇怪。我们也可以取最低点为零势能点，那么 $V = mgl(1 - \cos\theta)$。这只是一个常数差，不影响运动方程。
-
-为了简单，我们用 $V = -mgl\cos\theta$（取支点下方 $l$ 处为零势能点）。
-
-\paragraph{步骤4：写出拉格朗日量}
-
-\[
-L = T - V = \frac{1}{2}ml^2\dot{\theta}^2 - (-mgl\cos\theta) = \frac{1}{2}ml^2\dot{\theta}^2 + mgl\cos\theta
-\]
-
-\paragraph{步骤5：计算偏导数}
-
-\[
-\frac{\partial L}{\partial \dot{\theta}} = ml^2\dot{\theta}
-\]
-\[
-\frac{\partial L}{\partial \theta} = -mgl\sin\theta
-\]
-
-\paragraph{步骤6：代入拉格朗日方程}
-
-\[
-\frac{d}{dt}(ml^2\dot{\theta}) - (-mgl\sin\theta) = 0
-\]
-\[
-ml^2\ddot{\theta} + mgl\sin\theta = 0
-\]
-
-消去 $ml$：
-\[
-\boxed{l\ddot{\theta} + g\sin\theta = 0 \quad \Leftrightarrow \quad \ddot{\theta} = -\frac{g}{l}\sin\theta}
-\]
-
-\paragraph{讨论}
-
-这就是单摆的运动方程！
-
-\textbf{小角度近似}：当 $\theta$ 很小时，$\sin\theta \approx \theta$，方程变成：
-\[
-\ddot{\theta} = -\frac{g}{l}\theta
-\]
-
-这是谐振子方程！周期 $T = 2\pi\sqrt{l/g}$，与质量无关。
-
-\textbf{注意}：整个推导过程中，我们\textbf{没有分析绳子的张力}！这就是拉格朗日方法的优势。
-
-% ------------------------------------------------------------------------------------
-\section{约束系统与拉格朗日乘子}
-
-\subsection{什么是约束？}
-
-在许多力学问题中，物体的运动受到某些限制：
-\begin{itemize}
-    \item 单摆的小球必须在以支点为圆心、长度为 $l$ 的圆上运动
-    \item 滑块必须沿着斜面运动
-    \item 火车必须沿着轨道运动
-\end{itemize}
-
-这些限制叫做\textbf{约束}。约束可以用方程表示：
-
-\begin{definition}[完整约束]
-形如
-\[
-f(q_1, q_2, \ldots, q_n, t) = 0
-\]
-的约束叫做\textbf{完整约束}（holonomic constraint）。
-\end{definition}
-
-\begin{example}[约束的例子]
-\begin{itemize}
-    \item 单摆：$x^2 + y^2 - l^2 = 0$（小球到支点距离固定）
-    \item 斜面滑块：$y - x\tan\theta = 0$（必须在斜面上）
-    \item 圆环上的珠子：$x^2 + y^2 - R^2 = 0$
-\end{itemize}
-\end{example}
-
-\subsection{约束力的困难}
-
-在牛顿力学中，约束通过\textbf{约束力}来实现：
-\begin{itemize}
-    \item 单摆的绳子张力使小球保持在圆上
-    \item 斜面的支持力使滑块保持在斜面上
-\end{itemize}
-
-问题是：\textbf{约束力的大小是未知的！}
-
-你必须先假设约束力，列出方程，然后从方程中解出约束力。这在复杂系统中非常麻烦。
-
-\subsection{拉格朗日乘子法处理约束}
-
-拉格朗日力学有一个漂亮的方法：用\textbf{拉格朗日乘子}自动处理约束。
-
-\begin{keyformula}[title=带约束的拉格朗日方程]
-设系统有约束 $f(q_1, \ldots, q_n, t) = 0$。
-
-运动方程变为：
-\begin{equation}
-\boxed{\frac{d}{dt}\frac{\partial L}{\partial \dot{q}_i} - \frac{\partial L}{\partial q_i} = \lambda \frac{\partial f}{\partial q_i}}
-\end{equation}
-
-其中 $\lambda$ 是拉格朗日乘子。
-\end{keyformula}
-
-\paragraph{方程右边是什么？}
-
-右边的 $\lambda \frac{\partial f}{\partial q_i}$ 正是\textbf{约束力}在 $q_i$ 方向上的分量！
+\subsection{KL散度的直觉}
 
 \begin{physicalmeaning}
-\textbf{拉格朗日乘子 $\lambda$ 就是约束力的大小！}
+KL散度的三种理解：
 
-\begin{itemize}
-    \item 单摆：$\lambda$ = 绳子的张力
-    \item 斜面滑块：$\lambda$ = 斜面的支持力
-    \item 圆环上的珠子：$\lambda$ = 圆环对珠子的反作用力
-\end{itemize}
+\textbf{1. 编码效率损失}
 
-这与第1章的"影子价格"完全对应：$\lambda$ 告诉我们约束有多"紧"。
+如果真实分布是 $P$，但你用基于 $Q$ 设计的编码，平均每个符号要多用
+\[
+D_{KL}(P \| Q) = H(P, Q) - H(P)
+\]
+比特。这是用“错误模型”的代价。
+
+\textbf{2. 信息增益}
+
+当你从“先验” $Q$ 更新到“后验” $P$，获得的信息量是 $D_{KL}(P \| Q)$。
+
+\textbf{3. 统计区分度}
+
+$D_{KL}(P \| Q)$ 越大，越容易通过采样区分 $P$ 和 $Q$。
 \end{physicalmeaning}
 
-\subsection{例5：用约束坐标分析单摆}
+\subsection{KL散度的性质}
 
-让我们用另一种方法分析单摆——使用笛卡尔坐标 $(x, y)$ 加约束。
-
-\paragraph{设置}
-
-广义坐标：$(x, y)$（2个坐标）
-
-约束：$f(x, y) = x^2 + y^2 - l^2 = 0$
-
-\paragraph{拉格朗日量}
-
+KL散度最重要的性质是\textbf{非负性}：$D_{KL}(P \| Q) \geq 0$。证明只需要 Jensen 不等式和 $\ln$ 的凹性：
 \[
-L = \frac{1}{2}m(\dot{x}^2 + \dot{y}^2) - (-mgy) = \frac{1}{2}m(\dot{x}^2 + \dot{y}^2) + mgy
+-D_{KL}(P \| Q) = \sum_i p_i \ln \frac{q_i}{p_i} \leq \ln \sum_i p_i \cdot \frac{q_i}{p_i} = \ln \sum_i q_i = \ln 1 = 0
 \]
+进一步，等号当且仅当 $P = Q$ 时成立，即 $D_{KL}(P \| Q) = 0 \Leftrightarrow P = Q$。这两条使 KL散度可以充当分布之间的“距离”。但它并不是真正的距离——一般 $D_{KL}(P \| Q) \neq D_{KL}(Q \| P)$，交换两个分布的位置，结果会变。
 
-（取支点为原点，向下为 $y$ 正方向）
+\begin{example}[不对称性的例子]
+设 $P = (0.5, 0.5)$，$Q = (0.9, 0.1)$。
 
-\paragraph{计算偏导数}
-
-\[
-\frac{\partial L}{\partial \dot{x}} = m\dot{x}, \quad \frac{\partial L}{\partial x} = 0
-\]
-\[
-\frac{\partial L}{\partial \dot{y}} = m\dot{y}, \quad \frac{\partial L}{\partial y} = mg
-\]
-
-约束的偏导数：
-\[
-\frac{\partial f}{\partial x} = 2x, \quad \frac{\partial f}{\partial y} = 2y
-\]
-
-\paragraph{带约束的运动方程}
-
-$x$ 方向：
-\[
-\frac{d}{dt}(m\dot{x}) - 0 = \lambda \cdot 2x \quad \Rightarrow \quad m\ddot{x} = 2\lambda x
-\]
-
-$y$ 方向：
-\[
-\frac{d}{dt}(m\dot{y}) - mg = \lambda \cdot 2y \quad \Rightarrow \quad m\ddot{y} = mg + 2\lambda y
-\]
-
-约束方程：
-\[
-x^2 + y^2 = l^2
-\]
-
-这是3个方程，3个未知量 $(x, y, \lambda)$。
-
-\paragraph{求解约束力}
-
-把坐标用角度表示：$x = l\sin\theta$，$y = -l\cos\theta$
-
-代入运动方程，经过计算可以得到：
-\[
-\lambda = -\frac{m}{2l}(g\cos\theta + l\dot{\theta}^2)
-\]
-
-绳子的张力是：
-\[
-T = |2\lambda l| = m(g\cos\theta + l\dot{\theta}^2)
-\]
-
-\paragraph{物理意义}
-
-张力由两部分组成：
-\begin{itemize}
-    \item $mg\cos\theta$：支撑重力的径向分量
-    \item $ml\dot{\theta}^2$：提供向心加速度
-\end{itemize}
-
-这与牛顿方法得到的结果一致！但拉格朗日方法不需要画受力图，约束力\textbf{自动算出来}了。
-
-% ------------------------------------------------------------------------------------
-\section{两种处理约束的策略}
-
-处理约束有两种策略，各有优缺点：
-
-\subsection{策略1：用广义坐标消去约束}
-
-选择恰好等于自由度数目的广义坐标，使约束自动满足。
-
-\textbf{例}：单摆用角度 $\theta$ 作为唯一的广义坐标。
-
-\textbf{优点}：
-\begin{itemize}
-    \item 方程数目最少
-    \item 不需要处理约束力
-\end{itemize}
-
-\textbf{缺点}：
-\begin{itemize}
-    \item 如果需要约束力（如求绳子的张力），还得另外计算
-    \item 有时候找到好的广义坐标很困难
-\end{itemize}
-
-\subsection{策略2：用拉格朗日乘子保留约束}
-
-使用多于自由度的坐标，显式写出约束方程。
-
-\textbf{例}：单摆用 $(x, y)$ 坐标，加约束 $x^2 + y^2 = l^2$。
-
-\textbf{优点}：
-\begin{itemize}
-    \item 约束力自动算出
-    \item 坐标选择更灵活
-    \item 便于数值计算（约束可以用数值方法强制满足）
-\end{itemize}
-
-\textbf{缺点}：
-\begin{itemize}
-    \item 方程数目更多
-    \item 多了乘子作为额外的未知量
-\end{itemize}
-
-\begin{insightbox}
-\textbf{选择哪种策略？}
-
-\begin{itemize}
-    \item 如果只关心运动轨迹，不需要约束力 $\to$ 策略1
-    \item 如果需要计算约束力（如工程设计中需要知道零件受力） $\to$ 策略2
-    \item 如果约束比较复杂，难以用简单坐标描述 $\to$ 策略2
-    \item 数值仿真中通常使用策略2（便于处理约束稳定性）
-\end{itemize}
-\end{insightbox}
-
-% ------------------------------------------------------------------------------------
-\section{守恒律与对称性}
-
-拉格朗日力学的另一个优美之处是：它自动揭示守恒律。
-
-\subsection{当 $L$ 不显含某个坐标时}
-
-如果拉格朗日量 $L$ 不显含某个坐标 $q_i$（即 $\frac{\partial L}{\partial q_i} = 0$），拉格朗日方程变成：
-\[
-\frac{d}{dt}\frac{\partial L}{\partial \dot{q}_i} = 0
-\]
-
-这意味着：
-\[
-p_i = \frac{\partial L}{\partial \dot{q}_i} = \text{常数}
-\]
-
-\textbf{结论}：对应的广义动量守恒！
-
-\begin{definition}[循环坐标]
-不出现在拉格朗日量中的坐标叫做\textbf{循环坐标}（cyclic coordinate）或\textbf{可遗坐标}（ignorable coordinate）。
-
-循环坐标对应的广义动量是守恒量。
-\end{definition}
-
-\begin{example}[平移不变性 $\to$ 动量守恒]
-自由粒子：$L = \frac{1}{2}m\dot{x}^2$
-
-$L$ 不含 $x$ $\Rightarrow$ $x$ 是循环坐标 $\Rightarrow$ $p_x = m\dot{x}$ 守恒
-\end{example}
-
-\begin{example}[旋转不变性 $\to$ 角动量守恒]
-中心力场中的粒子（如行星绕太阳运动）：
-\[
-L = \frac{1}{2}m(\dot{r}^2 + r^2\dot{\theta}^2) - V(r)
-\]
-
-$L$ 不含 $\theta$ $\Rightarrow$ $\theta$ 是循环坐标 $\Rightarrow$ $p_\theta = mr^2\dot{\theta}$ 守恒
-
-$p_\theta$ 正是角动量！这就是开普勒第二定律（行星扫过相等面积）的数学基础。
-\end{example}
-
-\subsection{当 $L$ 不显含时间时——能量守恒}
-
-如果 $L$ 不显含时间 $t$（即 $\frac{\partial L}{\partial t} = 0$），有一个更深刻的守恒量。
-
-\begin{keytheorem}[title=能量守恒]
-若 $L(q, \dot{q})$ 不显含 $t$，则\textbf{哈密顿量}
-\begin{equation}
-H := \sum_i \dot{q}_i \frac{\partial L}{\partial \dot{q}_i} - L
-\end{equation}
-是守恒量。
-
-对于"正常"的力学系统（动能是速度的二次函数），$H = T + V$ 就是总能量。
-\end{keytheorem}
-
-\begin{proof}[验证]
-计算 $H$ 对时间的全导数：
 \begin{align}
-\frac{dH}{dt} &= \sum_i \left[ \ddot{q}_i \frac{\partial L}{\partial \dot{q}_i} + \dot{q}_i \frac{d}{dt}\frac{\partial L}{\partial \dot{q}_i} \right] - \frac{dL}{dt} \\
-&= \sum_i \left[ \ddot{q}_i \frac{\partial L}{\partial \dot{q}_i} + \dot{q}_i \frac{d}{dt}\frac{\partial L}{\partial \dot{q}_i} \right] - \sum_i \left[ \frac{\partial L}{\partial q_i}\dot{q}_i + \frac{\partial L}{\partial \dot{q}_i}\ddot{q}_i \right] - \frac{\partial L}{\partial t} \\
-&= \sum_i \dot{q}_i \left[ \frac{d}{dt}\frac{\partial L}{\partial \dot{q}_i} - \frac{\partial L}{\partial q_i} \right] - \frac{\partial L}{\partial t}
+D_{KL}(P \| Q) &= 0.5 \ln \frac{0.5}{0.9} + 0.5 \ln \frac{0.5}{0.1} \\
+&= 0.5 \times (-0.588) + 0.5 \times 1.609 = 0.51
 \end{align}
 
-由拉格朗日方程，方括号里是零。如果 $\frac{\partial L}{\partial t} = 0$，则 $\frac{dH}{dt} = 0$。
-\end{proof}
+\begin{align}
+D_{KL}(Q \| P) &= 0.9 \ln \frac{0.9}{0.5} + 0.1 \ln \frac{0.1}{0.5} \\
+&= 0.9 \times 0.588 + 0.1 \times (-1.609) = 0.37
+\end{align}
 
-\marginnote{\textbf{艾米·诺特}(1882--1935)：德国数学家，被爱因斯坦称为``有史以来最重要的女性数学家''。她1918年证明的诺特定理揭示了对称性与守恒律的深刻联系，是现代物理学的基石。因是女性和犹太人，她长期无法获得正式教职，纳粹上台后流亡美国。}
+$D_{KL}(P \| Q) \neq D_{KL}(Q \| P)$！
+\end{example}
+
+\begin{insightbox}
+KL散度不对称的直觉：
+
+$D_{KL}(P \| Q)$ 衡量“用 $Q$ 近似 $P$”的代价——在 $P$ 概率大的地方，$Q$ 不能太小。
+
+$D_{KL}(Q \| P)$ 衡量“用 $P$ 近似 $Q$”的代价——在 $Q$ 概率大的地方，$P$ 不能太小。
+
+两个方向关心的“重点区域”不同！
+\end{insightbox}
+
+\subsection{最大熵 = 最小KL散度}
+
+\begin{unification}[title=最大熵的等价形式]
+\begin{equation}
+\max_p H(p) \;\text{s.t. 约束} \quad \Longleftrightarrow \quad \min_p D_{KL}(p \| u) \;\text{s.t. 约束}
+\end{equation}
+
+其中 $u$ 是均匀分布。
+
+\textbf{最大熵 = 在约束下离均匀分布最近}
+\end{unification}
+\preview{把这里的均匀分布 $u$ 换成“旧策略”，$\min D_{KL}(p \| u)$ 就变成第9章信任域方法（TRPO/PPO）里“新策略别离旧策略太远”的约束。}
+
+\textit{证明}：
+\begin{align}
+D_{KL}(p \| u) &= \sum_i p_i \ln \frac{p_i}{1/k} = \sum_i p_i \ln p_i + \sum_i p_i \ln k \\
+&= -H(p) + \ln k
+\end{align}
+
+由于 $\ln k$ 是常数，$\min D_{KL}(p \| u) \Leftrightarrow \max H(p)$。
+
+\section{KL散度的第一性原理}
+
+\subsection{什么是“好的”分布距离？}
+
+假设我们想用一个简单的分布 $q(x)$ 去近似复杂的真实分布 $p(x)$。我们需要一个“差异度量” $D(p \| q)$ 来衡量近似的好坏。
+
+但是，什么样的度量才是“合理”的？信息论给出了答案：合理的度量必须满足三条公理。
+
+\begin{keyformula}[title={信息距离的三条公理 (Shore \& Johnson, 1980)}]
+\begin{enumerate}
+    \item \textbf{局部性 (Locality)}：差异应该是逐点累积的，不依赖全局耦合。
+    \[
+    D(p \| q) = \int f(p(x), q(x)) \, dx
+    \]
+    
+    \item \textbf{可加性 (Additivity)}：对于独立系统 $A, B$，联合分布的差异等于各自差异之和。
+    \[
+    D(p_A p_B \| q_A q_B) = D(p_A \| q_A) + D(p_B \| q_B)
+    \]
+    
+    \item \textbf{一致性 (Consistency)}：当 $q(x) = p(x)$ 时，差异为零且达到最小值。
+\end{enumerate}
+\end{keyformula}
 
 \begin{physicalmeaning}
-\textbf{对称性与守恒律的对应}（Noether 定理）：
+这三条公理各有直觉。局部性说的是每个点的偏差独立计算，就像质量、能量一样是“广延量”；可加性说的是独立系统的总偏差等于各自偏差之和，这与熵、能量的性质一致；一致性说的是完美近似时差异为零——这是最基本的要求。
+\end{physicalmeaning}
+
+\subsection{从公理推导KL散度}
+
+\paragraph{Step 1：利用可加性锁定函数形式}
+
+设差异度量为 $D(p\|q) = \sum_i h(p_i, q_i)$。
+
+考虑两个独立事件，联合概率 $p_{ij} = u_i v_j$，$q_{ij} = \alpha_i \beta_j$。根据可加性：
+\[
+\sum_{i,j} h(u_i v_j, \alpha_i \beta_j) = \sum_i h(u_i, \alpha_i) + \sum_j h(v_j, \beta_j)
+\]
+
+这是一个经典的\textbf{柯西函数方程}变体。数学上可以证明，唯一满足此性质的连续函数形式必须包含\textbf{对数项}：
+\[
+h(p, q) = c \cdot p \ln \frac{p}{q} + \cdots
+\]
+
+\paragraph{Step 2：利用一致性确定系数}
+
+设通解为：
+\[
+D(p\|q) = \int \left( A p(x) \ln p(x) + B p(x) \ln q(x) + C p(x) \right) dx
+\]
+
+根据一致性公理：当 $q(x) \to p(x)$ 时，$D$ 必须达到最小值（且为0）。
+
+对 $q(x)$ 求变分导数（考虑归一化约束）：
+\[
+\frac{\delta}{\delta q} \left( D(p\|q) + \lambda \int q \, dx \right) = 0
+\quad \Rightarrow \quad
+\frac{B p(x)}{q(x)} + \lambda = 0
+\]
+
+为了让最优解是 $q^*(x) = p(x)$、且 $D(p\|p) = 0$，需要 $A + B = 0$，$B < 0$（极小性）；取归一化 $A = -B = 1$（相当于选定对数底），就得到：
+
+\begin{keytheorem}[title=KL散度的唯一性]
+满足局部性、可加性、一致性三条公理的差异度量，在相差一个正常数（即对数底的选择）的意义下是\textbf{唯一}的：
+\begin{equation}
+\boxed{D_{KL}(p \| q) = \int p(x) \ln \frac{p(x)}{q(x)} \, dx = -H(p) - \int p(x) \ln q(x) \, dx}
+\end{equation}
+\end{keytheorem}
+
+\begin{insightbox}
+\textbf{为什么机器学习中常用交叉熵损失？}
+
+最小化 $D_{KL}(p^* \| q)$ 等价于：
+\[
+\min_q \left( \underbrace{-H(p^*)}_{\text{常数，与 }q\text{ 无关}} + \underbrace{\left(-\int p^*(x) \ln q(x) \, dx\right)}_{\text{交叉熵 }H(p^*, q)} \right)
+\]
+
+因此，\textbf{最小化交叉熵 = 最小化KL散度 = 找最逼近真实分布的模型}。
+
+这不是“选择”，而是\textbf{数学必然}！
+\end{insightbox}
+
+% ------------------------------------------------------------------------------------
+\section{常见损失函数的“违规记录”}
+
+既然 KL散度是唯一满足三条公理的度量，为什么实践中还有那么多别的损失函数？因为并非所有损失函数都需要满足信息论公理。有些为了特定的工程目的（如鲁棒性、几何感知），故意违反某些公理。
 
 \begin{center}
-\begin{tabular}{c|c}
+\renewcommand{\arraystretch}{1.6}
+\begin{tabularx}{\textwidth}{p{2.4cm}|p{2.8cm}|p{2cm}|X}
 \toprule
-\textbf{对称性} & \textbf{守恒量} \\
+\textbf{损失函数} & \textbf{数学形式} & \textbf{违反的公理} & \textbf{为何要违反？} \\
 \midrule
-空间平移不变 & 动量 \\
-空间旋转不变 & 角动量 \\
-时间平移不变 & 能量 \\
+\textbf{交叉熵} (Cross Entropy) 
+& $-\sum p \ln q$ 
+& 无 
+& 信息论的“正统”选择 \\
+\midrule
+\textbf{MSE} (均方误差) 
+& $\int (p-q)^2 dx$ 
+& 可加性 
+& 计算便利，求导简单，适合回归任务 \\
+\midrule
+\textbf{MAE} (L1 Loss) 
+& $\int |p-q| dx$ 
+& 可加性 
+& 对异常值鲁棒，不被离群点拉偏 \\
+\midrule
+\textbf{Hinge} (SVM) 
+& $\max(0, 1-yf(x))$ 
+& 一致性 
+& 追求稀疏性和分类边界，不追求估计真实概率 \\
+\midrule
+\textbf{Wasserstein} (WGAN) 
+& $\inf \mathbb{E}[\|x-y\|]$ 
+& 局部性 
+& 引入空间距离（全局耦合），解决分布不重叠时KL散度梯度消失的问题 \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{physicalmeaning}
+\textbf{选择损失函数的智慧}：如果你相信数据服从某个概率模型，就用交叉熵，它是信息论意义下的最优选择；如果你想要对异常值鲁棒，就用 MAE 或 Huber 损失；如果你只关心分类边界，就用 Hinge 损失；如果两个分布可能不重叠，就用 Wasserstein 距离。没有“最好”的损失函数，只有最适合问题的损失函数——每一次“违规”都是在用信息论最优性换取某种工程性质。
+\end{physicalmeaning}
+
+
+% ------------------------------------------------------------------------------------
+\section{交叉熵与机器学习}
+\preview{本节会出现“神经网络”、“分类器”等深度学习术语。如果你没学过深度学习，暂时只需知道：神经网络是一种能从数据中学习规律的数学模型，分类器是判断“这张图是猫还是狗”之类问题的程序。第8章会详细介绍。}
+
+\subsection{交叉熵的定义}
+
+\begin{keyformula}[title=交叉熵]
+\begin{equation}
+H(P, Q) = -\sum_i p_i \ln q_i = H(P) + D_{KL}(P \| Q)
+\end{equation}
+
+交叉熵 = 真实分布的熵 + KL散度
+\end{keyformula}
+
+\subsection{为什么机器学习用交叉熵损失？}
+
+前面的推导都是关于分布本身的，现在把它接到机器学习最常见的任务——分类——上。在分类问题中，$P$ 是真实标签分布（通常是 one-hot，如 $[0, 1, 0]$），$Q$ 是模型预测的概率分布（如 $[0.1, 0.7, 0.2]$）。训练目标是让 $Q$ 尽量接近 $P$，即最小化 $D_{KL}(P \| Q)$。
+
+由于 $H(P)$ 是固定的（真实标签不变），所以：
+\begin{equation}
+\min_Q D_{KL}(P \| Q) \quad \Longleftrightarrow \quad \min_Q H(P, Q)
+\end{equation}
+
+对于 one-hot 标签 $y = [0, \ldots, 1, \ldots, 0]$（第 $c$ 类为1）：
+\begin{equation}
+H(P, Q) = -\sum_i y_i \ln q_i = -\ln q_c
+\end{equation}
+
+这就是我们熟悉的\textbf{交叉熵损失}！
+
+\begin{insightbox}
+\textbf{为什么不用均方误差（MSE）？}对于分类问题，交叉熵有三个优势。它是信息论最优的：交叉熵直接度量“用模型编码真实数据”的代价。它的梯度性质好：当预测很错时，交叉熵的梯度大，而 MSE 的梯度可能很小（梯度消失）。它还有概率解释：最小化交叉熵等价于最大化似然。
+\end{insightbox}
+
+\subsection{Softmax = 最大熵分布}
+
+神经网络分类器的输出通常经过 softmax 函数：
+\begin{equation}
+p_i = \frac{e^{z_i}}{\sum_j e^{z_j}}
+\end{equation}
+\clarify{softmax函数把一组任意实数变成概率分布（全为正数且和为1）。它是深度学习中最常用的函数之一。在第8章你会看到它如何用于图像分类、第11章会看到它如何用于Transformer注意力机制。}
+
+这个形式是不是很眼熟？让我们一步步看它是如何从最大熵原理推导出来的。
+
+\begin{insightbox}
+\textbf{Softmax的推导：从最大熵到神经网络}
+
+回顾前面推导的最大熵分布形式（式~\eqref{eq:maxent}）：
+\[
+p_i = \frac{1}{Z} \exp\left( \sum_j \beta_j g_j(x_i) \right)
+\]
+
+现在考虑分类问题：我们想预测输入 $\bm{x}$ 属于哪个类别。
+
+\textbf{Step 1}：神经网络为每个类别 $i$ 计算一个得分（logit）：
+\[
+z_i = \bm{w}_i^\top \bm{x} + b_i
+\]
+
+\textbf{Step 2}：将这个得分代入最大熵分布。这里 $z_i$ 就是 $\sum_j \beta_j g_j(x_i)$ 的具体形式——它表示类别 $i$ 的“能量”或“偏好程度”。
+
+\textbf{Step 3}：归一化得到概率：
+\[
+p_i = \frac{e^{z_i}}{\underbrace{\sum_j e^{z_j}}_{Z = \text{配分函数}}}
+\]
+
+这正是 softmax 函数！
+\end{insightbox}
+
+\begin{unification}[title=Softmax的最大熵解释]
+Softmax 函数给出的是满足约束 $\langle z \rangle = \sum_i p_i z_i = c$ 的\textbf{最大熵分布}。
+
+其中 $z_i$ 是神经网络的 logits（未归一化得分），$c$ 是由网络参数决定的常数。
+
+\textbf{神经网络学习的权重 $\bm{w}_i$ 是最大熵分布的拉格朗日乘子，logit $z_i = \bm{w}_i^\top \bm{x}$ 是“乘子 $\times$ 特征”。}
+\end{unification}
+
+\begin{physicalmeaning}
+\textbf{为什么叫 “softmax”？}
+
+考虑一个“硬”版本——argmax，它只输出得分最高的类别：
+\[
+\text{argmax: } p_i = \begin{cases} 1 & \text{if } i = \arg\max_j z_j \\ 0 & \text{otherwise} \end{cases}
+\]
+
+Softmax 是它的“软”版本：当各 $z_i$ 差异很大时，softmax 接近 argmax（赢者通吃）；当各 $z_i$ 差异很小时，softmax 接近均匀分布（不确定）。
+
+你可以通过引入“温度”参数 $T$ 来控制软硬程度：
+\[
+p_i = \frac{e^{z_i / T}}{\sum_j e^{z_j / T}}
+\]
+$T \to 0$：变“硬”（接近argmax）；$T \to \infty$：变“软”（接近均匀分布）。
+
+这与物理中的温度概念完全对应！高温时系统混乱（高熵），低温时系统有序（低熵）。
+\end{physicalmeaning}
+
+\subsection{逻辑回归 = 最大熵分类}
+
+逻辑回归的模型：
+\begin{equation}
+P(y=1 | \bm{x}) = \sigma(\bm{w}^\top \bm{x}) = \frac{1}{1 + e^{-\bm{w}^\top \bm{x}}} = \frac{e^{\bm{w}^\top \bm{x}}}{1 + e^{\bm{w}^\top \bm{x}}}
+\end{equation}
+
+这可以理解为：在特征期望约束 $\mathbb{E}_{model}[\bm{\phi}(\bm{x})] = \mathbb{E}_{data}[\bm{\phi}(\bm{x})]$ 下的最大熵分布。
+
+权重 $\bm{w}$ 正是这些约束的拉格朗日乘子！
+
+\begin{physicalmeaning}
+逻辑回归的训练过程可以完全用最大熵的语言复述：先从数据计算特征的经验期望 $\mathbb{E}_{data}[\bm{\phi}]$，然后调整 $\bm{w}$ 使得模型的特征期望 $\mathbb{E}_{model}[\bm{\phi}]$ 与之匹配，而在满足这些矩约束的同时，模型保持熵最大，不做额外假设。这就是为什么逻辑回归又叫“最大熵分类器”！
+\end{physicalmeaning}
+
+% ------------------------------------------------------------------------------------
+
+
+
+
+\section{信息压缩：熵的工程应用}
+
+\subsection{为什么需要变长编码？}
+
+熵被定义成“平均信息量”，这个说法能不能落到实处——它到底对应多少个比特？信源编码给出了最直接的回答。假设你要传输天气预报，有4种天气：晴、阴、雨、雪。
+
+\textbf{方案1：等长编码}
+
+每种天气用2位二进制表示：
+\begin{center}
+\begin{tabular}{c|c}
+天气 & 编码 \\
+\hline
+晴 & 00 \\
+阴 & 01 \\
+雨 & 10 \\
+雪 & 11 \\
+\end{tabular}
+\end{center}
+
+传输100天的天气，需要 $100 \times 2 = 200$ 比特。
+
+\textbf{但是}，如果这个城市70\%的日子是晴天呢？
+
+用等长编码太浪费了！“晴”出现70次，每次都用2比特；而“雪”可能只出现5次。
+
+\begin{insightbox}
+\textbf{核心直觉}：高频符号用短码，低频符号用长码。
+
+就像常用汉字笔画少（“一、人、大”），罕见汉字笔画多（“{\rarecjkfont 龘、靐}、鑫”）。
+
+或者想想摩尔斯电码：最常用的字母 E 只需要一个点（$\cdot$），而罕见的 Q 需要四个符号（$--\cdot-$）。
+\end{insightbox}
+
+\subsection{变长编码的陷阱：前缀码}
+
+变长编码有个问题：\textbf{怎么知道一个符号在哪里结束？}
+
+\begin{example}[歧义编码]
+假设编码是：A = 0, B = 01, C = 1
+
+收到 “01”，是 “AB” 还是 “B”？无法确定！
+\end{example}
+
+解决方案是\textbf{前缀码}：任何符号的编码都不是另一个符号编码的前缀。
+
+\begin{example}[前缀码]
+A = 0, B = 10, C = 11。收到 “01011” 时，第一位是 0，只能是 A（没有其他编码以 0 开头然后继续）；接下来的 10 是 B；最后的 11 是 C。解码结果 ABC，没有歧义！
+\end{example}
+
+\begin{physicalmeaning}
+前缀码可以用\textbf{二叉树}表示：每个符号对应一个叶子节点，从根到叶子的路径就是编码（左=0，右=1）。因为符号都在叶子上，任何编码都不会是另一个编码的前缀，所以不会有歧义。
+\end{physicalmeaning}
+
+\subsection{最优编码的理论极限}
+
+那么，最好的变长编码能做到多好？答案正是熵。
+
+\begin{keytheorem}[title=Shannon第一定理（信源编码定理）]
+对于信源 $X$，任何无损前缀码的平均码长都不低于 $H(X)$，而\textbf{最优}前缀码的平均码长 $\bar{L}$ 满足：
+\begin{equation}
+H(X) \leq \bar{L} < H(X) + 1
+\end{equation}
+
+\textbf{熵是压缩的理论极限}——不可能把平均码长压到熵以下！
+\end{keytheorem}
+\think{为什么平均码长不可能低于熵？提示：把码长看成一个分布 $q_i = 2^{-l_i}$（Kraft 不等式保证 $\sum q_i \le 1$），平均码长 $\sum p_i l_i = -\sum p_i \log_2 q_i$ 就是交叉熵 $H(p, q) \ge H(p)$——正是习题 5 的 Gibbs 不等式。}
+
+直觉上，如果一个符号的概率是 $p_i$，它携带的信息量是 $-\log_2 p_i$ 比特，编码这个符号就至少需要 $-\log_2 p_i$ 比特，否则就“凭空创造”了信息；平均下来，每个符号至少需要 $H = \sum p_i (-\log_2 p_i)$ 比特。理想情况下，符号 $i$ 的最优码长应该是：
+\begin{equation}
+l_i^* = -\log_2 p_i
+\end{equation}
+
+但码长必须是整数！所以实际码长是 $\lceil -\log_2 p_i \rceil$，这就是为什么有 “+1” 的间隙。
+
+\subsection{Huffman编码：贪心构造最优码}
+
+现在的问题是：如何构造一个平均码长最小的前缀码？
+
+\textbf{关键洞察}：前缀码对应二叉树，平均码长就是叶子的加权平均深度：
+\begin{equation}
+\bar{L} = \sum_i p_i \cdot \text{depth}(i)
+\end{equation}
+
+我们要最小化这个加权深度！
+
+\begin{physicalmeaning}
+想象一下：你要把符号放在一棵二叉树的叶子上。高频符号应该放在\textbf{靠近根}的位置（深度小，编码短），低频符号可以放在\textbf{远离根}的位置（深度大，编码长）。就像公司组织架构：CEO（最重要）在顶层，实习生在最底层。
+\end{physicalmeaning}
+
+\textbf{Huffman的贪心策略}：从叶子往上建树，每次把概率最小的两个节点合并成一个。1951 年，David Huffman 还是 MIT 的研究生，导师 Fano 允许学生用一篇论文代替期末考试，题目正是最优二进制编码；他在几乎放弃的时候想到了这个“自底向上合并最小概率”的办法。
+
+为什么这样做是对的？直觉是：
+\begin{quote}
+概率最小的两个符号，应该在树的最深处，而且应该是“兄弟”（共享同一个父节点）。因为它们最不重要，放在最深处损失最小。
+\end{quote}
+
+\subsection{Huffman编码的详细例子}
+
+\begin{example}[天气预报编码]
+某城市的天气概率：
+\begin{center}
+\begin{tabular}{c|cccc}
+天气 & 晴 & 阴 & 雨 & 雪 \\
+\hline
+概率 & 0.5 & 0.25 & 0.15 & 0.1 \\
+\end{tabular}
+\end{center}
+
+\textbf{Step 1}：找概率最小的两个——雨(0.15)和雪(0.1)，合并
+\begin{center}
+\begin{tikzpicture}[scale=0.8]
+    \node[draw, circle, minimum size=8mm] (rs) at (0,0) {0.25};
+    \node[draw, circle, fill=blue!15, minimum size=8mm] (r) at (-1,-1.2) {雨};
+    \node[draw, circle, fill=blue!15, minimum size=8mm] (s) at (1,-1.2) {雪};
+    \draw (rs) -- node[left, font=\scriptsize] {0} (r);
+    \draw (rs) -- node[right, font=\scriptsize] {1} (s);
+    \node[below, font=\scriptsize, gray] at (r.south) {0.15};
+    \node[below, font=\scriptsize, gray] at (s.south) {0.1};
+\end{tikzpicture}
+\end{center}
+
+现在有：晴(0.5)、阴(0.25)、[雨雪](0.25)
+
+\textbf{Step 2}：找最小的两个——阴(0.25)和[雨雪](0.25)，合并
+\begin{center}
+\begin{tikzpicture}[scale=0.8]
+    \node[draw, circle, minimum size=8mm] (top) at (0,0) {0.5};
+    \node[draw, circle, fill=blue!15, minimum size=8mm] (y) at (-1.5,-1.2) {阴};
+    \node[draw, circle, minimum size=8mm] (rs) at (1.5,-1.2) {0.25};
+    \node[draw, circle, fill=blue!15, minimum size=8mm] (r) at (0.5,-2.4) {雨};
+    \node[draw, circle, fill=blue!15, minimum size=8mm] (s) at (2.5,-2.4) {雪};
+    \draw (top) -- node[left, font=\scriptsize] {0} (y);
+    \draw (top) -- node[right, font=\scriptsize] {1} (rs);
+    \draw (rs) -- node[left, font=\scriptsize] {0} (r);
+    \draw (rs) -- node[right, font=\scriptsize] {1} (s);
+    \node[below, font=\scriptsize, gray] at (y.south) {0.25};
+    \node[below, font=\scriptsize, gray] at (r.south) {0.15};
+    \node[below, font=\scriptsize, gray] at (s.south) {0.1};
+\end{tikzpicture}
+\end{center}
+
+现在有：晴(0.5)、[阴雨雪](0.5)
+
+\textbf{Step 3}：合并最后两个——晴(0.5)和[阴雨雪](0.5)
+\begin{center}
+\begin{tikzpicture}[scale=0.8]
+    \node[draw, circle, minimum size=8mm] (root) at (0,0) {1.0};
+    \node[draw, circle, fill=blue!15, minimum size=8mm] (q) at (-3,-1.2) {晴};
+    \node[draw, circle, minimum size=8mm] (right) at (2,-1.2) {0.5};
+    \node[draw, circle, fill=blue!15, minimum size=8mm] (y) at (0.5,-2.4) {阴};
+    \node[draw, circle, minimum size=8mm] (rs) at (3.5,-2.4) {0.25};
+    \node[draw, circle, fill=blue!15, minimum size=8mm] (r) at (2.5,-3.6) {雨};
+    \node[draw, circle, fill=blue!15, minimum size=8mm] (s) at (4.5,-3.6) {雪};
+    
+    \draw (root) -- node[left, font=\scriptsize] {0} (q);
+    \draw (root) -- node[right, font=\scriptsize] {1} (right);
+    \draw (right) -- node[left, font=\scriptsize] {0} (y);
+    \draw (right) -- node[right, font=\scriptsize] {1} (rs);
+    \draw (rs) -- node[left, font=\scriptsize] {0} (r);
+    \draw (rs) -- node[right, font=\scriptsize] {1} (s);
+    
+    \node[below, font=\scriptsize, gray] at (q.south) {0.5};
+    \node[below, font=\scriptsize, gray] at (y.south) {0.25};
+    \node[below, font=\scriptsize, gray] at (r.south) {0.15};
+    \node[below, font=\scriptsize, gray] at (s.south) {0.1};
+    
+    % 编码标注
+    \node[left=5pt, font=\footnotesize, blue] at (q.west) {编码: 0};
+    \node[left=5pt, font=\footnotesize, blue] at (y.west) {编码: 10};
+    \node[below left, font=\footnotesize, blue] at (r.south west) {编码: 110};
+    \node[below right, font=\footnotesize, blue] at (s.south east) {编码: 111};
+\end{tikzpicture}
+\end{center}
+
+\textbf{最终编码}：
+\begin{center}
+\begin{tabular}{c|c|c|c|c}
+天气 & 概率 & 编码 & 码长 & 理想码长 $-\log_2 p$ \\
+\hline
+晴 & 0.5 & 0 & 1 & 1.0 \\
+阴 & 0.25 & 10 & 2 & 2.0 \\
+雨 & 0.15 & 110 & 3 & 2.74 \\
+雪 & 0.1 & 111 & 3 & 3.32 \\
+\end{tabular}
+\end{center}
+
+\textbf{性能分析}：平均码长为
+\[
+\bar{L} = 0.5 \times 1 + 0.25 \times 2 + 0.15 \times 3 + 0.1 \times 3 = 1.75
+\]
+比特，而熵为
+\[
+H = -0.5\log_2 0.5 - 0.25\log_2 0.25 - 0.15\log_2 0.15 - 0.1\log_2 0.1 \approx 1.74
+\]
+比特，效率 $\eta = H / \bar{L} = 1.74 / 1.75 = 99.4\%$。
+
+对比等长编码（2比特/符号），Huffman编码节省了 $(2-1.75)/2 = 12.5\%$！
+
+传输100天天气：等长需要200比特，Huffman只需要175比特。
+\end{example}
+
+\begin{insightbox}
+\textbf{Huffman编码为什么是最优的？}直觉证明分三步：概率最小的两个符号必须在最深层，否则可以把它们交换到更深处、减小平均码长；它们必须是兄弟，否则可以把它们配对、腾出其他位置；合并之后问题规模减一，对剩下的问题递归应用同样的论证。这是一个经典的\textbf{贪心算法}：每步做局部最优选择（合并最小两个），最终得到全局最优。
+\end{insightbox}
+
+\subsection{从Huffman到现代压缩}
+
+Huffman编码是所有现代压缩算法的基础：
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{l|l|l}
+\toprule
+\textbf{算法} & \textbf{核心思想} & \textbf{应用} \\
+\midrule
+Huffman & 静态概率，构建最优树 & JPEG, MP3 的一部分 \\
+算术编码 & 把整个消息编码为一个小数 & 更接近熵极限 \\
+LZ77/LZ78 & 利用重复模式（字典压缩） & ZIP, GZIP, PNG \\
+LZW & LZ78的变种 & GIF, Unix compress \\
+Deflate & LZ77 + Huffman & ZIP, GZIP, HTTP \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-这是物理学中最深刻的联系之一。
+\begin{physicalmeaning}
+\textbf{为什么ZIP能把文件压小？}因为大多数文件都有\textbf{冗余}：文本中某些字母和词组频繁出现（字母 e 比 z 常见100倍），代码中有大量重复模式（括号、关键字），图像中相邻像素通常很相似。压缩算法就是在\textbf{发现并利用这些冗余}，用更少的比特表示同样的信息。
+
+理论极限就是熵——当且仅当数据完全随机（无冗余）时，才无法压缩。
 \end{physicalmeaning}
 
-% ------------------------------------------------------------------------------------
-\section{案例：双摆与混沌}
+\subsection{实际文本的压缩潜力}
 
-让我们用拉格朗日方法分析一个更复杂的系统——双摆。
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{l|c|l}
+\toprule
+\textbf{模型} & \textbf{熵率（bits/字母）} & \textbf{说明} \\
+\midrule
+完全随机（26字母均匀） & $\log_2 26 \approx 4.7$ & 无任何结构 \\
+单字母频率 & $\approx 4.2$ & 考虑 e 比 z 常见 \\
+二元组（bigram） & $\approx 3.5$ & 考虑字母对频率 \\
+人类实验估计 & $\approx 1.0 - 1.5$ & 利用全部语言知识 \\
+GPT-4 估计 & $\approx 0.9$ & 当前最好的语言模型 \\
+\bottomrule
+\end{tabular}
+\end{center}
 
-\begin{figure}[h]
-\centering
-\begin{tikzpicture}[scale=1.5]
-    % 支点
-    \fill (0,0) circle (2pt);
-    \draw[thick] (-0.3,0) -- (0.3,0);
-    
-    % 第一个摆
-    \draw[thick] (0,0) -- ({1.2*sin(40)},{-1.2*cos(40)});
-    \node[left] at ({0.5*sin(40)},{-0.5*cos(40)}) {$l_1$};
-    \shade[ball color=blue!30] ({1.2*sin(40)},{-1.2*cos(40)}) circle (4pt);
-    \node[left] at ({1.2*sin(40)-0.15},{-1.2*cos(40)}) {$m_1$};
-    
-    % 第二个摆
-    \draw[thick] ({1.2*sin(40)},{-1.2*cos(40)}) -- ({1.2*sin(40)+1*sin(70)},{-1.2*cos(40)-1*cos(70)});
-    \node[right] at ({1.2*sin(40)+0.4*sin(70)},{-1.2*cos(40)-0.4*cos(70)}) {$l_2$};
-    \shade[ball color=red!30] ({1.2*sin(40)+1*sin(70)},{-1.2*cos(40)-1*cos(70)}) circle (4pt);
-    \node[right] at ({1.2*sin(40)+1*sin(70)+0.1},{-1.2*cos(40)-1*cos(70)}) {$m_2$};
-    
-    % 角度
-    \draw[dashed] (0,0) -- (0,-1);
-    \draw[->] (0,-0.5) arc (-90:-50:0.5);
-    \node at (0.25,-0.65) {$\theta_1$};
-    
-    \draw[dashed] ({1.2*sin(40)},{-1.2*cos(40)}) -- ({1.2*sin(40)},{-1.2*cos(40)-0.8});
-    \draw[->] ({1.2*sin(40)},{-1.2*cos(40)-0.4}) arc (-90:-20:0.4);
-    \node at ({1.2*sin(40)+0.35},{-1.2*cos(40)-0.5}) {$\theta_2$};
-\end{tikzpicture}
-\caption{双摆系统}
-\end{figure}
+\begin{insightbox}
+英语文本的真实熵率约为 1-1.5 bits/字母，远低于 4.7 bits 的“随机上限”。
 
-\subsection{建立拉格朗日量}
-
-\paragraph{广义坐标}：$(\theta_1, \theta_2)$（2个自由度）
-
-\paragraph{第一个摆球的位置和速度}
-
-\[
-x_1 = l_1 \sin\theta_1, \quad y_1 = -l_1 \cos\theta_1
-\]
-\[
-\dot{x}_1 = l_1 \dot{\theta}_1 \cos\theta_1, \quad \dot{y}_1 = l_1 \dot{\theta}_1 \sin\theta_1
-\]
-\[
-v_1^2 = \dot{x}_1^2 + \dot{y}_1^2 = l_1^2 \dot{\theta}_1^2
-\]
-
-\paragraph{第二个摆球的位置和速度}
-
-\[
-x_2 = l_1 \sin\theta_1 + l_2 \sin\theta_2, \quad y_2 = -l_1 \cos\theta_1 - l_2 \cos\theta_2
-\]
-\[
-\dot{x}_2 = l_1 \dot{\theta}_1 \cos\theta_1 + l_2 \dot{\theta}_2 \cos\theta_2
-\]
-\[
-\dot{y}_2 = l_1 \dot{\theta}_1 \sin\theta_1 + l_2 \dot{\theta}_2 \sin\theta_2
-\]
-
-$v_2^2$ 的计算比较复杂：
-\[
-v_2^2 = l_1^2 \dot{\theta}_1^2 + l_2^2 \dot{\theta}_2^2 + 2l_1 l_2 \dot{\theta}_1 \dot{\theta}_2 \cos(\theta_1 - \theta_2)
-\]
-
-\paragraph{动能}
-
-\[
-T = \frac{1}{2}m_1 v_1^2 + \frac{1}{2}m_2 v_2^2
-\]
-\[
-= \frac{1}{2}(m_1 + m_2) l_1^2 \dot{\theta}_1^2 + \frac{1}{2}m_2 l_2^2 \dot{\theta}_2^2 + m_2 l_1 l_2 \dot{\theta}_1 \dot{\theta}_2 \cos(\theta_1 - \theta_2)
-\]
-
-\paragraph{势能}
-
-\[
-V = m_1 g y_1 + m_2 g y_2 = -(m_1 + m_2) g l_1 \cos\theta_1 - m_2 g l_2 \cos\theta_2
-\]
-
-\paragraph{拉格朗日量}
-
-\[
-L = T - V
-\]
-
-这是一个相当复杂的表达式！
-
-\subsection{运动方程}
-
-对 $\theta_1$ 和 $\theta_2$ 分别应用拉格朗日方程，得到两个耦合的二阶微分方程。
-
-方程很长，我们不写出完整形式。重要的是：
-\begin{itemize}
-    \item 推导过程是\textbf{机械的}——只需要求偏导数和全导数
-    \item 不需要分析任何力
-    \item 约束（两段摆杆的长度固定）自动满足
-\end{itemize}
-
-\subsection{混沌行为}
-
-双摆是最简单的\textbf{混沌系统}之一。
-
-\begin{definition}[混沌]
-确定性系统对初始条件\textbf{极其敏感}的行为叫做混沌。两个几乎相同的初始状态，经过足够长时间后会演化出完全不同的轨迹。
-\end{definition}
-
-\begin{figure}[h]
-\centering
-\begin{tikzpicture}[scale=0.8]
-    % 两条轨迹
-    \draw[blue, thick] plot[smooth] coordinates {(0,0) (0.5,0.3) (1,0.8) (1.5,0.5) (2,1.2) (2.5,0.3) (3,1.5) (3.5,0.8) (4,2)};
-    \draw[red, thick] plot[smooth] coordinates {(0,0.05) (0.5,0.35) (1,0.75) (1.5,0.6) (2,0.9) (2.5,1.5) (3,0.5) (3.5,2) (4,0.3)};
-    
-    % 标注
-    \node at (0,-0.5) {\small 初始条件几乎相同};
-    \draw[<->] (4.5,0.3) -- (4.5,2);
-    \node[right] at (4.5,1.15) {\small 结果完全不同};
-    
-    % 轴
-    \draw[->] (-0.5,0) -- (5,0) node[right] {时间};
-    \draw[->] (0,-0.5) -- (0,2.5) node[above] {状态};
-\end{tikzpicture}
-\caption{混沌系统的特征：初始条件的微小差异导致完全不同的结果}
-\end{figure}
-
-双摆虽然是完全确定性的系统（没有任何随机性），但它的长期行为实际上是\textbf{不可预测}的——因为我们永远无法精确测量初始条件。
-
-这就是"确定性混沌"：方程是确定的，但结果是不可预测的。
-
-% ------------------------------------------------------------------------------------
-\section{拉格朗日方法的威力}
-
-让我们总结拉格朗日方法相比牛顿方法的优势：
-
-\subsection{优势1：不需要分析力}
-
-\textbf{牛顿方法}：需要画受力图，分析所有力（重力、张力、支持力、摩擦力……）
-
-\textbf{拉格朗日方法}：只需要写出动能 $T$ 和势能 $V$，约束力自动处理
-
-\subsection{优势2：坐标选择灵活}
-
-\textbf{牛顿方法}：通常用笛卡尔坐标，坐标变换需要重新分析力
-
-\textbf{拉格朗日方法}：可以用任何方便的广义坐标，方程形式不变
-
-\begin{example}[球面上的运动]
-一个粒子被约束在球面上运动。
-
-\textbf{牛顿方法}：用 $(x, y, z)$ 坐标，需要引入指向球心的约束力。
-
-\textbf{拉格朗日方法}：用球坐标 $(\theta, \phi)$，约束自动满足，只有2个方程。
-\end{example}
-
-\subsection{优势3：揭示深层结构}
-
-\begin{itemize}
-    \item 对称性与守恒律的联系
-    \item 变分原理的统一视角
-    \item 推广到场论和量子力学
-\end{itemize}
-
-\subsection{优势4：便于数值计算}
-
-现代物理仿真（如游戏引擎、机器人仿真）大量使用拉格朗日方法：
-\begin{itemize}
-    \item 约束可以用数值方法强制满足
-    \item 辛积分器保持能量守恒
-    \item 便于处理复杂的多体系统
-\end{itemize}
-
-% ------------------------------------------------------------------------------------
-% 代码演示结果
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.98\textwidth]{figs_chap04/chap04_fig1.png}
-\caption{双摆混沌演示：初值敏感性。两条轨迹的初始角度仅相差0.001弧度（约0.057度）。左上：$\theta_1$随时间变化——约6秒后轨迹开始显著分离；右上：相空间轨迹显示混沌吸引子结构；左下：轨迹差异随时间指数增长（混沌的标志）；右下：双摆末端的实际轨迹，展示蝴蝶效应的生动体现。}
-\label{fig:chap04_double_pendulum}
-\end{figure}
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.95\textwidth]{figs_chap04/chap04_fig2.png}
-\caption{单摆：小角度近似的有效范围。左图：不同初始角度下精确解（实线）与近似解（虚线）的对比——$\theta_0 < 30°$时两者几乎重合；中图：周期误差分析——$\theta_0 = 30°$时误差约2\%，$\theta_0 = 90°$时误差超过15\%；右图：相空间对比——小角度近似给出椭圆（蓝），精确解给出更复杂的曲线（红），差异在大振幅时明显。}
-\label{fig:chap04_simple_pendulum}
-\end{figure}
-
+这意味着\textbf{英语有约 70\% 的冗余}！正是这些冗余，让文本压缩（ZIP, GZIP）能够工作，让语言模型（GPT）能预测下一个词，让手机自动补全能猜对，也让你能读懂 “Cn y rd ths sntnc?”。
+\end{insightbox}
 % ------------------------------------------------------------------------------------
 \section{本章小结}
 
 \begin{enumerate}
-    \item \textbf{最小作用量原理}：自然选择使作用量 $S = \int L \, dt$ 取极值的路径。这是比牛顿定律更深刻的原理。
-    
-    \item \textbf{拉格朗日量}：$L = T - V$（动能减势能）。作用量是拉格朗日量对时间的积分。
-    
-    \item \textbf{拉格朗日方程}：
+    \item \textbf{信息量}：事件 $x$ 的信息量是 $I(x) = -\log_2 p(x)$，概率越小，信息量越大。
+
+    \item \textbf{熵}：$H(p) = -\sum p_i \log p_i$ 是平均信息量，度量一个分布的不确定性。
+
+    \item \textbf{最大熵原理}：在约束下选择熵最大的分布，用拉格朗日乘子法解出来就是指数族形式
     \[
-    \frac{d}{dt}\frac{\partial L}{\partial \dot{q}_i} - \frac{\partial L}{\partial q_i} = 0
+    p_i = \frac{1}{Z} \exp\left( \sum_j \beta_j g_j(x_i) \right) .
     \]
-    这是变分法在力学中的应用，与第4章的 E-L 方程完全一致。
-    
-    \item \textbf{约束处理}：
-    \begin{itemize}
-        \item 策略1：用广义坐标消去约束
-        \item 策略2：用拉格朗日乘子，$\lambda$ 自动给出约束力
-    \end{itemize}
-    
-    \item \textbf{守恒律}：
-    \begin{itemize}
-        \item $L$ 不含 $q_i$ $\Rightarrow$ $p_i = \frac{\partial L}{\partial \dot{q}_i}$ 守恒
-        \item $L$ 不含 $t$ $\Rightarrow$ 能量 $H = T + V$ 守恒
-    \end{itemize}
+
+    \item \textbf{拉格朗日乘子}：$\beta_j$ 是约束的拉格朗日乘子，它调节分布的形状，使约束被精确满足。
+
+    \item \textbf{KL散度}：$D_{KL}(P \| Q) = \sum p_i \ln \frac{p_i}{q_i}$ 度量两个分布的差异，非负但不对称。
+
+    \item \textbf{交叉熵}：$H(P, Q) = H(P) + D_{KL}(P \| Q)$ 是机器学习的核心损失函数。
+
+    \item \textbf{机器学习联系}：softmax 就是最大熵分布，逻辑回归就是最大熵分类，而最小化交叉熵、最小化KL散度和最大似然是同一件事。
+
+    \item \textbf{信息压缩}：熵是压缩的理论极限，最优码长约为 $-\log_2 p$。
 \end{enumerate}
 
+\begin{unification}[title=本章的统一视角]
+\begin{center}
+\begin{tabular}{c|c}
+\toprule
+\textbf{信息论概念} & \textbf{优化视角} \\
+\midrule
+熵 $H(p)$ & 目标函数（最大化） \\
+归一化 $\sum p_i = 1$ & 等式约束 \\
+矩约束 $\langle g \rangle = c$ & 等式约束 \\
+拉格朗日乘子 $\beta$ & 特征权重 / 逆温度 \\
+最大熵分布 & 拉格朗日条件的解 \\
+KL散度 & 与均匀分布的“距离” \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+信息论的核心问题——“在约束下找最均匀的分布”——正是第1章拉格朗日乘子法的直接应用！
+\end{unification}
+
 \begin{physicalmeaning}
-\textbf{$\lambda$ 在力学中的意义}：
-
-拉格朗日乘子就是\textbf{约束力}本身！
-\begin{itemize}
-    \item 单摆的绳子张力
-    \item 斜面的支持力
-    \item 铰链的反作用力
-    \item ……
-\end{itemize}
-
-这与第1章的"影子价格"完美对应：约束力告诉我们，如果约束稍微放松一点，系统的能量会变化多少。
-
-从优化问题的影子价格，到物理系统的约束力，$\lambda$ 的意义在不同领域间美妙地统一。
+\textbf{$\lambda$ 在本章的意义}：本章的乘子叫 $\beta_j$，它是第 $j$ 条已知信息的“熵价格”——$\beta_j = -\partial H^*/\partial c_j$，约束值每变一个单位，最大可达的熵变多少。在物理里，$\partial S/\partial U = 1/T$，温度的倒数是“能量约束的影子价格”；在机器学习里，logit $z = w^\top x$ 中的权重 $w$ 就是乘子，softmax 就是最大熵分布。往前看，第1章的影子价格、第5章的约束力、本章的逆温度，是同一个 $\lambda$；第8章会把 softmax 放进网络的最后一层，第11章会把它变成注意力权重，第9章的最大熵强化学习（SAC）则把熵直接加进目标。
 \end{physicalmeaning}
 
 % ------------------------------------------------------------------------------------
@@ -1079,305 +1118,59 @@ L = T - V
 
 \paragraph{计算题}
 \begin{enumerate}
-    \item 一个质量为 $m$ 的小球沿光滑斜面（倾角 $\theta$）下滑。
+    \item 计算以下分布的熵：
     \begin{enumerate}
-        \item 用沿斜面的位移 $s$ 作为广义坐标，写出拉格朗日量
-        \item 用拉格朗日方程求加速度
-        \item 与牛顿方法的结果比较
+        \item 公平硬币：$p = (0.5, 0.5)$
+        \item 偏硬币：$p = (0.8, 0.2)$
+        \item 公平骰子：$p = (1/6, 1/6, 1/6, 1/6, 1/6, 1/6)$
     \end{enumerate}
     
-    \item 弹簧单摆：质量为 $m$ 的小球连在弹簧（自然长度 $l_0$，弹簧常数 $k$）的末端，在竖直平面内运动。
-    \begin{enumerate}
-        \item 选择合适的广义坐标（提示：用极坐标 $r, \theta$）
-        \item 写出拉格朗日量
-        \item 写出运动方程（不需要求解）
-    \end{enumerate}
+    \item 计算 $D_{KL}(P \| Q)$ 和 $D_{KL}(Q \| P)$，其中 $P = (0.5, 0.5)$，$Q = (0.8, 0.2)$。验证它们不相等。
     
-    \item 对于单摆，用笛卡尔坐标 $(x, y)$ 加约束 $x^2 + y^2 = l^2$：
-    \begin{enumerate}
-        \item 写出带乘子的运动方程
-        \item 求出拉格朗日乘子 $\lambda$ 与角度 $\theta$ 的关系
-        \item 验证绳子张力 $T = m(g\cos\theta + l\dot{\theta}^2)$
-    \end{enumerate}
-    
-    \item 阿特伍德机：两个质量 $m_1$ 和 $m_2$ 的物体通过轻绳连接，绑在定滑轮两侧。
-    \begin{enumerate}
-        \item 选择一个广义坐标（只有1个自由度）
-        \item 写出拉格朗日量
-        \item 求系统的加速度
-    \end{enumerate}
+    \item 为符号集 $\{A, B, C, D\}$（概率分别为 $0.5, 0.25, 0.125, 0.125$）构造 Huffman 编码，计算平均码长，并与熵比较。
 \end{enumerate}
 
 \paragraph{证明题}
 \begin{enumerate}
-    \setcounter{enumi}{4}
-    \item 证明：如果 $L$ 不显含时间 $t$，则哈密顿量 $H = \sum_i \dot{q}_i \frac{\partial L}{\partial \dot{q}_i} - L$ 守恒。
+    \setcounter{enumi}{3}
+    \item 证明：在只有归一化约束下，最大熵分布是均匀分布。
     
-    \item 证明：对于 $L = T - V$，如果 $T = \frac{1}{2}\sum_{ij} M_{ij}(q)\dot{q}_i\dot{q}_j$（动能是速度的二次函数），则 $H = T + V$。
+    \item 证明 Gibbs 不等式：$D_{KL}(P \| Q) \geq 0$，等号成立当且仅当 $P = Q$。
     
-    \item 证明拉格朗日方程在坐标变换下形式不变：如果 $q = q(Q, t)$，则新坐标 $Q$ 满足相同形式的方程。
+    （提示：使用 Jensen 不等式和 $\ln x \leq x - 1$）
+    
+    \item 证明：对于固定方差 $\sigma^2$，高斯分布是连续分布中熵最大的。
+    
+    （提示：设任意分布 $p(x)$，计算 $H(p) - H(\text{Gaussian})$ 并说明它 $\leq 0$）
 \end{enumerate}
 
 \paragraph{编程题}
 \begin{enumerate}
-    \setcounter{enumi}{7}
-    \item 单摆仿真：
+    \setcounter{enumi}{6}
+    \item 实现 Huffman 编码算法：
     \begin{enumerate}
-        \item 用四阶 Runge-Kutta 方法求解单摆方程
-        \item 画出 $\theta(t)$ 和相图 $(\theta, \dot{\theta})$
-        \item 比较小角度近似与精确解的差异
+        \item 输入：符号概率分布
+        \item 输出：每个符号的编码
+        \item 验证：平均码长接近熵
     \end{enumerate}
     
-    \item 双摆仿真：
+    \item 实现最大熵分类器（softmax 回归）：
     \begin{enumerate}
-        \item 推导双摆的运动方程（可以用符号计算软件辅助）
-        \item 用数值方法求解并可视化运动
-        \item 展示混沌行为：比较两个初始条件相差 $0.001$ 弧度的轨迹
-    \end{enumerate}
-    
-    \item 实现辛积分器（Störmer-Verlet 方法）：
-    \begin{enumerate}
-        \item 对谐振子和单摆实现辛积分
-        \item 比较与普通欧拉法的能量守恒性能
-        \item 长时间仿真，观察能量漂移
+        \item 使用 MNIST 数据集
+        \item 实现前向传播（softmax）和反向传播
+        \item 使用交叉熵损失
+        \item 报告分类准确率
     \end{enumerate}
 \end{enumerate}
 
 \paragraph{思考题}
 \begin{enumerate}
-    \setcounter{enumi}{10}
-    \item 为什么拉格朗日量是 $T - V$ 而不是 $T + V$？如果用 $T + V$ 会发生什么？
+    \setcounter{enumi}{8}
+    \item 为什么深度学习中分类任务用交叉熵损失而不是均方误差？从梯度的角度分析。
     
-    \item 拉格朗日方法和牛顿方法本质上是等价的吗？有没有一种方法能做到而另一种方法做不到的事情？
+    \item KL散度不对称意味着什么？在实际应用中，对 $Q$ 最小化 $D_{KL}(P \| Q)$ 与最小化 $D_{KL}(Q \| P)$，分别倾向于产生什么样的近似？
     
-    \item 量子力学的路径积分表述与最小作用量原理有什么关系？为什么费曼说"粒子探索所有可能的路径"？
+    \item 最大熵原理与 Occam 剃刀有什么联系？为什么“最均匀”的分布是“最简单”的？
     
-    \item 双摆是确定性系统，为什么它的行为是"不可预测"的？这与随机性有什么区别？
-    
-    \item 在机器人学中（第7章），我们将用 $M(q)\ddot{q} + C(q,\dot{q})\dot{q} + G(q) = \tau$ 描述动力学。这与拉格朗日方程有什么关系？
+    \item GPT 等语言模型本质上在估计什么？它与熵率有什么关系？
 \end{enumerate}
-
-% ====================================================================================
-\section*{扩展阅读：ODE数值方法与辛积分器}
-\addcontentsline{toc}{section}{扩展阅读：ODE数值方法}
-% ====================================================================================
-
-求解力学方程需要数值积分ODE。但不是所有数值方法都"尊重物理"——有些方法会让能量随时间漂移，导致长时间仿真失真。本节介绍\textbf{辛积分器}，它能保持哈密顿系统的几何结构。
-
-\subsection*{常见ODE积分方法}
-
-\paragraph{前向欧拉法（1阶）}
-\begin{equation}
-y_{n+1} = y_n + h \cdot f(t_n, y_n)
-\end{equation}
-简单但不稳定，能量会持续增长（对振荡系统）。
-
-\paragraph{4阶龙格-库塔法（RK4）}
-\begin{equation}
-y_{n+1} = y_n + \frac{h}{6}(k_1 + 2k_2 + 2k_3 + k_4)
-\end{equation}
-其中$k_1 = f(t_n, y_n)$, $k_2 = f(t_n + h/2, y_n + hk_1/2)$等。精度高但能量会缓慢漂移。
-
-\paragraph{Störmer-Verlet法（辛积分器，2阶）}
-
-对于哈密顿系统$\dot{q} = \partial H/\partial p$，$\dot{p} = -\partial H/\partial q$：
-\begin{align}
-p_{n+1/2} &= p_n - \frac{h}{2} \frac{\partial H}{\partial q}(q_n) \\
-q_{n+1} &= q_n + h \frac{\partial H}{\partial p}(p_{n+1/2}) \\
-p_{n+1} &= p_{n+1/2} - \frac{h}{2} \frac{\partial H}{\partial q}(q_{n+1})
-\end{align}
-
-\begin{tcolorbox}[colback=blue!5, colframe=blue!60!black, title=辛积分器的关键性质]
-辛积分器保持相空间体积（Liouville定理），\textbf{能量不会系统性漂移}，只会在真实值附近振荡。这对长时间仿真至关重要。
-\end{tcolorbox}
-
-\subsection*{简谐振子对比实验}
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.95\textwidth]{figs_chap04/harmonic_comparison.pdf}
-\caption{简谐振子数值积分对比（$\omega=1$, $dt=0.1$, 积分50个周期）。\textbf{左上}：轨迹——Euler法振幅发散，RK4和Verlet接近精确解。\textbf{右上}：能量——Euler法能量指数增长，RK4缓慢漂移，Verlet围绕真实值振荡。\textbf{左下}：相空间——Euler螺旋向外（能量增加），Verlet保持闭合曲线。\textbf{右下}：相对能量误差——Verlet误差有界，RK4误差累积。}
-\end{figure}
-
-\subsection*{长时间积分的差异}
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.95\textwidth]{figs_chap04/long_time_comparison.pdf}
-\caption{长时间积分（$t=500$）能量漂移对比。\textbf{左图}：RK4的能量漂移随时间累积，而Verlet保持有界振荡。\textbf{右图}：放大看Verlet——能量在真实值附近做小振荡，没有系统性漂移。这是辛积分器的核心优势。}
-\end{figure}
-
-\subsection*{收敛阶验证}
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.6\textwidth]{figs_chap04/convergence_order.pdf}
-\caption{收敛阶验证。在双对数坐标下，Euler误差$\sim dt$（1阶），Verlet误差$\sim dt^2$（2阶），RK4误差$\sim dt^4$（4阶）。虽然RK4精度最高，但辛积分器在长时间仿真中表现更好。}
-\end{figure}
-
-\begin{lstlisting}[language=Python, caption=Störmer-Verlet实现]
-def stormer_verlet(dH_dq, dH_dp, q0, p0, t_span, dt):
-    """辛积分器：保能量的ODE求解"""
-    t = np.arange(t_span[0], t_span[1], dt)
-    q, p = np.zeros(len(t)), np.zeros(len(t))
-    q[0], p[0] = q0, p0
-    for i in range(len(t)-1):
-        p_half = p[i] - dt/2 * dH_dq(q[i])    # 半步动量
-        q[i+1] = q[i] + dt * dH_dp(p_half)    # 全步位置
-        p[i+1] = p_half - dt/2 * dH_dq(q[i+1])  # 完成动量
-    return t, q, p
-\end{lstlisting}
-
-\begin{insightbox}
-\textbf{选择数值方法的原则}：
-\begin{itemize}
-    \item \textbf{短时间、高精度需求}：RK4或高阶方法
-    \item \textbf{长时间仿真、能量守恒关键}：辛积分器（Verlet, 辛RK）
-    \item \textbf{刚性系统}：隐式方法（BDF, 隐式RK）
-    \item \textbf{实时应用}（游戏、机器人）：半隐式Euler或Verlet
-\end{itemize}
-\end{insightbox}
-
-% ====================================================================================
-\section*{扩展阅读：从作用量到PDE——连续介质力学}
-\addcontentsline{toc}{section}{扩展阅读：PDE与作用量}
-% ====================================================================================
-
-拉格朗日方法不仅适用于质点系统，还能推广到连续介质。这就是场论的起点——从有限自由度到无限自由度。
-
-\subsection*{从离散到连续}
-
-考虑一根弦上的$N$个质点，用弹簧连接。当$N \to \infty$时：
-\begin{itemize}
-    \item 离散变量$q_i(t)$ $\to$ 连续场$u(x,t)$
-    \item 求和$\sum_i$ $\to$ 积分$\int dx$
-    \item 有限维拉格朗日量$L$ $\to$ 拉格朗日密度$\mathcal{L}$
-\end{itemize}
-
-\subsection*{弦的波动方程}
-
-一维弦的拉格朗日密度：
-\begin{equation}
-\mathcal{L} = \frac{1}{2}\rho \left(\frac{\partial u}{\partial t}\right)^2 - \frac{1}{2}T\left(\frac{\partial u}{\partial x}\right)^2
-\end{equation}
-其中$\rho$是线密度，$T$是张力，$u(x,t)$是位移场。
-
-作用量：
-\begin{equation}
-S[u] = \int_{t_1}^{t_2} \int_0^L \mathcal{L} \, dx \, dt
-\end{equation}
-
-对$u$变分，得到\textbf{Euler-Lagrange场方程}：
-\begin{equation}
-\frac{\partial}{\partial t}\frac{\partial \mathcal{L}}{\partial \dot{u}} + \frac{\partial}{\partial x}\frac{\partial \mathcal{L}}{\partial u'} - \frac{\partial \mathcal{L}}{\partial u} = 0
-\end{equation}
-
-代入弦的$\mathcal{L}$，得到\textbf{波动方程}：
-\begin{equation}
-\boxed{\frac{\partial^2 u}{\partial t^2} = c^2 \frac{\partial^2 u}{\partial x^2}, \quad c = \sqrt{T/\rho}}
-\end{equation}
-
-\subsection*{弹性力学}
-
-三维弹性体的拉格朗日密度：
-\begin{equation}
-\mathcal{L} = \frac{1}{2}\rho |\dot{\mathbf{u}}|^2 - W(\boldsymbol{\varepsilon})
-\end{equation}
-其中$\mathbf{u}(\mathbf{x},t)$是位移场，$\boldsymbol{\varepsilon} = \frac{1}{2}(\nabla \mathbf{u} + \nabla \mathbf{u}^T)$是应变张量，$W$是弹性势能密度。
-
-对于各向同性线弹性材料（Hooke定律）：
-\begin{equation}
-W = \frac{\lambda}{2}(\text{tr}\,\boldsymbol{\varepsilon})^2 + \mu \, \text{tr}(\boldsymbol{\varepsilon}^2)
-\end{equation}
-
-变分得到\textbf{Navier方程}（弹性波方程）：
-\begin{equation}
-\boxed{\rho \frac{\partial^2 \mathbf{u}}{\partial t^2} = (\lambda + \mu)\nabla(\nabla \cdot \mathbf{u}) + \mu \nabla^2 \mathbf{u}}
-\end{equation}
-
-\subsection*{流体力学：Navier-Stokes方程}
-
-流体力学的拉格朗日描述比较复杂，但思想是一致的。对于不可压缩粘性流体：
-
-\textbf{动能}：$T = \frac{1}{2}\int \rho |\mathbf{v}|^2 \, dV$
-
-\textbf{约束}：不可压缩条件$\nabla \cdot \mathbf{v} = 0$
-
-用拉格朗日乘子$p$（压力！）处理约束，变分得到\textbf{Navier-Stokes方程}：
-\begin{equation}
-\boxed{\rho \left(\frac{\partial \mathbf{v}}{\partial t} + \mathbf{v} \cdot \nabla \mathbf{v}\right) = -\nabla p + \mu \nabla^2 \mathbf{v} + \mathbf{f}}
-\end{equation}
-
-\begin{insightbox}
-\textbf{压力是拉格朗日乘子！}
-
-在流体力学中，压力$p$的角色就是不可压缩约束$\nabla \cdot \mathbf{v} = 0$的拉格朗日乘子。这与第1章的"影子价格"、第4章的"约束力"完全一致——$\lambda$在不同领域有不同的物理名称，但数学本质相同。
-\end{insightbox}
-
-\subsection*{物理问题与PDE对应表}
-
-\begin{table}[h]
-\centering
-\renewcommand{\arraystretch}{1.4}
-\begin{tabular}{l|l|l}
-\toprule
-\textbf{物理系统} & \textbf{作用量/能量泛函} & \textbf{PDE} \\
-\midrule
-弦振动 & $S = \int\!\!\int [\frac{\rho}{2}\dot{u}^2 - \frac{T}{2}u'^2]\,dx\,dt$ & $u_{tt} = c^2 u_{xx}$（波动方程）\\
-热传导 & $F = \int [\frac{k}{2}|\nabla u|^2 + fu]\,dx$ & $-k\nabla^2 u = f$（Poisson方程）\\
-弹性体 & $\Pi = \int W(\varepsilon)\,dV - \int \mathbf{f}\cdot\mathbf{u}\,dS$ & Navier方程 \\
-不可压流体 & $L = T - \int p(\nabla\cdot\mathbf{v})\,dV$ & Navier-Stokes方程 \\
-薛定谔场 & $S = \int \bar{\psi}(i\hbar\partial_t + \frac{\hbar^2}{2m}\nabla^2)\psi\,dx\,dt$ & 薛定谔方程 \\
-电磁场 & $S = \int [-\frac{1}{4}F_{\mu\nu}F^{\mu\nu}]\,d^4x$ & Maxwell方程 \\
-\bottomrule
-\end{tabular}
-\caption{从作用量推导各类物理PDE}
-\end{table}
-
-\begin{figure}[h]
-\centering
-\begin{tikzpicture}[scale=0.9]
-    % 波动方程解
-    \begin{scope}[shift={(-5,0)}]
-        \draw[->] (-0.5,0) -- (3.5,0) node[right] {$x$};
-        \draw[->] (0,-1.5) -- (0,1.5) node[above] {$u$};
-        \draw[blue, thick, domain=0:3, samples=50] plot (\x, {sin(2*\x r)*exp(-0.3*\x)});
-        \node at (1.5,-2) {\small 波动方程解：行波};
-    \end{scope}
-
-    % Poisson方程解
-    \begin{scope}[shift={(0,0)}]
-        \draw[->] (-0.5,0) -- (3.5,0) node[right] {$x$};
-        \draw[->] (0,-0.5) -- (0,2) node[above] {$u$};
-        \draw[red, thick, domain=0:3, samples=50] plot (\x, {-0.5*\x*(\x-3)});
-        \node at (1.5,-2) {\small Poisson解：稳态分布};
-    \end{scope}
-
-    % NS涡
-    \begin{scope}[shift={(5,0)}]
-        \draw[->] (-1.5,0) -- (1.5,0) node[right] {$x$};
-        \draw[->] (0,-1.5) -- (0,1.5) node[above] {$y$};
-        \foreach \r in {0.3,0.6,0.9,1.2} {
-            \draw[green!60!black, thick, ->] (0,0) +(\r,0) arc (0:330:\r);
-        }
-        \node at (0,-2) {\small NS解：涡旋};
-    \end{scope}
-\end{tikzpicture}
-\caption{不同PDE的典型解：波动方程产生行波，Poisson方程给出稳态分布，Navier-Stokes方程描述涡旋}
-\end{figure}
-
-\begin{physicalmeaning}
-\textbf{变分原理的统一性}：
-
-从质点力学到场论，变分原理贯穿始终：
-\begin{enumerate}
-    \item 写出系统的拉格朗日量（或拉格朗日密度）
-    \item 构造作用量$S = \int L\,dt$（或$S = \int\!\!\int \mathcal{L}\,dx\,dt$）
-    \item 要求$\delta S = 0$，得到运动方程（ODE或PDE）
-    \item 约束用拉格朗日乘子处理
-\end{enumerate}
-
-这个框架适用于：经典力学、弹性力学、流体力学、电磁学、量子力学、广义相对论……
-
-\textbf{为什么自然"喜欢"极值？}这仍是物理学的深刻谜题。费曼的量子路径积分给出了一种解释：粒子"探索"所有可能路径，但只有作用量驻点附近的路径相互干涉相长，形成经典轨道。
-\end{physicalmeaning}
