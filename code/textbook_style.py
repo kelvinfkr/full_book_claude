@@ -5,13 +5,13 @@
 用法（在任何绘图脚本开头）::
 
     import sys, os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'code'))
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
     from textbook_style import setup_style, save_figure, panel_label, COLORS
 
     setup_style()
     fig, ax = plt.subplots(figsize=fig_size(1))   # 单栏
     ...
-    save_figure(fig, 'figs_chapXX/name')           # 同时输出 name.pdf 与 name.png
+    save_figure(fig, 'figures/chapXX/name')        # 同时输出 name.pdf 与 name.png
 
 设计原则（与正文"每张图都有思路"的要求对应）：
 

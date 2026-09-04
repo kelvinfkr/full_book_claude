@@ -577,7 +577,7 @@ r(s_t,a)+\gamma V(f(s_t,a))
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.6\textwidth]{figs_chap09/chap09_shortest_path.png}
+\includegraphics[width=0.6\textwidth]{figures/chap09/chap09_shortest_path.png}
 \caption{最短路问题示意图。红色箭头标示最优路径$s \to a \to c \to t$，总代价为4。每个节点旁标注的$V$值是从该点到终点的最短距离。}
 \label{fig:shortest_path}
 \end{figure}
@@ -1505,12 +1505,12 @@ def value_iteration(env, gamma=1.0, threshold=1e-6):
 \centering
 \begin{minipage}{0.48\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{figs_chap09/chap09_value_iteration.png}
+    \includegraphics[width=\textwidth]{figures/chap09/chap09_value_iteration.png}
 \end{minipage}
 \hfill
 \begin{minipage}{0.48\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{figs_chap09/chap09_value_heatmap.png}
+    \includegraphics[width=\textwidth]{figures/chap09/chap09_value_heatmap.png}
 \end{minipage}
 \caption{值迭代结果（$5\times5$ GridWorld，每步 $-1$，$\gamma=1$）。\textbf{左}：对角线上 5 个状态的 $V_k(s)$ 随迭代轮数的变化——离终点 $d$ 步的状态恰好在第 $d$ 轮到位，9 轮后全部收敛；\textbf{右}：收敛后的值函数热力图，颜色越绿表示离目标越近、期望回报越高，数值正是``负的曼哈顿距离''。}
 \label{fig:value_iteration}
@@ -1518,7 +1518,7 @@ def value_iteration(env, gamma=1.0, threshold=1e-6):
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.45\textwidth]{figs_chap09/chap09_policy.png}
+\includegraphics[width=0.45\textwidth]{figures/chap09/chap09_policy.png}
 \caption{值迭代得到的最优策略。箭头指向每个状态的最佳动作；``下''与``右''同样最优的格子画出了两个箭头——曼哈顿网格上最短路不唯一，任何一条只沿箭头走的路径都恰好 8 步。}
 \label{fig:policy}
 \end{figure}
@@ -1749,12 +1749,12 @@ Q-Learning：训练了 2000 个回合
 \centering
 \begin{minipage}{0.55\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{figs_chap09/chap09_qlearning_sarsa.png}
+    \includegraphics[width=\textwidth]{figures/chap09/chap09_qlearning_sarsa.png}
 \end{minipage}
 \hfill
 \begin{minipage}{0.42\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{figs_chap09/chap09_qtable.png}
+    \includegraphics[width=\textwidth]{figures/chap09/chap09_qtable.png}
 \end{minipage}
 \caption{\textbf{左}：Q-Learning 与 SARSA 的学习曲线（2000 回合，$\alpha=0.1$，$\epsilon=0.1$；10 个随机种子的 50 回合滑动平均，阴影为种子间标准差，纵轴为 symlog）。两种无模型算法都从回报约 $-40$ 的随机游走出发，约 500 回合后贴近最优回报 $-8$（黑色虚线）；执行时仍有 10\% 随机探索，所以稳态略低于 $-8$。\textbf{右}：Q-Learning 学到的 $\max_a Q(s,a)$ 热力图，与图\ref{fig:value_iteration}右图使用同一色标——训练方式完全不同（无模型 vs 有模型），学到的值函数却逐格相同。}
 \label{fig:qlearning_results}
@@ -3670,7 +3670,7 @@ GridWorld的状态是离散的格子，动作是上下左右四个方向。但�
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap09/arm_kinematics.pdf}
+\includegraphics[width=0.95\textwidth]{figures/chap09/arm_kinematics.pdf}
 \caption{二连杆机械臂运动学（$L_1=1$ m，$L_2=0.8$ m）。（a）正运动学：扫描关节角 $\theta_1,\theta_2\in[-90^\circ,90^\circ]$，末端位置扫出两条红色虚线之间的环形工作空间。（b）逆运动学：给定四个目标位置（方框），用余弦定理解出关节角（见图例）。（c）位形 $\theta=(45^\circ,30^\circ)$ 下的可操作性椭圆：单位关节速度圆经雅可比 $J$ 映射为末端速度椭圆，红色箭头为两个奇异方向，$\sigma_1=1.90$、$\sigma_2=0.21$——沿长轴一动就动很多，沿短轴几乎动不了。}
 \label{fig:arm_kinematics}
 \end{figure}
@@ -3701,7 +3701,7 @@ GridWorld的状态是离散的格子，动作是上下左右四个方向。但�
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap09/rl_control_comparison.pdf}
+\includegraphics[width=0.95\textwidth]{figures/chap09/rl_control_comparison.pdf}
 \caption{控制方法对比（示意图）。（a）传统控制是一条串行的设计流水线：建模、控制器设计、稳定性分析、参数整定、实现与测试，不达标就回头改模型或增益；（b）强化学习只需定义奖励函数，智能体在与环境的闭环交互中采样、估计回报并更新策略参数，但需要大量训练样本和计算资源。}
 \label{fig:rl_control_comparison}
 \end{figure}
@@ -3718,7 +3718,7 @@ GridWorld的状态是离散的格子，动作是上下左右四个方向。但�
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap09/pd_control_trajectory.pdf}
+\includegraphics[width=0.95\textwidth]{figures/chap09/pd_control_trajectory.pdf}
 \caption{PD 控制器跟踪圆形轨迹（$K_p=400$，$K_d=40$，力矩限幅 $\pm50$ N$\cdot$m，RK4 仿真）。（a）末端从右下角的伸直姿态甩入目标圆；（b）跟踪误差（对数轴）从 700 mm 降到约 34 mm 后不再减小——纯反馈控制对运动目标总有滞后；（c）关节角随时间变化；（d）控制力矩：启动瞬间打到限幅，之后很小。}
 \label{fig:pd_control}
 \end{figure}
@@ -3742,7 +3742,7 @@ r = -\|p_{\text{end}} - p_{\text{goal}}\|^2 - 0.01 \|\tau\|^2
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap09/cartpole_demo.pdf}
+\includegraphics[width=0.95\textwidth]{figures/chap09/cartpole_demo.pdf}
 \caption{CartPole 任务。（a）环境示意——小车上竖立一根杆，通过左右推动小车让杆保持竖直；状态是 4 维连续向量，动作是离散的（左/右），每坚持一步奖励 $+1$，每回合最多 200 步。（b）两个真实算法的学习曲线（各 5 个随机种子，均值 $\pm$ 标准差；环境按 Barto 等的标准方程自行实现，不依赖 gym）：交叉熵方法 + 线性策略在第 15 代（600 回合）达到``解决''阈值 195；把状态离散化的表格 Q-Learning 几百回合内升到 150--190 但不稳定、种子间差异大；随机策略始终徘徊在 22 左右。}
 \label{fig:cartpole_demo}
 \end{figure}
@@ -3802,7 +3802,7 @@ model.learn(total_timesteps=100000)
 \end{enumerate}
 \end{insightbox}
 
-完整代码见\texttt{code\_chap09/robotic\_arm\_control.py}。
+完整代码见\texttt{code/chap09/robotic\_arm\_control.py}。
 
 \begin{remark}
 从GridWorld到机械臂，我们看到了强化学习的通用性：只要能定义状态、动作、奖励，同样的算法框架就能应用。但“能应用”不等于“好用”——连续控制的样本效率、奖励设计、sim-to-real差距都是活跃的研究方向。

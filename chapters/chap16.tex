@@ -142,7 +142,7 @@ Yann LeCun对生成式路线的批评是尖锐的：
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap16/paradigm_comparison.png}
+\includegraphics[width=0.95\textwidth]{figures/chap16/paradigm_comparison.png}
 \caption{两种世界模型范式对比。左图：生成式模型直接预测像素，预测结果有噪声；右图：JEPA在低维潜空间预测，轨迹更加平滑、本质。}
 \label{fig:paradigm_comparison}
 \end{figure}
@@ -203,7 +203,7 @@ JEPA的哲学就是：\textbf{学习本质，忽略细节}。
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap16/latent_dynamics.png}
+\includegraphics[width=0.95\textwidth]{figures/chap16/latent_dynamics.png}
 \caption{在潜空间里学单摆的动力学（真实实验）。(a) 智能体只能看到 $24\times24$ 的带噪图像（两帧堆叠，1152 维）；(b) 真实相空间 $(\theta,\omega)$ 中三条不同能量的轨迹，模型看不到；(c) 编码器学到的二维潜态 $z_t=(q_t,\,q_t-q_{t-1})$（实线）同样是嵌套的闭合环，从 $z_0$ 出发纯靠转移模型在潜空间展开的``梦境''轨迹（虚线）与之重合——潜空间就是学出来的广义坐标；(d) 在潜空间展开 $k$ 步后解码的像素误差停在观测噪声附近，而``保持当前帧''的基线误差高 5 倍。}
 \label{fig:latent_dynamics}
 \end{figure}
@@ -365,7 +365,7 @@ Dreamer 算法的工作流程就像人类做白日梦。第一步是\textbf{学�
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap16/cbf_controller.png}
+\includegraphics[width=0.95\textwidth]{figures/chap16/cbf_controller.png}
 \caption{CBF 安全滤波器实验。(a) 无滤波时（红色虚线）直线穿过禁区 $h<0$；CBF 滤波后（蓝色）贴着安全边界 $h=0$ 绕行，橙色加粗段是 $\lambda^*>0$ 的区段，箭头画出该处的分解 $u^*=u_{\rm ref}+\lambda^*\nabla h$。(b) 障碍函数 $h(x(t))$：无滤波时降到 $-1.75$，滤波后最小值 $0.11>0$。(c) 乘子 $\lambda^*(t)$ 只在 $t\in[3.7,7.6]$ s 贴近边界时非零——$\lambda^*$ 是安全约束的影子价格，远离障碍时为零。}
 \label{fig:cbf_controller}
 \end{figure}
@@ -374,7 +374,7 @@ Dreamer 算法的工作流程就像人类做白日梦。第一步是\textbf{学�
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.75\textwidth]{figs_chap16/multi_obstacle.png}
+\includegraphics[width=0.75\textwidth]{figures/chap16/multi_obstacle.png}
 \caption{多约束 CBF-QP。(a) 三个障碍各一条约束 $h_i\ge 0$，轨迹上按障碍颜色标出 $\lambda_i>0$ 的区段；(b) 三条乘子 $\lambda_i(t)$：穿过障碍 1、2 之间的缝隙时两条约束同时活跃（灰色阴影），绕障碍 3 时 $\lambda_3$ 的峰最高——峰值大小反映``这条约束有多碍事''。}
 \label{fig:multi_obstacle}
 \end{figure}
@@ -456,7 +456,7 @@ CBF方法可以自然地扩展到\textbf{多障碍物}场景：对每个障碍�
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap16/differentiable_physics.png}
+\includegraphics[width=0.95\textwidth]{figures/chap16/differentiable_physics.png}
 \caption{可微物理系统辨识实验。(a) 带噪观测（灰点）、真实轨迹（黑）、初始猜测 $(m,k,c)=(2,5,1)$ 的仿真（橙色虚线）与辨识后的仿真（蓝）；(b) 均方误差从 $3.8\times10^{-1}$ 降到 $8.2\times10^{-4}$，贴近观测噪声方差 $\sigma^2=9\times10^{-4}$（点线）；(c) 三个参数（对数轴）收敛到各自的真值虚线。}
 \label{fig:differentiable_physics}
 \end{figure}
@@ -478,7 +478,7 @@ CBF方法可以自然地扩展到\textbf{多障碍物}场景：对每个障碍�
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap16/phase_space.png}
+\includegraphics[width=0.95\textwidth]{figures/chap16/phase_space.png}
 \caption{弹簧-质点系统的相空间轨迹。(a)无阻尼：能量守恒，轨迹是闭合的椭圆；(b)欠阻尼：能量逐渐耗散，轨迹螺旋趋向平衡点；(c)过阻尼：系统“懒洋洋”地直接趋向平衡点。}
 \label{fig:phase_space}
 \end{figure}
@@ -500,7 +500,7 @@ CBF方法可以自然地扩展到\textbf{多障碍物}场景：对每个障碍�
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.85\textwidth]{figs_chap16/unified_view.png}
+\includegraphics[width=0.85\textwidth]{figures/chap16/unified_view.png}
 \caption{全书的统一视角（示意图）。中心是 $\mathcal L=f+\lambda^\top g$ 与 KKT 条件；左列（物理与控制：第1、3、6--7、16章）与右列（学习与博弈：第8、9、14、10章）各写出该章的目标 $f$、约束 $g$、$\lambda$ 的身份和一阶条件。$\lambda$ 从影子价格、广义动量、协态变量、误差信号、值函数、损失权重、均衡价格到安全约束的价格，名字一直在变，结构从未改变。}
 \label{fig:unified_view}
 \end{figure}
@@ -538,7 +538,7 @@ CBF方法可以自然地扩展到\textbf{多障碍物}场景：对每个障碍�
 \paragraph{编程题}
 \begin{enumerate}
     \setcounter{enumi}{2}
-    \item \textbf{CBF 实验}：运行 \texttt{code\_chap16/chap16\_world\_model.py} 重新生成 CBF 避障图（代码中的修正方向已改为 $u_{\rm ref} + \lambda \nabla h$）。然后把障碍物从连线正中挪开一点，或给修正加一个切向分量，观察轨迹如何“绕行”而不只是“减速”；画出 $\lambda$ 随时间的变化，验证它只在贴近边界时非零。
+    \item \textbf{CBF 实验}：运行 \texttt{code/chap16/chap16\_world\_model.py} 重新生成 CBF 避障图（代码中的修正方向已改为 $u_{\rm ref} + \lambda \nabla h$）。然后把障碍物从连线正中挪开一点，或给修正加一个切向分量，观察轨迹如何“绕行”而不只是“减速”；画出 $\lambda$ 随时间的变化，验证它只在贴近边界时非零。
     
     \item \textbf{可微仿真做系统辨识}：把弹簧--质点实验里的有限差分梯度换成 PyTorch 的自动微分（\texttt{torch.autograd}，把整段仿真写成计算图），比较两种梯度，并观察仿真步数增加到 $10^4$ 时梯度是否出现第11章那样的爆炸。
 \end{enumerate}
@@ -616,7 +616,7 @@ Karl Friston提出的\textbf{自由能原理}（Free Energy Principle）给出�
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap16/free_energy.png}
+\includegraphics[width=0.95\textwidth]{figures/chap16/free_energy.png}
 \caption{自由能原理示意图。(a)惊奇的定义：观测越偏离预期，惊奇越大；(b)感知：更新信念使之匹配观测；(c)行动：改变世界使之匹配信念。两者都在最小化惊奇！}
 \label{fig:free_energy}
 \end{figure}

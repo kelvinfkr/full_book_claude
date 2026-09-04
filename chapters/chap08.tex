@@ -1050,7 +1050,7 @@ def train(model, data_loader, optimizer, num_epochs):
 % 代码演示结果
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap08/chap08_fig1.png}
+\includegraphics[width=0.95\textwidth]{figures/chap08/chap08_fig1.png}
 \caption{自动微分与反向传播演示。（1）自动微分验证：本章例子 $y = x^2 + 2x + 1$，自动微分给出 $x = 3$ 处的切线斜率 $dy/dx = 8$，与手算一致；（2）用自动微分引擎训练线性回归 $y = 2x$ 的损失曲线；（3）拟合结果；（4）把 $N$ 层残差网络 $z_{i+1}=z_i+h\,f(z_i;\theta_i)$ 看成离散最优控制问题：用同一个自动微分引擎反向传播得到的伴随变量 $\lambda_i=\delta_i=\partial\ell/\partial z_i$（方块：$N=10$，圆点：$N=40$）落在连续协态 $p(t)$（黑线，由伴随方程 $\dot p=-(\partial f/\partial x)^{\top}p$ 积分得到）上，插图显示偏差 $\max_i|\lambda_i-p(t_i)|$ 随 $h=T/N$ 一阶下降——反向传播就是伴随方程的离散形式。}
 \label{fig:chap08_autograd}
 \end{figure}
@@ -1728,7 +1728,7 @@ GPU 喜欢三类计算模式：\textbf{大量独立的相同操作}（如 batch 
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap08/activation_functions.pdf}
+\includegraphics[width=0.95\textwidth]{figures/chap08/activation_functions.pdf}
 \caption{常用激活函数（蓝色实线）及其导数（橙色虚线）。Sigmoid和Tanh在输入绝对值较大时趋于饱和，导数接近0。ReLU在负半轴完全为0，正半轴导数恒为1。Leaky ReLU、ELU、Swish、GELU都是对ReLU的改进。}
 \label{fig:activation_functions}
 \end{figure}
@@ -1767,7 +1767,7 @@ Sigmoid的导数有一个优雅的形式：
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap08/gradient_flow.pdf}
+\includegraphics[width=0.95\textwidth]{figures/chap08/gradient_flow.pdf}
 \caption{梯度流动分析。(a) 三种激活函数的导数：Sigmoid 最大只有 0.25。(b) 随机初始化的 20 层全连接网络中，距输出 $k$ 层处的梯度范数与输出层之比（对数坐标，5 个种子平均）：Sigmoid 沿 $0.25^k$ 衰减到 $10^{-13}$，Tanh 与 He 初始化的 ReLU 基本不衰减，Xavier 初始化的 ReLU 每层约乘 $1/\sqrt2$。(c) 真实训练实验（3 隐藏层 MLP，Adam，4 个随机种子，阴影为最小--最大范围）：学习率偏大（0.03）时 ReLU 在头几轮就有一半以上隐藏单元的预激活对所有样本恒 $\le 0$（输出恒为 0、梯度为 0，``死亡''且不再恢复）；Leaky ReLU 下同样的单元仍有梯度、比例更低且会波动恢复；学习率 0.001 时几乎不发生。}
 \label{fig:gradient_flow}
 \end{figure}
@@ -1784,7 +1784,7 @@ ReLU的优势在于：正半轴的梯度恒为1，不会衰减。这使得梯度
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap08/computation_graph.pdf}
+\includegraphics[width=0.95\textwidth]{figures/chap08/computation_graph.pdf}
 \caption{单层神经元的计算图。(a) 前向传播，从输入$x$计算输出$a$。(b) 反向传播，从损失对输出的梯度$\partial L/\partial a$逐步计算对参数$W, b$的梯度。注意$\sigma'(z)$是``阀门''，控制梯度能否有效流回。}
 \label{fig:computation_graph}
 \end{figure}
@@ -1809,7 +1809,7 @@ ReLU的优势在于：正半轴的梯度恒为1，不会衰减。这使得梯度
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap08/gradient_check.pdf}
+\includegraphics[width=0.95\textwidth]{figures/chap08/gradient_check.pdf}
 \caption{梯度检验：解析梯度（蓝色实线）与数值梯度（红色虚线）几乎完全重合。下排绿色区域是绝对误差（对数坐标），最大约为 $3\times10^{-11}$——这正是中心差分截断误差 $O(\epsilon^2)$ 与舍入误差 $O(10^{-16}/\epsilon)$ 在 $\epsilon=10^{-5}$ 时的水平，验证了实现的正确性。}
 \label{fig:gradient_check}
 \end{figure}
@@ -1831,7 +1831,7 @@ GPT和BERT等大模型为什么选择GELU（Gaussian Error Linear Unit）？
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.9\textwidth]{figs_chap08/modern_activations.pdf}
+\includegraphics[width=0.9\textwidth]{figures/chap08/modern_activations.pdf}
 \caption{现代激活函数对比。GELU、Swish、Mish都是ReLU的光滑近似，在$x=0$附近没有导数的跳跃。(b) 显示由自动微分求得的导数曲线：ReLU 在 $x=0$ 跳变，其余三者连续过渡（且在 $x\approx1.5$ 处略大于 1）。}
 \label{fig:modern_activations}
 \end{figure}
@@ -1889,7 +1889,7 @@ class Tensor:
 
 核心思想：每个操作（如Sigmoid）都记录“如何把输出的梯度传递给输入”。反向传播时，按拓扑逆序依次调用这些函数。
 
-完整代码见\texttt{code\_chap08/activation\_functions.py}。
+完整代码见\texttt{code/chap08/activation\_functions.py}。
 
 \subsection*{八、设计哲学小结}
 

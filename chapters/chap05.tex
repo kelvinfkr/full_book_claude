@@ -946,14 +946,14 @@ L = T - V
 % 代码演示结果
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.98\textwidth]{figs_chap05/chap05_fig1.png}
+\includegraphics[width=0.98\textwidth]{figures/chap05/chap05_fig1.png}
 \caption{双摆混沌演示：初值敏感性。两条轨迹的初始角度仅相差0.001弧度（约0.057度）。左上：$\theta_1$随时间变化——差异按指数增长，约11秒后两条轨迹显著分离（$|\Delta\theta_1|$超过0.5弧度）；右上：相空间轨迹显示混沌吸引子结构；左下：轨迹差异随时间指数增长（混沌的标志）；右下：双摆末端的实际轨迹，展示蝴蝶效应的生动体现。}
 \label{fig:chap05_double_pendulum}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap05/chap05_fig2.png}
+\includegraphics[width=0.95\textwidth]{figures/chap05/chap05_fig2.png}
 \caption{单摆：小角度近似的有效范围。(a)(b) 精确方程（黑色实线）与线性化方程（蓝色虚线）的数值解：$\theta_0=30^\circ$时两者在5个周期内几乎重合，$\theta_0=90^\circ$时相位很快错开。(c) 周期偏差$T/T_0-1$：蓝点由数值积分的过零时刻测得，与椭圆积分公式（黑线）一致——$\theta_0=30^\circ$时约1.7\%，$\theta_0=90^\circ$时约18\%；灰色点线是二阶修正$T\approx T_0(1+\theta_0^2/16)$。(d) 相图：精确能量曲线（黑色实线）在大振幅时明显偏离线性化的椭圆（蓝色虚线），红色点划线是$\theta_0=180^\circ$的分界线。}
 \label{fig:chap05_simple_pendulum}
 \end{figure}
@@ -1104,7 +1104,7 @@ p_{n+1} &= p_{n+1/2} - \frac{h}{2} \frac{\partial H}{\partial q}(q_{n+1})
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap05/harmonic_comparison.pdf}
+\includegraphics[width=0.95\textwidth]{figures/chap05/harmonic_comparison.pdf}
 \caption{简谐振子数值积分对比（$\omega=1$, $dt=0.1$, 积分到$t=50$，约8个周期）。\textbf{(a)}：轨迹——Euler法振幅发散，RK4和Verlet与精确解重合。\textbf{(b)}：能量——Euler法能量指数增长，RK4缓慢漂移，Verlet围绕真实值振荡。\textbf{(c)}：相空间——Euler螺旋向外（能量增加），Verlet保持闭合曲线。\textbf{(d)}：相对能量误差（对数坐标）——Verlet误差有界，RK4误差缓慢累积。}
 \end{figure}
 
@@ -1112,7 +1112,7 @@ p_{n+1} &= p_{n+1/2} - \frac{h}{2} \frac{\partial H}{\partial q}(q_{n+1})
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap05/long_time_comparison.pdf}
+\includegraphics[width=0.95\textwidth]{figures/chap05/long_time_comparison.pdf}
 \caption{长时间积分（$t=500$）能量漂移对比。\textbf{(a)}：双对数坐标下每个周期内的最大相对能量误差——RK4随时间近似线性增长（拟合斜率约0.96），Verlet保持常数；点线是RK4的拟合外推，按此趋势约在$t\approx2\times10^4$时超过Verlet的误差水平。\textbf{(b)}：前30个时间单位的逐步能量偏差——Verlet的能量在$[-2.5\times10^{-3},\,0]E_0$之间周期性振荡、没有系统性漂移，RK4的偏差在此尺度下看不见（$t=500$时约$-7\times10^{-5}E_0$）但会一直累积下去。这是辛积分器的核心优势：误差有界，不随时间增长。}
 \end{figure}
 
@@ -1120,7 +1120,7 @@ p_{n+1} &= p_{n+1/2} - \frac{h}{2} \frac{\partial H}{\partial q}(q_{n+1})
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.6\textwidth]{figs_chap05/convergence_order.pdf}
+\includegraphics[width=0.6\textwidth]{figures/chap05/convergence_order.pdf}
 \caption{收敛阶验证。在双对数坐标下按数据拟合斜率：Euler与辛Euler误差$\sim dt$（1阶），Verlet误差$\sim dt^2$（2阶），RK4误差$\sim dt^4$（4阶）；点线为对应阶数的参考斜率。虽然RK4单步精度最高，但辛积分器在长时间仿真中能量误差不累积。}
 \end{figure}
 

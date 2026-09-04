@@ -129,7 +129,7 @@
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap10/prisoners_dilemma.pdf}
+\includegraphics[width=0.95\textwidth]{figures/chap10/prisoners_dilemma.pdf}
 \caption{囚徒困境的可视化分析。左图：支付矩阵热力图，红色虚线框标记纳什均衡（背叛，背叛）。右图：玩家1的最优响应分析，无论玩家2如何选择，背叛都是玩家1的更优选择。}
 \label{fig:prisoners}
 \end{figure}
@@ -307,7 +307,7 @@ $N$组KKT条件一般是一个庞大的非线性方程组。什么时候它可�
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap10/network_game.pdf}
+\includegraphics[width=0.95\textwidth]{figures/chap10/network_game.pdf}
 \caption{图博弈的数值实验。左图：6个玩家组成的网络，节点颜色表示均衡策略的大小。中图：迭代最优响应过程，从零初始化出发，每个玩家的策略逐渐收敛到纳什均衡（虚线）。右图：收敛误差随迭代次数呈指数下降，表明算法线性收敛。参数：$\delta = 0.15$（策略替代）。}
 \label{fig:network_game}
 \end{figure}
@@ -357,7 +357,7 @@ $N$组KKT条件一般是一个庞大的非线性方程组。什么时候它可�
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap10/braess_paradox.pdf}
+\includegraphics[width=0.95\textwidth]{figures/chap10/braess_paradox.pdf}
 \caption{Braess悖论的数值验证。左图：有免费道路（红色AB边）时，所有车辆都选择S$\to$A$\to$B$\to$E路径，平均旅行时间80分钟。中图：没有免费道路时，车辆均匀分布在两条路径上，平均旅行时间65分钟。右图：柱状对比显示，移除免费道路可减少约18.8\%的旅行时间。}
 \label{fig:braess}
 \end{figure}
@@ -429,7 +429,7 @@ KKT的互补松弛条件要求$\mu_p \cdot f_p = 0$。于是若$f_p > 0$（路�
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap10/potential_game.pdf}
+\includegraphics[width=0.95\textwidth]{figures/chap10/potential_game.pdf}
 \caption{势博弈的收敛性质。左图：势函数$\Phi(a_1, a_2)$的等高线，红星标记纳什均衡（势函数最小值点）。中图：从不同初始点出发的迭代最优响应轨迹，都收敛到纳什均衡。右图：势函数沿轨迹单调下降，保证收敛性。}
 \label{fig:potential}
 \end{figure}
@@ -475,7 +475,7 @@ KKT的互补松弛条件要求$\mu_p \cdot f_p = 0$。于是若$f_p > 0$（路�
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap10/ctde_comparison.pdf}
+\includegraphics[width=0.95\textwidth]{figures/chap10/ctde_comparison.pdf}
 \caption{三种多智能体学习范式的对比。左：独立学习（IQL），每个智能体独立与环境交互，面临非平稳性问题。中：CTDE范式，训练时使用全局信息（集中式Critic），执行时只用局部观测（分散式Actor）。右：完全集中式，由单一控制器指挥所有智能体，存在可扩展性和通信瓶颈问题。}
 \label{fig:ctde}
 \end{figure}
@@ -522,7 +522,7 @@ QMIX是CTDE范式下\textbf{价值分解}（Value Decomposition）方法的代�
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.8\textwidth]{figs_chap10/qmix_architecture.pdf}
+\includegraphics[width=0.8\textwidth]{figures/chap10/qmix_architecture.pdf}
 \caption{QMIX架构示意图。每个智能体有自己的Q网络$Q_i(o_i, a_i)$，只使用局部观测。混合网络将各个局部Q值组合成全局Q值$Q_{tot}$。关键：混合网络的权重由超网络（Hypernetwork）根据全局状态$s$生成，且保证对$Q_i$的偏导非负（单调性约束），从而满足IGM原则。}
 \label{fig:qmix}
 \end{figure}
@@ -720,8 +720,8 @@ HJB方程类似量子力学中的Schrödinger方程，描述``价值波''的演�
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap10/mfg_solution.pdf}
-\caption{一维平均场博弈的数值解（有限差分 + 阻尼不动点迭代，代码 \texttt{code\_chap10/chap10\_mfg\_solver.py}）。每个人的运行代价是 $\frac12 v^2+\frac{\alpha}{2}(x-x_{\rm target})^2+\kappa\, m(x,t)$：想去目标点 $x_{\rm target}=1$（黑色点线），但讨厌拥挤。(a) 密度 $m(x,t)$：群体从 $x=-1$ 整体迁往目标点；红色虚线是沿最优速度场 $\dot x=-\partial_x u$ 积分出的个体轨迹——个体随群体一起走，但走在最前面的人会越过目标点，给后面的人让位。(b) 价值函数 $u(x,t)$（离目标越远代价越高）与最优速度 $v^*=-\partial_x u$（箭头）：$u$ 就是第7章的协态、本章的 $\lambda$，它的梯度直接告诉每个人该往哪走、走多快。(c) 不同时刻的密度剖面：有拥挤惩罚（$\kappa=2$）时，$t=T$ 的群体铺成峰值 $1.3$、标准差 $0.28$ 的宽平台；把 $\kappa$ 设为 $0$（灰色虚线）群体就挤成峰值 $2.6$、标准差 $0.16$ 的尖峰。(d) 不动点迭代残差：$m\to$HJB$\to u\to$FP$\to\tilde m$ 每一轮的变化量按指数衰减，约 110 轮后降到 $10^{-8}$——$(u^*,m^*)$ 确实是自洽的纳什均衡，不是画出来的。}
+\includegraphics[width=0.95\textwidth]{figures/chap10/mfg_solution.pdf}
+\caption{一维平均场博弈的数值解（有限差分 + 阻尼不动点迭代，代码 \texttt{code/chap10/chap10\_mfg\_solver.py}）。每个人的运行代价是 $\frac12 v^2+\frac{\alpha}{2}(x-x_{\rm target})^2+\kappa\, m(x,t)$：想去目标点 $x_{\rm target}=1$（黑色点线），但讨厌拥挤。(a) 密度 $m(x,t)$：群体从 $x=-1$ 整体迁往目标点；红色虚线是沿最优速度场 $\dot x=-\partial_x u$ 积分出的个体轨迹——个体随群体一起走，但走在最前面的人会越过目标点，给后面的人让位。(b) 价值函数 $u(x,t)$（离目标越远代价越高）与最优速度 $v^*=-\partial_x u$（箭头）：$u$ 就是第7章的协态、本章的 $\lambda$，它的梯度直接告诉每个人该往哪走、走多快。(c) 不同时刻的密度剖面：有拥挤惩罚（$\kappa=2$）时，$t=T$ 的群体铺成峰值 $1.3$、标准差 $0.28$ 的宽平台；把 $\kappa$ 设为 $0$（灰色虚线）群体就挤成峰值 $2.6$、标准差 $0.16$ 的尖峰。(d) 不动点迭代残差：$m\to$HJB$\to u\to$FP$\to\tilde m$ 每一轮的变化量按指数衰减，约 110 轮后降到 $10^{-8}$——$(u^*,m^*)$ 确实是自洽的纳什均衡，不是画出来的。}
 \label{fig:mfg}
 \end{figure}
 
@@ -822,7 +822,7 @@ HJB方程类似量子力学中的Schrödinger方程，描述``价值波''的演�
     \end{enumerate}
     
     \item \textbf{Braess悖论的数值验证}：
-    参考本章生成图的 Python 代码 \texttt{code\_chap10/}\allowbreak\texttt{chap10\_generate\_figures.py}：
+    参考本章生成图的 Python 代码 \texttt{code/chap10/}\allowbreak\texttt{chap10\_generate\_figures.py}：
     \begin{enumerate}
         \item 复现Braess悖论的计算
         \item 修改需求量（从4000变为其他值），观察悖论是否仍然存在

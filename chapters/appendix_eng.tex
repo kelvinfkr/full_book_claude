@@ -1039,7 +1039,7 @@ $256 \times 256$ & 650 次 & 500 次 & 78 次 & 8 次 \\
 % 代码演示结果
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap13/chap13_fig3.png}
+\includegraphics[width=0.95\textwidth]{figures/chap13/chap13_fig3.png}
 \caption{预条件子效果的实验验证（1行3列）。\textbf{左图}：共轭梯度法收敛曲线对比——无预条件（蓝）、Jacobi预条件（绿）、ILU预条件（红），ILU只需约1/3的迭代次数；\textbf{中图}：网格加密时迭代次数的增长趋势——无预条件和Jacobi迭代次数线性增长，而ILU增长明显更慢；\textbf{右图}：条件数的几何意义——扁椭圆（高条件数）导致zigzag路径，圆形（低条件数）可以直达最优解。代码见 \texttt{code/chap05\_performance.py}。}
 \label{fig:preconditioner}
 \end{figure}
@@ -1272,7 +1272,7 @@ print(f"按列访问: {time.time() - t0:.2f} 秒")
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap13/chap13_fig1.png}
+\includegraphics[width=0.95\textwidth]{figures/chap13/chap13_fig1.png}
 \caption{Python性能优化实验：GIL对多线程的影响、缓存局部性的重要性、以及NumPy向量化的加速效果。左图显示Python多线程在CPU密集任务上受GIL限制，multiprocessing才能真正并行；中图展示行优先vs列优先遍历的性能差异（缓存局部性）；右图对比循环与向量化操作的速度——向量化可获得数十倍加速。}
 \label{fig:chap13_python}
 \end{figure}
@@ -1622,7 +1622,7 @@ Turek和Hron在2006年提出了一系列FSI基准测试问题，其中\textbf{FS
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.98\textwidth]{figs_chap13/turek_fsi2_mechanism.pdf}
+\includegraphics[width=0.98\textwidth]{figures/chap13/turek_fsi2_mechanism.pdf}
 \caption{涡激振动机理示意。(a) 当上方涡脱落时，圆柱和板上方形成低压区，产生向上的升力，推动弹性板向上弯曲。(b) 半个周期后，下方涡脱落，下方形成低压区，产生向下的升力。这种交替的压力差驱动板的周期性振荡。}
 \label{fig:turek_fsi2_mechanism}
 \end{figure}
@@ -1642,7 +1642,7 @@ f_s = \text{St} \cdot \frac{U}{D}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.98\textwidth]{figs_chap13/turek_fsi2_snapshots.pdf}
+\includegraphics[width=0.98\textwidth]{figures/chap13/turek_fsi2_snapshots.pdf}
 \caption{Turek-Hron FSI2：弹性板在一个振动周期（$T \approx 0.5$ s）内的变形快照。板端Y方向位移幅值约$\pm 80$ mm，这是板长（350 mm）的约23\%——属于大变形范畴！注意板的变形主要由一阶弯曲模态主导。}
 \label{fig:turek_fsi2_snapshots}
 \end{figure}
@@ -1651,7 +1651,7 @@ f_s = \text{St} \cdot \frac{U}{D}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.98\textwidth]{figs_chap13/turek_fsi2_time_history.pdf}
+\includegraphics[width=0.98\textwidth]{figures/chap13/turek_fsi2_time_history.pdf}
 \caption{Turek-Hron FSI2动力学分析。\textbf{左上}：板端Y位移时间历程——经过短暂瞬态后进入稳态振荡，振幅约$\pm 80$ mm。\textbf{右上}：相空间轨迹——稳态时形成极限环（limit cycle），这是自激振荡的标志。\textbf{左下}：频谱分析——主频约2 Hz，与涡脱落频率一致。\textbf{右下}：振动包络——一个周期内板的位置叠加，展示振动的空间范围。}
 \label{fig:turek_fsi2_analysis}
 \end{figure}
@@ -1660,7 +1660,7 @@ f_s = \text{St} \cdot \frac{U}{D}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.98\textwidth]{figs_chap13/turek_fsi2_cfd_velocity.pdf}
+\includegraphics[width=0.98\textwidth]{figures/chap13/turek_fsi2_cfd_velocity.pdf}
 \caption{Turek-Hron FSI2基准测试的CFD模拟结果（Kratos Multiphysics开源软件）。颜色表示流体速度大小（蓝色=低速，红色=高速）。可以清楚看到：(1) 卡门涡街从圆柱后方交替脱落并向下游对流移动；(2) 弹性板（白色）随着涡的周期性脱落发生大幅度弯曲振荡；(3) 流场呈现典型的涡激振动特征，高速区（红/橙色）和低速区（蓝色）交替出现。}
 \label{fig:turek_fsi2_vortex_street}
 \end{figure}
@@ -1719,7 +1719,7 @@ Turek-Hron FSI2之所以成为经典基准，是因为它包含了FSI问题的�
 
 \sidenoteplain{\textbf{开源FSI框架}：Kratos Multiphysics（完整的多物理场框架）、preCICE（连接不同求解器的耦合库）、Feel++（C++ FEM 库）、oomph-lib（牛津大学开发的多物理场库），以及 OpenFOAM + CalculiX 的流体+结构组合，都包含 Turek--Hron 基准案例的实现。}
 
-本节的示意图由 \texttt{code\_chap13} 目录下的 Python 脚本 \texttt{turek\_fsi2\_\allowbreak visualization.py} 生成；真正的 FSI2 求解需要使用专业的多物理场软件。
+本节的示意图由 \texttt{code/chap13} 目录下的 Python 脚本 \texttt{turek\_fsi2\_\allowbreak visualization.py} 生成；真正的 FSI2 求解需要使用专业的多物理场软件。
 
 \begin{lstlisting}[language=Python, caption=弹性板变形计算示意]
 def flag_deformation(s, t, amplitude=0.080, freq=2.0):

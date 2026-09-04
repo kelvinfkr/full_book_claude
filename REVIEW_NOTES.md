@@ -38,7 +38,7 @@
 6. 第 14 章把损失权重、拉格朗日乘子、对偶步长三个东西都记作 $\lambda$ 或 $\rho$，与第 1 章"$\rho$ 是罚系数、$\lambda$ 是乘子"的约定打架；等式约束记号 $h(x)=0$ 与第 1 章的 $g(x)=0$ 对调。
 7. 第 15 章通篇没有出现"拉格朗日 / 乘子 / 影子价格"任何一个词，是唯一完全脱离主线的一章。
 8. 附录C（工程章）如何纳入主线？——本次采用"显存 / 算力 / 带宽是硬约束，它们的乘子是资源的影子价格"这一表述。
-9. 第 16 章缺 `本章小结`，习题直接接在正文后；`figs_chap16/unified_view.png` 从未被引用。
+9. 第 16 章缺 `本章小结`，习题直接接在正文后；`figures/chap16/unified_view.png` 从未被引用。
 10. 第 6 章开篇宣称"关节力矩也是拉格朗日乘子"，正文里 $\tau$ 始终是拉格朗日方程右端的广义力，从未作为乘子出现；第 1 章两次预告"第 6 章会出现 KKT 分块矩阵（质量矩阵 + 约束雅可比）"，第 6 章没有写出来。
 
 ### B. 跨章引用错误（已全部修正）
@@ -69,7 +69,7 @@
 - 第 14 章图注与正文对梯度范数的描述相反（图中 PDE 梯度更大）；因果权重公式依赖未积分的 $x$；傅里叶特征经验法则与实验矛盾；"Deep Ritz 对应最小作用量原理"应为最小势能原理。
 - 第 15 章离散化无关性的极限断言过强；统一表中 DeepONet 的核写错；格林函数定理漏边界条件；Galerkin 注意力描述与原文不符。
 - 第 10 章 QMIX 的 IGM 证明只检查了单方偏离；HJB 缺 $-\nu\Delta u$ 项；MFG 例子终端代价 $\tfrac12 x^2$ 与图注 $x^2$ 矛盾；"拥挤代价越远越好"符号写反；MFG 图并非数值解（代码手绘），已改称示意；Lasry–Lions "独立提出"史实错。
-- 第 16 章 CBF 闭式解、伪代码、代码三处符号写反（修正沿 $-\nabla h$ 推向障碍物），配套图中 CBF 从未激活。已修正文字、伪代码和 `code_chap16` / `code_organized` 两份代码。
+- 第 16 章 CBF 闭式解、伪代码、代码三处符号写反（修正沿 $-\nabla h$ 推向障碍物），配套图中 CBF 从未激活。已修正文字、伪代码和 `code/chap16` / `code_organized` 两份代码。
 - 史实：牛顿生年（儒略历）、Linnainmaa 是硕士论文、Kingma 当时在阿姆斯特丹、Sutton 已获 2024 年图灵奖、纳什 21 岁证明存在性等。
 
 ### E. 承诺未兑现（已处理）
@@ -97,10 +97,10 @@
 作者回复"都改了吧，图不合适的重新生成一批，像教科书一点，每张图都有思路"，于是第一轮列出的 8 项全部处理：
 
 1. **第 7 章离散部分与第 8 章翻号，全书动态章节统一符号**。动力学约束一律写成 $f - \dot x$（离散版 $f(x_k,u_k) - x_{k+1}$，第 8 章 $f_i(z_{i-1}) - z_i$），于是所有动态章节都有 $\lambda = +\partial(\text{代价})/\partial(\text{状态})$：第 7 章连续/离散、第 8 章 $\lambda_i = \partial L/\partial z_i = \delta_i$（正好是深度学习的误差信号，不再"差一个负号"）、第 9 章 $\lambda_t = \gamma^{t+1}\nabla V$、第 11 章 BPTT。第 7 章离散推导改用离散哈密顿量 $H_k = L_k + \lambda_{k+1}^\top f$，伴随方程 $\lambda_k = \partial H_k/\partial x_k$、$\lambda_N = \partial\phi/\partial x_N$，与连续部分逐项对应；手算例题（$N=2$ 积分器）重算，最优控制 $u_0=u_1=-10/21$ 不变。第 1 章的 $\lambda = -df^*/d\epsilon$ 规则在各章的"符号约定"页边栏里重新解释（放松 $f - x = \epsilon$ 等于把状态往回拨 $\epsilon$，两个负号抵消）。第 8 章的对照表、反向传播伪代码、两层网络手算例、扩展阅读中的拉格朗日函数同步翻号。
-2. **第 14 章损失权重改记 $\rho$**：正文（开篇反问、罚参数讨论、梯度竞争公式、实验表格、对比表、逆问题损失）与代码清单里的固定权重全部由 $\lambda$ 改为 $\rho$，`lambda_bc` → `rho_bc`（`code_chap14/`、`code_organized/` 中 5 个固定权重脚本与 README 同步）；对偶上升里真正的乘子仍记 $\lambda$（`self.lambda_bc`）。图 `figs_chap14/lambda_effect.pdf` 用统一风格重跑（$\rho \in \{0.1,1,10,100,1000\}$，10000 轮），文件名保留以免改引用，正文表格按新结果更新。
+2. **第 14 章损失权重改记 $\rho$**：正文（开篇反问、罚参数讨论、梯度竞争公式、实验表格、对比表、逆问题损失）与代码清单里的固定权重全部由 $\lambda$ 改为 $\rho$，`lambda_bc` → `rho_bc`（`code/chap14/`、`code_organized/` 中 5 个固定权重脚本与 README 同步）；对偶上升里真正的乘子仍记 $\lambda$（`self.lambda_bc`）。图 `figures/chap14/lambda_effect.pdf` 用统一风格重跑（$\rho \in \{0.1,1,10,100,1000\}$，10000 轮），文件名保留以免改引用，正文表格按新结果更新。
 3. **附录C 1500 行"服务器与环境配置"移为附录 B**（`chapters/appendix_env.tex`，标题"实验环境速成——服务器与环境配置"），原位置留一段"关于实验环境"指引；原附录改称"附录 A：核心概念索引"；`book_outline.tex` 增加 `\input`。
 4. **第 9 章扩展阅读**：五篇之前加"扩展阅读导读"盒子（每篇一句话说明内容、前置知识、适合谁读），四篇各自补"本节导读"（第四篇原有）。未合并正文，避免破坏各篇的自洽。
-5. **图片改名**：`figs_chap11/appC_fig*.png` → `chap11_fig*.png`，标签 `fig:appC_*` → `fig:chap11_*`，并重新生成（见第五节）。
+5. **图片改名**：`figures/chap11/appC_fig*.png` → `chap11_fig*.png`，标签 `fig:appC_*` → `fig:chap11_*`，并重新生成（见第五节）。
 6. **`[h]` → `[htbp]`**：全书 `\begin{figure}[h]` / `\begin{table}[h]` 统一改为 `[htbp]`。
 7. 第 16 章正文中"请重新运行脚本再生成"的 TODO 注释删除（图已重绘）。
 8. 引号与 `\hline`/booktabs 仍未逐处统一（排版层面，与本轮目标无关）。
@@ -128,28 +128,28 @@
 
 ### 5.3 重绘清单（按章）
 
-每张图在 `figure_docs/chapNN_figures.md` 里都有"背景 / 意图 / 生成方法 / 数据来源 / **思路** / **读图指南**"六段，这里只列一句话思路。
+每张图在 `docs/figures/chapNN_figures.md` 里都有"背景 / 意图 / 生成方法 / 数据来源 / **思路** / **读图指南**"六段，这里只列一句话思路。
 
 | 章 | 图 | 脚本 | 一句话思路 |
 |---|---|---|---|
-| 2 | `lp_performance`、`qp_performance`、`portfolio_weights`、`nonconvex_comparison` | `code_chap02/optimization_tools_demo.py` | 求解逻辑保留、全部中文化：LP 是最便宜的问题（1000 变量 0.3 s）；通用 QP 求解器代价 $\propto n^{3.2}$；最优组合只集中在 4 种资产上（收益约束不起作用，是预算与非负约束在塑造解）；Rosenbrock 上有梯度方法最省。LP 代码清单原来的"输出"是假的（$c\ge0$ 求最小，解应为 0），改为最大化利润并换成真实输出 $x=(2.2,1.8,1.6)$、利润 18.2。 |
+| 2 | `lp_performance`、`qp_performance`、`portfolio_weights`、`nonconvex_comparison` | `code/chap02/optimization_tools_demo.py` | 求解逻辑保留、全部中文化：LP 是最便宜的问题（1000 变量 0.3 s）；通用 QP 求解器代价 $\propto n^{3.2}$；最优组合只集中在 4 种资产上（收益约束不起作用，是预算与非负约束在塑造解）；Rosenbrock 上有梯度方法最省。LP 代码清单原来的"输出"是假的（$c\ge0$ 求最小，解应为 0），改为最大化利润并换成真实输出 $x=(2.2,1.8,1.6)$、利润 18.2。 |
 | 4 | `chap05_fig2` | `code/chap05_mechanics.py` | 线性化不是对错而是"误差多大"：过零事件实测周期偏差（30°→+1.7%，90°→+18.0%，与椭圆积分公式一致）；`chap05_fig1` 图注改为"约 11 秒"。 |
-| 4 | `long_time_comparison`、`harmonic_comparison`、`convergence_order` | `code_chap05/ode_numerical_methods.py` | RK4 能量误差每周期最大值在双对数下是斜率 0.96 的直线（无界），Verlet 是水平线（有界振荡，无漂移）；收敛阶图例直接给出拟合斜率。 |
+| 4 | `long_time_comparison`、`harmonic_comparison`、`convergence_order` | `code/chap05/ode_numerical_methods.py` | RK4 能量误差每周期最大值在双对数下是斜率 0.96 的直线（无界），Verlet 是水平线（有界振荡，无漂移）；收敛阶图例直接给出拟合斜率。 |
 | 5 | `chap13_fig2` | `code/chap13_performance.py fem` | 有限元的误差要说清是哪种范数：节点精确（超收敛）、$L^2$ 与单元内最大误差 $O(h^2)$、$H^1$ 半范数 $O(h)$，并补上 caption 提到的三对角刚度矩阵面板。 |
 | 7 | `chap06_fig1` | `code/chap06_robotics.py` | 正文手算例（$L_1=L_2=1$、$x_d=(1.2,0.9)$、$q^{(0)}=(0^\circ,90^\circ)$）真正迭代：误差 $0.22\to0.021\to2\times10^{-4}\to2\times10^{-8}$ 的二次收敛，$|\det J|$ 热图解释为什么目标点远离奇异位形；图移到算例之后。 |
-| 9 | `activation_functions`、`gradient_flow`、`computation_graph`、`gradient_check`、`modern_activations` | `code_chap08/activation_functions.py` | 全部中文化；`gradient_flow` 的"梯度消失"与"死亡 ReLU"改为真实实验（20 层网络各层梯度范数比；3 层 MLP 训练中恒为 0 的单元比例，ReLU 大学习率 10%→57%，Leaky ReLU 可恢复）。 |
+| 9 | `activation_functions`、`gradient_flow`、`computation_graph`、`gradient_check`、`modern_activations` | `code/chap08/activation_functions.py` | 全部中文化；`gradient_flow` 的"梯度消失"与"死亡 ReLU"改为真实实验（20 层网络各层梯度范数比；3 层 MLP 训练中恒为 0 的单元比例，ReLU 大学习率 10%→57%，Leaky ReLU 可恢复）。 |
 | 9 | `chap08_fig1` | `code/chap08_autograd.py` | 第 4 面板改为真图：$N$ 层残差网络反向传播得到的 $\lambda_i=\delta_i$ 落在连续协态 $p(t)$ 上，偏差随 $h=T/N$ 一阶下降——反向传播就是伴随方程的离散形式。 |
-| 10 | `chap09_shortest_path`、`chap09_value_iteration`、`chap09_value_heatmap`、`chap09_policy`、`chap09_qlearning_sarsa`、`chap09_qtable` | `code_chap09/chap09_rl.py` | 环境改为正文的 $5\times5$（每步 $-1$、$\gamma=1$）：离终点 $d$ 步的状态恰在第 $d$ 轮到位；$V$ = 负曼哈顿距离；并列最优动作画双箭头；Q-Learning/SARSA 10 个种子真实训练；Q 表与值迭代逐格相同。 |
-| 10 | `arm_kinematics`、`rl_control_comparison`、`pd_control_trajectory`、`cartpole_demo` | `code_chap09/robotic_arm_control.py` | 中文化；CartPole 自行实现（Barto 方程，不依赖 gym），用交叉熵法 + 线性策略（600 回合达到 195）和表格 Q-Learning 得到真实学习曲线，替换原来的随机数曲线。 |
-| 11 | `chap11_fig1`、`chap11_fig2`（原 `appC_fig*`） | `code_chap11/chap11_figures.py` | 在含噪正弦上训练单头自注意力，注意力矩阵出现间距 16 的斜条纹（"关注同相位时刻"）；正弦位置编码矩阵、各维波长、位置间点积的 Toeplitz 结构。 |
-| 13 | `lambda_effect` | `code_chap14/lambda_effect.py` | $\rho\in\{0.1,\dots,1000\}\times3$ 个种子各 10000 轮：$\rho$ 太小前期慢（第 1000 轮误差高 3–4 个量级、解整体漂一个齐次解），$\rho=10\sim100$ 前期最快，$\rho$ 太大后期震荡、最终反而最差——"罚得越狠边界学得越差"，为自适应权重铺垫。正文表格与结论按真实结果重写（原表格数字不可复现）。 |
-| 15 | `mfg_solution` | `code_chap10/chap10_mfg_solver.py` | 真正的一维 MFG 有限差分求解：HJB 倒向（隐式扩散 + 迎风 Hamilton 项）、FP 正向（守恒迎风格式）、阻尼不动点迭代 112 轮残差降到 $10^{-8}$；展示"个体按 HJB 最优响应、群体按 FP 演化、均衡是不动点"，拥挤项 $\kappa m$ 就是"别人对我的价格"。 |
-| 16 | `cbf_controller`、`multi_obstacle`、`differentiable_physics`、`latent_dynamics`、`unified_view` | `code_chap16/chap16_figures_v2.py` | CBF 用正确符号 $u^*=u_{\rm ref}+\lambda^*\nabla h$ 重做，障碍物移出起点–目标连线，画出 $h(t)\ge0$ 与只在贴边时非零的 $\lambda^*(t)$（安全约束的影子价格）；多障碍版显示两条约束同时活跃；可微物理用 autograd 穿过 200 步 RK4 真正辨识出 $(m,k,c)$；隐空间动力学用 $24\times24$ 带噪单摆图像训练编码器 + 转移模型，潜态是嵌套闭合环、30 步"做梦"误差贴近噪声；统一视角图改为全中文、内容取自附录 A 主线总表。 |
+| 10 | `chap09_shortest_path`、`chap09_value_iteration`、`chap09_value_heatmap`、`chap09_policy`、`chap09_qlearning_sarsa`、`chap09_qtable` | `code/chap09/chap09_rl.py` | 环境改为正文的 $5\times5$（每步 $-1$、$\gamma=1$）：离终点 $d$ 步的状态恰在第 $d$ 轮到位；$V$ = 负曼哈顿距离；并列最优动作画双箭头；Q-Learning/SARSA 10 个种子真实训练；Q 表与值迭代逐格相同。 |
+| 10 | `arm_kinematics`、`rl_control_comparison`、`pd_control_trajectory`、`cartpole_demo` | `code/chap09/robotic_arm_control.py` | 中文化；CartPole 自行实现（Barto 方程，不依赖 gym），用交叉熵法 + 线性策略（600 回合达到 195）和表格 Q-Learning 得到真实学习曲线，替换原来的随机数曲线。 |
+| 11 | `chap11_fig1`、`chap11_fig2`（原 `appC_fig*`） | `code/chap11/chap11_figures.py` | 在含噪正弦上训练单头自注意力，注意力矩阵出现间距 16 的斜条纹（"关注同相位时刻"）；正弦位置编码矩阵、各维波长、位置间点积的 Toeplitz 结构。 |
+| 13 | `lambda_effect` | `code/chap14/lambda_effect.py` | $\rho\in\{0.1,\dots,1000\}\times3$ 个种子各 10000 轮：$\rho$ 太小前期慢（第 1000 轮误差高 3–4 个量级、解整体漂一个齐次解），$\rho=10\sim100$ 前期最快，$\rho$ 太大后期震荡、最终反而最差——"罚得越狠边界学得越差"，为自适应权重铺垫。正文表格与结论按真实结果重写（原表格数字不可复现）。 |
+| 15 | `mfg_solution` | `code/chap10/chap10_mfg_solver.py` | 真正的一维 MFG 有限差分求解：HJB 倒向（隐式扩散 + 迎风 Hamilton 项）、FP 正向（守恒迎风格式）、阻尼不动点迭代 112 轮残差降到 $10^{-8}$；展示"个体按 HJB 最优响应、群体按 FP 演化、均衡是不动点"，拥挤项 $\kappa m$ 就是"别人对我的价格"。 |
+| 16 | `cbf_controller`、`multi_obstacle`、`differentiable_physics`、`latent_dynamics`、`unified_view` | `code/chap16/chap16_figures_v2.py` | CBF 用正确符号 $u^*=u_{\rm ref}+\lambda^*\nabla h$ 重做，障碍物移出起点–目标连线，画出 $h(t)\ge0$ 与只在贴边时非零的 $\lambda^*(t)$（安全约束的影子价格）；多障碍版显示两条约束同时活跃；可微物理用 autograd 穿过 200 步 RK4 真正辨识出 $(m,k,c)$；隐空间动力学用 $24\times24$ 带噪单摆图像训练编码器 + 转移模型，潜态是嵌套闭合环、30 步"做梦"误差贴近噪声；统一视角图改为全中文、内容取自附录 A 主线总表。 |
 
 ### 5.4 遗留
 
 - 仍是旧风格但内容无误、未重绘的图：第 14 章其余 12 张（中文、清晰）、第 10 章其余 6 张、第 16 章 3 张、第 13 章 Turek–Hron 四张、第 5 章 `chap05_fig1`、第 15 章 `chap15_fig1`、第 1–3 章。
-- 旧的重复脚本未删（`code/chap09_rl.py`、`code/appC_transformer.py`、`code_chap06/chap06_robotics.py`、`code_appC/appC_transformer.py`、`code_chap16/chap16_world_model.py`），它们生成的是旧图或写到旧路径，建议清理；新图一律由 `figure_docs` 中标明的脚本生成。
+- 旧的重复脚本未删（`code/chap09_rl.py`、`code/appC_transformer.py`、`code/chap06/chap06_robotics.py`、`code/appC/appC_transformer.py`、`code/chap16/chap16_world_model.py`），它们生成的是旧图或写到旧路径，建议清理；新图一律由 `figure_docs` 中标明的脚本生成。
 - 本环境没有 TeX，无法编译；对所有改动过的章节做了 `\begin/\end` 与花括号配对检查。
 - 计时类图（第 2 章）的绝对秒数依赖机器，caption 用了"约"。
 
@@ -177,7 +177,7 @@
 | III 学习中的优化 | 9 反向传播、10 强化学习、11 序列建模（含 VLM）、12 工程 | 模型与策略从哪里来 | 误差信号、值函数 |
 | IV 前沿交叉 | 13 PINN、14 神经算子、15 多智能体、16 世界模型与具身智能（含 VLA、真机 RL） | 物理、学习、决策怎样合到一起 | 物理约束权重、均衡价格、安全约束的价格 |
 
-**章节轮换的实现**（旧 → 新）：`chap13.tex`（信息）→ `chap04.tex`，`chap04.tex`（力学）→ `chap05.tex`，`chap05.tex`（有限元）→ `chap13.tex`；`figs_chap04/` → `figs_chap05/`，`figs_chap05/` → `figs_chap13/`；`code_chap04/` → `code_chap05/`，`code_chap05/` → `code_chap13/`；`code/chap04_mechanics.py` → `chap05_mechanics.py`，`code/chap05_performance.py` → `chap13_performance.py`；`figure_docs` 同步改名。全书正文、附录、图注、脚本里的"第 4/5/6 章"、`Ch4/5/6`、图与代码路径按同一映射（4→5，5→6，6→4）轮换；附录"主线总表"与"章节速查"的行重排；第 3 章结尾的过渡句改写。图的 `\label` 名（`fig:chap05_...`）随文件名轮换，只在本章内引用。
+**章节轮换的实现**（旧 → 新）：`chap13.tex`（信息）→ `chap04.tex`，`chap04.tex`（力学）→ `chap05.tex`，`chap05.tex`（有限元）→ `chap13.tex`；`figures/chap04/` → `figures/chap05/`，`figures/chap05/` → `figures/chap13/`；`code/chap04/` → `code/chap05/`，`code/chap05/` → `code/chap13/`；`code/chap04_mechanics.py` → `chap05_mechanics.py`，`code/chap05_performance.py` → `chap13_performance.py`；`figure_docs` 同步改名。全书正文、附录、图注、脚本里的"第 4/5/6 章"、`Ch4/5/6`、图与代码路径按同一映射（4→5，5→6，6→4）轮换；附录"主线总表"与"章节速查"的行重排；第 3 章结尾的过渡句改写。图的 `\label` 名（`fig:chap05_...`）随文件名轮换，只在本章内引用。
 
 **前言**：新增 `chapters/preface.tex`（当比特遇见原子——通往物理智能之路），采用作者版本的文字，"什么是物理智能"一节按批注补上人工智能视角的定义（让机器拥有物理知识：感知状态、预测行为、完成任务），并与数学视角（约束可行域内的优化与学习）对应起来；内含 TikZ 阅读导航图（四个部分、核心/选读章节、物理/AI 侧重、跨部分依赖）和两条推荐路径。原"全书核心思想"保留统一框架与模板表，改为四个部分的问题表。
 
@@ -211,11 +211,11 @@
 | 附录 | A 核心概念索引、B 实验环境、C 大模型工程速成（原第 12 章 + 原第 9 章"计算基础设施"）、D 工程专题 | 工程实践类内容集中存放 |
 | 后记 | Bitter Lesson 与持续学习 | 原第 16 章终章 |
 
-**章号映射（上一版 → 本版）**：6 有限元 → 13；7 → 6；8 → 7；9 → 8；10 → 9；15 多智能体 → 10；13 → 14；14 → 15；12 → 附录 C；16 拆成 16（世界模型、CBF、可微物理，自由能原理降为扩展阅读）和 17（VLA、世界—动作模型、真机 RL、结语）；11 不变。文件、图目录、代码目录、`figure_docs`、图 label 一并按映射改名（`code_chap12/`、`figs_chap12/` 留给新第 12 章；旧第 12 章代码移到 `code_appC/`）。
+**章号映射（上一版 → 本版）**：6 有限元 → 13；7 → 6；8 → 7；9 → 8；10 → 9；15 多智能体 → 10；13 → 14；14 → 15；12 → 附录 C；16 拆成 16（世界模型、CBF、可微物理，自由能原理降为扩展阅读）和 17（VLA、世界—动作模型、真机 RL、结语）；11 不变。文件、图目录、代码目录、`figure_docs`、图 label 一并按映射改名（`code/chap12/`、`figures/chap12/` 留给新第 12 章；旧第 12 章代码移到 `code/appC/`）。
 
 **移到附录 D 的工程类扩展阅读**：大规模线性方程组的求解艺术、CPU 并行计算、流固耦合有限元（原有限元章三篇）；从旋转矩阵到三维重建（原机器人章）；Python 表达式求值（原反向传播章）；用 SB3 训练经典控制任务（原强化学习章"从表格到神经网络"的动手实践小节）。理论类扩展阅读（ODE 数值方法、PDE 与作用量、约束与投影、矩阵求导、数值方法联系、激活函数、架构选择、TRPO/PPO、采样理论、连续控制、奖励函数设计）留在章内。各原位置留有一句指引。
 
-**新第 12 章**：RLHF 的 KL 约束（β 就是 λ，闭式解是第 4 章的玻尔兹曼分布）、DPO（对偶消元）、GRPO 与可验证奖励、多步智能体的 RL、造数据的流水线（生成器/验证器/过滤器 = 从约束分布采样，硬过滤 λ→∞，软加权是玻尔兹曼）、机器人数据引擎；两个纯玩具实验（`code_chap12/toy_rlhf.py`、`code_chap12/data_pipeline.py`）。
+**新第 12 章**：RLHF 的 KL 约束（β 就是 λ，闭式解是第 4 章的玻尔兹曼分布）、DPO（对偶消元）、GRPO 与可验证奖励、多步智能体的 RL、造数据的流水线（生成器/验证器/过滤器 = 从约束分布采样，硬过滤 λ→∞，软加权是玻尔兹曼）、机器人数据引擎；两个纯玩具实验（`code/chap12/toy_rlhf.py`、`code/chap12/data_pipeline.py`）。
 
 **其他**：前言导航图改为 17 章（5 列布局），四个部分导读重写，"全书核心思想"表改为四部分，附录 A 的主线总表/章节速查补第 12、17 行并新增"J. 智能体的后训练与数据"定义组；第 4 章 KL 散度的预告加上第 12 章；第 11 章 VLA 预告改指第 17 章。
 
@@ -257,3 +257,9 @@
 - **段落小标题与其后表格分离**：`\paragraph{…}` 是行内标题，其后若紧跟浮动体，浮动体会漂到别处，甚至排在标题之前（附录 B “文件与目录操作”）。全书 12 处改为 `\paragraph{…}\mbox{}\par\nopagebreak` 加 `[H]` 就地放置（新加载 `float` 宏包）。
 - **附录编号**：附录用 `\chapter*`，章计数器停在 17，表/图/代码编号显示为 17.x。新增 `\appendixchapter{标题}{短标题}`：`\appendix` 之后显式推进章计数器并清零表、图、公式、代码计数器，编号变为 A.1、B.2……。
 - **页边栏重叠复查**：作者截图来自旧版；对最新 PDF 逐页比较页边栏文字行的包围盒，无两条边注互压；每章开头把盒子深度计数写入 .log，26 个章级入口均为 0，说明没有盒子环境漏配对。
+
+## 十四、目录整理
+
+作者要求整理文件夹名字和没用到的文件。整理后的结构见 README.md：`figures/chapNN/`（原 `figs_chapNN/`）、`code/chapNN/`（原 `code_chapNN/`）、`code/appC/`（原 `code_appC/`，`chap12_transformer.py` 改名 `transformer.py`）、`docs/figures/chapNN.md`（原 `figure_docs/chapNN_figures.md`）；共享的绘图风格模块留在 `code/textbook_style.py`，脚本里的 `sys.path.insert(0, 'code')` 不用改。正文、脚本、图说明、本文件里的路径字符串一并改写。
+
+删除的内容：`figs/`（29 张旧编号的 PNG，正文没有引用）、`figures_organized/`（71 个文件、12 MB，全是旧图的副本）、`code_organized/` 与 `code/chapNN_*.py`（与各章目录重复或更旧的脚本副本，各章目录里的版本是维护中的版本）、`latex_stubs/`（早期没有 TeX Live 时用的桩宏包，会遮蔽真宏包）、`full_book.zip`（原始压缩包，含 `__MACOSX` 垃圾文件）、17 张脚本生成但正文未引用的图（第 2 章 1 张、第 5 章 7 张 PDE 可视化、第 13 章 9 张 FSI 中间结果）。所有删除都在 git 历史里可找回。`.gitignore` 补了 `__pycache__/`、`*.pyc`、编译中间文件。

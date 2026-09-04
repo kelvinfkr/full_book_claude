@@ -918,7 +918,7 @@ print(x*(1-x)/2)            # 精确解在节点处的值——完全一致
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap13/chap13_fig2.png}
+\includegraphics[width=0.95\textwidth]{figures/chap13/chap13_fig2.png}
 \caption{一维有限元求解热传导问题$-u''=1$，$u(0)=u(1)=0$。(a) 有限元解（$N=4,8$）与解析解$u(x)=x(1-x)/2$的对比：节点值与解析解重合，误差只出现在单元内部。(b) 施加边界条件后的刚度矩阵$K$（$N=8$）的三对角结构——这源于帐篷函数的局部支撑性。(c) 网格细化时的收敛：$L^2$误差和单元内最大误差按$O(h^2)$下降（拟合斜率2.00），$H^1$半范数误差按$O(h)$下降（斜率1.00）；节点处的误差在$10^{-14}$以下（舍入水平），这是一维线性元的超收敛现象。}
 \label{fig:chap13_fem}
 \end{figure}

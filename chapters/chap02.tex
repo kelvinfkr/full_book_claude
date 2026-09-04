@@ -1144,7 +1144,7 @@ print(f"组合风险: {risk:.4f}")
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.7\textwidth]{figs_chap02/portfolio_weights.pdf}
+\includegraphics[width=0.7\textwidth]{figures/chap02/portfolio_weights.pdf}
 \caption{10种资产的最优投资组合权重分配（SLSQP 求解）。可以看到优化器倾向于集中投资少数几种资产（只有 4 种资产权重非零），而非均匀分配（虚线），这是均值-方差优化的典型特征；这组数据里收益约束 $\mu^\top w\geq 0.08$ 并不起作用（最优组合收益 $0.105$），起作用的只有预算约束 $\mathbf{1}^\top w=1$ 和 $w\geq 0$。}
 \end{figure}
 
@@ -1154,13 +1154,13 @@ print(f"组合风险: {risk:.4f}")
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap02/qp_performance.pdf}
+\includegraphics[width=0.95\textwidth]{figures/chap02/qp_performance.pdf}
 \caption{二次规划性能测试。\textbf{(a)}：求解时间随资产数量的变化，呈现超线性增长（$n\geq 50$ 后约按 $n^{3.2}$ 增长，SLSQP 在 500 资产时需要约 9 秒）——SLSQP 每步都要解一个稠密的最小二乘子问题，不适合大规模 QP。\textbf{(b)}：最小风险随资产数量增加而增加，这是因为随机生成的协方差矩阵 $\Sigma=AA^\top+0.1I$ 的最大特征值随维度增长；灰色虚线是均匀分配 $w_i=1/n$ 的风险，优化大约把风险压低 $10\%$--$20\%$。}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.7\textwidth]{figs_chap02/lp_performance.pdf}
+\includegraphics[width=0.7\textwidth]{figures/chap02/lp_performance.pdf}
 \caption{线性规划性能测试（随机生成的资源分配问题 $\max c^\top x$, s.t. $Ax\leq b$, $x\geq 0$）。使用HiGHS求解器，1000个变量、500个约束的LP仅需约0.3秒（74 次单纯形迭代，点旁标注为迭代次数）；$n\geq 100$ 后时间大致按 $n^{2}$ 左右增长（图例中的指数由当次计时拟合，不同机器会略有差别）。现代LP求解器已经非常成熟，对于大多数实际问题都能快速求解。}
 \end{figure}
 
@@ -1188,7 +1188,7 @@ for method in methods:
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap02/nonconvex_comparison.pdf}
+\includegraphics[width=0.95\textwidth]{figures/chap02/nonconvex_comparison.pdf}
 \caption{非凸优化方法比较（Rosenbrock 函数，从 $x_0=0$ 出发）。\textbf{(a)}：求解时间随维度增长，L-BFGS-B 与 BFGS 这两种用梯度的方法在高维问题上最快。\textbf{(b)}：函数评估次数，Powell 方法需要的评估次数最多；Nelder--Mead 在 $n=20$ 时用完评估预算仍未收敛（空心标记）——无梯度方法的代价随维度增长得最快。\textbf{结论}：对于大规模非凸问题，L-BFGS-B是首选。}
 \end{figure}
 

@@ -535,7 +535,7 @@ q^{(1)} = q^{(0)} + \Delta q = (-5.7^\circ, 84.3^\circ)
 % 代码演示结果（code/chap06_robotics.py）
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.98\textwidth]{figs_chap06/chap06_fig1.png}
+\includegraphics[width=0.98\textwidth]{figures/chap06/chap06_fig1.png}
 \caption{牛顿迭代法求解逆运动学：与上面手算示例相同的设定（$L_1 = L_2 = 1$，目标 $x_d = (1.2,\,0.9)$，初值 $q^{(0)} = (0^\circ, 90^\circ)$），由 \texttt{code/chap07\_robotics.py} 实际迭代得到。（a）迭代过程中的机械臂姿态：一步之后末端到目标的距离已从 $0.22$ 缩到 $0.02$，两步之后与收敛解 $q^\ast = (-4.5^\circ,\,82.8^\circ)$ 肉眼已不可分（插图放大了目标附近）。（b）末端误差 $\|e_k\| = \|x_d - f(q^{(k)})\|$ 随迭代次数的变化（对数轴）：$2\times10^{-1} \to 2\times10^{-2} \to 2\times10^{-4} \to 2\times10^{-8}$，误差的指数每步大约翻一倍——这就是牛顿法的二次收敛，四步即达双精度机器精度。（c）工作空间上的可操作度 $|\det J| = L_1 L_2 |\sin q_2|$：外圈 $r = 2$（手臂伸直）与圆心是奇异位形，$r = \sqrt{2}$（$q_2 = 90^\circ$）处最灵活；目标点在 $r = 1.5$，离奇异位形很远，$J$ 良态，所以牛顿法收敛得又快又稳。}
 \label{fig:chap06_robotics}
 \end{figure}

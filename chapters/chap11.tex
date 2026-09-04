@@ -2053,14 +2053,14 @@ Transformer有一个重要限制：\textbf{最大上下文长度}。GPT-3是2048
 % 代码演示结果
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.98\textwidth]{figs_chap11/chap11_fig1.png}
-\caption{一个真实训练出来的单头自注意力（\texttt{code\_chap11/chap11\_figures.py}）：输入是含噪的正弦序列 $x_t=\sin(2\pi t/16+\phi)+\varepsilon_t$（$T=48$，三个周期），$Q,K,V$ 由最近 4 个采样值线性映射得到，训练目标是还原无噪声的信号。（a）含噪输入（灰点）、真实信号（黑线）与注意力输出（蓝线）：输出的均方误差约为输入噪声的一半。（b）注意力矩阵 $\alpha_{ij}=\mathrm{softmax}_j(q_i\cdot k_j/\sqrt{d_k})$：平行于对角线、间距为 16 的条纹说明模型学会了``关注相位相同的时刻''。（c）查询位置 $t=24$ 的注意力分布：权重集中在 $j\approx 8,24,40$ 三簇（合计约 0.95），其余位置几乎为零——注意力就是按相似度加权的平均，即正文所说的 softmax 核回归。}
+\includegraphics[width=0.98\textwidth]{figures/chap11/chap11_fig1.png}
+\caption{一个真实训练出来的单头自注意力（\texttt{code/chap11/chap11\_figures.py}）：输入是含噪的正弦序列 $x_t=\sin(2\pi t/16+\phi)+\varepsilon_t$（$T=48$，三个周期），$Q,K,V$ 由最近 4 个采样值线性映射得到，训练目标是还原无噪声的信号。（a）含噪输入（灰点）、真实信号（黑线）与注意力输出（蓝线）：输出的均方误差约为输入噪声的一半。（b）注意力矩阵 $\alpha_{ij}=\mathrm{softmax}_j(q_i\cdot k_j/\sqrt{d_k})$：平行于对角线、间距为 16 的条纹说明模型学会了``关注相位相同的时刻''。（c）查询位置 $t=24$ 的注意力分布：权重集中在 $j\approx 8,24,40$ 三簇（合计约 0.95），其余位置几乎为零——注意力就是按相似度加权的平均，即正文所说的 softmax 核回归。}
 \label{fig:chap11_attention}
 \end{figure}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.95\textwidth]{figs_chap11/chap11_fig2.png}
+\includegraphics[width=0.95\textwidth]{figures/chap11/chap11_fig2.png}
 \caption{正弦位置编码（$d_{\text{model}}=16$，位置 $0\sim 63$）。（a）编码矩阵 $PE_{(pos,d)}$：低维度变化快（高频），高维度变化慢（低频），最右几列在 64 个位置内几乎不变。（b）维度 $0,2,4,6$ 的正弦分量，波长分别为 $6.3,20,63,199$：一个位置的编码就是一组不同频率的``时钟指针''。（c）位置之间的归一化点积 $PE_{pos}\cdot PE_{pos'}/(d/2)$：矩阵沿对角线平移不变，只依赖相对位置 $pos-pos'$，相邻位置最相似——这正是``$PE_{pos+k}$ 是 $PE_{pos}$ 的线性变换''的体现。}
 \label{fig:chap11_positional_encoding}
 \end{figure}
